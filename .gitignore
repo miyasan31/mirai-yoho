@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Runtime / caches
+.npm
+.yarn
+.pnp.*
+.cache
+.parcel-cache
+.turbo
+.vercel
+*.tsbuildinfo
+
+# Build output
+dist
+build
+out
+.next
+.nuxt
+.output
+
+# Test / coverage
+coverage
+.nyc_output
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / IDE
+.idea
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+*~
