@@ -1,0 +1,234 @@
+openapi: 3.1.0
+info:
+  title: Arc - 未来予報 API
+  version: 0.1.0
+  description: 予約・決済・相談員管理 API
+
+servers:
+  - url: /api
+
+paths:
+  /consultants:
+    get:
+      operationId: getConsultants
+      summary: 相談員一覧取得
+      tags: [consultant]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [consultants]
+                properties:
+                  consultants:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Consultant"
+
+  /slots:
+    get:
+      operationId: getSlots
+      summary: 空き枠一覧取得
+      tags: [slot]
+      parameters:
+        - name: consultantId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [slots]
+                properties:
+                  slots:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Slot"
+
+  /bookings:
+    post:
+      operationId: createBooking
+      summary: 予約作成
+      tags: [booking]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBookingRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateBookingResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bookings/{bookingId}/cancel:
+    post:
+      operationId: cancelBooking
+      summary: 予約キャンセル
+      tags: [booking]
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cancelledBy]
+              properties:
+                cancelledBy:
+                  type: string
+                  enum: [client, admin]
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bookings/{bookingId}/capture:
+    post:
+      operationId: capturePayment
+      summary: 手動本決済
+      tags: [booking]
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [method]
+              properties:
+                method:
+                  type: string
+                  enum: [manual]
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /batch/capture:
+    post:
+      operationId: batchCapture
+      summary: バッチ本決済（Cloud Scheduler）
+      tags: [batch]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [capturedCount]
+                properties:
+                  capturedCount:
+                    type: integer
+
+components:
+  schemas:
+    Consultant:
+      type: object
+      required: [consultantId, name, specialties, isActive]
+      properties:
+        consultantId:
+          type: string
+        name:
+          type: string
+        specialties:
+          type: array
+          items:
+            type: string
+        bio:
+          type: string
+        imageUrl:
+          type: string
+        isActive:
+          type: boolean
+
+    Slot:
+      type: object
+      required: [slotId, consultantId, startDatetime, endDatetime, isAvailable]
+      properties:
+        slotId:
+          type: string
+        consultantId:
+          type: string
+        startDatetime:
+          type: string
+          format: date-time
+        endDatetime:
+          type: string
+          format: date-time
+        isAvailable:
+          type: boolean
+
+    CreateBookingRequest:
+      type: object
+      required: [slotId, clientName, clientEmail, clientPhone]
+      properties:
+        slotId:
+          type: string
+        clientName:
+          type: string
+        clientEmail:
+          type: string
+          format: email
+        clientPhone:
+          type: string
+        consultantContent:
+          type: string
+
+    CreateBookingResponse:
+      type: object
+      required: [bookingId, clientSecret, zoomUrl]
+      properties:
+        bookingId:
+          type: string
+        clientSecret:
+          type: string
+        zoomUrl:
+          type: string
+          format: uri
+
+    ErrorResponse:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string

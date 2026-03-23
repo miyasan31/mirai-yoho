@@ -9,7 +9,8 @@
     "build:panda": "panda codegen",
     "start": "next start",
     "lint": "biome check",
-    "format": "biome format --write"
+    "format": "biome format --write",
+    "generate": "orval"
   },
   "dependencies": {
     "@ark-ui/react": "^5.34.1",
@@ -37,6 +38,7 @@
     "@types/react-big-calendar": "^1.16.3",
     "@types/react-dom": "^19",
     "babel-plugin-react-compiler": "1.0.0",
+    "orval": "^8.5.3",
     "typescript": "^5"
   }
 }

@@ -44,3 +44,7 @@ next-env.d.ts
 ## Panda
 styled-system
 styled-system-studio
+
+## Orval generated
+src/generated/api
+src/generated/schemas
