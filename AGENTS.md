@@ -7,7 +7,7 @@
 
 ## 命名規則
 - ファイル名はすべて kebab-case（例: booking-status.ts）
-- Repository Interface は先頭 i-（例: i-booking-repository.ts）
+- Repository Interface / Service Interface にファイル名のプレフィックスは付けない
 - URL パスも kebab-case（Google URL 構造ガイドライン準拠）
 - export 名は PascalCase（コンポーネント、クラス）/ camelCase（関数、変数）
 

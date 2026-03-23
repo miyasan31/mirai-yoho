@@ -72,14 +72,14 @@ src/
 │       ├── <aggregate>.ts            # 集約ルートエンティティ
 │       ├── <value-object>.ts         # 値オブジェクト
 │       ├── <aggregate>-events.ts     # ドメインイベント
-│       └── i-<aggregate>-repository.ts # Repository Interface
+│       └── <aggregate>-repository.ts   # Repository Interface
 │
 ├── application/                      # Application 層（ユースケース）
 │   ├── shared/                       # 共有サービスインターフェース
-│   │   ├── i-email-service.ts
-│   │   ├── i-stripe-service.ts
-│   │   ├── i-zoom-service.ts
-│   │   └── i-unit-of-work.ts
+│   │   ├── email-service.ts
+│   │   ├── stripe-service.ts
+│   │   ├── zoom-service.ts
+│   │   └── unit-of-work.ts
 │   └── <aggregate>/                  # 集約ごとのユースケース
 │       └── <action>-<aggregate>-use-case.ts
 │
@@ -121,7 +121,7 @@ src/
 ├─ ビジネスロジック / ルール？
 │   ├─ エンティティ / 値オブジェクト → src/domain/<aggregate>/
 │   ├─ 複数集約をまたぐ処理 → src/application/<aggregate>/<action>-<aggregate>-use-case.ts
-│   └─ 外部サービスの抽象 → src/application/shared/i-<name>-service.ts
+│   └─ 外部サービスの抽象 → src/application/shared/<name>-service.ts
 │
 ├─ 外部サービスの具体実装？
 │   └─ src/infrastructure/<service>/
@@ -228,7 +228,7 @@ src/domain/booking/
   ├── booking-status.ts        # 値オブジェクト
   ├── booking-events.ts        # ドメインイベント
   ├── cancel-deadline.ts       # 値オブジェクト
-  └── i-booking-repository.ts  # Repository Interface
+  └── booking-repository.ts     # Repository Interface
 
 src/application/booking/
   ├── create-booking-use-case.ts
@@ -266,9 +266,9 @@ src/infrastructure/firestore/
 | 集約ルート | `src/domain/<aggregate>/<aggregate>.ts` |
 | 値オブジェクト | `src/domain/<aggregate>/<value-object>.ts` |
 | ドメインイベント | `src/domain/<aggregate>/<aggregate>-events.ts` |
-| Repository Interface | `src/domain/<aggregate>/i-<aggregate>-repository.ts` |
+| Repository Interface | `src/domain/<aggregate>/<aggregate>-repository.ts` |
 | UseCase | `src/application/<aggregate>/<action>-<aggregate>-use-case.ts` |
-| サービス Interface | `src/application/shared/i-<name>-service.ts` |
+| サービス Interface | `src/application/shared/<name>-service.ts` |
 | Firestore 実装 | `src/infrastructure/firestore/firestore-<name>-repository.ts` |
 | 外部サービス実装 | `src/infrastructure/<service>/<name>-service.ts` |
 | レシピ | `src/theme/recipes/<name>.ts` |
@@ -285,7 +285,7 @@ src/infrastructure/firestore/
 | コンポーネント | kebab-case | `booking-calendar.tsx` |
 | フック | use-kebab-case | `use-booking.ts` |
 | UseCase | kebab-case | `create-booking-use-case.ts` |
-| Repository Interface | i-kebab-case | `i-booking-repository.ts` |
+| Repository Interface | kebab-case | `booking-repository.ts` |
 | ドメインイベント | kebab-case | `booking-events.ts` |
 | 値オブジェクト | kebab-case | `booking-status.ts` |
 | Query Keys | kebab-case | `booking-keys.ts` |
@@ -342,7 +342,7 @@ src/
 │   ├── booking-status.ts                    # 値オブジェクト
 │   ├── cancel-deadline.ts                   # 値オブジェクト
 │   ├── booking-events.ts                    # BookingConfirmedEvent
-│   └── i-booking-repository.ts              # Repository Interface
+│   └── booking-repository.ts                # Repository Interface
 │
 ├── application/booking/                     # Step 2: ユースケース
 │   └── create-booking-use-case.ts           # 予約作成の業務フロー
@@ -477,7 +477,7 @@ import { Button } from "@/components/ui";
    - コロケーション違反（1 ページでしか使わないのに `src/components/` に置かれている）
    - `utils/` や `helpers/` のような曖昧なディレクトリが存在する
    - domain 層に外部ライブラリの import がある
-   - 命名規則違反（kebab-case でないファイル名、`i-` プレフィックスのない Repository Interface）
+   - 命名規則違反（kebab-case でないファイル名）
    - `../../../` が 3 つ以上並ぶ相対 import
    - barrel export の乱用（`ui/index.ts` と `recipes/index.ts` 以外の不要な `index.ts`）
    - URL パスが kebab-case でないルートディレクトリ

@@ -108,7 +108,7 @@ interface IStripeService {
 
 ```typescript
 // domain 層: インターフェースを定義
-// src/domain/booking/iBookingRepository.ts
+// src/domain/booking/booking-repository.ts
 export interface IBookingRepository { ... }
 
 // infrastructure 層: 具体実装

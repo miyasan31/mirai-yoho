@@ -42,7 +42,7 @@ Grep で src/domain/ 配下を検索する
 ### 5. 命名規則チェック
 
 - ファイル名が kebab-case であること
-- Repository Interface のファイル名が `i-` プレフィックスを持つこと
+- Repository Interface のファイル名が kebab-case であること
 
 ## 出力形式
 

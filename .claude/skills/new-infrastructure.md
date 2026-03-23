@@ -22,7 +22,7 @@ domain 層の Repository Interface を実装する。
 
 ```typescript
 import type { <Name> } from "@/domain/<name>/<name>";
-import type { I<Name>Repository } from "@/domain/<name>/i<Name>Repository";
+import type { I<Name>Repository } from "@/domain/<name>/<name>-repository";
 
 export class Firestore<Name>Repository implements I<Name>Repository {
   async findById(<name>Id: string): Promise<<Name> | null> {
@@ -44,7 +44,7 @@ export class Firestore<Name>Repository implements I<Name>Repository {
 application 層の Service Interface を実装する。
 
 ```typescript
-import type { I<Name>Service } from "@/application/shared/i<Name>Service";
+import type { I<Name>Service } from "@/application/shared/<name>-service";
 
 export class <Impl><Name>Service implements I<Name>Service {
   async someMethod(params: SomeParams): Promise<SomeResult> {
@@ -88,7 +88,7 @@ export class ZoomService implements IZoomService {
 
 ## 新しい外部サービスを追加する場合
 
-1. まず application 層にインターフェースを作成: `src/application/shared/i<Name>Service.ts`
+1. まず application 層にインターフェースを作成: `src/application/shared/<name>-service.ts`
 2. 次に infrastructure 層に実装を作成: `src/infrastructure/<service>/<name>Service.ts`
 
 ## ルール

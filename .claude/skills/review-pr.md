@@ -46,7 +46,7 @@ git diff main...HEAD
 #### コーディング規約
 
 - ファイル名が kebab-case か
-- Repository Interface が `i` プレフィックスを持つか
+- Repository Interface が kebab-case で命名されているか
 - コンポーネント名が PascalCase か
 
 #### フロントエンド（該当する場合）

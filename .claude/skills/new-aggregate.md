@@ -25,9 +25,9 @@ args: "<aggregate_name>"
 - ビジネスロジックメソッド
 - getter メソッド
 
-### 2. Repository Interface: `src/domain/<name>/i<Name>Repository.ts`
+### 2. Repository Interface: `src/domain/<name>/<name>-repository.ts`
 
-既存の `src/domain/booking/iBookingRepository.ts` のパターンに従う:
+既存の `src/domain/booking/booking-repository.ts` のパターンに従う:
 - `findById` と `save` メソッドを持つ interface
 
 ### 3. Firestore Repository 実装: `src/infrastructure/firestore/firestore<Name>Repository.ts`
@@ -38,8 +38,7 @@ args: "<aggregate_name>"
 
 ## ルール
 
-- ファイル名は kebab-case（例: `notification.ts`, `i-notification-repository.ts`）
-- Repository Interface のファイル名は先頭に `i-` を付ける（例: `i-notification-repository.ts`）
+- ファイル名は kebab-case（例: `notification.ts`, `notification-repository.ts`）
 - Repository Interface の export 名は先頭に `I` を付ける（例: `INotificationRepository`）
 - domain 層には firebase-admin や stripe などの外部依存を import しない
 - import パスは `@/domain/...` のエイリアスを使用する
