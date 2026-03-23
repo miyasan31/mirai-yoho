@@ -4,7 +4,9 @@ export class CancelDeadline {
   private constructor(private readonly deadline: Date) {}
 
   static create(startDatetime: Date): CancelDeadline {
-    const deadline = new Date(startDatetime.getTime() - CANCEL_DEADLINE_HOURS * 60 * 60 * 1000);
+    const deadline = new Date(
+      startDatetime.getTime() - CANCEL_DEADLINE_HOURS * 60 * 60 * 1000,
+    );
     return new CancelDeadline(deadline);
   }
 

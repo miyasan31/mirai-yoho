@@ -7,14 +7,25 @@ export class ConsultantProfile {
     private readonly specialties: readonly string[],
   ) {}
 
-  static create(displayName: string, bio: string, specialties: string[]): ConsultantProfile {
+  static create(
+    displayName: string,
+    bio: string,
+    specialties: string[],
+  ): ConsultantProfile {
     if (!displayName || displayName.trim().length === 0) {
-      throw new DomainError("INVALID_DISPLAY_NAME", "Display name must not be empty");
+      throw new DomainError(
+        "INVALID_DISPLAY_NAME",
+        "Display name must not be empty",
+      );
     }
     return new ConsultantProfile(displayName, bio, [...specialties]);
   }
 
-  static reconstruct(displayName: string, bio: string, specialties: string[]): ConsultantProfile {
+  static reconstruct(
+    displayName: string,
+    bio: string,
+    specialties: string[],
+  ): ConsultantProfile {
     return new ConsultantProfile(displayName, bio, [...specialties]);
   }
 

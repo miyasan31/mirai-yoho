@@ -1,9 +1,10 @@
 import type { IStripeService } from "@/application/shared/iStripeService";
 
 export class StripeService implements IStripeService {
-  async createPaymentIntent(
-    _params: { amountJPY: number; metadata: Record<string, string> },
-  ): Promise<{ paymentIntentId: string; clientSecret: string }> {
+  async createPaymentIntent(_params: {
+    amountJPY: number;
+    metadata: Record<string, string>;
+  }): Promise<{ paymentIntentId: string; clientSecret: string }> {
     throw new Error("Not implemented");
   }
 

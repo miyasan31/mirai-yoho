@@ -25,19 +25,37 @@ export class Slot extends AggregateRoot {
   }
 
   static create(props: SlotCreateProps): Slot {
-    return new Slot(props.slotId, props.consultantId, props.timeRange, undefined, false);
+    return new Slot(
+      props.slotId,
+      props.consultantId,
+      props.timeRange,
+      undefined,
+      false,
+    );
   }
 
   static reconstruct(props: SlotProps): Slot {
-    return new Slot(props.slotId, props.consultantId, props.timeRange, props.bookingId, props.isReserved);
+    return new Slot(
+      props.slotId,
+      props.consultantId,
+      props.timeRange,
+      props.bookingId,
+      props.isReserved,
+    );
   }
 
   reserve(bookingId: string): void {
     if (this.isReserved) {
-      throw new DomainError("SLOT_ALREADY_RESERVED", "This slot is already reserved");
+      throw new DomainError(
+        "SLOT_ALREADY_RESERVED",
+        "This slot is already reserved",
+      );
     }
     if (this.timeRange.getStartAt() < new Date()) {
-      throw new DomainError("SLOT_IN_PAST", "Cannot reserve a slot in the past");
+      throw new DomainError(
+        "SLOT_IN_PAST",
+        "Cannot reserve a slot in the past",
+      );
     }
     this.bookingId = bookingId;
     this.isReserved = true;

@@ -1,6 +1,9 @@
 import { AggregateRoot } from "@/domain/shared/aggregateRoot";
 import { DomainError } from "@/domain/shared/domainError";
-import { BookingCancelledEvent, BookingConfirmedEvent } from "@/domain/booking/bookingEvents";
+import {
+  BookingCancelledEvent,
+  BookingConfirmedEvent,
+} from "@/domain/booking/bookingEvents";
 import { BookingStatus } from "@/domain/booking/bookingStatus";
 import { CancelDeadline } from "@/domain/booking/cancelDeadline";
 import type { ConsultantMemo } from "@/domain/booking/consultantMemo";
@@ -74,7 +77,10 @@ export class Booking extends AggregateRoot {
 
   confirm(zoomUrl: ZoomUrl, paymentIntentId: string): void {
     if (this.status.getValue() !== "pending") {
-      throw new DomainError("INVALID_STATUS_TRANSITION", "Only pending bookings can be confirmed");
+      throw new DomainError(
+        "INVALID_STATUS_TRANSITION",
+        "Only pending bookings can be confirmed",
+      );
     }
     this.status = BookingStatus.reconstruct("confirmed");
     this.zoomUrl = zoomUrl;
@@ -92,11 +98,17 @@ export class Booking extends AggregateRoot {
 
   cancel(cancelledBy: "client" | "admin"): void {
     if (cancelledBy === "client" && this.cancelDeadline.isExpired(new Date())) {
-      throw new DomainError("CANCEL_DEADLINE_EXPIRED", "Cancel deadline has passed");
+      throw new DomainError(
+        "CANCEL_DEADLINE_EXPIRED",
+        "Cancel deadline has passed",
+      );
     }
     const currentStatus = this.status.getValue();
     if (currentStatus !== "pending" && currentStatus !== "confirmed") {
-      throw new DomainError("INVALID_STATUS_TRANSITION", "Only pending or confirmed bookings can be cancelled");
+      throw new DomainError(
+        "INVALID_STATUS_TRANSITION",
+        "Only pending or confirmed bookings can be cancelled",
+      );
     }
     this.status = BookingStatus.reconstruct("cancelled");
     this.addDomainEvent(
@@ -111,7 +123,10 @@ export class Booking extends AggregateRoot {
 
   complete(): void {
     if (this.status.getValue() !== "confirmed") {
-      throw new DomainError("INVALID_STATUS_TRANSITION", "Only confirmed bookings can be completed");
+      throw new DomainError(
+        "INVALID_STATUS_TRANSITION",
+        "Only confirmed bookings can be completed",
+      );
     }
     this.status = BookingStatus.reconstruct("completed");
   }

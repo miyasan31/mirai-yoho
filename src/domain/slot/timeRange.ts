@@ -8,10 +8,16 @@ export class TimeRange {
 
   static create(startAt: Date, endAt: Date): TimeRange {
     if (startAt >= endAt) {
-      throw new DomainError("INVALID_TIME_RANGE", "startAt must be before endAt");
+      throw new DomainError(
+        "INVALID_TIME_RANGE",
+        "startAt must be before endAt",
+      );
     }
     if (startAt < new Date()) {
-      throw new DomainError("PAST_TIME_RANGE", "startAt must not be in the past");
+      throw new DomainError(
+        "PAST_TIME_RANGE",
+        "startAt must not be in the past",
+      );
     }
     return new TimeRange(startAt, endAt);
   }
@@ -29,6 +35,9 @@ export class TimeRange {
   }
 
   equals(other: TimeRange): boolean {
-    return this.startAt.getTime() === other.startAt.getTime() && this.endAt.getTime() === other.endAt.getTime();
+    return (
+      this.startAt.getTime() === other.startAt.getTime() &&
+      this.endAt.getTime() === other.endAt.getTime()
+    );
   }
 }

@@ -16,7 +16,9 @@ export class PaymentCapturedEvent implements DomainEvent {
     this.payload = payload;
   }
 
-  static create(payload: PaymentCapturedEvent["payload"]): PaymentCapturedEvent {
+  static create(
+    payload: PaymentCapturedEvent["payload"],
+  ): PaymentCapturedEvent {
     return new PaymentCapturedEvent(payload);
   }
 }

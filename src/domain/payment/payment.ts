@@ -58,7 +58,10 @@ export class Payment extends AggregateRoot {
 
   capture(method: CaptureMethod): void {
     if (this.status.getValue() !== "authorized") {
-      throw new DomainError("INVALID_PAYMENT_STATUS", "Only authorized payments can be captured");
+      throw new DomainError(
+        "INVALID_PAYMENT_STATUS",
+        "Only authorized payments can be captured",
+      );
     }
     this.status = PaymentStatus.reconstruct("captured");
     this.captureMethod = method;
@@ -75,7 +78,10 @@ export class Payment extends AggregateRoot {
 
   cancel(): void {
     if (this.status.getValue() !== "authorized") {
-      throw new DomainError("INVALID_PAYMENT_STATUS", "Only authorized payments can be cancelled");
+      throw new DomainError(
+        "INVALID_PAYMENT_STATUS",
+        "Only authorized payments can be cancelled",
+      );
     }
     this.status = PaymentStatus.reconstruct("cancelled");
   }

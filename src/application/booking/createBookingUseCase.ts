@@ -70,10 +70,11 @@ export class CreateBookingUseCase {
 
     const money = Money.create(input.amountJPY, input.taxRate);
 
-    const { paymentIntentId, clientSecret } = await this.stripeService.createPaymentIntent({
-      amountJPY: money.getTotalJPY(),
-      metadata: { bookingId },
-    });
+    const { paymentIntentId, clientSecret } =
+      await this.stripeService.createPaymentIntent({
+        amountJPY: money.getTotalJPY(),
+        metadata: { bookingId },
+      });
 
     const meetingUrl = await this.zoomService.createMeetingUrl({
       startDatetime: slot.getTimeRange().getStartAt(),

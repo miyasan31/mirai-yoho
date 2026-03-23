@@ -24,16 +24,23 @@ export class CapturePaymentUseCase {
       throw new Error("Booking not found");
     }
 
-    const payment = await this.paymentRepository.findByBookingId(input.bookingId);
+    const payment = await this.paymentRepository.findByBookingId(
+      input.bookingId,
+    );
     if (!payment) {
       throw new Error("Payment not found");
     }
 
-    await this.stripeService.capturePaymentIntent(payment.getStripePaymentIntentId());
+    await this.stripeService.capturePaymentIntent(
+      payment.getStripePaymentIntentId(),
+    );
     payment.capture(input.method);
     booking.complete();
 
-    await Promise.all([this.bookingRepository.save(booking), this.paymentRepository.save(payment)]);
+    await Promise.all([
+      this.bookingRepository.save(booking),
+      this.paymentRepository.save(payment),
+    ]);
 
     const events = payment.pullDomainEvents();
     for (const event of events) {

@@ -23,11 +23,23 @@ export class Client extends AggregateRoot {
   }
 
   static create(props: ClientCreateProps): Client {
-    return new Client(props.clientId, props.name, props.email, props.phone, undefined);
+    return new Client(
+      props.clientId,
+      props.name,
+      props.email,
+      props.phone,
+      undefined,
+    );
   }
 
   static reconstruct(props: ClientProps): Client {
-    return new Client(props.clientId, props.name, props.email, props.phone, props.memo);
+    return new Client(
+      props.clientId,
+      props.name,
+      props.email,
+      props.phone,
+      props.memo,
+    );
   }
 
   updateInfo(props: { name: string; email: string; phone: string }): void {

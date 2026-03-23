@@ -23,11 +23,21 @@ export class Consultant extends AggregateRoot {
   }
 
   static create(props: ConsultantCreateProps): Consultant {
-    return new Consultant(props.consultantId, props.profile, [...props.zoomRoomIds], true);
+    return new Consultant(
+      props.consultantId,
+      props.profile,
+      [...props.zoomRoomIds],
+      true,
+    );
   }
 
   static reconstruct(props: ConsultantProps): Consultant {
-    return new Consultant(props.consultantId, props.profile, [...props.zoomRoomIds], props.isActive);
+    return new Consultant(
+      props.consultantId,
+      props.profile,
+      [...props.zoomRoomIds],
+      props.isActive,
+    );
   }
 
   updateProfile(profile: ConsultantProfile): void {
@@ -40,7 +50,10 @@ export class Consultant extends AggregateRoot {
 
   deactivate(): void {
     if (!this.isActive) {
-      throw new DomainError("ALREADY_DEACTIVATED", "Consultant is already deactivated");
+      throw new DomainError(
+        "ALREADY_DEACTIVATED",
+        "Consultant is already deactivated",
+      );
     }
     this.isActive = false;
   }

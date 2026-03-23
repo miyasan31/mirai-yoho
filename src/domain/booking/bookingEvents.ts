@@ -16,7 +16,9 @@ export class BookingConfirmedEvent implements DomainEvent {
     this.payload = payload;
   }
 
-  static create(payload: BookingConfirmedEvent["payload"]): BookingConfirmedEvent {
+  static create(
+    payload: BookingConfirmedEvent["payload"],
+  ): BookingConfirmedEvent {
     return new BookingConfirmedEvent(payload);
   }
 }
@@ -36,7 +38,9 @@ export class BookingCancelledEvent implements DomainEvent {
     this.payload = payload;
   }
 
-  static create(payload: BookingCancelledEvent["payload"]): BookingCancelledEvent {
+  static create(
+    payload: BookingCancelledEvent["payload"],
+  ): BookingCancelledEvent {
     return new BookingCancelledEvent(payload);
   }
 }

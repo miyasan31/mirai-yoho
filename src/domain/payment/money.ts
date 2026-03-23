@@ -12,7 +12,10 @@ export class Money {
       throw new DomainError("INVALID_AMOUNT", "Amount must be non-negative");
     }
     if (taxRate < 0 || taxRate > 1) {
-      throw new DomainError("INVALID_TAX_RATE", "Tax rate must be between 0 and 1");
+      throw new DomainError(
+        "INVALID_TAX_RATE",
+        "Tax rate must be between 0 and 1",
+      );
     }
     const taxAmountJPY = Math.floor(amountJPY * taxRate);
     return new Money(amountJPY, taxAmountJPY, taxRate);
@@ -23,14 +26,21 @@ export class Money {
       throw new DomainError("INVALID_AMOUNT", "Total must be non-negative");
     }
     if (taxRate < 0 || taxRate > 1) {
-      throw new DomainError("INVALID_TAX_RATE", "Tax rate must be between 0 and 1");
+      throw new DomainError(
+        "INVALID_TAX_RATE",
+        "Tax rate must be between 0 and 1",
+      );
     }
     const amountJPY = Math.floor(totalJPY / (1 + taxRate));
     const taxAmountJPY = totalJPY - amountJPY;
     return new Money(amountJPY, taxAmountJPY, taxRate);
   }
 
-  static reconstruct(amountJPY: number, taxAmountJPY: number, taxRate: number): Money {
+  static reconstruct(
+    amountJPY: number,
+    taxAmountJPY: number,
+    taxRate: number,
+  ): Money {
     return new Money(amountJPY, taxAmountJPY, taxRate);
   }
 
@@ -51,6 +61,10 @@ export class Money {
   }
 
   equals(other: Money): boolean {
-    return this.amountJPY === other.amountJPY && this.taxAmountJPY === other.taxAmountJPY && this.taxRate === other.taxRate;
+    return (
+      this.amountJPY === other.amountJPY &&
+      this.taxAmountJPY === other.taxAmountJPY &&
+      this.taxRate === other.taxRate
+    );
   }
 }

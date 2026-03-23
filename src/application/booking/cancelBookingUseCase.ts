@@ -27,9 +27,13 @@ export class CancelBookingUseCase {
 
     booking.cancel(input.cancelledBy);
 
-    const payment = await this.paymentRepository.findByBookingId(input.bookingId);
+    const payment = await this.paymentRepository.findByBookingId(
+      input.bookingId,
+    );
     if (payment) {
-      await this.stripeService.cancelPaymentIntent(payment.getStripePaymentIntentId());
+      await this.stripeService.cancelPaymentIntent(
+        payment.getStripePaymentIntentId(),
+      );
       payment.cancel();
     }
 

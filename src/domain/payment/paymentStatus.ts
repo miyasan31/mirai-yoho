@@ -1,6 +1,11 @@
 import { DomainError } from "@/domain/shared/domainError";
 
-const VALID_STATUSES = ["authorized", "captured", "cancelled", "failed"] as const;
+const VALID_STATUSES = [
+  "authorized",
+  "captured",
+  "cancelled",
+  "failed",
+] as const;
 export type PaymentStatusValue = (typeof VALID_STATUSES)[number];
 
 export class PaymentStatus {
@@ -8,7 +13,10 @@ export class PaymentStatus {
 
   static create(value: string): PaymentStatus {
     if (!VALID_STATUSES.includes(value as PaymentStatusValue)) {
-      throw new DomainError("INVALID_PAYMENT_STATUS", `Invalid status: ${value}`);
+      throw new DomainError(
+        "INVALID_PAYMENT_STATUS",
+        `Invalid status: ${value}`,
+      );
     }
     return new PaymentStatus(value as PaymentStatusValue);
   }
