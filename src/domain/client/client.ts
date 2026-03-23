@@ -1,4 +1,4 @@
-import { AggregateRoot } from "@/domain/shared/aggregateRoot";
+import { AggregateRoot } from "@/domain/shared/aggregate-root";
 
 interface ClientCreateProps {
   clientId: string;

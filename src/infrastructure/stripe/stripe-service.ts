@@ -1,4 +1,4 @@
-import type { IStripeService } from "@/application/shared/iStripeService";
+import type { IStripeService } from "@/application/shared/stripe-service";
 
 export class StripeService implements IStripeService {
   async createPaymentIntent(_params: {

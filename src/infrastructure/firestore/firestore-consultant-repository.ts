@@ -1,5 +1,5 @@
 import type { Consultant } from "@/domain/consultant/consultant";
-import type { IConsultantRepository } from "@/domain/consultant/iConsultantRepository";
+import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
 
 export class FirestoreConsultantRepository implements IConsultantRepository {
   async findById(_consultantId: string): Promise<Consultant | null> {

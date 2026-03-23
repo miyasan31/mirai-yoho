@@ -1,6 +1,6 @@
-import { AggregateRoot } from "@/domain/shared/aggregateRoot";
-import { DomainError } from "@/domain/shared/domainError";
-import type { TimeRange } from "@/domain/slot/timeRange";
+import { AggregateRoot } from "@/domain/shared/aggregate-root";
+import { DomainError } from "@/domain/shared/domain-error";
+import type { TimeRange } from "@/domain/slot/time-range";
 
 interface SlotCreateProps {
   slotId: string;

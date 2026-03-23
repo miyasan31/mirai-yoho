@@ -1,4 +1,4 @@
-import { DomainError } from "@/domain/shared/domainError";
+import { DomainError } from "@/domain/shared/domain-error";
 
 const VALID_STATUSES = [
   "authorized",

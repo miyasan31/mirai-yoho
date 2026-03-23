@@ -1,4 +1,4 @@
-import type { IEmailService } from "@/application/shared/iEmailService";
+import type { IEmailService } from "@/application/shared/email-service";
 
 export class ResendEmailService implements IEmailService {
   async sendBookingConfirmation(_params: {

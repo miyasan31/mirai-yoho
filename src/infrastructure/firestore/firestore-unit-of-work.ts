@@ -1,4 +1,4 @@
-import type { IUnitOfWork } from "@/application/shared/iUnitOfWork";
+import type { IUnitOfWork } from "@/application/shared/unit-of-work";
 
 export class FirestoreUnitOfWork implements IUnitOfWork {
   async runInTransaction(_fn: () => Promise<void>): Promise<void> {

@@ -1,5 +1,5 @@
 import type { Client } from "@/domain/client/client";
-import type { IClientRepository } from "@/domain/client/iClientRepository";
+import type { IClientRepository } from "@/domain/client/client-repository";
 
 export class FirestoreClientRepository implements IClientRepository {
   async findById(_clientId: string): Promise<Client | null> {

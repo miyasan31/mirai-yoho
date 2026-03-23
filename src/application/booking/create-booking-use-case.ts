@@ -1,18 +1,18 @@
 import { Booking } from "@/domain/booking/booking";
-import type { BookingConfirmedEvent } from "@/domain/booking/bookingEvents";
-import { ConsultantMemo } from "@/domain/booking/consultantMemo";
-import { ZoomUrl } from "@/domain/booking/zoomUrl";
-import type { IBookingRepository } from "@/domain/booking/iBookingRepository";
+import type { BookingConfirmedEvent } from "@/domain/booking/booking-events";
+import { ConsultantMemo } from "@/domain/booking/consultant-memo";
+import { ZoomUrl } from "@/domain/booking/zoom-url";
+import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import { Client } from "@/domain/client/client";
-import type { IClientRepository } from "@/domain/client/iClientRepository";
+import type { IClientRepository } from "@/domain/client/client-repository";
 import { Money } from "@/domain/payment/money";
 import { Payment } from "@/domain/payment/payment";
-import type { IPaymentRepository } from "@/domain/payment/iPaymentRepository";
-import type { ISlotRepository } from "@/domain/slot/iSlotRepository";
-import type { IEmailService } from "@/application/shared/iEmailService";
-import type { IStripeService } from "@/application/shared/iStripeService";
-import type { IUnitOfWork } from "@/application/shared/iUnitOfWork";
-import type { IZoomService } from "@/application/shared/iZoomService";
+import type { IPaymentRepository } from "@/domain/payment/payment-repository";
+import type { ISlotRepository } from "@/domain/slot/slot-repository";
+import type { IEmailService } from "@/application/shared/email-service";
+import type { IStripeService } from "@/application/shared/stripe-service";
+import type { IUnitOfWork } from "@/application/shared/unit-of-work";
+import type { IZoomService } from "@/application/shared/zoom-service";
 
 interface CreateBookingInput {
   slotId: string;

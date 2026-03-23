@@ -1,5 +1,5 @@
 import type { Payment } from "@/domain/payment/payment";
-import type { IPaymentRepository } from "@/domain/payment/iPaymentRepository";
+import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 
 export class FirestorePaymentRepository implements IPaymentRepository {
   async findByBookingId(_bookingId: string): Promise<Payment | null> {

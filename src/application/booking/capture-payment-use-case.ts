@@ -1,9 +1,9 @@
-import type { IBookingRepository } from "@/domain/booking/iBookingRepository";
+import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import type { CaptureMethod } from "@/domain/payment/payment";
-import type { PaymentCapturedEvent } from "@/domain/payment/paymentEvents";
-import type { IPaymentRepository } from "@/domain/payment/iPaymentRepository";
-import type { IEmailService } from "@/application/shared/iEmailService";
-import type { IStripeService } from "@/application/shared/iStripeService";
+import type { PaymentCapturedEvent } from "@/domain/payment/payment-events";
+import type { IPaymentRepository } from "@/domain/payment/payment-repository";
+import type { IEmailService } from "@/application/shared/email-service";
+import type { IStripeService } from "@/application/shared/stripe-service";
 
 interface CapturePaymentInput {
   bookingId: string;

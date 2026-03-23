@@ -1,5 +1,5 @@
 import type { Booking } from "@/domain/booking/booking";
-import type { IBookingRepository } from "@/domain/booking/iBookingRepository";
+import type { IBookingRepository } from "@/domain/booking/booking-repository";
 
 export class FirestoreBookingRepository implements IBookingRepository {
   async findById(_bookingId: string): Promise<Booking | null> {

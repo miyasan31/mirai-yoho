@@ -1,5 +1,5 @@
 import type { Slot } from "@/domain/slot/slot";
-import type { ISlotRepository } from "@/domain/slot/iSlotRepository";
+import type { ISlotRepository } from "@/domain/slot/slot-repository";
 
 export class FirestoreSlotRepository implements ISlotRepository {
   async findById(_slotId: string): Promise<Slot | null> {

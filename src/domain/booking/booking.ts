@@ -1,13 +1,13 @@
-import { AggregateRoot } from "@/domain/shared/aggregateRoot";
-import { DomainError } from "@/domain/shared/domainError";
+import { AggregateRoot } from "@/domain/shared/aggregate-root";
+import { DomainError } from "@/domain/shared/domain-error";
 import {
   BookingCancelledEvent,
   BookingConfirmedEvent,
-} from "@/domain/booking/bookingEvents";
-import { BookingStatus } from "@/domain/booking/bookingStatus";
-import { CancelDeadline } from "@/domain/booking/cancelDeadline";
-import type { ConsultantMemo } from "@/domain/booking/consultantMemo";
-import type { ZoomUrl } from "@/domain/booking/zoomUrl";
+} from "@/domain/booking/booking-events";
+import { BookingStatus } from "@/domain/booking/booking-status";
+import { CancelDeadline } from "@/domain/booking/cancel-deadline";
+import type { ConsultantMemo } from "@/domain/booking/consultant-memo";
+import type { ZoomUrl } from "@/domain/booking/zoom-url";
 
 interface BookingCreateProps {
   bookingId: string;
