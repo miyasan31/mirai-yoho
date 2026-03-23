@@ -17,8 +17,20 @@
 - UI: ParkUI / カレンダー: react-big-calendar
 - テスト: Vitest + React Testing Library
 - Lint/Format: Biome
+- API クライアント生成: Orval（OpenAPI → React Query hooks）
+
+## API クライアント生成（Orval）
+- OpenAPI スペック: `openapi.yaml`（プロジェクトルート）
+- 設定: `orval.config.ts`
+- 生成先: `src/generated/api/`（hooks）、`src/generated/schemas/`（型）
+- カスタム fetch: `src/generated/custom-fetch.ts`
+- 生成コマンド: `pnpm generate`
+- API エンドポイントを追加・変更したら `openapi.yaml` を更新してから `pnpm generate` を実行する
+- `src/generated/api/` と `src/generated/schemas/` は自動生成のため手動編集しない
+- `src/generated/custom-fetch.ts` は手動管理ファイル
 
 ## やってはいけないこと
 - domain 層に firebase-admin や stripe を import しない
 - 集約の外から集約メンバーを直接変更しない
 - any 型を使わない
+- `src/generated/api/` や `src/generated/schemas/` を手動編集しない（`pnpm generate` で再生成される）
