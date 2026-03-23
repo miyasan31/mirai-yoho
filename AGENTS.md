@@ -6,8 +6,10 @@
 - 集約をまたぐ処理は application 層の UseCase が責任を持つ
 
 ## 命名規則
-- ファイル名はすべて camelCase（例: bookingStatus.ts）
-- Repository Interface は先頭 i（例: iBookingRepository.ts）
+- ファイル名はすべて kebab-case（例: booking-status.ts）
+- Repository Interface は先頭 i-（例: i-booking-repository.ts）
+- URL パスも kebab-case（Google URL 構造ガイドライン準拠）
+- export 名は PascalCase（コンポーネント、クラス）/ camelCase（関数、変数）
 
 ## 技術スタック
 - Next.js App Router / TypeScript / Firestore / Stripe / Zoom / Resend
