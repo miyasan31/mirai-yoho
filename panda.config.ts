@@ -17,15 +17,12 @@ import { defineConfig } from "@pandacss/dev";
 
 export default defineConfig({
   preflight: true,
-
-  include: [
-    "./src/app/**/*.{ts,tsx,js,jsx}",
-    "./src/components/**/*.{ts,tsx,js,jsx}",
-  ],
-
+  shorthands: true,
+  minify: false,
   jsxFramework: "react",
+  outdir: "styled-system",
+  include: ["./src/**/*.{ts,tsx,js,jsx}"],
   exclude: [],
-
   theme: {
     extend: {
       animationStyles: animationStyles,
@@ -34,13 +31,11 @@ export default defineConfig({
       keyframes: keyframes,
       layerStyles: layerStyles,
       textStyles: textStyles,
-
       tokens: {
         colors: colors,
         durations: durations,
         zIndex: zIndex,
       },
-
       semanticTokens: {
         colors: {
           fg: {
@@ -50,14 +45,12 @@ export default defineConfig({
                 _dark: "{colors.gray.12}",
               },
             },
-
             muted: {
               value: {
                 _light: "{colors.gray.11}",
                 _dark: "{colors.gray.11}",
               },
             },
-
             subtle: {
               value: {
                 _light: "{colors.gray.10}",
@@ -65,38 +58,31 @@ export default defineConfig({
               },
             },
           },
-
           border: {
             value: {
               _light: "{colors.gray.4}",
               _dark: "{colors.gray.4}",
             },
           },
-
           error: {
             value: {
               _light: "{colors.red.9}",
               _dark: "{colors.red.9}",
             },
           },
-
           blue: blue,
           gray: slate,
           red: red,
           green: green,
         },
-
         shadows: shadows,
-
         radii: {
           l1: {
             value: "{radii.xs}",
           },
-
           l2: {
             value: "{radii.sm}",
           },
-
           l3: {
             value: "{radii.md}",
           },
@@ -104,8 +90,6 @@ export default defineConfig({
       },
     },
   },
-
-  outdir: "styled-system",
   globalCss: globalCss,
   conditions: conditions,
 });
