@@ -19,14 +19,14 @@
 
 | | タスク | ツール |
 |---|---|---|
-| `[ ]` | Next.js プロジェクト作成（`create-next-app`） | |
-| `[ ]` | `DDD_DESIGN.md` を `CLAUDE.md` としてプロジェクトルートに配置 | |
-| `[ ]` | 生成済みスケルトンを `src/` に配置（`domain` / `application` / `infrastructure`） | |
-| `[ ]` | `tsconfig.json` にパスエイリアス追加（`@/domain/*` 等） | `Claude Code` |
-| `[ ]` | `tsc --noEmit` で型エラーを全解消 | `Claude Code` |
-| `[ ]` | 必要パッケージのインストール（`firebase-admin` / `stripe` / `resend` 等） | `Claude Code` |
-| `[ ]` | Firebase / Stripe / Resend / Zoom の環境変数を `.env.local` に設定 | |
-| `[ ]` | Biome の設定（`biome.json`） | `Claude Code` |
+| `[x]` | Next.js プロジェクト作成（`create-next-app`） | |
+| `[x]` | `DDD_DESIGN.md` を `CLAUDE.md` としてプロジェクトルートに配置 | |
+| `[x]` | 生成済みスケルトンを `src/` に配置（`domain` / `application` / `infrastructure`） | |
+| `[x]` | `tsconfig.json` にパスエイリアス追加（`@/domain/*` 等） | `Claude Code` |
+| `[x]` | `tsc --noEmit` で型エラーを全解消 | `Claude Code` |
+| `[x]` | 必要パッケージのインストール（`firebase-admin` / `stripe` / `resend` 等） | `Claude Code` |
+| `[x]` | Firebase / Stripe / Resend / Zoom の環境変数を `.env.local` に設定 | |
+| `[x]` | Biome の設定（`biome.json`） | `Claude Code` |
 | `[ ]` | Vitest の設定（`vitest.config.ts`） | `Claude Code` |
 
 ---
