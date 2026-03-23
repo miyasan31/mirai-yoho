@@ -3,9 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "prepare": "panda codegen",
+    "prepare": "pnpm build:panda",
     "dev": "rm -rf .next && next dev",
     "build": "next build",
+    "build:panda": "panda codegen",
     "start": "next start",
     "lint": "biome check",
     "format": "biome format --write"

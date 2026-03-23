@@ -1,4 +1,4 @@
-import { css } from "@styles/css";
+import { css } from "styled-system/css";
 
 export default function Home() {
   return (
