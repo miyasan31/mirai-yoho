@@ -27,7 +27,7 @@
 | `[x]` | 必要パッケージのインストール（`firebase-admin` / `stripe` / `resend` 等） | `Claude Code` |
 | `[x]` | Firebase / Stripe / Resend / Zoom の環境変数を `.env.local` に設定 | |
 | `[x]` | Biome の設定（`biome.json`） | `Claude Code` |
-| `[ ]` | Vitest の設定（`vitest.config.ts`） | `Claude Code` |
+| `[x]` | Vitest の設定（`vitest.config.ts`） | `Claude Code` |
 
 ---
 
