@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Arc - 未来予報 API
-  version: 0.1.0
+  version: 0.2.0
   description: 予約・決済・相談員管理 API
 
 servers:
@@ -114,6 +114,8 @@ paths:
       operationId: capturePayment
       summary: 手動本決済
       tags: [booking]
+      security:
+        - bearerAuth: []
       parameters:
         - name: bookingId
           in: path
@@ -158,7 +160,335 @@ paths:
                   capturedCount:
                     type: integer
 
+  /consultant/bookings:
+    get:
+      operationId: getConsultantBookings
+      summary: 自分の予約一覧取得
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [bookings]
+                properties:
+                  bookings:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/BookingDetail"
+
+  /consultant/bookings/{bookingId}/memo:
+    patch:
+      operationId: updateConsultantMemo
+      summary: メモ更新
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [memo]
+              properties:
+                memo:
+                  type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /consultant/profile:
+    get:
+      operationId: getConsultantProfile
+      summary: 自分のプロフィール取得
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsultantProfile"
+    patch:
+      operationId: updateConsultantProfile
+      summary: プロフィール更新
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [displayName, specialties]
+              properties:
+                displayName:
+                  type: string
+                bio:
+                  type: string
+                specialties:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: OK
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /admin/dashboard:
+    get:
+      operationId: getAdminDashboard
+      summary: 統計情報取得
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardData"
+
+  /admin/consultants:
+    get:
+      operationId: getAdminConsultants
+      summary: 相談員一覧取得（管理者）
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [consultants]
+                properties:
+                  consultants:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ConsultantDetail"
+    post:
+      operationId: createAdminConsultant
+      summary: 相談員作成
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [consultantId, displayName]
+              properties:
+                consultantId:
+                  type: string
+                displayName:
+                  type: string
+                bio:
+                  type: string
+                specialties:
+                  type: array
+                  items:
+                    type: string
+                zoomRoomIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [consultantId]
+                properties:
+                  consultantId:
+                    type: string
+
+  /admin/consultants/{id}:
+    patch:
+      operationId: updateAdminConsultant
+      summary: 相談員更新
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                displayName:
+                  type: string
+                bio:
+                  type: string
+                specialties:
+                  type: array
+                  items:
+                    type: string
+                zoomRoomIds:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        "200":
+          description: OK
+    delete:
+      operationId: deleteAdminConsultant
+      summary: 相談員無効化
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+
+  /admin/bookings:
+    get:
+      operationId: getAdminBookings
+      summary: 全予約一覧取得
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          schema:
+            type: string
+            enum: [pending, confirmed, completed, cancelled]
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [bookings]
+                properties:
+                  bookings:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/BookingDetail"
+
+  /admin/payments:
+    get:
+      operationId: getAdminPayments
+      summary: 全決済一覧取得
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [payments]
+                properties:
+                  payments:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PaymentDetail"
+
+  /admin/clients:
+    get:
+      operationId: getAdminClients
+      summary: 全クライアント一覧取得
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [clients]
+                properties:
+                  clients:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ClientDetail"
+
+  /admin/users/{uid}/role:
+    patch:
+      operationId: updateUserRole
+      summary: ロール管理（super_admin限定）
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: uid
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [super_admin, operator, consultant]
+      responses:
+        "200":
+          description: OK
+
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
   schemas:
     Consultant:
       type: object
@@ -179,6 +509,48 @@ components:
         isActive:
           type: boolean
 
+    ConsultantDetail:
+      type: object
+      required: [consultantId, displayName, specialties, isActive]
+      properties:
+        consultantId:
+          type: string
+        displayName:
+          type: string
+        bio:
+          type: string
+        specialties:
+          type: array
+          items:
+            type: string
+        zoomRoomIds:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+
+    ConsultantProfile:
+      type: object
+      required: [consultantId, displayName, specialties, isActive]
+      properties:
+        consultantId:
+          type: string
+        displayName:
+          type: string
+        bio:
+          type: string
+        specialties:
+          type: array
+          items:
+            type: string
+        zoomRoomIds:
+          type: array
+          items:
+            type: string
+        isActive:
+          type: boolean
+
     Slot:
       type: object
       required: [slotId, consultantId, startDatetime, endDatetime, isAvailable]
@@ -195,6 +567,107 @@ components:
           format: date-time
         isAvailable:
           type: boolean
+
+    BookingDetail:
+      type: object
+      required: [bookingId, clientId, consultantId, slotId, startDatetime, status]
+      properties:
+        bookingId:
+          type: string
+        clientId:
+          type: string
+        consultantId:
+          type: string
+        slotId:
+          type: string
+        startDatetime:
+          type: string
+          format: date-time
+        status:
+          type: string
+          enum: [pending, confirmed, completed, cancelled]
+        zoomUrl:
+          type: string
+          format: uri
+          nullable: true
+        consultantMemo:
+          type: string
+        consultationContent:
+          type: string
+          nullable: true
+        stripePaymentIntentId:
+          type: string
+          nullable: true
+
+    PaymentDetail:
+      type: object
+      required: [paymentId, bookingId, clientId, amountJPY, taxAmountJPY, totalJPY, status]
+      properties:
+        paymentId:
+          type: string
+        bookingId:
+          type: string
+        clientId:
+          type: string
+        stripePaymentIntentId:
+          type: string
+        amountJPY:
+          type: integer
+        taxAmountJPY:
+          type: integer
+        totalJPY:
+          type: integer
+        status:
+          type: string
+          enum: [authorized, captured, cancelled]
+        captureMethod:
+          type: string
+          enum: [batch, manual]
+          nullable: true
+
+    ClientDetail:
+      type: object
+      required: [clientId, name, email, phone]
+      properties:
+        clientId:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        phone:
+          type: string
+        memo:
+          type: string
+          nullable: true
+
+    DashboardData:
+      type: object
+      required: [totalBookings, totalPayments, totalClients, totalConsultants, totalRevenue, bookingsByStatus]
+      properties:
+        totalBookings:
+          type: integer
+        totalPayments:
+          type: integer
+        totalClients:
+          type: integer
+        totalConsultants:
+          type: integer
+        totalRevenue:
+          type: integer
+        bookingsByStatus:
+          type: object
+          required: [pending, confirmed, completed, cancelled]
+          properties:
+            pending:
+              type: integer
+            confirmed:
+              type: integer
+            completed:
+              type: integer
+            cancelled:
+              type: integer
 
     CreateBookingRequest:
       type: object

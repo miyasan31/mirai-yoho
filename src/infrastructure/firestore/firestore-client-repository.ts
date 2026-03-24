@@ -40,6 +40,21 @@ export class FirestoreClientRepository implements IClientRepository {
     return toDomain(doc.data() as ClientDoc);
   }
 
+  async findByEmail(email: string): Promise<Client | null> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("email", "==", email)
+      .limit(1)
+      .get();
+    if (snapshot.empty) return null;
+    return toDomain(snapshot.docs[0].data() as ClientDoc);
+  }
+
+  async findAll(): Promise<Client[]> {
+    const snapshot = await db.collection(COLLECTION).get();
+    return snapshot.docs.map((doc) => toDomain(doc.data() as ClientDoc));
+  }
+
   async save(client: Client): Promise<void> {
     await db
       .collection(COLLECTION)

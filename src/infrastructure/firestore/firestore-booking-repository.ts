@@ -1,3 +1,4 @@
+import type { Timestamp } from "firebase-admin/firestore";
 import type { Booking } from "@/domain/booking/booking";
 import { Booking as BookingEntity } from "@/domain/booking/booking";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
@@ -6,7 +7,6 @@ import { CancelDeadline } from "@/domain/booking/cancel-deadline";
 import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
 import { db } from "@/infrastructure/firestore/firestore-client";
-import type { Timestamp } from "firebase-admin/firestore";
 
 const COLLECTION = "bookings";
 
@@ -61,6 +61,27 @@ export class FirestoreBookingRepository implements IBookingRepository {
     const doc = await db.collection(COLLECTION).doc(bookingId).get();
     if (!doc.exists) return null;
     return toDomain(doc.data() as BookingDoc);
+  }
+
+  async findByConsultantId(consultantId: string): Promise<Booking[]> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("consultantId", "==", consultantId)
+      .get();
+    return snapshot.docs.map((doc) => toDomain(doc.data() as BookingDoc));
+  }
+
+  async findByStatus(status: string): Promise<Booking[]> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("status", "==", status)
+      .get();
+    return snapshot.docs.map((doc) => toDomain(doc.data() as BookingDoc));
+  }
+
+  async findAll(): Promise<Booking[]> {
+    const snapshot = await db.collection(COLLECTION).get();
+    return snapshot.docs.map((doc) => toDomain(doc.data() as BookingDoc));
   }
 
   async save(booking: Booking): Promise<void> {

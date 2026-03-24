@@ -1,7 +1,6 @@
-import type { Payment } from "@/domain/payment/payment";
-import type { CaptureMethod } from "@/domain/payment/payment";
-import { Payment as PaymentEntity } from "@/domain/payment/payment";
 import { Money } from "@/domain/payment/money";
+import type { CaptureMethod, Payment } from "@/domain/payment/payment";
+import { Payment as PaymentEntity } from "@/domain/payment/payment";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 import { PaymentStatus } from "@/domain/payment/payment-status";
 import { db } from "@/infrastructure/firestore/firestore-client";
@@ -56,6 +55,11 @@ export class FirestorePaymentRepository implements IPaymentRepository {
       .get();
     if (snapshot.empty) return null;
     return toDomain(snapshot.docs[0].data() as PaymentDoc);
+  }
+
+  async findAll(): Promise<Payment[]> {
+    const snapshot = await db.collection(COLLECTION).get();
+    return snapshot.docs.map((doc) => toDomain(doc.data() as PaymentDoc));
   }
 
   async save(payment: Payment): Promise<void> {

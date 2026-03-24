@@ -56,13 +56,13 @@
 
 | | タスク | ツール |
 |---|---|---|
-| `[ ]` | Firebase Auth カスタムクレーム設定（`super_admin` / `operator` / `consultant`） | |
-| `[ ]` | 相談員向け 4 画面（ログイン・予約一覧・メモ入力・プロフィール編集） | `Claude Code` |
-| `[ ]` | 管理者 CRM 9 画面（ダッシュボード〜権限管理） | `Claude Code` |
-| `[ ]` | `POST /api/bookings/[id]/capture` — 手動本決済 API | `Claude Code` |
-| `[ ]` | `POST /api/batch/capture` — Cloud Scheduler 深夜 0 時バッチ + OIDC 認証 | `Claude Code` |
-| `[ ]` | Firestore Security Rules 更新（`consultant` / `admin` ロール対応） | |
-| `[ ]` | Vitest — Component テスト（予約フォーム・カレンダー等） | `Claude Code` |
+| `[x]` | Firebase Auth カスタムクレーム設定（`super_admin` / `operator` / `consultant`） | |
+| `[x]` | 相談員向け 4 画面（ログイン・予約一覧・メモ入力・プロフィール編集） | `Claude Code` |
+| `[x]` | 管理者 CRM 9 画面（ダッシュボード〜権限管理） | `Claude Code` |
+| `[x]` | `POST /api/bookings/[id]/capture` — 手動本決済 API | `Claude Code` |
+| `[x]` | `POST /api/batch/capture` — Cloud Scheduler 深夜 0 時バッチ + OIDC 認証 | `Claude Code` |
+| `[x]` | Firestore Security Rules 更新（`consultant` / `admin` ロール対応） | |
+| `[x]` | Vitest — Component テスト（予約フォーム・カレンダー等） | `Claude Code` |
 
 ---
 

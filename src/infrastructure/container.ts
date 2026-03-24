@@ -1,6 +1,7 @@
-import { CreateBookingUseCase } from "@/application/booking/create-booking-use-case";
+import { BatchCaptureUseCase } from "@/application/booking/batch-capture-use-case";
 import { CancelBookingUseCase } from "@/application/booking/cancel-booking-use-case";
 import { CapturePaymentUseCase } from "@/application/booking/capture-payment-use-case";
+import { CreateBookingUseCase } from "@/application/booking/create-booking-use-case";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
 import { FirestoreClientRepository } from "@/infrastructure/firestore/firestore-client-repository";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
@@ -50,6 +51,25 @@ export function createCapturePaymentUseCase() {
   return new CapturePaymentUseCase(
     new FirestoreBookingRepository(),
     new FirestorePaymentRepository(),
+    new FirestoreClientRepository(),
+    new StripeService(),
+    new ResendEmailService(),
+  );
+}
+
+export function createClientRepository() {
+  return new FirestoreClientRepository();
+}
+
+export function createPaymentRepository() {
+  return new FirestorePaymentRepository();
+}
+
+export function createBatchCaptureUseCase() {
+  return new BatchCaptureUseCase(
+    new FirestoreBookingRepository(),
+    new FirestorePaymentRepository(),
+    new FirestoreClientRepository(),
     new StripeService(),
     new ResendEmailService(),
   );

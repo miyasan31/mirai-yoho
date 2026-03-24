@@ -15,5 +15,5 @@ function initializeFirebaseAdmin() {
   });
 }
 
-const app = initializeFirebaseAdmin();
+export const app = initializeFirebaseAdmin();
 export const db = getFirestore(app);
