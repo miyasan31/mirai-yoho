@@ -1,0 +1,142 @@
+"use client";
+
+import { useRouter, useSearchParams } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import * as v from "valibot";
+import { useCreateBooking } from "@/generated/api/booking/booking";
+import { css } from "styled-system/css";
+import { Button } from "@/components/ui/button";
+import * as Field from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Text } from "@/components/ui/text";
+import { Textarea } from "@/components/ui/textarea";
+
+const bookingSchema = v.object({
+  clientName: v.pipe(v.string(), v.minLength(1, "お名前を入力してください")),
+  clientEmail: v.pipe(
+    v.string(),
+    v.email("メールアドレスの形式が正しくありません"),
+  ),
+  clientPhone: v.pipe(v.string(), v.minLength(1, "電話番号を入力してください")),
+  consultantContent: v.optional(v.string()),
+});
+
+type BookingFormValues = v.InferOutput<typeof bookingSchema>;
+
+export default function BookingPage() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const slotId = searchParams.get("slotId");
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<BookingFormValues>({
+    resolver: valibotResolver(bookingSchema),
+  });
+
+  const createBooking = useCreateBooking();
+
+  if (!slotId) {
+    return (
+      <div className={css({ p: "8" })}>
+        <Text color="fg.error">枠が選択されていません</Text>
+      </div>
+    );
+  }
+
+  const onSubmit = async (values: BookingFormValues) => {
+    const result = await createBooking.mutateAsync({
+      data: {
+        slotId,
+        clientName: values.clientName,
+        clientEmail: values.clientEmail,
+        clientPhone: values.clientPhone,
+        consultantContent: values.consultantContent,
+      },
+    });
+
+    const responseData = result.data;
+    if ("bookingId" in responseData) {
+      router.push(
+        `/booking/payment?bookingId=${responseData.bookingId}&clientSecret=${responseData.clientSecret}`,
+      );
+    }
+  };
+
+  return (
+    <div className={css({ maxW: "lg", mx: "auto", p: "8" })}>
+      <Text
+        as="h1"
+        className={css({ fontSize: "3xl", fontWeight: "bold", mb: "8" })}
+      >
+        予約情報入力
+      </Text>
+
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className={css({ display: "flex", flexDirection: "column", gap: "6" })}
+      >
+        <Field.Root invalid={!!errors.clientName}>
+          <Field.Label>
+            お名前
+            <Field.RequiredIndicator />
+          </Field.Label>
+          <Input {...register("clientName")} placeholder="山田 太郎" />
+          {errors.clientName && (
+            <Field.ErrorText>{errors.clientName.message}</Field.ErrorText>
+          )}
+        </Field.Root>
+
+        <Field.Root invalid={!!errors.clientEmail}>
+          <Field.Label>
+            メールアドレス
+            <Field.RequiredIndicator />
+          </Field.Label>
+          <Input
+            {...register("clientEmail")}
+            type="email"
+            placeholder="example@email.com"
+          />
+          {errors.clientEmail && (
+            <Field.ErrorText>{errors.clientEmail.message}</Field.ErrorText>
+          )}
+        </Field.Root>
+
+        <Field.Root invalid={!!errors.clientPhone}>
+          <Field.Label>
+            電話番号
+            <Field.RequiredIndicator />
+          </Field.Label>
+          <Input
+            {...register("clientPhone")}
+            type="tel"
+            placeholder="090-1234-5678"
+          />
+          {errors.clientPhone && (
+            <Field.ErrorText>{errors.clientPhone.message}</Field.ErrorText>
+          )}
+        </Field.Root>
+
+        <Field.Root>
+          <Field.Label>ご相談内容（任意）</Field.Label>
+          <Textarea
+            {...register("consultantContent")}
+            placeholder="ご相談内容をお書きください"
+            rows={4}
+          />
+        </Field.Root>
+
+        <Button
+          type="submit"
+          loading={createBooking.isPending}
+          loadingText="予約を作成中..."
+        >
+          お支払いへ進む
+        </Button>
+      </form>
+    </div>
+  );
+}

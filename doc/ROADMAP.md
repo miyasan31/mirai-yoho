@@ -37,16 +37,16 @@
 
 | | タスク | ツール |
 |---|---|---|
-| `[ ]` | Firestore Security Rules（`clients` / `bookings` / `slots` / `payments`） | |
-| `[ ]` | `POST /api/bookings` — `CreateBookingUseCase` を API Route に繋ぐ | `Claude Code` |
-| `[ ]` | `GET /api/consultants` — 相談員一覧エンドポイント | `Claude Code` |
-| `[ ]` | `GET /api/slots` — 空き枠一覧エンドポイント | `Claude Code` |
-| `[ ]` | クライアント向け 5 画面 UI 実装（相談員一覧 → 予約完了） | `Claude Code` |
-| `[ ]` | Stripe Payment Element の組み込み（`/booking/payment`） | |
-| `[ ]` | Stripe Webhook（`/api/webhooks/stripe`）署名検証・ステータス更新 | `Claude Code` |
-| `[ ]` | `POST /api/bookings/[id]/cancel` — `CancelBookingUseCase` | `Claude Code` |
-| `[ ]` | キャンセルリンクのトークン生成・検証（確認メール内リンク） | |
-| `[ ]` | Vitest — ドメイン層ユニットテスト（`CancelDeadline` / `Booking` / `Slot` / `Money`） | `Claude Code` |
+| `[x]` | Firestore Security Rules（`clients` / `bookings` / `slots` / `payments`） | |
+| `[x]` | `POST /api/bookings` — `CreateBookingUseCase` を API Route に繋ぐ | `Claude Code` |
+| `[x]` | `GET /api/consultants` — 相談員一覧エンドポイント | `Claude Code` |
+| `[x]` | `GET /api/slots` — 空き枠一覧エンドポイント | `Claude Code` |
+| `[x]` | クライアント向け 5 画面 UI 実装（相談員一覧 → 予約完了） | `Claude Code` |
+| `[x]` | Stripe Payment Element の組み込み（`/booking/payment`） | |
+| `[x]` | Stripe Webhook（`/api/webhooks/stripe`）署名検証・ステータス更新 | `Claude Code` |
+| `[x]` | `POST /api/bookings/[id]/cancel` — `CancelBookingUseCase` | `Claude Code` |
+| `[x]` | キャンセルリンクのトークン生成・検証（確認メール内リンク） | |
+| `[x]` | Vitest — ドメイン層ユニットテスト（`CancelDeadline` / `Booking` / `Slot` / `Money`） | `Claude Code` |
 
 ---
 

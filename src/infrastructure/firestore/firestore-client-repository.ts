@@ -1,12 +1,49 @@
 import type { Client } from "@/domain/client/client";
+import { Client as ClientEntity } from "@/domain/client/client";
 import type { IClientRepository } from "@/domain/client/client-repository";
+import { db } from "@/infrastructure/firestore/firestore-client";
+
+const COLLECTION = "clients";
+
+interface ClientDoc {
+  clientId: string;
+  name: string;
+  email: string;
+  phone: string;
+  memo?: string;
+}
+
+function toDomain(doc: ClientDoc): Client {
+  return ClientEntity.reconstruct({
+    clientId: doc.clientId,
+    name: doc.name,
+    email: doc.email,
+    phone: doc.phone,
+    memo: doc.memo,
+  });
+}
+
+function toFirestore(client: Client): ClientDoc {
+  return {
+    clientId: client.getClientId(),
+    name: client.getName(),
+    email: client.getEmail(),
+    phone: client.getPhone(),
+    memo: client.getMemo(),
+  };
+}
 
 export class FirestoreClientRepository implements IClientRepository {
-  async findById(_clientId: string): Promise<Client | null> {
-    throw new Error("Not implemented");
+  async findById(clientId: string): Promise<Client | null> {
+    const doc = await db.collection(COLLECTION).doc(clientId).get();
+    if (!doc.exists) return null;
+    return toDomain(doc.data() as ClientDoc);
   }
 
-  async save(_client: Client): Promise<void> {
-    throw new Error("Not implemented");
+  async save(client: Client): Promise<void> {
+    await db
+      .collection(COLLECTION)
+      .doc(client.getClientId())
+      .set(toFirestore(client));
   }
 }

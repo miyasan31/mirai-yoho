@@ -1,0 +1,20 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Phase 2: 全アクセスはサーバーサイド（Admin SDK）経由のみ
+    // Admin SDK はセキュリティルールをバイパスする
+    // Phase 3 で Firebase Auth 導入時にロールベースのルールに更新
+    match /clients/{clientId} {
+      allow read, write: if false;
+    }
+    match /bookings/{bookingId} {
+      allow read, write: if false;
+    }
+    match /slots/{slotId} {
+      allow read, write: if false;
+    }
+    match /payments/{paymentId} {
+      allow read, write: if false;
+    }
+  }
+}
