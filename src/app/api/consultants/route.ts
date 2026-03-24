@@ -15,7 +15,7 @@ export async function GET() {
         isActive: c.getIsActive(),
       })),
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { code: "INTERNAL_ERROR", message: "Internal server error" },
       { status: 500 },

@@ -1,8 +1,8 @@
-import { AggregateRoot } from "@/domain/shared/aggregate-root";
-import { DomainError } from "@/domain/shared/domain-error";
 import type { Money } from "@/domain/payment/money";
 import { PaymentCapturedEvent } from "@/domain/payment/payment-events";
 import { PaymentStatus } from "@/domain/payment/payment-status";
+import { AggregateRoot } from "@/domain/shared/aggregate-root";
+import { DomainError } from "@/domain/shared/domain-error";
 
 export type CaptureMethod = "batch" | "manual";
 

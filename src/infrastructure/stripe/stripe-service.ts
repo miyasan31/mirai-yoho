@@ -1,5 +1,5 @@
-import type { IStripeService } from "@/application/shared/stripe-service";
 import Stripe from "stripe";
+import type { IStripeService } from "@/application/shared/stripe-service";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
 

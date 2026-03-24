@@ -1,5 +1,5 @@
-import type { IEmailService } from "@/application/shared/email-service";
 import { Resend } from "resend";
+import type { IEmailService } from "@/application/shared/email-service";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 const fromEmail = process.env.RESEND_FROM_EMAIL as string;

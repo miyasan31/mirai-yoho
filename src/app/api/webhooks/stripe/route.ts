@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { createBookingRepository } from "@/infrastructure/container";
 import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore-payment-repository";
-import { PaymentStatus } from "@/domain/payment/payment-status";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET as string;

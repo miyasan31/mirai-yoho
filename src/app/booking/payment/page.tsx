@@ -1,13 +1,13 @@
 "use client";
 
-import { useRouter, useSearchParams } from "next/navigation";
-import { loadStripe } from "@stripe/stripe-js";
 import {
   Elements,
   PaymentElement,
   useElements,
   useStripe,
 } from "@stripe/react-stripe-js";
+import { loadStripe } from "@stripe/stripe-js";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "@/components/ui/button";
@@ -20,7 +20,7 @@ const stripePromise = loadStripe(
 function CheckoutForm({ bookingId }: { bookingId: string }) {
   const stripe = useStripe();
   const elements = useElements();
-  const router = useRouter();
+  const _router = useRouter();
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
 

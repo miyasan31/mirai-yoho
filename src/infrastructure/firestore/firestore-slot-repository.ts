@@ -1,9 +1,9 @@
+import type { Timestamp } from "firebase-admin/firestore";
 import type { Slot } from "@/domain/slot/slot";
 import { Slot as SlotEntity } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import { TimeRange } from "@/domain/slot/time-range";
 import { db } from "@/infrastructure/firestore/firestore-client";
-import type { Timestamp } from "firebase-admin/firestore";
 
 const COLLECTION = "slots";
 

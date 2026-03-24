@@ -1,6 +1,6 @@
+import type { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 import { DomainError } from "@/domain/shared/domain-error";
-import type { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 
 interface ConsultantCreateProps {
   consultantId: string;

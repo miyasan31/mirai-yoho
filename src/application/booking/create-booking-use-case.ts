@@ -1,18 +1,18 @@
+import type { IEmailService } from "@/application/shared/email-service";
+import type { IStripeService } from "@/application/shared/stripe-service";
+import type { IUnitOfWork } from "@/application/shared/unit-of-work";
+import type { IZoomService } from "@/application/shared/zoom-service";
 import { Booking } from "@/domain/booking/booking";
 import type { BookingConfirmedEvent } from "@/domain/booking/booking-events";
+import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
-import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import { Client } from "@/domain/client/client";
 import type { IClientRepository } from "@/domain/client/client-repository";
 import { Money } from "@/domain/payment/money";
 import { Payment } from "@/domain/payment/payment";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
-import type { IEmailService } from "@/application/shared/email-service";
-import type { IStripeService } from "@/application/shared/stripe-service";
-import type { IUnitOfWork } from "@/application/shared/unit-of-work";
-import type { IZoomService } from "@/application/shared/zoom-service";
 
 interface CreateBookingInput {
   slotId: string;

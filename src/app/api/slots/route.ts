@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
         isAvailable: !s.getIsReserved(),
       })),
     });
-  } catch (error) {
+  } catch (_error) {
     return NextResponse.json(
       { code: "INTERNAL_ERROR", message: "Internal server error" },
       { status: 500 },

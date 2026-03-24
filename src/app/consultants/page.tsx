@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useGetConsultants } from "@/generated/api/consultant/consultant";
 import { css } from "styled-system/css";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/text";
+import { useGetConsultants } from "@/generated/api/consultant/consultant";
 
 export default function ConsultantsPage() {
   const { data, isLoading, error } = useGetConsultants();

@@ -1,19 +1,19 @@
+import { defineConfig } from "@pandacss/dev";
+import { animationStyles } from "@/theme/animation-styles";
+import { blue } from "@/theme/colors/blue";
 import { green } from "@/theme/colors/green";
 import { red } from "@/theme/colors/red";
 import { slate } from "@/theme/colors/slate";
-import { blue } from "@/theme/colors/blue";
-import { animationStyles } from "@/theme/animation-styles";
-import { zIndex } from "@/theme/tokens/z-index";
-import { shadows } from "@/theme/tokens/shadows";
-import { durations } from "@/theme/tokens/durations";
-import { colors } from "@/theme/tokens/colors";
-import { textStyles } from "@/theme/text-styles";
-import { layerStyles } from "@/theme/layer-styles";
-import { keyframes } from "@/theme/keyframes";
-import { globalCss } from "@/theme/global-css";
 import { conditions } from "@/theme/conditions";
-import { slotRecipes, recipes } from "@/theme/recipes";
-import { defineConfig } from "@pandacss/dev";
+import { globalCss } from "@/theme/global-css";
+import { keyframes } from "@/theme/keyframes";
+import { layerStyles } from "@/theme/layer-styles";
+import { recipes, slotRecipes } from "@/theme/recipes";
+import { textStyles } from "@/theme/text-styles";
+import { colors } from "@/theme/tokens/colors";
+import { durations } from "@/theme/tokens/durations";
+import { shadows } from "@/theme/tokens/shadows";
+import { zIndex } from "@/theme/tokens/z-index";
 
 export default defineConfig({
   preflight: true,

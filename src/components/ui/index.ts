@@ -19,9 +19,9 @@ export * as Select from "./select";
 export {
   Skeleton,
   SkeletonCircle,
-  SkeletonText,
   type SkeletonCircleProps,
   type SkeletonProps,
+  SkeletonText,
   type SkeletonTextProps,
 } from "./skeleton";
 export { Span, type SpanProps } from "./span";

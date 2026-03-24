@@ -1,5 +1,3 @@
-import { AggregateRoot } from "@/domain/shared/aggregate-root";
-import { DomainError } from "@/domain/shared/domain-error";
 import {
   BookingCancelledEvent,
   BookingConfirmedEvent,
@@ -8,6 +6,8 @@ import { BookingStatus } from "@/domain/booking/booking-status";
 import { CancelDeadline } from "@/domain/booking/cancel-deadline";
 import type { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import type { ZoomUrl } from "@/domain/booking/zoom-url";
+import { AggregateRoot } from "@/domain/shared/aggregate-root";
+import { DomainError } from "@/domain/shared/domain-error";
 
 interface BookingCreateProps {
   bookingId: string;
