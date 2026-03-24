@@ -2,61 +2,44 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
+import {
+  useConsultantBookings,
+  useUpdateConsultantMemo,
+} from "@/hooks/use-consultant-bookings";
 
 export default function ConsultantMemoEditPage() {
-  const { token } = useAuth();
   const params = useParams();
   const router = useRouter();
   const bookingId = params.id as string;
   const [memo, setMemo] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const { data, isLoading } = useConsultantBookings();
+  const updateMemo = useUpdateConsultantMemo();
+
   useEffect(() => {
-    if (!token) return;
-    fetch("/api/consultant/bookings", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        const booking = (data.bookings ?? []).find(
-          (b: { bookingId: string }) => b.bookingId === bookingId,
-        );
-        if (booking) {
-          setMemo(booking.consultantMemo ?? "");
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [token, bookingId]);
+    const bookings = data?.data?.bookings ?? [];
+    const booking = bookings.find((b) => b.bookingId === bookingId);
+    if (booking) {
+      setMemo(booking.consultantMemo ?? "");
+    }
+  }, [data, bookingId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
     setError("");
     try {
-      const res = await fetch(`/api/consultant/bookings/${bookingId}/memo`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ memo }),
+      await updateMemo.mutateAsync({
+        bookingId,
+        data: { memo },
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message ?? "Failed to save");
-      }
       router.push("/consultant/bookings");
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存に失敗しました");
-    } finally {
-      setSaving(false);
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (isLoading) return <div>Loading...</div>;
 
   return (
     <div style={{ maxWidth: 600 }}>
@@ -87,7 +70,7 @@ export default function ConsultantMemoEditPage() {
         <div style={{ display: "flex", gap: 8 }}>
           <button
             type="submit"
-            disabled={saving}
+            disabled={updateMemo.isPending}
             style={{
               padding: "8px 16px",
               background: "#2563eb",
@@ -97,7 +80,7 @@ export default function ConsultantMemoEditPage() {
               cursor: "pointer",
             }}
           >
-            {saving ? "保存中..." : "保存"}
+            {updateMemo.isPending ? "保存中..." : "保存"}
           </button>
           <button
             type="button"

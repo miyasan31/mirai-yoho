@@ -5,6 +5,8 @@ import { useState } from "react";
 import { css } from "styled-system/css";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
+import type { CancelBookingBody } from "@/generated/schemas";
+import { useCancelBooking } from "@/hooks/use-booking";
 
 export default function CancelPage() {
   const searchParams = useSearchParams();
@@ -13,6 +15,8 @@ export default function CancelPage() {
     "idle" | "loading" | "success" | "error"
   >("idle");
   const [errorMessage, setErrorMessage] = useState<string>();
+
+  const cancelBooking = useCancelBooking();
 
   if (!token) {
     return (
@@ -29,17 +33,11 @@ export default function CancelPage() {
   const handleCancel = async () => {
     setStatus("loading");
     try {
-      const response = await fetch(`/api/bookings/${bookingId}/cancel`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ cancelledBy: "client", token }),
+      await cancelBooking.mutateAsync({
+        bookingId,
+        // token は OpenAPI スキーマに未定義だが API 側で必要
+        data: { cancelledBy: "client", token } as CancelBookingBody,
       });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message ?? "キャンセルに失敗しました");
-      }
-
       setStatus("success");
     } catch (e) {
       setErrorMessage(

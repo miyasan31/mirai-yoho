@@ -1,60 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
-
-interface BookingItem {
-  bookingId: string;
-  clientId: string;
-  consultantId: string;
-  startDatetime: string;
-  status: string;
-  stripePaymentIntentId: string | null;
-}
+import { useAdminBookings } from "@/hooks/use-admin-bookings";
+import { useCapturePayment } from "@/hooks/use-booking";
 
 export default function AdminBookingsPage() {
-  const { token } = useAuth();
-  const [bookings, setBookings] = useState<BookingItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [capturing, setCapturing] = useState<string | null>(null);
+  const { data, isLoading } = useAdminBookings();
+  const capturePayment = useCapturePayment();
 
-  const fetchBookings = useCallback(() => {
-    if (!token) return;
-    fetch("/api/admin/bookings", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => setBookings(data.bookings ?? []))
-      .finally(() => setLoading(false));
-  }, [token]);
-
-  useEffect(() => {
-    fetchBookings();
-  }, [fetchBookings]);
+  const bookings = data?.data?.bookings ?? [];
 
   const handleCapture = async (bookingId: string) => {
-    setCapturing(bookingId);
     try {
-      const res = await fetch(`/api/bookings/${bookingId}/capture`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ method: "manual" }),
+      await capturePayment.mutateAsync({
+        bookingId,
+        data: { method: "manual" },
       });
-      if (!res.ok) {
-        const data = await res.json();
-        alert(data.message ?? "キャプチャに失敗しました");
-      } else {
-        fetchBookings();
-      }
-    } finally {
-      setCapturing(null);
+    } catch (err) {
+      const message =
+        err && typeof err === "object" && "message" in err
+          ? (err as { message: string }).message
+          : "キャプチャに失敗しました";
+      alert(message);
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (isLoading) return <div>Loading...</div>;
 
   return (
     <div>
@@ -131,7 +101,10 @@ export default function AdminBookingsPage() {
                   <button
                     type="button"
                     onClick={() => handleCapture(b.bookingId)}
-                    disabled={capturing === b.bookingId}
+                    disabled={
+                      capturePayment.isPending &&
+                      capturePayment.variables?.bookingId === b.bookingId
+                    }
                     style={{
                       padding: "4px 8px",
                       background: "#16a34a",
@@ -141,7 +114,10 @@ export default function AdminBookingsPage() {
                       cursor: "pointer",
                     }}
                   >
-                    {capturing === b.bookingId ? "処理中..." : "本決済"}
+                    {capturePayment.isPending &&
+                    capturePayment.variables?.bookingId === b.bookingId
+                      ? "処理中..."
+                      : "本決済"}
                   </button>
                 )}
               </td>

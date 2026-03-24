@@ -1,32 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
-
-interface ClientItem {
-  clientId: string;
-  name: string;
-  email: string;
-  phone: string;
-  memo: string | null;
-}
+import { useAdminClients } from "@/hooks/use-admin-clients";
 
 export default function AdminClientsPage() {
-  const { token } = useAuth();
-  const [clients, setClients] = useState<ClientItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading } = useAdminClients();
 
-  useEffect(() => {
-    if (!token) return;
-    fetch("/api/admin/clients", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => setClients(data.clients ?? []))
-      .finally(() => setLoading(false));
-  }, [token]);
+  const clients = data?.data?.clients ?? [];
 
-  if (loading) return <div>Loading...</div>;
+  if (isLoading) return <div>Loading...</div>;
 
   return (
     <div>

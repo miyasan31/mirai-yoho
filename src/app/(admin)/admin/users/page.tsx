@@ -1,14 +1,18 @@
 "use client";
 
 import { useState } from "react";
+import type { UpdateUserRoleBodyRole } from "@/generated/schemas";
+import { useUpdateUserRole } from "@/hooks/use-admin-users";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function AdminUsersPage() {
-  const { token, role } = useAuth();
+  const { role } = useAuth();
   const [uid, setUid] = useState("");
-  const [selectedRole, setSelectedRole] = useState("consultant");
+  const [selectedRole, setSelectedRole] =
+    useState<UpdateUserRoleBodyRole>("consultant");
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const updateUserRole = useUpdateUserRole();
 
   if (role !== "super_admin") {
     return <div>権限がありません</div>;
@@ -19,18 +23,10 @@ export default function AdminUsersPage() {
     setMessage("");
     setError("");
     try {
-      const res = await fetch(`/api/admin/users/${uid}/role`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ role: selectedRole }),
+      await updateUserRole.mutateAsync({
+        uid,
+        data: { role: selectedRole },
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message ?? "Failed to update role");
-      }
       setMessage(`ユーザー ${uid} のロールを ${selectedRole} に設定しました`);
       setUid("");
     } catch (err) {
@@ -69,7 +65,9 @@ export default function AdminUsersPage() {
           <select
             id="role"
             value={selectedRole}
-            onChange={(e) => setSelectedRole(e.target.value)}
+            onChange={(e) =>
+              setSelectedRole(e.target.value as UpdateUserRoleBodyRole)
+            }
             style={{
               display: "block",
               width: "100%",

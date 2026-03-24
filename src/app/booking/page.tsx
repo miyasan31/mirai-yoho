@@ -10,7 +10,7 @@ import * as Field from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
-import { useCreateBooking } from "@/generated/api/booking/booking";
+import { useCreateBooking } from "@/hooks/use-booking";
 
 const bookingSchema = v.object({
   clientName: v.pipe(v.string(), v.minLength(1, "お名前を入力してください")),

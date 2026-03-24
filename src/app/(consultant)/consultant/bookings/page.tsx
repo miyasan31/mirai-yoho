@@ -1,35 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
-
-interface BookingItem {
-  bookingId: string;
-  clientId: string;
-  startDatetime: string;
-  status: string;
-  zoomUrl: string | null;
-  consultantMemo: string;
-  consultationContent: string | null;
-}
+import { useConsultantBookings } from "@/hooks/use-consultant-bookings";
 
 export default function ConsultantBookingsPage() {
-  const { token } = useAuth();
-  const [bookings, setBookings] = useState<BookingItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading } = useConsultantBookings();
+  const bookings = data?.data?.bookings ?? [];
 
-  useEffect(() => {
-    if (!token) return;
-    fetch("/api/consultant/bookings", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => setBookings(data.bookings ?? []))
-      .finally(() => setLoading(false));
-  }, [token]);
-
-  if (loading) return <div>Loading...</div>;
+  if (isLoading) return <div>Loading...</div>;
 
   return (
     <div>

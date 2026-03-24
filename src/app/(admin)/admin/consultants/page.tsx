@@ -1,33 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
-
-interface ConsultantItem {
-  consultantId: string;
-  displayName: string;
-  bio: string;
-  specialties: string[];
-  isActive: boolean;
-}
+import { useAdminConsultants } from "@/hooks/use-admin-consultants";
 
 export default function AdminConsultantsPage() {
-  const { token } = useAuth();
-  const [consultants, setConsultants] = useState<ConsultantItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading } = useAdminConsultants();
 
-  useEffect(() => {
-    if (!token) return;
-    fetch("/api/admin/consultants", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => setConsultants(data.consultants ?? []))
-      .finally(() => setLoading(false));
-  }, [token]);
+  const consultants = data?.data?.consultants ?? [];
 
-  if (loading) return <div>Loading...</div>;
+  if (isLoading) return <div>Loading...</div>;
 
   return (
     <div>

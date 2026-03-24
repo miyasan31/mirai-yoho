@@ -1,43 +1,52 @@
 // @vitest-environment jsdom
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/hooks/use-auth", () => ({
-  useAuth: () => ({ token: "test-token", role: "consultant" }),
+const mockUseConsultantBookings = vi.fn();
+
+vi.mock("@/hooks/use-consultant-bookings", () => ({
+  useConsultantBookings: () => mockUseConsultantBookings(),
 }));
 
 vi.mock("next/link", () => ({
-  default: ({
-    href,
-    children,
-  }: {
-    href: string;
-    children: React.ReactNode;
-  }) => <a href={href}>{children}</a>,
+  default: ({ href, children }: { href: string; children: ReactNode }) => (
+    <a href={href}>{children}</a>
+  ),
 }));
 
 import ConsultantBookingsPage from "../page";
 
-describe("ConsultantBookingsPage", () => {
-  beforeEach(() => {
-    vi.stubGlobal("fetch", vi.fn());
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
   });
+  return ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+}
 
+describe("ConsultantBookingsPage", () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
   });
 
   it("shows loading state initially", () => {
-    vi.mocked(fetch).mockReturnValue(new Promise(() => {}));
-    render(<ConsultantBookingsPage />);
+    mockUseConsultantBookings.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+      error: null,
+    });
+    render(<ConsultantBookingsPage />, { wrapper: createWrapper() });
     expect(screen.getByText("Loading...")).toBeDefined();
   });
 
   it("renders booking list from API response", async () => {
-    vi.mocked(fetch).mockResolvedValue({
-      json: () =>
-        Promise.resolve({
+    mockUseConsultantBookings.mockReturnValue({
+      data: {
+        data: {
           bookings: [
             {
               bookingId: "b1",
@@ -49,10 +58,13 @@ describe("ConsultantBookingsPage", () => {
               consultationContent: null,
             },
           ],
-        }),
-    } as Response);
+        },
+      },
+      isLoading: false,
+      error: null,
+    });
 
-    render(<ConsultantBookingsPage />);
+    render(<ConsultantBookingsPage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(screen.getByText("confirmed")).toBeDefined();
@@ -63,28 +75,16 @@ describe("ConsultantBookingsPage", () => {
   });
 
   it("shows empty message when no bookings", async () => {
-    vi.mocked(fetch).mockResolvedValue({
-      json: () => Promise.resolve({ bookings: [] }),
-    } as Response);
+    mockUseConsultantBookings.mockReturnValue({
+      data: { data: { bookings: [] } },
+      isLoading: false,
+      error: null,
+    });
 
-    render(<ConsultantBookingsPage />);
+    render(<ConsultantBookingsPage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect(screen.getByText("予約はありません")).toBeDefined();
-    });
-  });
-
-  it("sends Authorization header with token", async () => {
-    vi.mocked(fetch).mockResolvedValue({
-      json: () => Promise.resolve({ bookings: [] }),
-    } as Response);
-
-    render(<ConsultantBookingsPage />);
-
-    await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith("/api/consultant/bookings", {
-        headers: { Authorization: "Bearer test-token" },
-      });
     });
   });
 });

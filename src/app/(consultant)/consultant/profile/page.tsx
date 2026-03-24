@@ -1,66 +1,51 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
+import {
+  useConsultantProfile,
+  useUpdateConsultantProfile,
+} from "@/hooks/use-consultant-profile";
 
 export default function ConsultantProfilePage() {
-  const { token } = useAuth();
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [specialties, setSpecialties] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
+  const { data, isLoading } = useConsultantProfile();
+  const updateProfile = useUpdateConsultantProfile();
+
   useEffect(() => {
-    if (!token) return;
-    fetch("/api/consultant/profile", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        setDisplayName(data.displayName ?? "");
-        setBio(data.bio ?? "");
-        setSpecialties((data.specialties ?? []).join(", "));
-      })
-      .finally(() => setLoading(false));
-  }, [token]);
+    if (data?.data) {
+      setDisplayName(data.data.displayName ?? "");
+      setBio(data.data.bio ?? "");
+      setSpecialties((data.data.specialties ?? []).join(", "));
+    }
+  }, [data]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
     setError("");
     setSuccess(false);
     try {
-      const res = await fetch("/api/consultant/profile", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      await updateProfile.mutateAsync({
+        data: {
           displayName,
           bio,
           specialties: specialties
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean),
-        }),
+        },
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message ?? "Failed to save");
-      }
       setSuccess(true);
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存に失敗しました");
-    } finally {
-      setSaving(false);
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (isLoading) return <div>Loading...</div>;
 
   return (
     <div style={{ maxWidth: 600 }}>
@@ -124,7 +109,7 @@ export default function ConsultantProfilePage() {
         {success && <p style={{ color: "green" }}>保存しました</p>}
         <button
           type="submit"
-          disabled={saving}
+          disabled={updateProfile.isPending}
           style={{
             padding: "8px 16px",
             background: "#2563eb",
@@ -135,7 +120,7 @@ export default function ConsultantProfilePage() {
             alignSelf: "flex-start",
           }}
         >
-          {saving ? "保存中..." : "保存"}
+          {updateProfile.isPending ? "保存中..." : "保存"}
         </button>
       </form>
     </div>

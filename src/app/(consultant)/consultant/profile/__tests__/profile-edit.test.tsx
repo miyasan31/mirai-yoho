@@ -1,37 +1,54 @@
 // @vitest-environment jsdom
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@/hooks/use-auth", () => ({
-  useAuth: () => ({ token: "test-token", role: "consultant" }),
+const mockUseConsultantProfile = vi.fn();
+const mockMutateAsync = vi.fn();
+
+vi.mock("@/hooks/use-consultant-profile", () => ({
+  useConsultantProfile: () => mockUseConsultantProfile(),
+  useUpdateConsultantProfile: () => ({
+    mutateAsync: mockMutateAsync,
+    isPending: false,
+  }),
 }));
 
 import ConsultantProfilePage from "../page";
 
-describe("ConsultantProfilePage", () => {
-  beforeEach(() => {
-    vi.stubGlobal("fetch", vi.fn());
+function createWrapper() {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
   });
+  return ({ children }: { children: ReactNode }) => (
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+  );
+}
 
+describe("ConsultantProfilePage", () => {
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();
   });
 
   it("loads and displays profile data", async () => {
-    vi.mocked(fetch).mockResolvedValue({
-      json: () =>
-        Promise.resolve({
+    mockUseConsultantProfile.mockReturnValue({
+      data: {
+        data: {
           consultantId: "c1",
           displayName: "田中太郎",
           bio: "自己紹介テスト",
           specialties: ["キャリア", "転職"],
           isActive: true,
-        }),
-    } as Response);
+        },
+      },
+      isLoading: false,
+      error: null,
+    });
 
-    render(<ConsultantProfilePage />);
+    render(<ConsultantProfilePage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect((screen.getByLabelText("表示名") as HTMLInputElement).value).toBe(
@@ -48,24 +65,23 @@ describe("ConsultantProfilePage", () => {
   });
 
   it("submits profile updates", async () => {
-    vi.mocked(fetch)
-      .mockResolvedValueOnce({
-        json: () =>
-          Promise.resolve({
-            consultantId: "c1",
-            displayName: "田中太郎",
-            bio: "",
-            specialties: [],
-            isActive: true,
-          }),
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ success: true }),
-      } as Response);
+    mockUseConsultantProfile.mockReturnValue({
+      data: {
+        data: {
+          consultantId: "c1",
+          displayName: "田中太郎",
+          bio: "",
+          specialties: [],
+          isActive: true,
+        },
+      },
+      isLoading: false,
+      error: null,
+    });
+    mockMutateAsync.mockResolvedValue({});
 
     const user = userEvent.setup();
-    render(<ConsultantProfilePage />);
+    render(<ConsultantProfilePage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect((screen.getByLabelText("表示名") as HTMLInputElement).value).toBe(
@@ -78,38 +94,32 @@ describe("ConsultantProfilePage", () => {
     await user.click(screen.getByText("保存"));
 
     await waitFor(() => {
-      expect(fetch).toHaveBeenCalledWith("/api/consultant/profile", {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer test-token",
-        },
-        body: JSON.stringify({
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        data: {
           displayName: "田中次郎",
           bio: "",
           specialties: [],
-        }),
+        },
       });
     });
   });
 
   it("shows success message after saving", async () => {
-    vi.mocked(fetch)
-      .mockResolvedValueOnce({
-        json: () =>
-          Promise.resolve({
-            displayName: "テスト",
-            bio: "",
-            specialties: [],
-          }),
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        json: () => Promise.resolve({ success: true }),
-      } as Response);
+    mockUseConsultantProfile.mockReturnValue({
+      data: {
+        data: {
+          displayName: "テスト",
+          bio: "",
+          specialties: [],
+        },
+      },
+      isLoading: false,
+      error: null,
+    });
+    mockMutateAsync.mockResolvedValue({});
 
     const user = userEvent.setup();
-    render(<ConsultantProfilePage />);
+    render(<ConsultantProfilePage />, { wrapper: createWrapper() });
 
     await waitFor(() => {
       expect((screen.getByLabelText("表示名") as HTMLInputElement).value).toBe(

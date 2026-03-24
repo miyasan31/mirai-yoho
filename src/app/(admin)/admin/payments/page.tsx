@@ -1,35 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
-
-interface PaymentItem {
-  paymentId: string;
-  bookingId: string;
-  clientId: string;
-  amountJPY: number;
-  taxAmountJPY: number;
-  totalJPY: number;
-  status: string;
-  captureMethod: string | null;
-}
+import { useAdminPayments } from "@/hooks/use-admin-payments";
 
 export default function AdminPaymentsPage() {
-  const { token } = useAuth();
-  const [payments, setPayments] = useState<PaymentItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading } = useAdminPayments();
 
-  useEffect(() => {
-    if (!token) return;
-    fetch("/api/admin/payments", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => setPayments(data.payments ?? []))
-      .finally(() => setLoading(false));
-  }, [token]);
+  const payments = data?.data?.payments ?? [];
 
-  if (loading) return <div>Loading...</div>;
+  if (isLoading) return <div>Loading...</div>;
 
   return (
     <div>

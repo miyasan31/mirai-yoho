@@ -6,7 +6,7 @@ import { css } from "styled-system/css";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/text";
-import { useGetSlots } from "@/generated/api/slot/slot";
+import { useGetSlots } from "@/hooks/use-slots";
 
 function formatSlotDatetime(isoString: string): string {
   const date = new Date(isoString);

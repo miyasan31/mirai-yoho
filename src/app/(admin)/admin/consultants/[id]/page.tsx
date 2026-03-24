@@ -2,89 +2,69 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { useAuth } from "@/hooks/use-auth";
+import {
+  useAdminConsultants,
+  useDeleteAdminConsultant,
+  useUpdateAdminConsultant,
+} from "@/hooks/use-admin-consultants";
 
 export default function AdminConsultantDetailPage() {
-  const { token } = useAuth();
   const params = useParams();
   const router = useRouter();
   const consultantId = params.id as string;
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [specialties, setSpecialties] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
+  const { data, isLoading } = useAdminConsultants();
+  const updateConsultant = useUpdateAdminConsultant();
+  const deleteConsultant = useDeleteAdminConsultant();
+
   useEffect(() => {
-    if (!token) return;
-    fetch("/api/admin/consultants", {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((res) => res.json())
-      .then((data) => {
-        const c = (data.consultants ?? []).find(
-          (c: { consultantId: string }) => c.consultantId === consultantId,
-        );
-        if (c) {
-          setDisplayName(c.displayName);
-          setBio(c.bio);
-          setSpecialties(c.specialties.join(", "));
-        }
-      })
-      .finally(() => setLoading(false));
-  }, [token, consultantId]);
+    const consultants = data?.data?.consultants ?? [];
+    const c = consultants.find(
+      (c: { consultantId: string }) => c.consultantId === consultantId,
+    );
+    if (c) {
+      setDisplayName(c.displayName ?? "");
+      setBio(c.bio ?? "");
+      setSpecialties((c.specialties ?? []).join(", "));
+    }
+  }, [data, consultantId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSaving(true);
     setError("");
     try {
-      const res = await fetch(`/api/admin/consultants/${consultantId}`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
+      await updateConsultant.mutateAsync({
+        id: consultantId,
+        data: {
           displayName,
           bio,
           specialties: specialties
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean),
-        }),
+        },
       });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message ?? "Failed to save");
-      }
       router.push("/admin/consultants");
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存に失敗しました");
-    } finally {
-      setSaving(false);
     }
   };
 
   const handleDeactivate = async () => {
     if (!confirm("この相談員を無効にしますか？")) return;
     try {
-      const res = await fetch(`/api/admin/consultants/${consultantId}`, {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.message ?? "Failed to deactivate");
-      }
+      await deleteConsultant.mutateAsync({ id: consultantId });
       router.push("/admin/consultants");
     } catch (err) {
       setError(err instanceof Error ? err.message : "無効化に失敗しました");
     }
   };
 
-  if (loading) return <div>Loading...</div>;
+  if (isLoading) return <div>Loading...</div>;
 
   return (
     <div style={{ maxWidth: 600 }}>
@@ -148,7 +128,7 @@ export default function AdminConsultantDetailPage() {
         <div style={{ display: "flex", gap: 8 }}>
           <button
             type="submit"
-            disabled={saving}
+            disabled={updateConsultant.isPending}
             style={{
               padding: "8px 16px",
               background: "#2563eb",
@@ -158,7 +138,7 @@ export default function AdminConsultantDetailPage() {
               cursor: "pointer",
             }}
           >
-            {saving ? "保存中..." : "保存"}
+            {updateConsultant.isPending ? "保存中..." : "保存"}
           </button>
           <button
             type="button"
