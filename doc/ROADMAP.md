@@ -73,7 +73,7 @@
 | `[ ]` | Resend 独自ドメイン設定（SPF / DKIM / DMARC レコード追加・検証） | |
 | `[ ]` | GCP prod 環境構築（Cloud Run + Secret Manager） | |
 | `[ ]` | dev / prod 環境変数の分離確認 | |
-| `[ ]` | GitHub Actions CI パイプライン（Lint・Format・Unit・Component・Build） | `Claude Code` |
+| `[x]` | GitHub Actions CI パイプライン（Lint・Format・Unit・Component・Build） | `Claude Code` |
 | `[ ]` | Cloud Scheduler 有効化（prod 環境のみ） | |
 | `[ ]` | Stripe 本番モード切り替え（`sk_live_...`） | |
 | `[ ]` | インボイス登録番号を環境変数に設定 | |
