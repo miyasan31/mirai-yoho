@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "prepare": "pnpm build:panda",
+    "prepare": "husky && pnpm build:panda",
     "dev": "rm -rf .next && next dev",
     "build": "next build",
     "build:panda": "panda codegen",
@@ -36,6 +36,9 @@
   },
   "devDependencies": {
     "@biomejs/biome": "2.2.0",
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "@commitlint/types": "^20.5.0",
     "@pandacss/dev": "^1.9.1",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -43,8 +46,15 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.1",
     "babel-plugin-react-compiler": "1.0.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
     "orval": "^8.5.3",
     "typescript": "^5",
     "vitest": "^4.1.1"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,json,css}": [
+      "biome check --write --no-errors-on-unmatched"
+    ]
   }
 }

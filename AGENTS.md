@@ -29,6 +29,11 @@
 - `src/generated/api/` と `src/generated/schemas/` は自動生成のため手動編集しない
 - `src/generated/custom-fetch.ts` は手動管理ファイル
 
+## コミットメッセージ規約
+- Conventional Commits 形式を使用する（例: `feat:`, `fix:`, `refactor:`, `docs:`, `chore:`, `test:`）
+- commitlint + husky で自動検証される
+- pre-commit フックで lint-staged（Biome）が実行される
+
 ## やってはいけないこと
 - domain 層に firebase-admin や stripe を import しない
 - 集約の外から集約メンバーを直接変更しない
