@@ -8,6 +8,7 @@
     "build": "next build",
     "build:panda": "panda codegen",
     "start": "next start",
+    "tsc": "tsc --noEmit",
     "lint": "biome check",
     "format": "biome format --write",
     "generate": "orval",
