@@ -8,7 +8,7 @@ import {
 } from "@ark-ui/react/toast";
 import { CheckCircleIcon, CircleAlertIcon, CircleXIcon } from "lucide-react";
 import { forwardRef } from "react";
-import { createStyleContext, Stack, styled } from "styled-system/jsx";
+import { createStyleContext, HStack, Stack, styled } from "styled-system/jsx";
 import { toast } from "styled-system/recipes";
 import { CloseButton } from "./close-button";
 import { Icon, type IconProps } from "./icon";
@@ -43,9 +43,10 @@ const Indicator = forwardRef<SVGSVGElement, IconProps>((props, ref) => {
 });
 
 export const toaster = createToaster({
-  placement: "bottom-end",
+  placement: "bottom",
   pauseOnPageIdle: true,
   overlap: true,
+  duration: 3000,
   max: 5,
 });
 
@@ -55,23 +56,22 @@ export const Toaster = () => {
       <StyledToaster toaster={toaster} insetInline={{ mdDown: "4" }}>
         {(toast) => (
           <Root>
-            {toast.type === "loading" ? (
-              <Spinner color="colorPalette.plain.fg" />
-            ) : (
-              <Indicator />
-            )}
-
-            <Stack gap="3" alignItems="start">
+            <HStack gap="3">
+              {toast.type === "loading" ? (
+                <Spinner color="colorPalette.plain.fg" />
+              ) : (
+                <Indicator />
+              )}
               <Stack gap="1">
                 {toast.title && <Title>{toast.title}</Title>}
                 {toast.description && (
                   <Description>{toast.description}</Description>
                 )}
               </Stack>
-              {toast.action && (
-                <ActionTrigger>{toast.action.label}</ActionTrigger>
-              )}
-            </Stack>
+            </HStack>
+            {toast.action && (
+              <ActionTrigger>{toast.action.label}</ActionTrigger>
+            )}
             {toast.closable && (
               <CloseTrigger asChild>
                 <CloseButton size="sm" />

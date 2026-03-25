@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { NuqsAdapter } from "nuqs/adapters/next/app";
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
+import { Toaster } from "@/components/ui/toast";
 import { AuthContext, useAuthState } from "@/hooks/use-auth";
 import { setAuthToken } from "@/lib/auth-token";
 
@@ -40,6 +41,7 @@ export function Providers({ children }: ProvidersProps) {
     <QueryClientProvider client={queryClient}>
       <NuqsAdapter>
         <AuthProvider>{children}</AuthProvider>
+        <Toaster />
       </NuqsAdapter>
     </QueryClientProvider>
   );
