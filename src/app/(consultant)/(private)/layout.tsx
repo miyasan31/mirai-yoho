@@ -45,6 +45,7 @@ export default function ConsultantLayout({
         </Text>
         <styled.nav display="flex" flexDir="column" gap="2">
           <Link href="/consultant/bookings">予約一覧</Link>
+          <Link href="/consultant/slots">空き枠管理</Link>
           <Link href="/consultant/profile">プロフィール</Link>
         </styled.nav>
         <Button variant="outline" mt="8" onClick={() => signOut()}>

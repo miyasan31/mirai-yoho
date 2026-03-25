@@ -1,1 +1,1 @@
-export { useGetSlots } from "@/generated/api/slot/slot";
+export { useCreateSlot, useGetSlots } from "@/generated/api/slot/slot";
