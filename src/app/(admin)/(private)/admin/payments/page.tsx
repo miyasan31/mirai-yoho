@@ -5,10 +5,10 @@ import { styled } from "styled-system/jsx";
 import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
 import { useAdminPayments } from "@/hooks/use-admin-payments";
-import { EmptyState } from "../../_components/empty-state";
-import { PaymentStatusBadge } from "../../_components/status-badge";
-import { TableSkeleton } from "../../_components/table-skeleton";
-import { TruncatedId } from "../../_components/truncated-id";
+import { EmptyState } from "../../../_components/empty-state";
+import { PaymentStatusBadge } from "../../../_components/status-badge";
+import { TableSkeleton } from "../../../_components/table-skeleton";
+import { TruncatedId } from "../../../_components/truncated-id";
 
 export default function AdminPaymentsPage() {
   const { data, isLoading } = useAdminPayments();

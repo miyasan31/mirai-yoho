@@ -5,8 +5,8 @@ import { styled } from "styled-system/jsx";
 import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
 import { useAdminClients } from "@/hooks/use-admin-clients";
-import { EmptyState } from "../../_components/empty-state";
-import { TableSkeleton } from "../../_components/table-skeleton";
+import { EmptyState } from "../../../_components/empty-state";
+import { TableSkeleton } from "../../../_components/table-skeleton";
 
 export default function AdminClientsPage() {
   const { data, isLoading } = useAdminClients();

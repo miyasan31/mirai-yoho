@@ -9,9 +9,9 @@ import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useAdminConsultants } from "@/hooks/use-admin-consultants";
-import { EmptyState } from "../../_components/empty-state";
-import { ActiveStatusBadge } from "../../_components/status-badge";
-import { TableSkeleton } from "../../_components/table-skeleton";
+import { EmptyState } from "../../../_components/empty-state";
+import { ActiveStatusBadge } from "../../../_components/status-badge";
+import { TableSkeleton } from "../../../_components/table-skeleton";
 
 export default function AdminConsultantsPage() {
   const { data, isLoading } = useAdminConsultants();

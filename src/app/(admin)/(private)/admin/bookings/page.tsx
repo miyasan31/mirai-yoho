@@ -7,10 +7,10 @@ import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
 import { useAdminBookings } from "@/hooks/use-admin-bookings";
 import { useChargePayment } from "@/hooks/use-booking";
-import { EmptyState } from "../../_components/empty-state";
-import { BookingStatusBadge } from "../../_components/status-badge";
-import { TableSkeleton } from "../../_components/table-skeleton";
-import { TruncatedId } from "../../_components/truncated-id";
+import { EmptyState } from "../../../_components/empty-state";
+import { BookingStatusBadge } from "../../../_components/status-badge";
+import { TableSkeleton } from "../../../_components/table-skeleton";
+import { TruncatedId } from "../../../_components/truncated-id";
 
 export default function AdminBookingsPage() {
   const { data, isLoading } = useAdminBookings();
