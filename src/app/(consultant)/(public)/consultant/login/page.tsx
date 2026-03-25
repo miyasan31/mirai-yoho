@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
@@ -61,6 +62,17 @@ export default function ConsultantLoginPage() {
         {error && <Text color="fg.error">{error}</Text>}
         <Button type="submit">ログイン</Button>
       </styled.form>
+      <styled.div display="flex" justifyContent="center" mt="4">
+        <Link href="/admin/login">
+          <Text
+            textStyle="sm"
+            color="fg.muted"
+            _hover={{ color: "fg.default" }}
+          >
+            管理者ログインはこちら
+          </Text>
+        </Link>
+      </styled.div>
     </styled.div>
   );
 }
