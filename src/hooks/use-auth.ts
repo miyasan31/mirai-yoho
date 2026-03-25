@@ -52,7 +52,11 @@ export function useAuthState(): AuthState {
   }, []);
 
   const signIn = useCallback(async (email: string, password: string) => {
-    await signInWithEmailAndPassword(auth, email, password);
+    const credential = await signInWithEmailAndPassword(auth, email, password);
+    const idTokenResult = await credential.user.getIdTokenResult();
+    setUser(credential.user);
+    setToken(idTokenResult.token);
+    setRole((idTokenResult.claims.role as UserRole) ?? null);
   }, []);
 
   const signOut = useCallback(async () => {
