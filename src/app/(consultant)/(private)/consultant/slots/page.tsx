@@ -11,8 +11,11 @@ import {
 } from "react-big-calendar";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { styled } from "styled-system/jsx";
-import { Spinner } from "@/components/ui/spinner";
+import { Button } from "@/components/ui/button";
+import * as Dialog from "@/components/ui/dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
+import { toaster } from "@/components/ui/toast";
 import {
   useCreateConsultantBlockedTime,
   useDeleteConsultantBlockedTime,
@@ -42,6 +45,7 @@ export default function ConsultantSlotsPage() {
   const { user } = useAuth();
   const [view, setView] = useState<View>("week");
   const [date, setDate] = useState(new Date());
+  const [deleteTarget, setDeleteTarget] = useState<CalendarEvent | null>(null);
 
   const { data, isLoading, refetch } = useGetConsultantBlockedTimes({
     query: { enabled: !!user },
@@ -77,21 +81,26 @@ export default function ConsultantSlotsPage() {
     [createBlockedTime, refetch],
   );
 
-  const handleSelectEvent = useCallback(
-    async (event: CalendarEvent) => {
-      if (confirm("このブロック時間を削除しますか？")) {
-        try {
-          await deleteBlockedTime.mutateAsync({
-            blockedTimeId: event.id,
-          });
-          refetch();
-        } catch {
-          // エラーは custom-fetch の toaster で表示される
-        }
-      }
-    },
-    [deleteBlockedTime, refetch],
-  );
+  const handleSelectEvent = useCallback((event: CalendarEvent) => {
+    setDeleteTarget(event);
+  }, []);
+
+  const handleDelete = useCallback(async () => {
+    if (!deleteTarget) return;
+    try {
+      await deleteBlockedTime.mutateAsync({
+        blockedTimeId: deleteTarget.id,
+      });
+      refetch();
+      setDeleteTarget(null);
+      toaster.create({
+        type: "success",
+        title: "ブロック時間を削除しました",
+      });
+    } catch {
+      // エラーは custom-fetch の toaster で表示される
+    }
+  }, [deleteTarget, deleteBlockedTime, refetch]);
 
   const eventStyleGetter = useCallback(() => {
     return {
@@ -104,17 +113,28 @@ export default function ConsultantSlotsPage() {
     };
   }, []);
 
-  if (isLoading) return <Spinner />;
+  if (isLoading) {
+    return (
+      <styled.div>
+        <Skeleton height="8" width="200px" mb="2" />
+        <Skeleton height="4" width="400px" mb="6" />
+        <Skeleton height="calc(100vh - 200px)" rounded="l2" />
+      </styled.div>
+    );
+  }
 
   return (
     <styled.div>
-      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="2">
-        スケジュール管理
-      </Text>
-      <Text color="fg.muted" mb="4">
-        カレンダー上でドラッグして予約不可の時間帯を設定できます。クリックで削除できます。
-      </Text>
-      <styled.div h="calc(100vh - 160px)">
+      <styled.div mb="6">
+        <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+          スケジュール管理
+        </Text>
+        <Text textStyle="sm" color="fg.muted">
+          カレンダー上でドラッグして予約不可の時間帯を設定できます。クリックで削除できます。
+        </Text>
+      </styled.div>
+
+      <styled.div h="calc(100vh - 200px)" shadow="xs" rounded="l2" p="4">
         <Calendar<CalendarEvent>
           localizer={localizer}
           culture="ja-JP"
@@ -143,6 +163,38 @@ export default function ConsultantSlotsPage() {
           }}
         />
       </styled.div>
+
+      <Dialog.Root
+        open={!!deleteTarget}
+        onOpenChange={({ open }) => {
+          if (!open) setDeleteTarget(null);
+        }}
+      >
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header>
+              <Dialog.Title>予約不可枠を削除しますか？</Dialog.Title>
+              <Dialog.Description>
+                この時間帯のブロックが解除され、予約可能になります。
+              </Dialog.Description>
+            </Dialog.Header>
+            <Dialog.Footer display="flex" justifyContent="flex-end" gap="2">
+              <Dialog.CloseTrigger asChild>
+                <Button variant="outline">キャンセル</Button>
+              </Dialog.CloseTrigger>
+              <Button
+                colorPalette="red"
+                onClick={handleDelete}
+                loading={deleteBlockedTime.isPending}
+                loadingText="削除中..."
+              >
+                削除
+              </Button>
+            </Dialog.Footer>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
     </styled.div>
   );
 }
