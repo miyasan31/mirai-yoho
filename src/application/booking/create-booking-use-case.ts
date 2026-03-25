@@ -1,6 +1,7 @@
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IUnitOfWork } from "@/application/shared/unit-of-work";
 import type { IZoomService } from "@/application/shared/zoom-service";
+import type { IBlockedTimeRepository } from "@/domain/blocked-time/blocked-time-repository";
 import { Booking } from "@/domain/booking/booking";
 import type { BookingConfirmedEvent } from "@/domain/booking/booking-events";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
@@ -8,6 +9,7 @@ import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
 import { Client } from "@/domain/client/client";
 import type { IClientRepository } from "@/domain/client/client-repository";
+import { DomainError } from "@/domain/shared/domain-error";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 
 interface CreateBookingInput {
@@ -31,12 +33,26 @@ export class CreateBookingUseCase {
     private readonly zoomService: IZoomService,
     private readonly unitOfWork: IUnitOfWork,
     private readonly emailService: IEmailService,
+    private readonly blockedTimeRepository: IBlockedTimeRepository,
   ) {}
 
   async execute(input: CreateBookingInput): Promise<CreateBookingOutput> {
     const slot = await this.slotRepository.findById(input.slotId);
     if (!slot) {
       throw new Error("Slot not found");
+    }
+
+    const blockedTimes = await this.blockedTimeRepository.findByConsultantId(
+      slot.getConsultantId(),
+    );
+    const isBlocked = blockedTimes.some((bt) =>
+      slot.getTimeRange().overlaps(bt.getTimeRange()),
+    );
+    if (isBlocked) {
+      throw new DomainError(
+        "SLOT_BLOCKED",
+        "この時間帯は予約不可に設定されています",
+      );
     }
 
     const bookingId = crypto.randomUUID();

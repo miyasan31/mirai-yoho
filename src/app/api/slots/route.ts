@@ -4,7 +4,10 @@ import { Slot } from "@/domain/slot/slot";
 import { TimeRange } from "@/domain/slot/time-range";
 import { requireRole } from "@/infrastructure/auth/require-role";
 import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
-import { createSlotRepository } from "@/infrastructure/container";
+import {
+  createBlockedTimeRepository,
+  createSlotRepository,
+} from "@/infrastructure/container";
 
 export async function GET(request: NextRequest) {
   try {
@@ -16,11 +19,20 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const repo = createSlotRepository();
-    const slots = await repo.findAvailableByConsultantId(consultantId);
+    const [slots, blockedTimes] = await Promise.all([
+      createSlotRepository().findAvailableByConsultantId(consultantId),
+      createBlockedTimeRepository().findByConsultantId(consultantId),
+    ]);
+
+    const availableSlots = slots.filter(
+      (slot) =>
+        !blockedTimes.some((bt) =>
+          slot.getTimeRange().overlaps(bt.getTimeRange()),
+        ),
+    );
 
     return NextResponse.json({
-      slots: slots.map((s) => ({
+      slots: availableSlots.map((s) => ({
         slotId: s.getSlotId(),
         consultantId: s.getConsultantId(),
         startDatetime: s.getTimeRange().getStartAt().toISOString(),

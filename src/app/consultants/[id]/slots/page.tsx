@@ -1,24 +1,21 @@
 "use client";
 
+import { format, parseISO } from "date-fns";
+import { ja } from "date-fns/locale";
 import Link from "next/link";
-import { use } from "react";
+import { use, useMemo } from "react";
 import { css } from "styled-system/css";
 import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/text";
 import { useGetSlots } from "@/hooks/use-slots";
 
-function formatSlotDatetime(isoString: string): string {
-  const date = new Date(isoString);
-  return date.toLocaleString("ja-JP", {
-    timeZone: "Asia/Tokyo",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    weekday: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+function formatDate(isoString: string): string {
+  return format(parseISO(isoString), "yyyy/MM/dd (E)", { locale: ja });
+}
+
+function formatTime(isoString: string): string {
+  return format(parseISO(isoString), "HH:mm");
 }
 
 export default function SlotsPage({
@@ -28,6 +25,20 @@ export default function SlotsPage({
 }) {
   const { id: consultantId } = use(params);
   const { data, isLoading, error } = useGetSlots({ consultantId });
+
+  const slots = data?.data?.slots ?? [];
+
+  const groupedSlots = useMemo(() => {
+    const groups: Record<string, typeof slots> = {};
+    for (const slot of slots) {
+      const dateKey = formatDate(slot.startDatetime);
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(slot);
+    }
+    return Object.entries(groups);
+  }, [slots]);
 
   if (isLoading) {
     return (
@@ -46,8 +57,6 @@ export default function SlotsPage({
       </div>
     );
   }
-
-  const slots = data?.data?.slots ?? [];
 
   return (
     <div className={css({ maxW: "2xl", mx: "auto", p: "8" })}>
@@ -77,38 +86,58 @@ export default function SlotsPage({
           className={css({
             display: "flex",
             flexDirection: "column",
-            gap: "3",
+            gap: "6",
           })}
         >
-          {slots.map((slot) => (
-            <div
-              key={slot.slotId}
-              className={css({
-                border: "1px solid",
-                borderColor: "border.default",
-                borderRadius: "md",
-                p: "4",
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              })}
-            >
-              <div>
-                <Text fontWeight="medium">
-                  {formatSlotDatetime(slot.startDatetime)}
-                </Text>
-                <Text className={css({ fontSize: "sm", color: "fg.muted" })}>
-                  〜 {formatSlotDatetime(slot.endDatetime)}
-                </Text>
+          {groupedSlots.map(([dateLabel, dateSlots]) => (
+            <div key={dateLabel}>
+              <Text
+                as="h2"
+                className={css({
+                  fontSize: "lg",
+                  fontWeight: "bold",
+                  mb: "3",
+                  pb: "2",
+                  borderBottom: "1px solid",
+                  borderColor: "border.default",
+                })}
+              >
+                {dateLabel}
+              </Text>
+              <div
+                className={css({
+                  display: "flex",
+                  flexDirection: "column",
+                  gap: "2",
+                })}
+              >
+                {dateSlots.map((slot) => (
+                  <div
+                    key={slot.slotId}
+                    className={css({
+                      border: "1px solid",
+                      borderColor: "border.default",
+                      borderRadius: "md",
+                      p: "4",
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                    })}
+                  >
+                    <Text fontWeight="medium">
+                      {formatTime(slot.startDatetime)} 〜{" "}
+                      {formatTime(slot.endDatetime)}
+                    </Text>
+                    <Button asChild size="sm">
+                      <Link
+                        href={`/booking?slotId=${slot.slotId}&consultantId=${consultantId}`}
+                      >
+                        予約する
+                      </Link>
+                    </Button>
+                  </div>
+                ))}
               </div>
-
-              <Button asChild size="sm">
-                <Link
-                  href={`/booking?slotId=${slot.slotId}&consultantId=${consultantId}`}
-                >
-                  予約する
-                </Link>
-              </Button>
             </div>
           ))}
         </div>

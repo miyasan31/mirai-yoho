@@ -34,6 +34,10 @@ export class TimeRange {
     return this.endAt;
   }
 
+  overlaps(other: TimeRange): boolean {
+    return this.startAt < other.endAt && other.startAt < this.endAt;
+  }
+
   equals(other: TimeRange): boolean {
     return (
       this.startAt.getTime() === other.startAt.getTime() &&
