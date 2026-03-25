@@ -1,14 +1,24 @@
 "use client";
 
+import { createListCollection } from "@ark-ui/react/select";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
 import { Button } from "@/components/ui/button";
 import * as Field from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
+import * as Select from "@/components/ui/select";
 import { Text } from "@/components/ui/text";
 import type { UpdateUserRoleBodyRole } from "@/generated/schemas";
 import { useUpdateUserRole } from "@/hooks/use-admin-users";
 import { useAuth } from "@/hooks/use-auth";
+
+const roleCollection = createListCollection({
+  items: [
+    { label: "consultant", value: "consultant" },
+    { label: "operator", value: "operator" },
+    { label: "super_admin", value: "super_admin" },
+  ],
+});
 
 export default function AdminUsersPage() {
   const { role } = useAuth();
@@ -60,25 +70,31 @@ export default function AdminUsersPage() {
             required
           />
         </Field.Root>
-        <Field.Root>
-          <Field.Label>ロール</Field.Label>
-          <styled.select
-            id="role"
-            value={selectedRole}
-            onChange={(e) =>
-              setSelectedRole(e.target.value as UpdateUserRoleBodyRole)
-            }
-            w="100%"
-            p="2"
-            border="1px solid"
-            borderColor="border"
-            rounded="l1"
-          >
-            <option value="consultant">consultant</option>
-            <option value="operator">operator</option>
-            <option value="super_admin">super_admin</option>
-          </styled.select>
-        </Field.Root>
+        <Select.Root
+          collection={roleCollection}
+          value={[selectedRole]}
+          onValueChange={(details) =>
+            setSelectedRole(details.value[0] as UpdateUserRoleBodyRole)
+          }
+        >
+          <Select.Label>ロール</Select.Label>
+          <Select.Control>
+            <Select.Trigger>
+              <Select.ValueText placeholder="ロールを選択" />
+              <Select.Indicator />
+            </Select.Trigger>
+          </Select.Control>
+          <Select.Positioner>
+            <Select.Content>
+              {roleCollection.items.map((item) => (
+                <Select.Item key={item.value} item={item}>
+                  <Select.ItemText>{item.label}</Select.ItemText>
+                  <Select.ItemIndicator />
+                </Select.Item>
+              ))}
+            </Select.Content>
+          </Select.Positioner>
+        </Select.Root>
         {error && <Text color="fg.error">{error}</Text>}
         {message && <Text color="fg.success">{message}</Text>}
         <Button type="submit" alignSelf="flex-start">
