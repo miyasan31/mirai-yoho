@@ -2,11 +2,11 @@
 
 import { CircleAlert } from "lucide-react";
 import { styled } from "styled-system/jsx";
+import { EmptyState } from "@/components/empty-state";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
-import { EmptyState } from "../../../_components/empty-state";
 
 const BOOKING_STATUS_CONFIG: Record<
   string,

@@ -3,15 +3,15 @@
 import { Pencil, Users } from "lucide-react";
 import Link from "next/link";
 import { styled } from "styled-system/jsx";
+import { EmptyState } from "@/components/empty-state";
+import { ActiveStatusBadge } from "@/components/status-badge";
+import { TableSkeleton } from "@/components/table-skeleton";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
 import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useAdminConsultants } from "@/hooks/use-admin-consultants";
-import { EmptyState } from "../../../_components/empty-state";
-import { ActiveStatusBadge } from "../../../_components/status-badge";
-import { TableSkeleton } from "../../../_components/table-skeleton";
 
 export default function AdminConsultantsPage() {
   const { data, isLoading } = useAdminConsultants();
@@ -77,7 +77,7 @@ export default function AdminConsultantsPage() {
                 </Table.Cell>
                 <Table.Cell>
                   <Tooltip content="編集">
-                    <IconButton variant="ghost" size="sm" asChild>
+                    <IconButton variant="subtle" size="sm" asChild>
                       <Link href={`/admin/consultants/${c.consultantId}`}>
                         <Pencil size={16} />
                       </Link>

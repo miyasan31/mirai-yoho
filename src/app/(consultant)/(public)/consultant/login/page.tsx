@@ -1,5 +1,6 @@
 "use client";
 
+import { UserCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -29,10 +30,22 @@ export default function ConsultantLoginPage() {
   };
 
   return (
-    <styled.div maxW="400px" mx="auto" mt="20" p="6">
-      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="6">
-        相談員ログイン
-      </Text>
+    <styled.div
+      maxW="400px"
+      mx="auto"
+      mt="20"
+      p="6"
+      shadow="md"
+      rounded="l3"
+      border="1px solid"
+      borderColor="border"
+    >
+      <styled.div display="flex" flexDir="column" alignItems="center" mb="6">
+        <UserCircle size={40} color="var(--colors-color-palette-default)" />
+        <Text as="h1" textStyle="2xl" fontWeight="bold" mt="3">
+          相談員ログイン
+        </Text>
+      </styled.div>
       <styled.form
         onSubmit={handleSubmit}
         display="flex"

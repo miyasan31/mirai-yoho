@@ -79,7 +79,7 @@ export default function ConsultantProfilePage() {
 
   return (
     <styled.div maxW="600px">
-      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="6">
+      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
         プロフィール編集
       </Text>
       <styled.div shadow="xs" rounded="l2" p="6">
