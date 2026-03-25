@@ -7,6 +7,7 @@ import {
   useStripe,
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
+import { CircleX, FileQuestion } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { css } from "styled-system/css";
@@ -19,6 +20,26 @@ const stripePromise = loadStripe(
 
 type PaymentMode = "setup" | "payment";
 type PaymentMethodType = "card" | "paypay";
+
+function ErrorMessage({ message }: { message: string }) {
+  return (
+    <div
+      className={css({
+        display: "flex",
+        alignItems: "center",
+        gap: "2",
+        p: "3",
+        bg: "red.50",
+        rounded: "l2",
+      })}
+    >
+      <CircleX size={16} className={css({ color: "red.500", flexShrink: 0 })} />
+      <Text textStyle="sm" color="red.700">
+        {message}
+      </Text>
+    </div>
+  );
+}
 
 function CheckoutForm({
   bookingId,
@@ -65,11 +86,7 @@ function CheckoutForm({
     >
       <PaymentElement />
 
-      {errorMessage && (
-        <Text className={css({ color: "red.500", fontSize: "sm" })}>
-          {errorMessage}
-        </Text>
-      )}
+      {errorMessage && <ErrorMessage message={errorMessage} />}
 
       <Button
         type="submit"
@@ -142,12 +159,15 @@ function PaymentMethodSelector({ bookingId }: { bookingId: string }) {
             alignItems: "center",
             gap: "3",
             p: "4",
+            shadow: "xs",
             border: "1px solid",
             borderColor:
               selectedMethod === "card" ? "blue.500" : "border.default",
-            borderRadius: "lg",
+            rounded: "l2",
             cursor: "pointer",
-            _hover: { borderColor: "blue.400" },
+            transition: "all",
+            transitionDuration: "normal",
+            _hover: { borderColor: "blue.400", shadow: "sm" },
           })}
         >
           <input
@@ -166,12 +186,15 @@ function PaymentMethodSelector({ bookingId }: { bookingId: string }) {
             alignItems: "center",
             gap: "3",
             p: "4",
+            shadow: "xs",
             border: "1px solid",
             borderColor:
               selectedMethod === "paypay" ? "blue.500" : "border.default",
-            borderRadius: "lg",
+            rounded: "l2",
             cursor: "pointer",
-            _hover: { borderColor: "blue.400" },
+            transition: "all",
+            transitionDuration: "normal",
+            _hover: { borderColor: "blue.400", shadow: "sm" },
           })}
         >
           <input
@@ -186,21 +209,17 @@ function PaymentMethodSelector({ bookingId }: { bookingId: string }) {
       </div>
 
       {selectedMethod === "card" && (
-        <Text className={css({ fontSize: "sm", color: "fg.muted" })}>
+        <Text textStyle="sm" color="fg.muted">
           カード情報を登録します。お支払いは相談実施後に確定します。
         </Text>
       )}
       {selectedMethod === "paypay" && (
-        <Text className={css({ fontSize: "sm", color: "fg.muted" })}>
+        <Text textStyle="sm" color="fg.muted">
           予約確定時にお支払いが完了します。
         </Text>
       )}
 
-      {errorMessage && (
-        <Text className={css({ color: "red.500", fontSize: "sm" })}>
-          {errorMessage}
-        </Text>
-      )}
+      {errorMessage && <ErrorMessage message={errorMessage} />}
 
       <Button
         onClick={handleSetupPayment}
@@ -219,9 +238,22 @@ export default function PaymentPage() {
 
   if (!bookingId) {
     return (
-      <div className={css({ p: "8" })}>
-        <Text className={css({ color: "red.500" })}>
+      <div
+        className={css({
+          display: "flex",
+          flexDir: "column",
+          alignItems: "center",
+          gap: "3",
+          py: "16",
+          px: "8",
+        })}
+      >
+        <FileQuestion size={48} className={css({ color: "fg.subtle" })} />
+        <Text fontWeight="medium" color="fg.muted">
           予約情報が見つかりません
+        </Text>
+        <Text textStyle="sm" color="fg.subtle">
+          URLが正しいかご確認ください
         </Text>
       </div>
     );
@@ -229,12 +261,17 @@ export default function PaymentPage() {
 
   return (
     <div className={css({ maxW: "lg", mx: "auto", p: "8" })}>
-      <Text
-        as="h1"
-        className={css({ fontSize: "3xl", fontWeight: "bold", mb: "8" })}
-      >
-        お支払い
-      </Text>
+      <div className={css({ mb: "8" })}>
+        <Text
+          as="h1"
+          className={css({ textStyle: "2xl", fontWeight: "bold", mb: "1" })}
+        >
+          お支払い
+        </Text>
+        <Text textStyle="sm" color="fg.muted">
+          お支払い方法を選択して決済を完了してください
+        </Text>
+      </div>
 
       <PaymentMethodSelector bookingId={bookingId} />
     </div>

@@ -21,8 +21,18 @@ vi.mock("@/components/ui/button", () => ({
   >) => <div {...props}>{children}</div>,
 }));
 
-vi.mock("@/components/ui/spinner", () => ({
-  Spinner: () => <div data-testid="spinner">Loading...</div>,
+vi.mock("@/components/ui/skeleton", () => ({
+  Skeleton: (props: React.ComponentProps<"div">) => (
+    <div data-testid="skeleton" {...props} />
+  ),
+  SkeletonText: (props: React.ComponentProps<"div">) => (
+    <div data-testid="skeleton-text" {...props} />
+  ),
+}));
+
+vi.mock("lucide-react", () => ({
+  CircleX: () => <span>CircleX</span>,
+  Users: () => <span>Users</span>,
 }));
 
 vi.mock("@/components/ui/text", () => ({
@@ -49,7 +59,7 @@ describe("ConsultantsPage", () => {
     vi.clearAllMocks();
   });
 
-  it("shows loading spinner while fetching", () => {
+  it("shows skeleton loading while fetching", () => {
     mockUseGetConsultants.mockReturnValue({
       data: undefined,
       isLoading: true,
@@ -57,7 +67,7 @@ describe("ConsultantsPage", () => {
     });
 
     render(<ConsultantsPage />);
-    expect(screen.getByTestId("spinner")).toBeDefined();
+    expect(screen.getAllByTestId("skeleton").length).toBeGreaterThan(0);
   });
 
   it("shows error message on failure", () => {

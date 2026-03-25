@@ -36,6 +36,11 @@ vi.mock("@/components/ui/field", () => ({
   Label: (props: React.ComponentProps<"label">) => <label {...props} />,
   RequiredIndicator: () => <span>*</span>,
   ErrorText: (props: React.ComponentProps<"span">) => <span {...props} />,
+  HelperText: (props: React.ComponentProps<"span">) => <span {...props} />,
+}));
+
+vi.mock("lucide-react", () => ({
+  CalendarX: () => <span>CalendarX</span>,
 }));
 
 vi.mock("@/components/ui/input", () => ({

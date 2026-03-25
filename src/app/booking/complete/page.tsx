@@ -1,10 +1,12 @@
 "use client";
 
+import { CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { css } from "styled-system/css";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
+import { Tooltip } from "@/components/ui/tooltip";
 
 export default function BookingCompletePage() {
   const searchParams = useSearchParams();
@@ -18,9 +20,14 @@ export default function BookingCompletePage() {
     <div
       className={css({ maxW: "lg", mx: "auto", p: "8", textAlign: "center" })}
     >
+      <CheckCircle
+        size={48}
+        className={css({ color: "green.500", mx: "auto", mb: "4" })}
+      />
+
       <Text
         as="h1"
-        className={css({ fontSize: "3xl", fontWeight: "bold", mb: "4" })}
+        className={css({ textStyle: "2xl", fontWeight: "bold", mb: "4" })}
       >
         {isSetupMode
           ? "ご予約が完了しました"
@@ -34,9 +41,18 @@ export default function BookingCompletePage() {
       </Text>
 
       {bookingId && (
-        <Text className={css({ fontSize: "sm", color: "fg.muted", mb: "4" })}>
-          予約ID: {bookingId}
-        </Text>
+        <Tooltip content={bookingId}>
+          <Text
+            className={css({
+              textStyle: "sm",
+              color: "fg.muted",
+              mb: "4",
+              cursor: "default",
+            })}
+          >
+            予約ID: {bookingId.slice(0, 8)}...
+          </Text>
+        </Tooltip>
       )}
 
       {zoomUrl && (
@@ -44,9 +60,10 @@ export default function BookingCompletePage() {
           className={css({
             mb: "8",
             p: "6",
+            shadow: "xs",
             border: "1px solid",
             borderColor: "border.default",
-            borderRadius: "lg",
+            rounded: "l2",
           })}
         >
           <Text fontWeight="medium" className={css({ mb: "2" })}>
@@ -60,6 +77,7 @@ export default function BookingCompletePage() {
               color: "blue.500",
               textDecoration: "underline",
               wordBreak: "break-all",
+              _hover: { color: "blue.600" },
             })}
           >
             {zoomUrl}

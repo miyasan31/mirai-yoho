@@ -1,6 +1,8 @@
 "use client";
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { CalendarX } from "lucide-react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { css } from "styled-system/css";
@@ -41,8 +43,26 @@ export default function BookingPage() {
 
   if (!slotId) {
     return (
-      <div className={css({ p: "8" })}>
-        <Text color="fg.error">枠が選択されていません</Text>
+      <div
+        className={css({
+          display: "flex",
+          flexDir: "column",
+          alignItems: "center",
+          gap: "3",
+          py: "16",
+          px: "8",
+        })}
+      >
+        <CalendarX size={48} className={css({ color: "fg.subtle" })} />
+        <Text fontWeight="medium" color="fg.muted">
+          枠が選択されていません
+        </Text>
+        <Text textStyle="sm" color="fg.subtle">
+          相談員一覧から枠を選択してください
+        </Text>
+        <Button asChild variant="outline" className={css({ mt: "2" })}>
+          <Link href="/consultants">相談員一覧へ</Link>
+        </Button>
       </div>
     );
   }
@@ -66,12 +86,17 @@ export default function BookingPage() {
 
   return (
     <div className={css({ maxW: "lg", mx: "auto", p: "8" })}>
-      <Text
-        as="h1"
-        className={css({ fontSize: "3xl", fontWeight: "bold", mb: "8" })}
-      >
-        予約情報入力
-      </Text>
+      <div className={css({ mb: "8" })}>
+        <Text
+          as="h1"
+          className={css({ textStyle: "2xl", fontWeight: "bold", mb: "1" })}
+        >
+          予約情報入力
+        </Text>
+        <Text textStyle="sm" color="fg.muted">
+          以下の情報を入力して予約を確定してください
+        </Text>
+      </div>
 
       <form
         onSubmit={handleSubmit(onSubmit)}
@@ -98,6 +123,7 @@ export default function BookingPage() {
             type="email"
             placeholder="example@email.com"
           />
+          <Field.HelperText>予約確認メールをお送りします</Field.HelperText>
           {errors.clientEmail && (
             <Field.ErrorText>{errors.clientEmail.message}</Field.ErrorText>
           )}
@@ -113,6 +139,9 @@ export default function BookingPage() {
             type="tel"
             placeholder="090-1234-5678"
           />
+          <Field.HelperText>
+            緊急連絡用（ハイフンあり・なし可）
+          </Field.HelperText>
           {errors.clientPhone && (
             <Field.ErrorText>{errors.clientPhone.message}</Field.ErrorText>
           )}
@@ -125,6 +154,9 @@ export default function BookingPage() {
             placeholder="ご相談内容をお書きください"
             rows={4}
           />
+          <Field.HelperText>
+            相談したい内容を事前にお知らせいただけると、より充実した相談が可能です
+          </Field.HelperText>
         </Field.Root>
 
         <Button
