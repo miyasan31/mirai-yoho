@@ -1,24 +1,22 @@
 import type { DomainEvent } from "@/domain/shared/domain-event";
 
-export class PaymentCapturedEvent implements DomainEvent {
-  readonly eventName = "PaymentCaptured";
+export class PaymentChargedEvent implements DomainEvent {
+  readonly eventName = "PaymentCharged";
   readonly occurredAt: Date;
   readonly payload: {
     paymentId: string;
     bookingId: string;
     clientId: string;
-    captureMethod: "batch" | "manual";
+    chargeMethod: "batch" | "manual";
     amountJPY: number;
   };
 
-  private constructor(payload: PaymentCapturedEvent["payload"]) {
+  private constructor(payload: PaymentChargedEvent["payload"]) {
     this.occurredAt = new Date();
     this.payload = payload;
   }
 
-  static create(
-    payload: PaymentCapturedEvent["payload"],
-  ): PaymentCapturedEvent {
-    return new PaymentCapturedEvent(payload);
+  static create(payload: PaymentChargedEvent["payload"]): PaymentChargedEvent {
+    return new PaymentChargedEvent(payload);
   }
 }

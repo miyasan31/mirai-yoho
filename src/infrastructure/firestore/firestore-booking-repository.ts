@@ -21,7 +21,6 @@ interface BookingDoc {
   zoomUrl?: string;
   consultantMemo: string;
   consultationContent?: string;
-  stripePaymentIntentId?: string;
 }
 
 function toDomain(doc: BookingDoc): Booking {
@@ -36,7 +35,6 @@ function toDomain(doc: BookingDoc): Booking {
     zoomUrl: doc.zoomUrl ? ZoomUrl.reconstruct(doc.zoomUrl) : undefined,
     consultantMemo: ConsultantMemo.reconstruct(doc.consultantMemo),
     consultationContent: doc.consultationContent,
-    stripePaymentIntentId: doc.stripePaymentIntentId,
   });
 }
 
@@ -52,7 +50,6 @@ function toFirestore(booking: Booking): Record<string, unknown> {
     zoomUrl: booking.getZoomUrl()?.getValue() ?? null,
     consultantMemo: booking.getConsultantMemo().getValue(),
     consultationContent: booking.getConsultationContent() ?? null,
-    stripePaymentIntentId: booking.getStripePaymentIntentId() ?? null,
   };
 }
 

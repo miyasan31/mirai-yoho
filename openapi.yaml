@@ -148,10 +148,41 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /bookings/{bookingId}/capture:
+  /bookings/{bookingId}/setup-payment:
     post:
-      operationId: capturePayment
-      summary: 手動本決済
+      operationId: setupPayment
+      summary: 決済セットアップ
+      tags: [booking]
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SetupPaymentRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SetupPaymentResponse"
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /bookings/{bookingId}/charge:
+    post:
+      operationId: chargePayment
+      summary: 手動課金
       tags: [booking]
       security:
         - bearerAuth: []
@@ -182,10 +213,10 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /batch/capture:
+  /batch/charge:
     post:
-      operationId: batchCapture
-      summary: バッチ本決済（Cloud Scheduler）
+      operationId: batchCharge
+      summary: バッチ課金（Cloud Scheduler）
       tags: [batch]
       responses:
         "200":
@@ -194,9 +225,11 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [capturedCount]
+                required: [chargedCount, completedCount]
                 properties:
-                  capturedCount:
+                  chargedCount:
+                    type: integer
+                  completedCount:
                     type: integer
 
   /consultant/bookings:
@@ -634,13 +667,10 @@ components:
         consultationContent:
           type: string
           nullable: true
-        stripePaymentIntentId:
-          type: string
-          nullable: true
 
     PaymentDetail:
       type: object
-      required: [paymentId, bookingId, clientId, amountJPY, taxAmountJPY, totalJPY, status]
+      required: [paymentId, bookingId, clientId, amountJPY, taxAmountJPY, totalJPY, status, paymentStrategy]
       properties:
         paymentId:
           type: string
@@ -648,8 +678,18 @@ components:
           type: string
         clientId:
           type: string
+        paymentStrategy:
+          type: string
+          enum: [deferred, immediate]
         stripePaymentIntentId:
           type: string
+          nullable: true
+        stripeSetupIntentId:
+          type: string
+          nullable: true
+        stripePaymentMethodId:
+          type: string
+          nullable: true
         amountJPY:
           type: integer
         taxAmountJPY:
@@ -658,8 +698,8 @@ components:
           type: integer
         status:
           type: string
-          enum: [authorized, captured, cancelled]
-        captureMethod:
+          enum: [setup_pending, setup_complete, charged, refunded, cancelled, failed]
+        chargeMethod:
           type: string
           enum: [batch, manual]
           nullable: true
@@ -726,15 +766,31 @@ components:
 
     CreateBookingResponse:
       type: object
-      required: [bookingId, clientSecret, zoomUrl]
+      required: [bookingId, zoomUrl]
       properties:
         bookingId:
-          type: string
-        clientSecret:
           type: string
         zoomUrl:
           type: string
           format: uri
+
+    SetupPaymentRequest:
+      type: object
+      required: [paymentMethodType]
+      properties:
+        paymentMethodType:
+          type: string
+          enum: [card, paypay]
+
+    SetupPaymentResponse:
+      type: object
+      required: [clientSecret, mode]
+      properties:
+        clientSecret:
+          type: string
+        mode:
+          type: string
+          enum: [setup, payment]
 
     ErrorResponse:
       type: object

@@ -1,8 +1,10 @@
 import { DomainError } from "@/domain/shared/domain-error";
 
 const VALID_STATUSES = [
-  "authorized",
-  "captured",
+  "setup_pending",
+  "setup_complete",
+  "charged",
+  "refunded",
   "cancelled",
   "failed",
 ] as const;

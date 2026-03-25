@@ -1,7 +1,9 @@
-import { BatchCaptureUseCase } from "@/application/booking/batch-capture-use-case";
+import { BatchChargeUseCase } from "@/application/booking/batch-charge-use-case";
 import { CancelBookingUseCase } from "@/application/booking/cancel-booking-use-case";
-import { CapturePaymentUseCase } from "@/application/booking/capture-payment-use-case";
+import { ChargePaymentUseCase } from "@/application/booking/charge-payment-use-case";
+import { CompleteSetupUseCase } from "@/application/booking/complete-setup-use-case";
 import { CreateBookingUseCase } from "@/application/booking/create-booking-use-case";
+import { SetupPaymentUseCase } from "@/application/booking/setup-payment-use-case";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
 import { FirestoreClientRepository } from "@/infrastructure/firestore/firestore-client-repository";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
@@ -29,11 +31,18 @@ export function createCreateBookingUseCase() {
     new FirestoreSlotRepository(),
     new FirestoreClientRepository(),
     new FirestoreBookingRepository(),
-    new FirestorePaymentRepository(),
-    new StripeService(),
     new ZoomService(),
     new FirestoreUnitOfWork(),
     new ResendEmailService(),
+  );
+}
+
+export function createSetupPaymentUseCase() {
+  return new SetupPaymentUseCase(
+    new FirestoreBookingRepository(),
+    new FirestorePaymentRepository(),
+    new StripeService(),
+    new FirestoreUnitOfWork(),
   );
 }
 
@@ -47,14 +56,18 @@ export function createCancelBookingUseCase() {
   );
 }
 
-export function createCapturePaymentUseCase() {
-  return new CapturePaymentUseCase(
+export function createChargePaymentUseCase() {
+  return new ChargePaymentUseCase(
     new FirestoreBookingRepository(),
     new FirestorePaymentRepository(),
     new FirestoreClientRepository(),
     new StripeService(),
     new ResendEmailService(),
   );
+}
+
+export function createCompleteSetupUseCase() {
+  return new CompleteSetupUseCase(new FirestorePaymentRepository());
 }
 
 export function createClientRepository() {
@@ -65,8 +78,8 @@ export function createPaymentRepository() {
   return new FirestorePaymentRepository();
 }
 
-export function createBatchCaptureUseCase() {
-  return new BatchCaptureUseCase(
+export function createBatchChargeUseCase() {
+  return new BatchChargeUseCase(
     new FirestoreBookingRepository(),
     new FirestorePaymentRepository(),
     new FirestoreClientRepository(),

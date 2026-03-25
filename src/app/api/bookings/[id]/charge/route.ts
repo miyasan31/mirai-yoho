@@ -2,7 +2,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { DomainError } from "@/domain/shared/domain-error";
 import { requireRole } from "@/infrastructure/auth/require-role";
 import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
-import { createCapturePaymentUseCase } from "@/infrastructure/container";
+import { createChargePaymentUseCase } from "@/infrastructure/container";
 
 export async function POST(
   request: NextRequest,
@@ -22,7 +22,7 @@ export async function POST(
       );
     }
 
-    const useCase = createCapturePaymentUseCase();
+    const useCase = createChargePaymentUseCase();
     await useCase.execute({ bookingId, method: "manual" });
 
     return NextResponse.json({ success: true });

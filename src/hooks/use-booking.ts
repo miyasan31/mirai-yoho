@@ -1,5 +1,6 @@
 export {
   useCancelBooking,
-  useCapturePayment,
+  useChargePayment,
   useCreateBooking,
+  useSetupPayment,
 } from "@/generated/api/booking/booking";

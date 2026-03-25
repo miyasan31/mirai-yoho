@@ -26,6 +26,7 @@ export default function AdminPaymentsPage() {
             <Table.Header>税額</Table.Header>
             <Table.Header>合計</Table.Header>
             <Table.Header>ステータス</Table.Header>
+            <Table.Header>戦略</Table.Header>
             <Table.Header>方式</Table.Header>
           </Table.Row>
         </Table.Head>
@@ -37,7 +38,8 @@ export default function AdminPaymentsPage() {
               <Table.Cell>{p.taxAmountJPY.toLocaleString()}円</Table.Cell>
               <Table.Cell>{p.totalJPY.toLocaleString()}円</Table.Cell>
               <Table.Cell>{p.status}</Table.Cell>
-              <Table.Cell>{p.captureMethod ?? "-"}</Table.Cell>
+              <Table.Cell>{p.paymentStrategy}</Table.Cell>
+              <Table.Cell>{p.chargeMethod ?? "-"}</Table.Cell>
             </Table.Row>
           ))}
         </Table.Body>

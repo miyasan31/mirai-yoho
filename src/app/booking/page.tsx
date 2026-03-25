@@ -60,9 +60,7 @@ export default function BookingPage() {
 
     const responseData = result.data;
     if ("bookingId" in responseData) {
-      router.push(
-        `/booking/payment?bookingId=${responseData.bookingId}&clientSecret=${responseData.clientSecret}`,
-      );
+      router.push(`/booking/payment?bookingId=${responseData.bookingId}`);
     }
   };
 

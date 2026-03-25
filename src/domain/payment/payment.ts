@@ -1,12 +1,21 @@
 import type { Money } from "@/domain/payment/money";
-import { PaymentCapturedEvent } from "@/domain/payment/payment-events";
+import { PaymentChargedEvent } from "@/domain/payment/payment-events";
 import { PaymentStatus } from "@/domain/payment/payment-status";
+import { PaymentStrategy } from "@/domain/payment/payment-strategy";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 import { DomainError } from "@/domain/shared/domain-error";
 
-export type CaptureMethod = "batch" | "manual";
+export type ChargeMethod = "batch" | "manual";
 
-interface PaymentCreateProps {
+interface PaymentDeferredCreateProps {
+  paymentId: string;
+  bookingId: string;
+  clientId: string;
+  stripeSetupIntentId: string;
+  money: Money;
+}
+
+interface PaymentImmediateCreateProps {
   paymentId: string;
   bookingId: string;
   clientId: string;
@@ -14,9 +23,17 @@ interface PaymentCreateProps {
   money: Money;
 }
 
-interface PaymentProps extends PaymentCreateProps {
+interface PaymentProps {
+  paymentId: string;
+  bookingId: string;
+  clientId: string;
+  money: Money;
   status: PaymentStatus;
-  captureMethod?: CaptureMethod;
+  paymentStrategy: PaymentStrategy;
+  stripePaymentIntentId?: string;
+  stripeSetupIntentId?: string;
+  stripePaymentMethodId?: string;
+  chargeMethod?: ChargeMethod;
 }
 
 export class Payment extends AggregateRoot {
@@ -24,22 +41,43 @@ export class Payment extends AggregateRoot {
     private readonly paymentId: string,
     private readonly bookingId: string,
     private readonly clientId: string,
-    private readonly stripePaymentIntentId: string,
     private readonly money: Money,
     private status: PaymentStatus,
-    private captureMethod: CaptureMethod | undefined,
+    private readonly paymentStrategy: PaymentStrategy,
+    private stripePaymentIntentId: string | undefined,
+    private stripeSetupIntentId: string | undefined,
+    private stripePaymentMethodId: string | undefined,
+    private chargeMethod: ChargeMethod | undefined,
   ) {
     super();
   }
 
-  static create(props: PaymentCreateProps): Payment {
+  static createDeferred(props: PaymentDeferredCreateProps): Payment {
     return new Payment(
       props.paymentId,
       props.bookingId,
       props.clientId,
-      props.stripePaymentIntentId,
       props.money,
-      PaymentStatus.create("authorized"),
+      PaymentStatus.create("setup_pending"),
+      PaymentStrategy.create("deferred"),
+      undefined,
+      props.stripeSetupIntentId,
+      undefined,
+      undefined,
+    );
+  }
+
+  static createImmediate(props: PaymentImmediateCreateProps): Payment {
+    return new Payment(
+      props.paymentId,
+      props.bookingId,
+      props.clientId,
+      props.money,
+      PaymentStatus.create("charged"),
+      PaymentStrategy.create("immediate"),
+      props.stripePaymentIntentId,
+      undefined,
+      undefined,
       undefined,
     );
   }
@@ -49,41 +87,86 @@ export class Payment extends AggregateRoot {
       props.paymentId,
       props.bookingId,
       props.clientId,
-      props.stripePaymentIntentId,
       props.money,
       props.status,
-      props.captureMethod,
+      props.paymentStrategy,
+      props.stripePaymentIntentId,
+      props.stripeSetupIntentId,
+      props.stripePaymentMethodId,
+      props.chargeMethod,
     );
   }
 
-  capture(method: CaptureMethod): void {
-    if (this.status.getValue() !== "authorized") {
+  completeSetup(paymentMethodId: string): void {
+    if (this.status.getValue() !== "setup_pending") {
       throw new DomainError(
         "INVALID_PAYMENT_STATUS",
-        "Only authorized payments can be captured",
+        "Only setup_pending payments can complete setup",
       );
     }
-    this.status = PaymentStatus.reconstruct("captured");
-    this.captureMethod = method;
+    this.status = PaymentStatus.reconstruct("setup_complete");
+    this.stripePaymentMethodId = paymentMethodId;
+  }
+
+  charge(paymentIntentId: string, method: ChargeMethod): void {
+    if (this.status.getValue() !== "setup_complete") {
+      throw new DomainError(
+        "INVALID_PAYMENT_STATUS",
+        "Only setup_complete payments can be charged",
+      );
+    }
+    this.status = PaymentStatus.reconstruct("charged");
+    this.stripePaymentIntentId = paymentIntentId;
+    this.chargeMethod = method;
     this.addDomainEvent(
-      PaymentCapturedEvent.create({
+      PaymentChargedEvent.create({
         paymentId: this.paymentId,
         bookingId: this.bookingId,
         clientId: this.clientId,
-        captureMethod: method,
+        chargeMethod: method,
         amountJPY: this.money.getTotalJPY(),
       }),
     );
   }
 
-  cancel(): void {
-    if (this.status.getValue() !== "authorized") {
+  refund(): void {
+    if (this.status.getValue() !== "charged") {
       throw new DomainError(
         "INVALID_PAYMENT_STATUS",
-        "Only authorized payments can be cancelled",
+        "Only charged payments can be refunded",
+      );
+    }
+    if (!this.paymentStrategy.isImmediate()) {
+      throw new DomainError(
+        "INVALID_PAYMENT_STRATEGY",
+        "Only immediate payments can be refunded",
+      );
+    }
+    this.status = PaymentStatus.reconstruct("refunded");
+  }
+
+  cancel(): void {
+    const currentStatus = this.status.getValue();
+    if (
+      currentStatus !== "setup_pending" &&
+      currentStatus !== "setup_complete"
+    ) {
+      throw new DomainError(
+        "INVALID_PAYMENT_STATUS",
+        "Only setup_pending or setup_complete payments can be cancelled",
       );
     }
     this.status = PaymentStatus.reconstruct("cancelled");
+  }
+
+  failCharge(): void {
+    if (this.status.getValue() !== "setup_complete") {
+      throw new DomainError(
+        "INVALID_PAYMENT_STATUS",
+        "Only setup_complete payments can fail charge",
+      );
+    }
+    this.status = PaymentStatus.reconstruct("failed");
   }
 
   getPaymentId(): string {
@@ -98,8 +181,16 @@ export class Payment extends AggregateRoot {
     return this.clientId;
   }
 
-  getStripePaymentIntentId(): string {
+  getStripePaymentIntentId(): string | undefined {
     return this.stripePaymentIntentId;
+  }
+
+  getStripeSetupIntentId(): string | undefined {
+    return this.stripeSetupIntentId;
+  }
+
+  getStripePaymentMethodId(): string | undefined {
+    return this.stripePaymentMethodId;
   }
 
   getMoney(): Money {
@@ -110,7 +201,11 @@ export class Payment extends AggregateRoot {
     return this.status;
   }
 
-  getCaptureMethod(): CaptureMethod | undefined {
-    return this.captureMethod;
+  getPaymentStrategy(): PaymentStrategy {
+    return this.paymentStrategy;
+  }
+
+  getChargeMethod(): ChargeMethod | undefined {
+    return this.chargeMethod;
   }
 }

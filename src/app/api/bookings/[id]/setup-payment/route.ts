@@ -1,31 +1,28 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { DomainError } from "@/domain/shared/domain-error";
-import { createCreateBookingUseCase } from "@/infrastructure/container";
+import { createSetupPaymentUseCase } from "@/infrastructure/container";
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
+    const { id: bookingId } = await params;
     const body = await request.json();
-    const { slotId, clientName, clientEmail, clientPhone, consultantContent } =
-      body;
 
-    if (!slotId || !clientName || !clientEmail || !clientPhone) {
+    const { paymentMethodType } = body;
+    if (paymentMethodType !== "card" && paymentMethodType !== "paypay") {
       return NextResponse.json(
         {
           code: "VALIDATION_ERROR",
-          message: "slotId, clientName, clientEmail, clientPhone are required",
+          message: "paymentMethodType must be 'card' or 'paypay'",
         },
         { status: 400 },
       );
     }
 
-    const useCase = createCreateBookingUseCase();
-    const result = await useCase.execute({
-      slotId,
-      clientName,
-      clientEmail,
-      clientPhone,
-      consultationContent: consultantContent,
-    });
+    const useCase = createSetupPaymentUseCase();
+    const result = await useCase.execute({ bookingId, paymentMethodType });
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {

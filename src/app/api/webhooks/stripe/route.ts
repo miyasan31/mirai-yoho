@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
+import { createCompleteSetupUseCase } from "@/infrastructure/container";
 import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore-payment-repository";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
@@ -27,15 +28,46 @@ export async function POST(request: Request) {
   }
 
   switch (event.type) {
+    case "setup_intent.succeeded": {
+      const setupIntent = event.data.object as Stripe.SetupIntent;
+      const paymentMethodId =
+        typeof setupIntent.payment_method === "string"
+          ? setupIntent.payment_method
+          : setupIntent.payment_method?.id;
+
+      if (paymentMethodId) {
+        const useCase = createCompleteSetupUseCase();
+        await useCase.execute({
+          setupIntentId: setupIntent.id,
+          paymentMethodId,
+        });
+      }
+      break;
+    }
+
+    case "setup_intent.setup_failed": {
+      const setupIntent = event.data.object as Stripe.SetupIntent;
+      const paymentRepo = new FirestorePaymentRepository();
+      const payment = await paymentRepo.findBySetupIntentId(setupIntent.id);
+      if (payment && payment.getStatus().getValue() === "setup_pending") {
+        payment.cancel();
+        await paymentRepo.save(payment);
+      }
+      break;
+    }
+
     case "payment_intent.payment_failed": {
       const paymentIntent = event.data.object;
       const bookingId = paymentIntent.metadata?.bookingId;
       if (bookingId) {
         const paymentRepo = new FirestorePaymentRepository();
         const payment = await paymentRepo.findByBookingId(bookingId);
-        if (payment && payment.getStatus().getValue() === "authorized") {
-          payment.cancel();
-          await paymentRepo.save(payment);
+        if (payment) {
+          const status = payment.getStatus().getValue();
+          if (status === "setup_complete") {
+            payment.failCharge();
+            await paymentRepo.save(payment);
+          }
         }
       }
       break;

@@ -23,7 +23,6 @@ interface BookingProps extends BookingCreateProps {
   status: BookingStatus;
   cancelDeadline: CancelDeadline;
   zoomUrl?: ZoomUrl;
-  stripePaymentIntentId?: string;
 }
 
 export class Booking extends AggregateRoot {
@@ -38,7 +37,6 @@ export class Booking extends AggregateRoot {
     private zoomUrl: ZoomUrl | undefined,
     private consultantMemo: ConsultantMemo,
     private consultationContent: string | undefined,
-    private stripePaymentIntentId: string | undefined,
   ) {
     super();
   }
@@ -55,7 +53,6 @@ export class Booking extends AggregateRoot {
       undefined,
       props.consultantMemo,
       props.consultationContent,
-      undefined,
     );
   }
 
@@ -71,11 +68,10 @@ export class Booking extends AggregateRoot {
       props.zoomUrl,
       props.consultantMemo,
       props.consultationContent,
-      props.stripePaymentIntentId,
     );
   }
 
-  confirm(zoomUrl: ZoomUrl, paymentIntentId: string): void {
+  confirm(zoomUrl: ZoomUrl): void {
     if (this.status.getValue() !== "pending") {
       throw new DomainError(
         "INVALID_STATUS_TRANSITION",
@@ -84,7 +80,6 @@ export class Booking extends AggregateRoot {
     }
     this.status = BookingStatus.reconstruct("confirmed");
     this.zoomUrl = zoomUrl;
-    this.stripePaymentIntentId = paymentIntentId;
     this.addDomainEvent(
       BookingConfirmedEvent.create({
         bookingId: this.bookingId,
@@ -173,9 +168,5 @@ export class Booking extends AggregateRoot {
 
   getConsultationContent(): string | undefined {
     return this.consultationContent;
-  }
-
-  getStripePaymentIntentId(): string | undefined {
-    return this.stripePaymentIntentId;
   }
 }

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     const totalRevenue = payments
-      .filter((p) => p.getStatus().getValue() === "captured")
+      .filter((p) => p.getStatus().getValue() === "charged")
       .reduce((sum, p) => sum + p.getMoney().getTotalJPY(), 0);
 
     return NextResponse.json({

@@ -31,10 +31,21 @@ export class CancelBookingUseCase {
       input.bookingId,
     );
     if (payment) {
-      await this.stripeService.cancelPaymentIntent(
-        payment.getStripePaymentIntentId(),
-      );
-      payment.cancel();
+      const strategy = payment.getPaymentStrategy();
+      const status = payment.getStatus().getValue();
+
+      if (strategy.isImmediate() && status === "charged") {
+        const paymentIntentId = payment.getStripePaymentIntentId();
+        if (paymentIntentId) {
+          await this.stripeService.refundPaymentIntent(paymentIntentId);
+        }
+        payment.refund();
+      } else if (
+        strategy.isDeferred() &&
+        (status === "setup_pending" || status === "setup_complete")
+      ) {
+        payment.cancel();
+      }
     }
 
     const slot = await this.slotRepository.findById(booking.getSlotId());

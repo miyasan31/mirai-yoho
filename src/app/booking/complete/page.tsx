@@ -10,6 +10,9 @@ export default function BookingCompletePage() {
   const searchParams = useSearchParams();
   const bookingId = searchParams.get("bookingId");
   const zoomUrl = searchParams.get("zoomUrl");
+  const mode = searchParams.get("mode");
+
+  const isSetupMode = mode === "setup";
 
   return (
     <div
@@ -19,11 +22,15 @@ export default function BookingCompletePage() {
         as="h1"
         className={css({ fontSize: "3xl", fontWeight: "bold", mb: "4" })}
       >
-        ご予約が完了しました
+        {isSetupMode
+          ? "ご予約が完了しました"
+          : "ご予約・お支払いが完了しました"}
       </Text>
 
       <Text className={css({ mb: "8", color: "fg.muted" })}>
-        確認メールをお送りしました。ご確認ください。
+        {isSetupMode
+          ? "カード情報を登録しました。お支払いは相談実施後に確定します。確認メールをお送りしましたのでご確認ください。"
+          : "お支払いが完了しました。確認メールをお送りしましたのでご確認ください。"}
       </Text>
 
       {bookingId && (

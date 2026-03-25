@@ -26,7 +26,6 @@ export async function GET(request: NextRequest) {
         zoomUrl: b.getZoomUrl()?.getValue() ?? null,
         consultantMemo: b.getConsultantMemo().getValue(),
         consultationContent: b.getConsultationContent() ?? null,
-        stripePaymentIntentId: b.getStripePaymentIntentId() ?? null,
       })),
     });
   } catch (error) {

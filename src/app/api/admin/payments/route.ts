@@ -16,12 +16,15 @@ export async function GET(request: NextRequest) {
         paymentId: p.getPaymentId(),
         bookingId: p.getBookingId(),
         clientId: p.getClientId(),
-        stripePaymentIntentId: p.getStripePaymentIntentId(),
+        paymentStrategy: p.getPaymentStrategy().getValue(),
+        stripePaymentIntentId: p.getStripePaymentIntentId() ?? null,
+        stripeSetupIntentId: p.getStripeSetupIntentId() ?? null,
+        stripePaymentMethodId: p.getStripePaymentMethodId() ?? null,
         amountJPY: p.getMoney().getAmountJPY(),
         taxAmountJPY: p.getMoney().getTaxAmountJPY(),
         totalJPY: p.getMoney().getTotalJPY(),
         status: p.getStatus().getValue(),
-        captureMethod: p.getCaptureMethod() ?? null,
+        chargeMethod: p.getChargeMethod() ?? null,
       })),
     });
   } catch (error) {

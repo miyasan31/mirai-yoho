@@ -6,17 +6,17 @@ import { Spinner } from "@/components/ui/spinner";
 import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
 import { useAdminBookings } from "@/hooks/use-admin-bookings";
-import { useCapturePayment } from "@/hooks/use-booking";
+import { useChargePayment } from "@/hooks/use-booking";
 
 export default function AdminBookingsPage() {
   const { data, isLoading } = useAdminBookings();
-  const capturePayment = useCapturePayment();
+  const chargePayment = useChargePayment();
 
   const bookings = data?.data?.bookings ?? [];
 
-  const handleCapture = async (bookingId: string) => {
+  const handleCharge = async (bookingId: string) => {
     try {
-      await capturePayment.mutateAsync({
+      await chargePayment.mutateAsync({
         bookingId,
         data: { method: "manual" },
       });
@@ -24,7 +24,7 @@ export default function AdminBookingsPage() {
       const message =
         err && typeof err === "object" && "message" in err
           ? (err as { message: string }).message
-          : "キャプチャに失敗しました";
+          : "課金に失敗しました";
       alert(message);
     }
   };
@@ -59,14 +59,14 @@ export default function AdminBookingsPage() {
                 {b.status === "confirmed" && (
                   <Button
                     size="sm"
-                    onClick={() => handleCapture(b.bookingId)}
+                    onClick={() => handleCharge(b.bookingId)}
                     loading={
-                      capturePayment.isPending &&
-                      capturePayment.variables?.bookingId === b.bookingId
+                      chargePayment.isPending &&
+                      chargePayment.variables?.bookingId === b.bookingId
                     }
                     loadingText="処理中..."
                   >
-                    本決済
+                    課金
                   </Button>
                 )}
               </Table.Cell>
