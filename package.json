@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "prepare": "husky && pnpm build:panda",
+    "prepare": "husky && pnpm build:panda && pnpm generate",
     "dev": "rm -rf .next && next dev",
     "build": "next build",
     "build:panda": "panda codegen",
