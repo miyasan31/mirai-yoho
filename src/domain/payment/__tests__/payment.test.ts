@@ -3,75 +3,114 @@ import { Money } from "@/domain/payment/money";
 import { Payment } from "@/domain/payment/payment";
 import { DomainError } from "@/domain/shared/domain-error";
 
-function createAuthorizedPayment() {
-  return Payment.create({
+function createDeferredPayment() {
+  return Payment.createDeferred({
     paymentId: "pay-1",
     bookingId: "booking-1",
     clientId: "client-1",
-    stripePaymentIntentId: "pi_test_123",
+    stripeSetupIntentId: "si_test_123",
     money: Money.create(10000, 0.1),
   });
 }
 
+function createSetupCompletePayment() {
+  const payment = createDeferredPayment();
+  payment.completeSetup("pm_test_123");
+  return payment;
+}
+
 describe("Payment", () => {
-  describe("create", () => {
-    it("ステータスが authorized で作成される", () => {
-      const payment = createAuthorizedPayment();
-      expect(payment.getStatus().getValue()).toBe("authorized");
+  describe("createDeferred", () => {
+    it("ステータスが setup_pending で作成される", () => {
+      const payment = createDeferredPayment();
+      expect(payment.getStatus().getValue()).toBe("setup_pending");
     });
 
-    it("captureMethod は undefined", () => {
-      const payment = createAuthorizedPayment();
-      expect(payment.getCaptureMethod()).toBeUndefined();
+    it("chargeMethod は undefined", () => {
+      const payment = createDeferredPayment();
+      expect(payment.getChargeMethod()).toBeUndefined();
     });
   });
 
-  describe("capture", () => {
-    it("authorized から captured に遷移する（manual）", () => {
-      const payment = createAuthorizedPayment();
-      payment.capture("manual");
-      expect(payment.getStatus().getValue()).toBe("captured");
-      expect(payment.getCaptureMethod()).toBe("manual");
+  describe("createImmediate", () => {
+    it("ステータスが charged で作成される", () => {
+      const payment = Payment.createImmediate({
+        paymentId: "pay-2",
+        bookingId: "booking-2",
+        clientId: "client-2",
+        stripePaymentIntentId: "pi_test_123",
+        money: Money.create(10000, 0.1),
+      });
+      expect(payment.getStatus().getValue()).toBe("charged");
+    });
+  });
+
+  describe("completeSetup", () => {
+    it("setup_pending から setup_complete に遷移する", () => {
+      const payment = createDeferredPayment();
+      payment.completeSetup("pm_test_123");
+      expect(payment.getStatus().getValue()).toBe("setup_complete");
     });
 
-    it("authorized から captured に遷移する（batch）", () => {
-      const payment = createAuthorizedPayment();
-      payment.capture("batch");
-      expect(payment.getStatus().getValue()).toBe("captured");
-      expect(payment.getCaptureMethod()).toBe("batch");
+    it("setup_pending 以外から completeSetup すると DomainError", () => {
+      const payment = createSetupCompletePayment();
+      expect(() => payment.completeSetup("pm_test_456")).toThrow(DomainError);
+    });
+  });
+
+  describe("charge", () => {
+    it("setup_complete から charged に遷移する（manual）", () => {
+      const payment = createSetupCompletePayment();
+      payment.charge("pi_test_123", "manual");
+      expect(payment.getStatus().getValue()).toBe("charged");
+      expect(payment.getChargeMethod()).toBe("manual");
     });
 
-    it("PaymentCapturedEvent が発行される", () => {
-      const payment = createAuthorizedPayment();
-      payment.capture("manual");
+    it("setup_complete から charged に遷移する（batch）", () => {
+      const payment = createSetupCompletePayment();
+      payment.charge("pi_test_123", "batch");
+      expect(payment.getStatus().getValue()).toBe("charged");
+      expect(payment.getChargeMethod()).toBe("batch");
+    });
+
+    it("PaymentChargedEvent が発行される", () => {
+      const payment = createSetupCompletePayment();
+      payment.charge("pi_test_123", "manual");
       const events = payment.pullDomainEvents();
       expect(events).toHaveLength(1);
-      expect(events[0].eventName).toBe("PaymentCaptured");
+      expect(events[0].eventName).toBe("PaymentCharged");
     });
 
-    it("authorized 以外から capture すると DomainError", () => {
-      const payment = createAuthorizedPayment();
-      payment.capture("manual");
-      expect(() => payment.capture("manual")).toThrow(DomainError);
+    it("setup_complete 以外から charge すると DomainError", () => {
+      const payment = createDeferredPayment();
+      expect(() => payment.charge("pi_test_123", "manual")).toThrow(
+        DomainError,
+      );
     });
   });
 
   describe("cancel", () => {
-    it("authorized から cancelled に遷移する", () => {
-      const payment = createAuthorizedPayment();
+    it("setup_pending から cancelled に遷移する", () => {
+      const payment = createDeferredPayment();
       payment.cancel();
       expect(payment.getStatus().getValue()).toBe("cancelled");
     });
 
-    it("authorized 以外から cancel すると DomainError", () => {
-      const payment = createAuthorizedPayment();
+    it("setup_complete から cancelled に遷移する", () => {
+      const payment = createSetupCompletePayment();
+      payment.cancel();
+      expect(payment.getStatus().getValue()).toBe("cancelled");
+    });
+
+    it("cancelled から cancel すると DomainError", () => {
+      const payment = createDeferredPayment();
       payment.cancel();
       expect(() => payment.cancel()).toThrow(DomainError);
     });
 
-    it("captured から cancel すると DomainError", () => {
-      const payment = createAuthorizedPayment();
-      payment.capture("manual");
+    it("charged から cancel すると DomainError", () => {
+      const payment = createSetupCompletePayment();
+      payment.charge("pi_test_123", "manual");
       expect(() => payment.cancel()).toThrow(DomainError);
     });
   });

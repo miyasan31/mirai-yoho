@@ -4,6 +4,36 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("styled-system/css", () => ({
   css: () => "",
+  cva: () => () => "",
+}));
+
+vi.mock("styled-system/jsx", () => {
+  const styledProxy = new Proxy(
+    (Tag: string) =>
+      ({ children, ...props }: Record<string, unknown>) => {
+        const Element = Tag as unknown as React.ElementType;
+        return <Element {...props}>{children as React.ReactNode}</Element>;
+      },
+    {
+      get:
+        (_target, tag: string) =>
+        ({ children, ...props }: Record<string, unknown>) => {
+          const Element = tag as unknown as React.ElementType;
+          return <Element {...props}>{children as React.ReactNode}</Element>;
+        },
+    },
+  );
+  return {
+    styled: styledProxy,
+    createStyleContext: () => ({
+      withRootProvider: (c: unknown) => c,
+      withContext: (c: unknown) => c,
+    }),
+  };
+});
+
+vi.mock("styled-system/recipes", () => ({
+  tooltip: () => ({}),
 }));
 
 vi.mock("@/components/ui/badge", () => ({
@@ -47,7 +77,7 @@ vi.mock("@/components/ui/text", () => ({
 }));
 
 const mockUseGetConsultants = vi.fn();
-vi.mock("@/generated/api/consultant/consultant", () => ({
+vi.mock("@/hooks/use-consultants", () => ({
   useGetConsultants: () => mockUseGetConsultants(),
 }));
 

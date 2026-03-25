@@ -11,7 +11,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const mockMutateAsync = vi.fn();
-vi.mock("@/generated/api/booking/booking", () => ({
+vi.mock("@/hooks/use-booking", () => ({
   useCreateBooking: () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
@@ -20,6 +20,62 @@ vi.mock("@/generated/api/booking/booking", () => ({
 
 vi.mock("styled-system/css", () => ({
   css: () => "",
+  cva: () => () => "",
+}));
+
+vi.mock("styled-system/jsx", () => {
+  const styledProxy = new Proxy(
+    (Tag: string) =>
+      ({ children, ...props }: Record<string, unknown>) => {
+        const Element = Tag as unknown as React.ElementType;
+        return <Element {...props}>{children as React.ReactNode}</Element>;
+      },
+    {
+      get:
+        (_target, tag: string) =>
+        ({ children, ...props }: Record<string, unknown>) => {
+          const Element = tag as unknown as React.ElementType;
+          return <Element {...props}>{children as React.ReactNode}</Element>;
+        },
+    },
+  );
+  return {
+    styled: styledProxy,
+    createStyleContext: () => ({
+      withRootProvider: (c: unknown) => c,
+      withContext: (c: unknown) => c,
+    }),
+  };
+});
+
+vi.mock("styled-system/recipes", () => ({
+  tooltip: () => ({}),
+}));
+
+vi.mock("next/link", () => ({
+  default: ({
+    href,
+    children,
+  }: {
+    href: string;
+    children: React.ReactNode;
+  }) => <a href={href}>{children}</a>,
+}));
+
+vi.mock("@/components/empty-state", () => ({
+  EmptyState: ({
+    message,
+    hint,
+  }: {
+    icon: unknown;
+    message: string;
+    hint?: string;
+  }) => (
+    <div>
+      <span>{message}</span>
+      {hint && <span>{hint}</span>}
+    </div>
+  ),
 }));
 
 vi.mock("@/components/ui/button", () => ({
@@ -40,6 +96,7 @@ vi.mock("@/components/ui/field", () => ({
 }));
 
 vi.mock("lucide-react", () => ({
+  ArrowLeft: () => <span>ArrowLeft</span>,
   CalendarX: () => <span>CalendarX</span>,
 }));
 
@@ -61,6 +118,32 @@ vi.mock("@/components/ui/text", () => ({
 vi.mock("@/components/ui/textarea", () => ({
   Textarea: (props: React.ComponentProps<"textarea">) => (
     <textarea {...props} />
+  ),
+}));
+
+vi.mock("@/components/ui/icon-button", () => ({
+  IconButton: ({
+    asChild,
+    children,
+    ...props
+  }: { asChild?: boolean; children: React.ReactNode } & Record<
+    string,
+    unknown
+  >) => <button {...props}>{children}</button>,
+}));
+
+vi.mock("@/components/ui/tooltip", () => ({
+  Tooltip: ({
+    children,
+    content,
+  }: { children: React.ReactNode; content: React.ReactNode } & Record<
+    string,
+    unknown
+  >) => (
+    <div>
+      {children}
+      <span>{content}</span>
+    </div>
   ),
 }));
 

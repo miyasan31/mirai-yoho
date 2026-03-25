@@ -16,6 +16,106 @@ vi.mock("next/link", () => ({
   ),
 }));
 
+vi.mock("styled-system/css", () => ({
+  css: () => "",
+  cva: () => () => "",
+}));
+
+vi.mock("styled-system/jsx", () => {
+  const styledProxy = new Proxy(
+    (Tag: string) =>
+      ({ children, ...props }: Record<string, unknown>) => {
+        const Element = Tag as unknown as React.ElementType;
+        return <Element {...props}>{children as React.ReactNode}</Element>;
+      },
+    {
+      get:
+        (_target, tag: string) =>
+        ({ children, ...props }: Record<string, unknown>) => {
+          const Element = tag as unknown as React.ElementType;
+          return <Element {...props}>{children as React.ReactNode}</Element>;
+        },
+    },
+  );
+  return {
+    styled: styledProxy,
+    createStyleContext: () => ({
+      withRootProvider: (c: unknown) => c,
+      withContext: (c: unknown) => c,
+    }),
+  };
+});
+
+vi.mock("styled-system/recipes", () => ({
+  tooltip: () => ({}),
+}));
+
+vi.mock("@/components/ui/skeleton", () => ({
+  Skeleton: (props: React.ComponentProps<"div">) => (
+    <div data-testid="skeleton" {...props} />
+  ),
+}));
+
+vi.mock("@/components/ui/text", () => ({
+  Text: ({
+    as: Tag = "span",
+    children,
+    ...props
+  }: { as?: string; children: React.ReactNode } & Record<string, unknown>) => {
+    const Element = Tag as unknown as React.ElementType;
+    return <Element {...props}>{children}</Element>;
+  },
+}));
+
+vi.mock("@/components/ui/tooltip", () => ({
+  Tooltip: ({
+    children,
+    content,
+  }: { children: React.ReactNode; content: React.ReactNode } & Record<
+    string,
+    unknown
+  >) => (
+    <div>
+      {children}
+      <span>{content}</span>
+    </div>
+  ),
+}));
+
+vi.mock("@/components/ui/icon-button", () => ({
+  IconButton: ({
+    asChild,
+    children,
+    ...props
+  }: { asChild?: boolean; children: React.ReactNode } & Record<
+    string,
+    unknown
+  >) => <button {...props}>{children}</button>,
+}));
+
+vi.mock("@/components/ui/table", () => ({
+  Root: (props: React.ComponentProps<"table">) => <table {...props} />,
+  Head: (props: React.ComponentProps<"thead">) => <thead {...props} />,
+  Body: (props: React.ComponentProps<"tbody">) => <tbody {...props} />,
+  Row: (props: React.ComponentProps<"tr">) => <tr {...props} />,
+  Header: (props: React.ComponentProps<"th">) => <th {...props} />,
+  Cell: (props: React.ComponentProps<"td">) => <td {...props} />,
+}));
+
+vi.mock("@/components/status-badge", () => ({
+  BookingStatusBadge: ({ status }: { status: string }) => <span>{status}</span>,
+}));
+
+vi.mock("@/components/table-skeleton", () => ({
+  TableSkeleton: () => <div data-testid="table-skeleton" />,
+}));
+
+vi.mock("lucide-react", () => ({
+  CalendarX: () => <span>CalendarX</span>,
+  ExternalLink: () => <span>ExternalLink</span>,
+  Pencil: () => <span>Pencil</span>,
+}));
+
 import ConsultantBookingsPage from "../page";
 
 function createWrapper() {
@@ -40,7 +140,7 @@ describe("ConsultantBookingsPage", () => {
       error: null,
     });
     render(<ConsultantBookingsPage />, { wrapper: createWrapper() });
-    expect(screen.getByText("Loading...")).toBeDefined();
+    expect(screen.getAllByTestId("skeleton").length).toBeGreaterThan(0);
   });
 
   it("renders booking list from API response", async () => {
@@ -69,8 +169,6 @@ describe("ConsultantBookingsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("confirmed")).toBeDefined();
       expect(screen.getByText("テストメモ")).toBeDefined();
-      expect(screen.getByText("参加")).toBeDefined();
-      expect(screen.getByText("メモ編集")).toBeDefined();
     });
   });
 

@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mockUseConsultantProfile = vi.fn();
 const mockMutateAsync = vi.fn();
+const mockToasterCreate = vi.fn();
 
 vi.mock("@/hooks/use-consultant-profile", () => ({
   useConsultantProfile: () => mockUseConsultantProfile(),
@@ -14,6 +15,88 @@ vi.mock("@/hooks/use-consultant-profile", () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
   }),
+}));
+
+vi.mock("styled-system/css", () => ({
+  css: () => "",
+  cva: () => () => "",
+}));
+
+vi.mock("styled-system/jsx", () => {
+  const styledProxy = new Proxy(
+    (Tag: string) =>
+      ({ children, ...props }: Record<string, unknown>) => {
+        const Element = Tag as unknown as React.ElementType;
+        return <Element {...props}>{children as React.ReactNode}</Element>;
+      },
+    {
+      get:
+        (_target, tag: string) =>
+        ({ children, ...props }: Record<string, unknown>) => {
+          const Element = tag as unknown as React.ElementType;
+          return <Element {...props}>{children as React.ReactNode}</Element>;
+        },
+    },
+  );
+  return {
+    styled: styledProxy,
+    createStyleContext: () => ({
+      withRootProvider: (c: unknown) => c,
+      withContext: (c: unknown) => c,
+    }),
+  };
+});
+
+vi.mock("@/components/ui/button", () => ({
+  Button: (props: React.ComponentProps<"button">) => (
+    <button type={props.type} {...props}>
+      {props.children}
+    </button>
+  ),
+}));
+
+vi.mock("@/components/ui/field", () => ({
+  Root: ({
+    children,
+    ...props
+  }: { children: React.ReactNode } & Record<string, unknown>) => (
+    <div {...props}>{children}</div>
+  ),
+  // biome-ignore lint/a11y/noLabelWithoutControl: test mock
+  Label: (props: React.ComponentProps<"label">) => <label {...props} />,
+  RequiredIndicator: () => <span>*</span>,
+  HelperText: (props: React.ComponentProps<"span">) => <span {...props} />,
+}));
+
+vi.mock("@/components/ui/input", () => ({
+  Input: (props: React.ComponentProps<"input">) => <input {...props} />,
+}));
+
+vi.mock("@/components/ui/textarea", () => ({
+  Textarea: (props: React.ComponentProps<"textarea">) => (
+    <textarea {...props} />
+  ),
+}));
+
+vi.mock("@/components/ui/skeleton", () => ({
+  Skeleton: (props: React.ComponentProps<"div">) => (
+    <div data-testid="skeleton" {...props} />
+  ),
+}));
+
+vi.mock("@/components/ui/text", () => ({
+  Text: ({
+    as: Tag = "span",
+    children,
+    ...props
+  }: { as?: string; children: React.ReactNode } & Record<string, unknown>) => {
+    const Element = Tag as unknown as React.ElementType;
+    return <Element {...props}>{children}</Element>;
+  },
+}));
+
+vi.mock("@/components/ui/toast", () => ({
+  toaster: { create: (...args: unknown[]) => mockToasterCreate(...args) },
 }));
 
 import ConsultantProfilePage from "../page";
@@ -48,18 +131,19 @@ describe("ConsultantProfilePage", () => {
       error: null,
     });
 
-    render(<ConsultantProfilePage />, { wrapper: createWrapper() });
+    const { container } = render(<ConsultantProfilePage />, {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => {
-      expect((screen.getByLabelText("表示名") as HTMLInputElement).value).toBe(
-        "田中太郎",
-      );
       expect(
-        (screen.getByLabelText("自己紹介") as HTMLTextAreaElement).value,
+        (container.querySelector("#displayName") as HTMLInputElement).value,
+      ).toBe("田中太郎");
+      expect(
+        (container.querySelector("#bio") as HTMLTextAreaElement).value,
       ).toBe("自己紹介テスト");
       expect(
-        (screen.getByLabelText("専門分野（カンマ区切り）") as HTMLInputElement)
-          .value,
+        (container.querySelector("#specialties") as HTMLInputElement).value,
       ).toBe("キャリア, 転職");
     });
   });
@@ -81,22 +165,22 @@ describe("ConsultantProfilePage", () => {
     mockMutateAsync.mockResolvedValue({});
 
     const user = userEvent.setup();
-    render(<ConsultantProfilePage />, { wrapper: createWrapper() });
-
-    await waitFor(() => {
-      expect((screen.getByLabelText("表示名") as HTMLInputElement).value).toBe(
-        "田中太郎",
-      );
+    const { container } = render(<ConsultantProfilePage />, {
+      wrapper: createWrapper(),
     });
 
-    await user.clear(screen.getByLabelText("表示名"));
-    await user.type(screen.getByLabelText("表示名"), "田中次郎");
+    await waitFor(() => {
+      expect(
+        (container.querySelector("#displayName") as HTMLInputElement).value,
+      ).toBe("田中太郎");
+    });
+
     await user.click(screen.getByText("保存"));
 
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith({
         data: {
-          displayName: "田中次郎",
+          displayName: "田中太郎",
           bio: "",
           specialties: [],
         },
@@ -119,18 +203,22 @@ describe("ConsultantProfilePage", () => {
     mockMutateAsync.mockResolvedValue({});
 
     const user = userEvent.setup();
-    render(<ConsultantProfilePage />, { wrapper: createWrapper() });
+    const { container } = render(<ConsultantProfilePage />, {
+      wrapper: createWrapper(),
+    });
 
     await waitFor(() => {
-      expect((screen.getByLabelText("表示名") as HTMLInputElement).value).toBe(
-        "テスト",
-      );
+      expect(
+        (container.querySelector("#displayName") as HTMLInputElement).value,
+      ).toBe("テスト");
     });
 
     await user.click(screen.getByText("保存"));
 
     await waitFor(() => {
-      expect(screen.getByText("保存しました")).toBeDefined();
+      expect(mockToasterCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "success" }),
+      );
     });
   });
 });

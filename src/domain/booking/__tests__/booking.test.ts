@@ -21,7 +21,7 @@ function createPendingBooking() {
 
 function createConfirmedBooking() {
   const booking = createPendingBooking();
-  booking.confirm(ZoomUrl.create("https://zoom.us/j/123"), "pi_test_123");
+  booking.confirm(ZoomUrl.create("https://zoom.us/j/123"));
   // イベントをクリア
   booking.pullDomainEvents();
   return booking;
@@ -40,31 +40,29 @@ describe("Booking", () => {
       expect(booking.getCancelDeadline().equals(expectedDeadline)).toBe(true);
     });
 
-    it("zoomUrl と stripePaymentIntentId は undefined", () => {
+    it("zoomUrl は undefined", () => {
       const booking = createPendingBooking();
       expect(booking.getZoomUrl()).toBeUndefined();
-      expect(booking.getStripePaymentIntentId()).toBeUndefined();
     });
   });
 
   describe("confirm", () => {
     it("pending から confirmed に遷移する", () => {
       const booking = createPendingBooking();
-      booking.confirm(ZoomUrl.create("https://zoom.us/j/123"), "pi_test_123");
+      booking.confirm(ZoomUrl.create("https://zoom.us/j/123"));
       expect(booking.getStatus().getValue()).toBe("confirmed");
     });
 
-    it("zoomUrl と stripePaymentIntentId が設定される", () => {
+    it("zoomUrl が設定される", () => {
       const booking = createPendingBooking();
       const zoomUrl = ZoomUrl.create("https://zoom.us/j/123");
-      booking.confirm(zoomUrl, "pi_test_123");
+      booking.confirm(zoomUrl);
       expect(booking.getZoomUrl()?.getValue()).toBe("https://zoom.us/j/123");
-      expect(booking.getStripePaymentIntentId()).toBe("pi_test_123");
     });
 
     it("BookingConfirmedEvent が発行される", () => {
       const booking = createPendingBooking();
-      booking.confirm(ZoomUrl.create("https://zoom.us/j/123"), "pi_test_123");
+      booking.confirm(ZoomUrl.create("https://zoom.us/j/123"));
       const events = booking.pullDomainEvents();
       expect(events).toHaveLength(1);
       expect(events[0].eventName).toBe("BookingConfirmed");
@@ -73,7 +71,7 @@ describe("Booking", () => {
     it("pending 以外から confirm すると DomainError", () => {
       const booking = createConfirmedBooking();
       expect(() =>
-        booking.confirm(ZoomUrl.create("https://zoom.us/j/456"), "pi_test_456"),
+        booking.confirm(ZoomUrl.create("https://zoom.us/j/456")),
       ).toThrow(DomainError);
     });
   });
