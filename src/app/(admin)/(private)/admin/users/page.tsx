@@ -8,15 +8,16 @@ import * as Field from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import * as Select from "@/components/ui/select";
 import { Text } from "@/components/ui/text";
+import { toaster } from "@/components/ui/toast";
 import type { UpdateUserRoleBodyRole } from "@/generated/schemas";
 import { useUpdateUserRole } from "@/hooks/use-admin-users";
 import { useAuth } from "@/hooks/use-auth";
 
 const roleCollection = createListCollection({
   items: [
-    { label: "consultant", value: "consultant" },
-    { label: "operator", value: "operator" },
-    { label: "super_admin", value: "super_admin" },
+    { label: "相談員", value: "consultant" },
+    { label: "オペレーター", value: "operator" },
+    { label: "スーパー管理者", value: "super_admin" },
   ],
 });
 
@@ -25,8 +26,6 @@ export default function AdminUsersPage() {
   const [uid, setUid] = useState("");
   const [selectedRole, setSelectedRole] =
     useState<UpdateUserRoleBodyRole>("consultant");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
   const updateUserRole = useUpdateUserRole();
 
   if (role !== "super_admin") {
@@ -35,17 +34,21 @@ export default function AdminUsersPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setMessage("");
-    setError("");
     try {
       await updateUserRole.mutateAsync({
         uid,
         data: { role: selectedRole },
       });
-      setMessage(`ユーザー ${uid} のロールを ${selectedRole} に設定しました`);
+      const roleLabel =
+        roleCollection.items.find((r) => r.value === selectedRole)?.label ??
+        selectedRole;
+      toaster.success({
+        title: "成功",
+        description: `ユーザー ${uid} のロールを ${roleLabel} に設定しました`,
+      });
       setUid("");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "ロール更新に失敗しました");
+    } catch {
+      // custom-fetch.ts がエラー Toast を自動表示
     }
   };
 
@@ -95,9 +98,12 @@ export default function AdminUsersPage() {
             </Select.Content>
           </Select.Positioner>
         </Select.Root>
-        {error && <Text color="fg.error">{error}</Text>}
-        {message && <Text color="fg.success">{message}</Text>}
-        <Button type="submit" alignSelf="flex-start">
+        <Button
+          type="submit"
+          alignSelf="flex-start"
+          loading={updateUserRole.isPending}
+          loadingText="設定中..."
+        >
           ロール設定
         </Button>
       </styled.form>

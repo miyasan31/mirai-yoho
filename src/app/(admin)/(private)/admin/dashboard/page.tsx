@@ -1,17 +1,62 @@
 "use client";
 
+import { CircleAlert } from "lucide-react";
 import { styled } from "styled-system/jsx";
-import { Spinner } from "@/components/ui/spinner";
+import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
+import { EmptyState } from "../../_components/empty-state";
+
+const BOOKING_STATUS_CONFIG: Record<
+  string,
+  { label: string; colorPalette: string }
+> = {
+  pending: { label: "保留中", colorPalette: "yellow" },
+  confirmed: { label: "確定", colorPalette: "blue" },
+  completed: { label: "完了", colorPalette: "green" },
+  cancelled: { label: "キャンセル", colorPalette: "red" },
+};
 
 export default function AdminDashboardPage() {
   const { data, isLoading } = useAdminDashboard();
 
-  if (isLoading) return <Spinner />;
+  if (isLoading) {
+    return (
+      <styled.div>
+        <Skeleton height="8" width="200px" mb="6" />
+        <styled.div
+          display="grid"
+          gridTemplateColumns="repeat(auto-fit, minmax(200px, 1fr))"
+          gap="4"
+          mb="8"
+        >
+          <Skeleton height="100px" rounded="l2" />
+          <Skeleton height="100px" rounded="l2" />
+          <Skeleton height="100px" rounded="l2" />
+          <Skeleton height="100px" rounded="l2" />
+        </styled.div>
+        <Skeleton height="6" width="160px" mb="3" />
+        <styled.div display="flex" gap="3">
+          <Skeleton height="6" width="80px" rounded="l2" />
+          <Skeleton height="6" width="80px" rounded="l2" />
+          <Skeleton height="6" width="80px" rounded="l2" />
+          <Skeleton height="6" width="80px" rounded="l2" />
+        </styled.div>
+      </styled.div>
+    );
+  }
 
   const dashboard = data?.data;
-  if (!dashboard) return <Text>データの取得に失敗しました</Text>;
+  if (!dashboard) {
+    return (
+      <EmptyState
+        icon={CircleAlert}
+        message="データの取得に失敗しました"
+        hint="しばらく経ってから再度お試しください"
+      />
+    );
+  }
 
   return (
     <styled.div>
@@ -24,32 +69,92 @@ export default function AdminDashboardPage() {
         gap="4"
         mb="8"
       >
-        <styled.div p="4" border="1px solid" borderColor="border" rounded="l2">
-          <Text textStyle="sm" color="fg.muted">
+        <styled.div
+          p="6"
+          rounded="l2"
+          shadow="sm"
+          border="1px solid"
+          borderColor="border"
+          transition="all"
+          transitionDuration="normal"
+          _hover={{ shadow: "md" }}
+        >
+          <Text
+            textStyle="xs"
+            fontWeight="medium"
+            textTransform="uppercase"
+            letterSpacing="wide"
+            color="fg.muted"
+          >
             予約数
           </Text>
           <Text textStyle="4xl" fontWeight="bold">
             {dashboard.totalBookings}
           </Text>
         </styled.div>
-        <styled.div p="4" border="1px solid" borderColor="border" rounded="l2">
-          <Text textStyle="sm" color="fg.muted">
+        <styled.div
+          p="6"
+          rounded="l2"
+          shadow="sm"
+          border="1px solid"
+          borderColor="border"
+          transition="all"
+          transitionDuration="normal"
+          _hover={{ shadow: "md" }}
+        >
+          <Text
+            textStyle="xs"
+            fontWeight="medium"
+            textTransform="uppercase"
+            letterSpacing="wide"
+            color="fg.muted"
+          >
             売上
           </Text>
           <Text textStyle="4xl" fontWeight="bold">
             {dashboard.totalRevenue.toLocaleString()}円
           </Text>
         </styled.div>
-        <styled.div p="4" border="1px solid" borderColor="border" rounded="l2">
-          <Text textStyle="sm" color="fg.muted">
+        <styled.div
+          p="6"
+          rounded="l2"
+          shadow="sm"
+          border="1px solid"
+          borderColor="border"
+          transition="all"
+          transitionDuration="normal"
+          _hover={{ shadow: "md" }}
+        >
+          <Text
+            textStyle="xs"
+            fontWeight="medium"
+            textTransform="uppercase"
+            letterSpacing="wide"
+            color="fg.muted"
+          >
             クライアント数
           </Text>
           <Text textStyle="4xl" fontWeight="bold">
             {dashboard.totalClients}
           </Text>
         </styled.div>
-        <styled.div p="4" border="1px solid" borderColor="border" rounded="l2">
-          <Text textStyle="sm" color="fg.muted">
+        <styled.div
+          p="6"
+          rounded="l2"
+          shadow="sm"
+          border="1px solid"
+          borderColor="border"
+          transition="all"
+          transitionDuration="normal"
+          _hover={{ shadow: "md" }}
+        >
+          <Text
+            textStyle="xs"
+            fontWeight="medium"
+            textTransform="uppercase"
+            letterSpacing="wide"
+            color="fg.muted"
+          >
             相談員数
           </Text>
           <Text textStyle="4xl" fontWeight="bold">
@@ -60,11 +165,23 @@ export default function AdminDashboardPage() {
       <Text as="h2" textStyle="lg" fontWeight="bold" mb="3">
         予約ステータス
       </Text>
-      <styled.div display="flex" gap="4">
-        <Text>保留中: {dashboard.bookingsByStatus.pending}</Text>
-        <Text>確定: {dashboard.bookingsByStatus.confirmed}</Text>
-        <Text>完了: {dashboard.bookingsByStatus.completed}</Text>
-        <Text>キャンセル: {dashboard.bookingsByStatus.cancelled}</Text>
+      <styled.div display="flex" gap="3" flexWrap="wrap">
+        {Object.entries(dashboard.bookingsByStatus).map(([status, count]) => {
+          const config = BOOKING_STATUS_CONFIG[status] ?? {
+            label: status,
+            colorPalette: "gray",
+          };
+          return (
+            <Badge
+              key={status}
+              variant="subtle"
+              size="lg"
+              colorPalette={config.colorPalette}
+            >
+              {config.label}: {count as number}
+            </Badge>
+          );
+        })}
       </styled.div>
     </styled.div>
   );

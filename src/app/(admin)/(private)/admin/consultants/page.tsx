@@ -1,19 +1,40 @@
 "use client";
 
+import { Pencil, Users } from "lucide-react";
 import Link from "next/link";
 import { styled } from "styled-system/jsx";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
+import { IconButton } from "@/components/ui/icon-button";
 import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useAdminConsultants } from "@/hooks/use-admin-consultants";
+import { EmptyState } from "../../_components/empty-state";
+import { ActiveStatusBadge } from "../../_components/status-badge";
+import { TableSkeleton } from "../../_components/table-skeleton";
 
 export default function AdminConsultantsPage() {
   const { data, isLoading } = useAdminConsultants();
 
   const consultants = data?.data?.consultants ?? [];
 
-  if (isLoading) return <Spinner />;
+  if (isLoading) {
+    return (
+      <styled.div>
+        <styled.div
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          mb="4"
+        >
+          <Text as="h1" textStyle="2xl" fontWeight="bold">
+            相談員管理
+          </Text>
+        </styled.div>
+        <TableSkeleton columns={4} rows={5} />
+      </styled.div>
+    );
+  }
 
   return (
     <styled.div>
@@ -30,29 +51,44 @@ export default function AdminConsultantsPage() {
           <Link href="/admin/consultants/new">新規追加</Link>
         </Button>
       </styled.div>
-      <Table.Root>
-        <Table.Head>
-          <Table.Row>
-            <Table.Header>名前</Table.Header>
-            <Table.Header>専門分野</Table.Header>
-            <Table.Header>ステータス</Table.Header>
-            <Table.Header>操作</Table.Header>
-          </Table.Row>
-        </Table.Head>
-        <Table.Body>
-          {consultants.map((c) => (
-            <Table.Row key={c.consultantId}>
-              <Table.Cell>{c.displayName}</Table.Cell>
-              <Table.Cell>{c.specialties.join(", ")}</Table.Cell>
-              <Table.Cell>{c.isActive ? "有効" : "無効"}</Table.Cell>
-              <Table.Cell>
-                <Link href={`/admin/consultants/${c.consultantId}`}>編集</Link>
-              </Table.Cell>
+      {consultants.length === 0 ? (
+        <EmptyState
+          icon={Users}
+          message="相談員はいません"
+          hint="新規追加ボタンから相談員を登録できます"
+        />
+      ) : (
+        <Table.Root>
+          <Table.Head>
+            <Table.Row>
+              <Table.Header>名前</Table.Header>
+              <Table.Header>専門分野</Table.Header>
+              <Table.Header>ステータス</Table.Header>
+              <Table.Header>操作</Table.Header>
             </Table.Row>
-          ))}
-        </Table.Body>
-      </Table.Root>
-      {consultants.length === 0 && <Text mt="4">相談員はいません</Text>}
+          </Table.Head>
+          <Table.Body>
+            {consultants.map((c) => (
+              <Table.Row key={c.consultantId}>
+                <Table.Cell>{c.displayName}</Table.Cell>
+                <Table.Cell>{c.specialties.join(", ")}</Table.Cell>
+                <Table.Cell>
+                  <ActiveStatusBadge isActive={c.isActive} />
+                </Table.Cell>
+                <Table.Cell>
+                  <Tooltip content="編集">
+                    <IconButton variant="ghost" size="sm" asChild>
+                      <Link href={`/admin/consultants/${c.consultantId}`}>
+                        <Pencil size={16} />
+                      </Link>
+                    </IconButton>
+                  </Tooltip>
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table.Root>
+      )}
     </styled.div>
   );
 }

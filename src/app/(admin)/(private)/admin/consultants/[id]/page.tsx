@@ -1,12 +1,15 @@
 "use client";
 
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { styled } from "styled-system/jsx";
 import { Button } from "@/components/ui/button";
+import * as Dialog from "@/components/ui/dialog";
 import * as Field from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
-import { Spinner } from "@/components/ui/spinner";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -62,7 +65,6 @@ export default function AdminConsultantDetailPage() {
   };
 
   const handleDeactivate = async () => {
-    if (!confirm("この相談員を無効にしますか？")) return;
     try {
       await deleteConsultant.mutateAsync({ id: consultantId });
       router.push("/admin/consultants");
@@ -71,13 +73,55 @@ export default function AdminConsultantDetailPage() {
     }
   };
 
-  if (isLoading) return <Spinner />;
+  if (isLoading) {
+    return (
+      <styled.div maxW="600px">
+        <styled.div display="flex" alignItems="center" gap="2" mb="4">
+          <Skeleton height="5" width="5" rounded="full" />
+          <Skeleton height="8" width="160px" />
+        </styled.div>
+        <styled.div display="flex" flexDir="column" gap="4">
+          <styled.div>
+            <Skeleton height="4" width="80px" mb="2" />
+            <Skeleton height="10" rounded="l2" />
+          </styled.div>
+          <styled.div>
+            <Skeleton height="4" width="80px" mb="2" />
+            <Skeleton height="24" rounded="l2" />
+          </styled.div>
+          <styled.div>
+            <Skeleton height="4" width="120px" mb="2" />
+            <Skeleton height="10" rounded="l2" />
+          </styled.div>
+          <styled.div display="flex" gap="2">
+            <Skeleton height="10" width="80px" rounded="l2" />
+            <Skeleton height="10" width="80px" rounded="l2" />
+          </styled.div>
+        </styled.div>
+      </styled.div>
+    );
+  }
 
   return (
     <styled.div maxW="600px">
-      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
-        相談員編集
-      </Text>
+      <styled.div display="flex" alignItems="center" gap="2" mb="4">
+        <Link href="/admin/consultants" style={{ textDecoration: "none" }}>
+          <styled.span
+            display="flex"
+            alignItems="center"
+            color="fg.muted"
+            _hover={{ color: "fg.default" }}
+            transition="all"
+            transitionDuration="normal"
+            cursor="pointer"
+          >
+            <ArrowLeft size={20} />
+          </styled.span>
+        </Link>
+        <Text as="h1" textStyle="2xl" fontWeight="bold">
+          相談員編集
+        </Text>
+      </styled.div>
       <styled.form
         onSubmit={handleSubmit}
         display="flex"
@@ -121,14 +165,41 @@ export default function AdminConsultantDetailPage() {
           >
             保存
           </Button>
-          <Button
-            type="button"
-            variant="outline"
-            colorPalette="red"
-            onClick={handleDeactivate}
-          >
-            無効化
-          </Button>
+          <Dialog.Root>
+            <Dialog.Trigger asChild>
+              <Button type="button" variant="outline" colorPalette="red">
+                無効化
+              </Button>
+            </Dialog.Trigger>
+            <Dialog.Backdrop />
+            <Dialog.Positioner>
+              <Dialog.Content>
+                <Dialog.Header>
+                  <Dialog.Title>相談員の無効化</Dialog.Title>
+                </Dialog.Header>
+                <Dialog.Body>
+                  <Dialog.Description>
+                    この相談員を無効にしますか？この操作は取り消せます。
+                  </Dialog.Description>
+                </Dialog.Body>
+                <Dialog.Footer>
+                  <styled.div display="flex" gap="2" justifyContent="flex-end">
+                    <Dialog.CloseTrigger asChild>
+                      <Button variant="outline">キャンセル</Button>
+                    </Dialog.CloseTrigger>
+                    <Button
+                      colorPalette="red"
+                      onClick={handleDeactivate}
+                      loading={deleteConsultant.isPending}
+                      loadingText="処理中..."
+                    >
+                      無効化する
+                    </Button>
+                  </styled.div>
+                </Dialog.Footer>
+              </Dialog.Content>
+            </Dialog.Positioner>
+          </Dialog.Root>
         </styled.div>
       </styled.form>
     </styled.div>

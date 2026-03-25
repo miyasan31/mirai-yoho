@@ -1,12 +1,16 @@
 "use client";
 
+import { CalendarDays } from "lucide-react";
 import { styled } from "styled-system/jsx";
 import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
 import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
 import { useAdminBookings } from "@/hooks/use-admin-bookings";
 import { useChargePayment } from "@/hooks/use-booking";
+import { EmptyState } from "../../_components/empty-state";
+import { BookingStatusBadge } from "../../_components/status-badge";
+import { TableSkeleton } from "../../_components/table-skeleton";
+import { TruncatedId } from "../../_components/truncated-id";
 
 export default function AdminBookingsPage() {
   const { data, isLoading } = useAdminBookings();
@@ -20,61 +24,79 @@ export default function AdminBookingsPage() {
         bookingId,
         data: { method: "manual" },
       });
-    } catch (err) {
-      const message =
-        err && typeof err === "object" && "message" in err
-          ? (err as { message: string }).message
-          : "課金に失敗しました";
-      alert(message);
+    } catch {
+      // custom-fetch.ts がエラー Toast を自動表示するため、ここでは何もしない
     }
   };
 
-  if (isLoading) return <Spinner />;
+  if (isLoading) {
+    return (
+      <styled.div>
+        <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
+          予約管理
+        </Text>
+        <TableSkeleton columns={5} rows={5} />
+      </styled.div>
+    );
+  }
 
   return (
     <styled.div>
       <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
         予約管理
       </Text>
-      <Table.Root>
-        <Table.Head>
-          <Table.Row>
-            <Table.Header>日時</Table.Header>
-            <Table.Header>ステータス</Table.Header>
-            <Table.Header>クライアントID</Table.Header>
-            <Table.Header>相談員ID</Table.Header>
-            <Table.Header>操作</Table.Header>
-          </Table.Row>
-        </Table.Head>
-        <Table.Body>
-          {bookings.map((b) => (
-            <Table.Row key={b.bookingId}>
-              <Table.Cell>
-                {new Date(b.startDatetime).toLocaleString("ja-JP")}
-              </Table.Cell>
-              <Table.Cell>{b.status}</Table.Cell>
-              <Table.Cell>{b.clientId}</Table.Cell>
-              <Table.Cell>{b.consultantId}</Table.Cell>
-              <Table.Cell>
-                {b.status === "confirmed" && (
-                  <Button
-                    size="sm"
-                    onClick={() => handleCharge(b.bookingId)}
-                    loading={
-                      chargePayment.isPending &&
-                      chargePayment.variables?.bookingId === b.bookingId
-                    }
-                    loadingText="処理中..."
-                  >
-                    課金
-                  </Button>
-                )}
-              </Table.Cell>
+      {bookings.length === 0 ? (
+        <EmptyState
+          icon={CalendarDays}
+          message="予約はありません"
+          hint="予約が作成されるとここに表示されます"
+        />
+      ) : (
+        <Table.Root>
+          <Table.Head>
+            <Table.Row>
+              <Table.Header>日時</Table.Header>
+              <Table.Header>ステータス</Table.Header>
+              <Table.Header>クライアントID</Table.Header>
+              <Table.Header>相談員ID</Table.Header>
+              <Table.Header>操作</Table.Header>
             </Table.Row>
-          ))}
-        </Table.Body>
-      </Table.Root>
-      {bookings.length === 0 && <Text mt="4">予約はありません</Text>}
+          </Table.Head>
+          <Table.Body>
+            {bookings.map((b) => (
+              <Table.Row key={b.bookingId}>
+                <Table.Cell>
+                  {new Date(b.startDatetime).toLocaleString("ja-JP")}
+                </Table.Cell>
+                <Table.Cell>
+                  <BookingStatusBadge status={b.status} />
+                </Table.Cell>
+                <Table.Cell>
+                  <TruncatedId id={b.clientId} />
+                </Table.Cell>
+                <Table.Cell>
+                  <TruncatedId id={b.consultantId} />
+                </Table.Cell>
+                <Table.Cell>
+                  {b.status === "confirmed" && (
+                    <Button
+                      size="sm"
+                      onClick={() => handleCharge(b.bookingId)}
+                      loading={
+                        chargePayment.isPending &&
+                        chargePayment.variables?.bookingId === b.bookingId
+                      }
+                      loadingText="処理中..."
+                    >
+                      課金
+                    </Button>
+                  )}
+                </Table.Cell>
+              </Table.Row>
+            ))}
+          </Table.Body>
+        </Table.Root>
+      )}
     </styled.div>
   );
 }
