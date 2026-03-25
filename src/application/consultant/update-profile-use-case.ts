@@ -1,3 +1,4 @@
+import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
 
@@ -12,16 +13,26 @@ export class UpdateProfileUseCase {
   constructor(private readonly consultantRepository: IConsultantRepository) {}
 
   async execute(input: UpdateProfileInput): Promise<void> {
-    const consultant = await this.consultantRepository.findById(
+    const profile = ConsultantProfile.create(
+      input.displayName,
+      input.bio,
+      input.specialties,
+    );
+
+    let consultant = await this.consultantRepository.findById(
       input.consultantId,
     );
-    if (!consultant) {
-      throw new Error("Consultant not found");
+
+    if (consultant) {
+      consultant.updateProfile(profile);
+    } else {
+      consultant = Consultant.create({
+        consultantId: input.consultantId,
+        profile,
+        zoomRoomIds: [],
+      });
     }
 
-    consultant.updateProfile(
-      ConsultantProfile.create(input.displayName, input.bio, input.specialties),
-    );
     await this.consultantRepository.save(consultant);
   }
 }

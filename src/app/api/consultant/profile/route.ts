@@ -14,10 +14,14 @@ export async function GET(request: NextRequest) {
     const repo = createConsultantRepository();
     const consultant = await repo.findById(authUser.uid);
     if (!consultant) {
-      return NextResponse.json(
-        { code: "NOT_FOUND", message: "Consultant not found" },
-        { status: 404 },
-      );
+      return NextResponse.json({
+        consultantId: authUser.uid,
+        displayName: "",
+        bio: "",
+        specialties: [],
+        zoomRoomIds: [],
+        isActive: true,
+      });
     }
 
     const profile = consultant.getProfile();

@@ -19,7 +19,12 @@ export const customFetch = async <T>(
     throw error;
   }
 
-  return response.json() as Promise<T>;
+  const data = await response.json();
+  return {
+    data,
+    status: response.status,
+    headers: response.headers,
+  } as T;
 };
 
 export default customFetch;
