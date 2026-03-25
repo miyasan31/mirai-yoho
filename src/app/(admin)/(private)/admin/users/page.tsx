@@ -1,6 +1,11 @@
 "use client";
 
 import { useState } from "react";
+import { styled } from "styled-system/jsx";
+import { Button } from "@/components/ui/button";
+import * as Field from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Text } from "@/components/ui/text";
 import type { UpdateUserRoleBodyRole } from "@/generated/schemas";
 import { useUpdateUserRole } from "@/hooks/use-admin-users";
 import { useAuth } from "@/hooks/use-auth";
@@ -15,7 +20,7 @@ export default function AdminUsersPage() {
   const updateUserRole = useUpdateUserRole();
 
   if (role !== "super_admin") {
-    return <div>権限がありません</div>;
+    return <Text>権限がありません</Text>;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -35,69 +40,51 @@ export default function AdminUsersPage() {
   };
 
   return (
-    <div style={{ maxWidth: 600 }}>
-      <h1 style={{ fontSize: 24, fontWeight: "bold", marginBottom: 16 }}>
+    <styled.div maxW="600px">
+      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
         ユーザー管理
-      </h1>
-      <form
+      </Text>
+      <styled.form
         onSubmit={handleSubmit}
-        style={{ display: "flex", flexDirection: "column", gap: 16 }}
+        display="flex"
+        flexDir="column"
+        gap="4"
       >
-        <div>
-          <label htmlFor="uid">ユーザーUID</label>
-          <input
+        <Field.Root>
+          <Field.Label>ユーザーUID</Field.Label>
+          <Input
             id="uid"
             type="text"
             value={uid}
             onChange={(e) => setUid(e.target.value)}
             required
-            style={{
-              display: "block",
-              width: "100%",
-              padding: 8,
-              border: "1px solid #d1d5db",
-              borderRadius: 4,
-            }}
           />
-        </div>
-        <div>
-          <label htmlFor="role">ロール</label>
-          <select
+        </Field.Root>
+        <Field.Root>
+          <Field.Label>ロール</Field.Label>
+          <styled.select
             id="role"
             value={selectedRole}
             onChange={(e) =>
               setSelectedRole(e.target.value as UpdateUserRoleBodyRole)
             }
-            style={{
-              display: "block",
-              width: "100%",
-              padding: 8,
-              border: "1px solid #d1d5db",
-              borderRadius: 4,
-            }}
+            w="100%"
+            p="2"
+            border="1px solid"
+            borderColor="border"
+            rounded="l1"
           >
             <option value="consultant">consultant</option>
             <option value="operator">operator</option>
             <option value="super_admin">super_admin</option>
-          </select>
-        </div>
-        {error && <p style={{ color: "red" }}>{error}</p>}
-        {message && <p style={{ color: "green" }}>{message}</p>}
-        <button
-          type="submit"
-          style={{
-            padding: "8px 16px",
-            background: "#2563eb",
-            color: "white",
-            borderRadius: 4,
-            border: "none",
-            cursor: "pointer",
-            alignSelf: "flex-start",
-          }}
-        >
+          </styled.select>
+        </Field.Root>
+        {error && <Text color="fg.error">{error}</Text>}
+        {message && <Text color="fg.success">{message}</Text>}
+        <Button type="submit" alignSelf="flex-start">
           ロール設定
-        </button>
-      </form>
-    </div>
+        </Button>
+      </styled.form>
+    </styled.div>
   );
 }

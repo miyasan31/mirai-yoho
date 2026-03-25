@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
+import { styled } from "styled-system/jsx";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { Text } from "@/components/ui/text";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
@@ -20,7 +24,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }, [user, role, isLoading, router]);
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <Spinner />;
   }
 
   if (!user || (role !== "super_admin" && role !== "operator")) {
@@ -28,19 +32,18 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      <aside
-        style={{
-          width: 240,
-          padding: 16,
-          borderRight: "1px solid #e5e7eb",
-          background: "#f9fafb",
-        }}
+    <styled.div display="flex" minH="100vh">
+      <styled.aside
+        w="240px"
+        p="4"
+        borderRight="1px solid"
+        borderColor="border"
+        bg="bg.subtle"
       >
-        <h2 style={{ fontSize: 18, fontWeight: "bold", marginBottom: 16 }}>
+        <Text as="h2" textStyle="lg" fontWeight="bold" mb="4">
           管理メニュー
-        </h2>
-        <nav style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        </Text>
+        <styled.nav display="flex" flexDir="column" gap="2">
           <Link href="/admin/dashboard">ダッシュボード</Link>
           <Link href="/admin/bookings">予約管理</Link>
           <Link href="/admin/consultants">相談員管理</Link>
@@ -50,16 +53,14 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
             <Link href="/admin/users">ユーザー管理</Link>
           )}
           <Link href="/admin/settings">設定</Link>
-        </nav>
-        <button
-          type="button"
-          onClick={() => signOut()}
-          style={{ marginTop: 32 }}
-        >
+        </styled.nav>
+        <Button variant="outline" mt="8" onClick={() => signOut()}>
           ログアウト
-        </button>
-      </aside>
-      <main style={{ flex: 1, padding: 24 }}>{children}</main>
-    </div>
+        </Button>
+      </styled.aside>
+      <styled.main flex="1" p="6">
+        {children}
+      </styled.main>
+    </styled.div>
   );
 }

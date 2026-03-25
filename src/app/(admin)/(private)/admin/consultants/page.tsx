@@ -1,6 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { styled } from "styled-system/jsx";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import * as Table from "@/components/ui/table";
+import { Text } from "@/components/ui/text";
 import { useAdminConsultants } from "@/hooks/use-admin-consultants";
 
 export default function AdminConsultantsPage() {
@@ -8,95 +13,46 @@ export default function AdminConsultantsPage() {
 
   const consultants = data?.data?.consultants ?? [];
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <Spinner />;
 
   return (
-    <div>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 16,
-        }}
+    <styled.div>
+      <styled.div
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        mb="4"
       >
-        <h1 style={{ fontSize: 24, fontWeight: "bold" }}>相談員管理</h1>
-        <Link
-          href="/admin/consultants/new"
-          style={{
-            padding: "8px 16px",
-            background: "#2563eb",
-            color: "white",
-            borderRadius: 4,
-            textDecoration: "none",
-          }}
-        >
-          新規追加
-        </Link>
-      </div>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th
-              style={{
-                textAlign: "left",
-                padding: 8,
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
-              名前
-            </th>
-            <th
-              style={{
-                textAlign: "left",
-                padding: 8,
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
-              専門分野
-            </th>
-            <th
-              style={{
-                textAlign: "left",
-                padding: 8,
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
-              ステータス
-            </th>
-            <th
-              style={{
-                textAlign: "left",
-                padding: 8,
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
-              操作
-            </th>
-          </tr>
-        </thead>
-        <tbody>
+        <Text as="h1" textStyle="2xl" fontWeight="bold">
+          相談員管理
+        </Text>
+        <Button asChild>
+          <Link href="/admin/consultants/new">新規追加</Link>
+        </Button>
+      </styled.div>
+      <Table.Root>
+        <Table.Head>
+          <Table.Row>
+            <Table.Header>名前</Table.Header>
+            <Table.Header>専門分野</Table.Header>
+            <Table.Header>ステータス</Table.Header>
+            <Table.Header>操作</Table.Header>
+          </Table.Row>
+        </Table.Head>
+        <Table.Body>
           {consultants.map((c) => (
-            <tr key={c.consultantId}>
-              <td style={{ padding: 8, borderBottom: "1px solid #e5e7eb" }}>
-                {c.displayName}
-              </td>
-              <td style={{ padding: 8, borderBottom: "1px solid #e5e7eb" }}>
-                {c.specialties.join(", ")}
-              </td>
-              <td style={{ padding: 8, borderBottom: "1px solid #e5e7eb" }}>
-                {c.isActive ? "有効" : "無効"}
-              </td>
-              <td style={{ padding: 8, borderBottom: "1px solid #e5e7eb" }}>
+            <Table.Row key={c.consultantId}>
+              <Table.Cell>{c.displayName}</Table.Cell>
+              <Table.Cell>{c.specialties.join(", ")}</Table.Cell>
+              <Table.Cell>{c.isActive ? "有効" : "無効"}</Table.Cell>
+              <Table.Cell>
                 <Link href={`/admin/consultants/${c.consultantId}`}>編集</Link>
-              </td>
-            </tr>
+              </Table.Cell>
+            </Table.Row>
           ))}
-        </tbody>
-      </table>
-      {consultants.length === 0 && (
-        <p style={{ marginTop: 16 }}>相談員はいません</p>
-      )}
-    </div>
+        </Table.Body>
+      </Table.Root>
+      {consultants.length === 0 && <Text mt="4">相談員はいません</Text>}
+    </styled.div>
   );
 }

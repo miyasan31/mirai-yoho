@@ -1,12 +1,14 @@
 "use client";
 
+import { Text } from "@/components/ui/text";
+
 export default function AdminSettingsPage() {
   return (
     <div>
-      <h1 style={{ fontSize: 24, fontWeight: "bold", marginBottom: 16 }}>
+      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
         設定
-      </h1>
-      <p>設定画面は準備中です。</p>
+      </Text>
+      <Text>設定画面は準備中です。</Text>
     </div>
   );
 }

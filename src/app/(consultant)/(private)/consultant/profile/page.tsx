@@ -1,6 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { styled } from "styled-system/jsx";
+import { Button } from "@/components/ui/button";
+import * as Field from "@/components/ui/field";
+import { Input } from "@/components/ui/input";
+import { Spinner } from "@/components/ui/spinner";
+import { Text } from "@/components/ui/text";
+import { Textarea } from "@/components/ui/textarea";
 import {
   useConsultantProfile,
   useUpdateConsultantProfile,
@@ -45,84 +52,58 @@ export default function ConsultantProfilePage() {
     }
   };
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <Spinner />;
 
   return (
-    <div style={{ maxWidth: 600 }}>
-      <h1 style={{ fontSize: 24, fontWeight: "bold", marginBottom: 16 }}>
+    <styled.div maxW="600px">
+      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
         プロフィール編集
-      </h1>
-      <form
+      </Text>
+      <styled.form
         onSubmit={handleSubmit}
-        style={{ display: "flex", flexDirection: "column", gap: 16 }}
+        display="flex"
+        flexDir="column"
+        gap="4"
       >
-        <div>
-          <label htmlFor="displayName">表示名</label>
-          <input
+        <Field.Root>
+          <Field.Label>表示名</Field.Label>
+          <Input
             id="displayName"
             type="text"
             value={displayName}
             onChange={(e) => setDisplayName(e.target.value)}
             required
-            style={{
-              display: "block",
-              width: "100%",
-              padding: 8,
-              border: "1px solid #d1d5db",
-              borderRadius: 4,
-            }}
           />
-        </div>
-        <div>
-          <label htmlFor="bio">自己紹介</label>
-          <textarea
+        </Field.Root>
+        <Field.Root>
+          <Field.Label>自己紹介</Field.Label>
+          <Textarea
             id="bio"
             value={bio}
             onChange={(e) => setBio(e.target.value)}
             rows={4}
-            style={{
-              display: "block",
-              width: "100%",
-              padding: 8,
-              border: "1px solid #d1d5db",
-              borderRadius: 4,
-            }}
           />
-        </div>
-        <div>
-          <label htmlFor="specialties">専門分野（カンマ区切り）</label>
-          <input
+        </Field.Root>
+        <Field.Root>
+          <Field.Label>専門分野（カンマ区切り）</Field.Label>
+          <Input
             id="specialties"
             type="text"
             value={specialties}
             onChange={(e) => setSpecialties(e.target.value)}
-            style={{
-              display: "block",
-              width: "100%",
-              padding: 8,
-              border: "1px solid #d1d5db",
-              borderRadius: 4,
-            }}
           />
-        </div>
-        {error && <p style={{ color: "red" }}>{error}</p>}
-        {success && <p style={{ color: "green" }}>保存しました</p>}
-        <button
+        </Field.Root>
+        {error && <Text color="fg.error">{error}</Text>}
+        {success && <Text color="fg.success">保存しました</Text>}
+        <Button
           type="submit"
-          disabled={updateProfile.isPending}
-          style={{
-            padding: "8px 16px",
-            background: "#2563eb",
-            color: "white",
-            borderRadius: 4,
-            border: "none",
-            cursor: "pointer",
-            alignSelf: "flex-start",
-          }}
+          alignSelf="flex-start"
+          loading={updateProfile.isPending}
+          loadingText="保存中..."
         >
-          {updateProfile.isPending ? "保存中..." : "保存"}
-        </button>
-      </form>
-    </div>
+          保存
+        </Button>
+      </styled.form>
+    </styled.div>
   );
 }

@@ -1,5 +1,10 @@
 "use client";
 
+import { styled } from "styled-system/jsx";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import * as Table from "@/components/ui/table";
+import { Text } from "@/components/ui/text";
 import { useAdminBookings } from "@/hooks/use-admin-bookings";
 import { useCapturePayment } from "@/hooks/use-booking";
 
@@ -24,110 +29,52 @@ export default function AdminBookingsPage() {
     }
   };
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <Spinner />;
 
   return (
-    <div>
-      <h1 style={{ fontSize: 24, fontWeight: "bold", marginBottom: 16 }}>
+    <styled.div>
+      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
         予約管理
-      </h1>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th
-              style={{
-                textAlign: "left",
-                padding: 8,
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
-              日時
-            </th>
-            <th
-              style={{
-                textAlign: "left",
-                padding: 8,
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
-              ステータス
-            </th>
-            <th
-              style={{
-                textAlign: "left",
-                padding: 8,
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
-              クライアントID
-            </th>
-            <th
-              style={{
-                textAlign: "left",
-                padding: 8,
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
-              相談員ID
-            </th>
-            <th
-              style={{
-                textAlign: "left",
-                padding: 8,
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
-              操作
-            </th>
-          </tr>
-        </thead>
-        <tbody>
+      </Text>
+      <Table.Root>
+        <Table.Head>
+          <Table.Row>
+            <Table.Header>日時</Table.Header>
+            <Table.Header>ステータス</Table.Header>
+            <Table.Header>クライアントID</Table.Header>
+            <Table.Header>相談員ID</Table.Header>
+            <Table.Header>操作</Table.Header>
+          </Table.Row>
+        </Table.Head>
+        <Table.Body>
           {bookings.map((b) => (
-            <tr key={b.bookingId}>
-              <td style={{ padding: 8, borderBottom: "1px solid #e5e7eb" }}>
+            <Table.Row key={b.bookingId}>
+              <Table.Cell>
                 {new Date(b.startDatetime).toLocaleString("ja-JP")}
-              </td>
-              <td style={{ padding: 8, borderBottom: "1px solid #e5e7eb" }}>
-                {b.status}
-              </td>
-              <td style={{ padding: 8, borderBottom: "1px solid #e5e7eb" }}>
-                {b.clientId}
-              </td>
-              <td style={{ padding: 8, borderBottom: "1px solid #e5e7eb" }}>
-                {b.consultantId}
-              </td>
-              <td style={{ padding: 8, borderBottom: "1px solid #e5e7eb" }}>
+              </Table.Cell>
+              <Table.Cell>{b.status}</Table.Cell>
+              <Table.Cell>{b.clientId}</Table.Cell>
+              <Table.Cell>{b.consultantId}</Table.Cell>
+              <Table.Cell>
                 {b.status === "confirmed" && (
-                  <button
-                    type="button"
+                  <Button
+                    size="sm"
                     onClick={() => handleCapture(b.bookingId)}
-                    disabled={
+                    loading={
                       capturePayment.isPending &&
                       capturePayment.variables?.bookingId === b.bookingId
                     }
-                    style={{
-                      padding: "4px 8px",
-                      background: "#16a34a",
-                      color: "white",
-                      borderRadius: 4,
-                      border: "none",
-                      cursor: "pointer",
-                    }}
+                    loadingText="処理中..."
                   >
-                    {capturePayment.isPending &&
-                    capturePayment.variables?.bookingId === b.bookingId
-                      ? "処理中..."
-                      : "本決済"}
-                  </button>
+                    本決済
+                  </Button>
                 )}
-              </td>
-            </tr>
+              </Table.Cell>
+            </Table.Row>
           ))}
-        </tbody>
-      </table>
-      {bookings.length === 0 && (
-        <p style={{ marginTop: 16 }}>予約はありません</p>
-      )}
-    </div>
+        </Table.Body>
+      </Table.Root>
+      {bookings.length === 0 && <Text mt="4">予約はありません</Text>}
+    </styled.div>
   );
 }

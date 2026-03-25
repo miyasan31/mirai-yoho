@@ -1,79 +1,41 @@
 "use client";
 
 import Link from "next/link";
+import { styled } from "styled-system/jsx";
+import { Spinner } from "@/components/ui/spinner";
+import * as Table from "@/components/ui/table";
+import { Text } from "@/components/ui/text";
 import { useConsultantBookings } from "@/hooks/use-consultant-bookings";
 
 export default function ConsultantBookingsPage() {
   const { data, isLoading } = useConsultantBookings();
   const bookings = data?.data?.bookings ?? [];
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <Spinner />;
 
   return (
-    <div>
-      <h1 style={{ fontSize: 24, fontWeight: "bold", marginBottom: 16 }}>
+    <styled.div>
+      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
         予約一覧
-      </h1>
-      <table style={{ width: "100%", borderCollapse: "collapse" }}>
-        <thead>
-          <tr>
-            <th
-              style={{
-                textAlign: "left",
-                padding: 8,
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
-              日時
-            </th>
-            <th
-              style={{
-                textAlign: "left",
-                padding: 8,
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
-              ステータス
-            </th>
-            <th
-              style={{
-                textAlign: "left",
-                padding: 8,
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
-              Zoom
-            </th>
-            <th
-              style={{
-                textAlign: "left",
-                padding: 8,
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
-              メモ
-            </th>
-            <th
-              style={{
-                textAlign: "left",
-                padding: 8,
-                borderBottom: "2px solid #e5e7eb",
-              }}
-            >
-              操作
-            </th>
-          </tr>
-        </thead>
-        <tbody>
+      </Text>
+      <Table.Root>
+        <Table.Head>
+          <Table.Row>
+            <Table.Header>日時</Table.Header>
+            <Table.Header>ステータス</Table.Header>
+            <Table.Header>Zoom</Table.Header>
+            <Table.Header>メモ</Table.Header>
+            <Table.Header>操作</Table.Header>
+          </Table.Row>
+        </Table.Head>
+        <Table.Body>
           {bookings.map((b) => (
-            <tr key={b.bookingId}>
-              <td style={{ padding: 8, borderBottom: "1px solid #e5e7eb" }}>
+            <Table.Row key={b.bookingId}>
+              <Table.Cell>
                 {new Date(b.startDatetime).toLocaleString("ja-JP")}
-              </td>
-              <td style={{ padding: 8, borderBottom: "1px solid #e5e7eb" }}>
-                {b.status}
-              </td>
-              <td style={{ padding: 8, borderBottom: "1px solid #e5e7eb" }}>
+              </Table.Cell>
+              <Table.Cell>{b.status}</Table.Cell>
+              <Table.Cell>
                 {b.zoomUrl ? (
                   <a href={b.zoomUrl} target="_blank" rel="noopener noreferrer">
                     参加
@@ -81,22 +43,18 @@ export default function ConsultantBookingsPage() {
                 ) : (
                   "-"
                 )}
-              </td>
-              <td style={{ padding: 8, borderBottom: "1px solid #e5e7eb" }}>
-                {b.consultantMemo || "-"}
-              </td>
-              <td style={{ padding: 8, borderBottom: "1px solid #e5e7eb" }}>
+              </Table.Cell>
+              <Table.Cell>{b.consultantMemo || "-"}</Table.Cell>
+              <Table.Cell>
                 <Link href={`/consultant/bookings/${b.bookingId}/memo`}>
                   メモ編集
                 </Link>
-              </td>
-            </tr>
+              </Table.Cell>
+            </Table.Row>
           ))}
-        </tbody>
-      </table>
-      {bookings.length === 0 && (
-        <p style={{ marginTop: 16 }}>予約はありません</p>
-      )}
-    </div>
+        </Table.Body>
+      </Table.Root>
+      {bookings.length === 0 && <Text mt="4">予約はありません</Text>}
+    </styled.div>
   );
 }

@@ -4,6 +4,10 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
+import { styled } from "styled-system/jsx";
+import { Button } from "@/components/ui/button";
+import { Spinner } from "@/components/ui/spinner";
+import { Text } from "@/components/ui/text";
 import { useAuth } from "@/hooks/use-auth";
 
 export default function ConsultantLayout({
@@ -21,7 +25,7 @@ export default function ConsultantLayout({
   }, [user, role, isLoading, router]);
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <Spinner />;
   }
 
   if (!user || role !== "consultant") {
@@ -29,26 +33,27 @@ export default function ConsultantLayout({
   }
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh" }}>
-      <aside
-        style={{ width: 240, padding: 16, borderRight: "1px solid #e5e7eb" }}
+    <styled.div display="flex" minH="100vh">
+      <styled.aside
+        w="240px"
+        p="4"
+        borderRight="1px solid"
+        borderColor="border"
       >
-        <h2 style={{ fontSize: 18, fontWeight: "bold", marginBottom: 16 }}>
+        <Text as="h2" textStyle="lg" fontWeight="bold" mb="4">
           相談員メニュー
-        </h2>
-        <nav style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        </Text>
+        <styled.nav display="flex" flexDir="column" gap="2">
           <Link href="/consultant/bookings">予約一覧</Link>
           <Link href="/consultant/profile">プロフィール</Link>
-        </nav>
-        <button
-          type="button"
-          onClick={() => signOut()}
-          style={{ marginTop: 32 }}
-        >
+        </styled.nav>
+        <Button variant="outline" mt="8" onClick={() => signOut()}>
           ログアウト
-        </button>
-      </aside>
-      <main style={{ flex: 1, padding: 24 }}>{children}</main>
-    </div>
+        </Button>
+      </styled.aside>
+      <styled.main flex="1" p="6">
+        {children}
+      </styled.main>
+    </styled.div>
   );
 }

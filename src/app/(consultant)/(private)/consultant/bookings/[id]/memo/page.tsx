@@ -2,6 +2,12 @@
 
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { styled } from "styled-system/jsx";
+import { Button } from "@/components/ui/button";
+import * as Field from "@/components/ui/field";
+import { Spinner } from "@/components/ui/spinner";
+import { Text } from "@/components/ui/text";
+import { Textarea } from "@/components/ui/textarea";
 import {
   useConsultantBookings,
   useUpdateConsultantMemo,
@@ -39,64 +45,46 @@ export default function ConsultantMemoEditPage() {
     }
   };
 
-  if (isLoading) return <div>Loading...</div>;
+  if (isLoading) return <Spinner />;
 
   return (
-    <div style={{ maxWidth: 600 }}>
-      <h1 style={{ fontSize: 24, fontWeight: "bold", marginBottom: 16 }}>
+    <styled.div maxW="600px">
+      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
         メモ編集
-      </h1>
-      <form
+      </Text>
+      <styled.form
         onSubmit={handleSubmit}
-        style={{ display: "flex", flexDirection: "column", gap: 16 }}
+        display="flex"
+        flexDir="column"
+        gap="4"
       >
-        <div>
-          <label htmlFor="memo">相談員メモ</label>
-          <textarea
+        <Field.Root>
+          <Field.Label>相談員メモ</Field.Label>
+          <Textarea
             id="memo"
             value={memo}
             onChange={(e) => setMemo(e.target.value)}
             rows={6}
-            style={{
-              display: "block",
-              width: "100%",
-              padding: 8,
-              border: "1px solid #d1d5db",
-              borderRadius: 4,
-            }}
           />
-        </div>
-        {error && <p style={{ color: "red" }}>{error}</p>}
-        <div style={{ display: "flex", gap: 8 }}>
-          <button
+        </Field.Root>
+        {error && <Text color="fg.error">{error}</Text>}
+        <styled.div display="flex" gap="2">
+          <Button
             type="submit"
-            disabled={updateMemo.isPending}
-            style={{
-              padding: "8px 16px",
-              background: "#2563eb",
-              color: "white",
-              borderRadius: 4,
-              border: "none",
-              cursor: "pointer",
-            }}
+            loading={updateMemo.isPending}
+            loadingText="保存中..."
           >
-            {updateMemo.isPending ? "保存中..." : "保存"}
-          </button>
-          <button
+            保存
+          </Button>
+          <Button
             type="button"
+            variant="outline"
             onClick={() => router.push("/consultant/bookings")}
-            style={{
-              padding: "8px 16px",
-              background: "#e5e7eb",
-              borderRadius: 4,
-              border: "none",
-              cursor: "pointer",
-            }}
           >
             キャンセル
-          </button>
-        </div>
-      </form>
-    </div>
+          </Button>
+        </styled.div>
+      </styled.form>
+    </styled.div>
   );
 }
