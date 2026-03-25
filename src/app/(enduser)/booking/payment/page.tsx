@@ -10,7 +10,8 @@ import { loadStripe } from "@stripe/stripe-js";
 import { CircleX, FileQuestion } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { css } from "styled-system/css";
+import { styled } from "styled-system/jsx";
+import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 
@@ -23,21 +24,23 @@ type PaymentMethodType = "card" | "paypay";
 
 function ErrorMessage({ message }: { message: string }) {
   return (
-    <div
-      className={css({
-        display: "flex",
-        alignItems: "center",
-        gap: "2",
-        p: "3",
-        bg: "red.50",
-        rounded: "l2",
-      })}
+    <styled.div
+      display="flex"
+      alignItems="center"
+      gap="2"
+      p="3"
+      bg="red.50"
+      rounded="l2"
     >
-      <CircleX size={16} className={css({ color: "red.500", flexShrink: 0 })} />
+      <CircleX
+        size={16}
+        color="var(--colors-red-500)"
+        style={{ flexShrink: 0 }}
+      />
       <Text textStyle="sm" color="red.700">
         {message}
       </Text>
-    </div>
+    </styled.div>
   );
 }
 
@@ -80,9 +83,11 @@ function CheckoutForm({
   };
 
   return (
-    <form
+    <styled.form
       onSubmit={handleSubmit}
-      className={css({ display: "flex", flexDirection: "column", gap: "6" })}
+      display="flex"
+      flexDirection="column"
+      gap="6"
     >
       <PaymentElement />
 
@@ -96,7 +101,7 @@ function CheckoutForm({
       >
         {mode === "setup" ? "カード情報を登録する" : "お支払いを確定する"}
       </Button>
-    </form>
+    </styled.form>
   );
 }
 
@@ -145,79 +150,61 @@ function PaymentMethodSelector({ bookingId }: { bookingId: string }) {
   }
 
   return (
-    <div
-      className={css({ display: "flex", flexDirection: "column", gap: "6" })}
-    >
+    <styled.div display="flex" flexDirection="column" gap="6">
       <Text fontWeight="medium">お支払い方法を選択してください</Text>
 
-      <div
-        className={css({ display: "flex", flexDirection: "column", gap: "3" })}
-      >
-        <label
-          className={css({
-            display: "flex",
-            alignItems: "center",
-            gap: "3",
-            p: "4",
-            shadow: "xs",
-            border: "1px solid",
-            borderColor:
-              selectedMethod === "card" ? "blue.500" : "border.default",
-            rounded: "l2",
-            cursor: "pointer",
-            transition: "all",
-            transitionDuration: "normal",
-            _hover: { borderColor: "blue.400", shadow: "sm" },
-          })}
-        >
-          <input
-            type="radio"
-            name="paymentMethod"
-            value="card"
-            checked={selectedMethod === "card"}
-            onChange={() => setSelectedMethod("card")}
-          />
-          <Text>クレジットカード</Text>
-        </label>
-
-        <label
-          className={css({
-            display: "flex",
-            alignItems: "center",
-            gap: "3",
-            p: "4",
-            shadow: "xs",
-            border: "1px solid",
-            borderColor:
-              selectedMethod === "paypay" ? "blue.500" : "border.default",
-            rounded: "l2",
-            cursor: "pointer",
-            transition: "all",
-            transitionDuration: "normal",
-            _hover: { borderColor: "blue.400", shadow: "sm" },
-          })}
-        >
-          <input
-            type="radio"
-            name="paymentMethod"
-            value="paypay"
-            checked={selectedMethod === "paypay"}
-            onChange={() => setSelectedMethod("paypay")}
-          />
-          <Text>PayPay</Text>
-        </label>
-      </div>
-
-      {selectedMethod === "card" && (
-        <Text textStyle="sm" color="fg.muted">
-          カード情報を登録します。お支払いは相談実施後に確定します。
-        </Text>
-      )}
-      {selectedMethod === "paypay" && (
-        <Text textStyle="sm" color="fg.muted">
-          予約確定時にお支払いが完了します。
-        </Text>
-      )}
+      <styled.div display="flex" flexDirection="column" gap="3">
+        {(
+          [
+            {
+              value: "card" as const,
+              label: "クレジットカード",
+              description:
+                "カード情報を登録します。お支払いは相談実施後に確定します。",
+            },
+            {
+              value: "paypay" as const,
+              label: "PayPay",
+              description: "予約確定時にお支払いが完了します。",
+            },
+          ] as const
+        ).map((method) => (
+          <styled.label
+            key={method.value}
+            display="flex"
+            alignItems="flex-start"
+            gap="3"
+            p="4"
+            shadow="xs"
+            border="1px solid"
+            borderColor={
+              selectedMethod === method.value
+                ? "colorPalette.default"
+                : "border"
+            }
+            rounded="l2"
+            cursor="pointer"
+            transition="all"
+            transitionDuration="normal"
+            _hover={{ borderColor: "colorPalette.default", shadow: "sm" }}
+          >
+            <input
+              type="radio"
+              name="paymentMethod"
+              value={method.value}
+              checked={selectedMethod === method.value}
+              onChange={() => setSelectedMethod(method.value)}
+              style={{ marginTop: "4px" }}
+            />
+            <styled.div>
+              <Text fontWeight="medium">{method.label}</Text>
+              <Text textStyle="sm" color="fg.muted" mt="1">
+                {method.description}
+              </Text>
+            </styled.div>
+          </styled.label>
+        ))}
+      </styled.div>
 
       {errorMessage && <ErrorMessage message={errorMessage} />}
 
@@ -228,7 +215,7 @@ function PaymentMethodSelector({ bookingId }: { bookingId: string }) {
       >
         次へ進む
       </Button>
-    </div>
+    </styled.div>
   );
 }
 
@@ -238,42 +225,34 @@ export default function PaymentPage() {
 
   if (!bookingId) {
     return (
-      <div
-        className={css({
-          display: "flex",
-          flexDir: "column",
-          alignItems: "center",
-          gap: "3",
-          py: "16",
-          px: "8",
-        })}
-      >
-        <FileQuestion size={48} className={css({ color: "fg.subtle" })} />
-        <Text fontWeight="medium" color="fg.muted">
-          予約情報が見つかりません
-        </Text>
-        <Text textStyle="sm" color="fg.subtle">
-          URLが正しいかご確認ください
-        </Text>
-      </div>
+      <styled.div py="16" px="8">
+        <EmptyState
+          icon={FileQuestion}
+          message="予約情報が見つかりません"
+          hint="URLが正しいかご確認ください"
+        />
+      </styled.div>
     );
   }
 
   return (
-    <div className={css({ maxW: "lg", mx: "auto", p: "8" })}>
-      <div className={css({ mb: "8" })}>
-        <Text
-          as="h1"
-          className={css({ textStyle: "2xl", fontWeight: "bold", mb: "1" })}
-        >
-          お支払い
-        </Text>
-        <Text textStyle="sm" color="fg.muted">
-          お支払い方法を選択して決済を完了してください
-        </Text>
-      </div>
+    <styled.div maxW="lg" mx="auto" p="8">
+      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+        お支払い
+      </Text>
+      <Text textStyle="sm" color="fg.muted" mb="6">
+        お支払い方法を選択して決済を完了してください
+      </Text>
 
-      <PaymentMethodSelector bookingId={bookingId} />
-    </div>
+      <styled.div
+        shadow="sm"
+        rounded="l2"
+        border="1px solid"
+        borderColor="border"
+        p="6"
+      >
+        <PaymentMethodSelector bookingId={bookingId} />
+      </styled.div>
+    </styled.div>
   );
 }

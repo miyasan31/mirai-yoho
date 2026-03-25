@@ -3,7 +3,7 @@
 import { CheckCircle } from "lucide-react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { css } from "styled-system/css";
+import { styled } from "styled-system/jsx";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -17,24 +17,20 @@ export default function BookingCompletePage() {
   const isSetupMode = mode === "setup";
 
   return (
-    <div
-      className={css({ maxW: "lg", mx: "auto", p: "8", textAlign: "center" })}
-    >
+    <styled.div maxW="lg" mx="auto" p="8" textAlign="center">
       <CheckCircle
         size={48}
-        className={css({ color: "green.500", mx: "auto", mb: "4" })}
+        color="var(--colors-green-500)"
+        style={{ margin: "0 auto 16px" }}
       />
 
-      <Text
-        as="h1"
-        className={css({ textStyle: "2xl", fontWeight: "bold", mb: "4" })}
-      >
+      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
         {isSetupMode
           ? "ご予約が完了しました"
           : "ご予約・お支払いが完了しました"}
       </Text>
 
-      <Text className={css({ mb: "8", color: "fg.muted" })}>
+      <Text color="fg.muted" mb="8">
         {isSetupMode
           ? "カード情報を登録しました。お支払いは相談実施後に確定します。確認メールをお送りしましたのでご確認ください。"
           : "お支払いが完了しました。確認メールをお送りしましたのでご確認ください。"}
@@ -42,52 +38,42 @@ export default function BookingCompletePage() {
 
       {bookingId && (
         <Tooltip content={bookingId}>
-          <Text
-            className={css({
-              textStyle: "sm",
-              color: "fg.muted",
-              mb: "4",
-              cursor: "default",
-            })}
-          >
+          <Text textStyle="sm" color="fg.muted" mb="4" cursor="default">
             予約ID: {bookingId.slice(0, 8)}...
           </Text>
         </Tooltip>
       )}
 
       {zoomUrl && (
-        <div
-          className={css({
-            mb: "8",
-            p: "6",
-            shadow: "xs",
-            border: "1px solid",
-            borderColor: "border.default",
-            rounded: "l2",
-          })}
+        <styled.div
+          mb="8"
+          p="6"
+          shadow="sm"
+          border="1px solid"
+          borderColor="border"
+          rounded="l2"
+          textAlign="left"
         >
-          <Text fontWeight="medium" className={css({ mb: "2" })}>
+          <Text fontWeight="medium" mb="2">
             Zoom ミーティング URL
           </Text>
-          <a
+          <styled.a
             href={zoomUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className={css({
-              color: "blue.500",
-              textDecoration: "underline",
-              wordBreak: "break-all",
-              _hover: { color: "blue.600" },
-            })}
+            color="colorPalette.default"
+            textDecoration="underline"
+            wordBreak="break-all"
+            _hover={{ color: "colorPalette.emphasized" }}
           >
             {zoomUrl}
-          </a>
-        </div>
+          </styled.a>
+        </styled.div>
       )}
 
       <Button asChild variant="outline">
         <Link href="/consultants">相談員一覧に戻る</Link>
       </Button>
-    </div>
+    </styled.div>
   );
 }

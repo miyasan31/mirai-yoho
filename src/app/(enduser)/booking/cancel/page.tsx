@@ -3,7 +3,8 @@
 import { CheckCircle, CircleX, ShieldX } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
-import { css } from "styled-system/css";
+import { styled } from "styled-system/jsx";
+import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import * as Dialog from "@/components/ui/dialog";
 import { Text } from "@/components/ui/text";
@@ -22,24 +23,13 @@ export default function CancelPage() {
 
   if (!token) {
     return (
-      <div
-        className={css({
-          display: "flex",
-          flexDir: "column",
-          alignItems: "center",
-          gap: "3",
-          py: "16",
-          px: "8",
-        })}
-      >
-        <ShieldX size={48} className={css({ color: "fg.subtle" })} />
-        <Text fontWeight="medium" color="fg.muted">
-          無効なキャンセルリンクです
-        </Text>
-        <Text textStyle="sm" color="fg.subtle">
-          メールに記載されたリンクをご確認ください
-        </Text>
-      </div>
+      <styled.div py="16" px="8">
+        <EmptyState
+          icon={ShieldX}
+          message="無効なキャンセルリンクです"
+          hint="メールに記載されたリンクをご確認ください"
+        />
+      </styled.div>
     );
   }
 
@@ -64,61 +54,51 @@ export default function CancelPage() {
 
   if (status === "success") {
     return (
-      <div
-        className={css({ maxW: "lg", mx: "auto", p: "8", textAlign: "center" })}
-      >
+      <styled.div maxW="lg" mx="auto" p="8" textAlign="center">
         <CheckCircle
           size={48}
-          className={css({ color: "green.500", mx: "auto", mb: "4" })}
+          color="var(--colors-green-500)"
+          style={{ margin: "0 auto 16px" }}
         />
-        <Text
-          as="h1"
-          className={css({ textStyle: "2xl", fontWeight: "bold", mb: "4" })}
-        >
+        <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
           キャンセル完了
         </Text>
         <Text color="fg.muted">
           ご予約のキャンセルが完了しました。確認メールをお送りしました。
         </Text>
-      </div>
+      </styled.div>
     );
   }
 
   return (
-    <div
-      className={css({ maxW: "lg", mx: "auto", p: "8", textAlign: "center" })}
-    >
-      <Text
-        as="h1"
-        className={css({ textStyle: "2xl", fontWeight: "bold", mb: "4" })}
-      >
+    <styled.div maxW="lg" mx="auto" p="8" textAlign="center">
+      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
         予約キャンセル
       </Text>
-      <Text className={css({ mb: "8", color: "fg.muted" })}>
+      <Text color="fg.muted" mb="8">
         予約をキャンセルしますか？この操作は取り消せません。
       </Text>
 
       {errorMessage && (
-        <div
-          className={css({
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "2",
-            p: "3",
-            mb: "4",
-            bg: "red.50",
-            rounded: "l2",
-          })}
+        <styled.div
+          display="flex"
+          alignItems="center"
+          justifyContent="center"
+          gap="2"
+          p="3"
+          mb="4"
+          bg="red.50"
+          rounded="l2"
         >
           <CircleX
             size={16}
-            className={css({ color: "red.500", flexShrink: 0 })}
+            color="var(--colors-red-500)"
+            style={{ flexShrink: 0 }}
           />
           <Text textStyle="sm" color="red.700">
             {errorMessage}
           </Text>
-        </div>
+        </styled.div>
       )}
 
       <Dialog.Root>
@@ -136,13 +116,7 @@ export default function CancelPage() {
                 この操作は取り消せません。キャンセル確認メールが送信されます。
               </Text>
             </Dialog.Body>
-            <Dialog.Footer
-              className={css({
-                display: "flex",
-                justifyContent: "flex-end",
-                gap: "3",
-              })}
-            >
+            <Dialog.Footer display="flex" justifyContent="flex-end" gap="3">
               <Dialog.CloseTrigger asChild>
                 <Button variant="outline">戻る</Button>
               </Dialog.CloseTrigger>
@@ -160,6 +134,6 @@ export default function CancelPage() {
           </Dialog.Content>
         </Dialog.Positioner>
       </Dialog.Root>
-    </div>
+    </styled.div>
   );
 }
