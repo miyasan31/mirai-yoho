@@ -51,6 +51,45 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/Slot"
+    post:
+      operationId: createSlot
+      summary: 空き枠作成
+      tags: [slot]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [consultantId, startDatetime, endDatetime]
+              properties:
+                consultantId:
+                  type: string
+                startDatetime:
+                  type: string
+                  format: date-time
+                endDatetime:
+                  type: string
+                  format: date-time
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [slotId]
+                properties:
+                  slotId:
+                    type: string
+        "400":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /bookings:
     post:
