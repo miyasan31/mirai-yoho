@@ -8,6 +8,14 @@
         { "fieldPath": "isReserved", "order": "ASCENDING" },
         { "fieldPath": "startAt", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "blockedTimes",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "consultantId", "order": "ASCENDING" },
+        { "fieldPath": "startAt", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []
