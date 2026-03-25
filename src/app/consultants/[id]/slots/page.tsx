@@ -5,7 +5,6 @@ import { ja } from "date-fns/locale";
 import Link from "next/link";
 import { use, useMemo } from "react";
 import { css } from "styled-system/css";
-import { Button } from "@/components/ui/button";
 import { Spinner } from "@/components/ui/spinner";
 import { Text } from "@/components/ui/text";
 import { useGetSlots } from "@/hooks/use-slots";
@@ -112,30 +111,36 @@ export default function SlotsPage({
                 })}
               >
                 {dateSlots.map((slot) => (
-                  <div
+                  <Link
                     key={slot.slotId}
+                    href={`/booking?slotId=${slot.slotId}&consultantId=${consultantId}`}
                     className={css({
                       border: "1px solid",
                       borderColor: "border.default",
                       borderRadius: "md",
                       p: "4",
-                      display: "flex",
-                      justifyContent: "space-between",
-                      alignItems: "center",
+                      display: "block",
+                      cursor: "pointer",
+                      transition: "all 0.15s",
+                      _hover: {
+                        borderColor: "blue.400",
+                        bg: "gray.50",
+                      },
+                      _active: {
+                        bg: "gray.100",
+                      },
+                      _focusVisible: {
+                        outline: "2px solid",
+                        outlineColor: "blue.400",
+                        outlineOffset: "2px",
+                      },
                     })}
                   >
                     <Text fontWeight="medium">
                       {formatTime(slot.startDatetime)} 〜{" "}
                       {formatTime(slot.endDatetime)}
                     </Text>
-                    <Button asChild size="sm">
-                      <Link
-                        href={`/booking?slotId=${slot.slotId}&consultantId=${consultantId}`}
-                      >
-                        予約する
-                      </Link>
-                    </Button>
-                  </div>
+                  </Link>
                 ))}
               </div>
             </div>
