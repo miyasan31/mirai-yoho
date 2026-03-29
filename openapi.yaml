@@ -819,6 +819,8 @@ components:
       properties:
         consultantId:
           type: string
+        email:
+          type: string
         displayName:
           type: string
         bio:

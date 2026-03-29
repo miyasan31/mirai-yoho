@@ -5,6 +5,7 @@ import { DomainError } from "@/domain/shared/domain-error";
 import { requireRole } from "@/infrastructure/auth/require-role";
 import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
 import { createConsultantRepository } from "@/infrastructure/container";
+import { getUser } from "@/infrastructure/firebase/firebase-auth-admin";
 
 export async function GET(request: NextRequest) {
   try {
@@ -14,16 +15,23 @@ export async function GET(request: NextRequest) {
     const repo = createConsultantRepository();
     const consultants = await repo.findAllActive();
 
-    return NextResponse.json({
-      consultants: consultants.map((c) => ({
-        consultantId: c.getConsultantId(),
-        displayName: c.getProfile().getDisplayName(),
-        bio: c.getProfile().getBio(),
-        specialties: [...c.getProfile().getSpecialties()],
-        zoomRoomIds: c.getZoomRoomIds(),
-        isActive: c.getIsActive(),
-      })),
-    });
+    const consultantsWithEmail = await Promise.all(
+      consultants.map(async (c) => {
+        const uid = c.getConsultantId();
+        const userRecord = await getUser(uid).catch(() => null);
+        return {
+          consultantId: uid,
+          email: userRecord?.email ?? "",
+          displayName: c.getProfile().getDisplayName(),
+          bio: c.getProfile().getBio(),
+          specialties: [...c.getProfile().getSpecialties()],
+          zoomRoomIds: c.getZoomRoomIds(),
+          isActive: c.getIsActive(),
+        };
+      }),
+    );
+
+    return NextResponse.json({ consultants: consultantsWithEmail });
   } catch (error) {
     if (error instanceof AuthError) {
       return NextResponse.json(

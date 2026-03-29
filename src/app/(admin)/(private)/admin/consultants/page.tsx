@@ -31,7 +31,7 @@ export default function AdminConsultantsPage() {
             相談員管理
           </Text>
         </styled.div>
-        <TableSkeleton columns={4} rows={5} />
+        <TableSkeleton columns={5} rows={5} />
       </styled.div>
     );
   }
@@ -62,6 +62,7 @@ export default function AdminConsultantsPage() {
           <Table.Head>
             <Table.Row>
               <Table.Header>名前</Table.Header>
+              <Table.Header>メールアドレス</Table.Header>
               <Table.Header>専門分野</Table.Header>
               <Table.Header>ステータス</Table.Header>
               <Table.Header>操作</Table.Header>
@@ -71,6 +72,7 @@ export default function AdminConsultantsPage() {
             {consultants.map((c) => (
               <Table.Row key={c.consultantId}>
                 <Table.Cell>{c.displayName}</Table.Cell>
+                <Table.Cell>{c.email}</Table.Cell>
                 <Table.Cell>{c.specialties.join(", ")}</Table.Cell>
                 <Table.Cell>
                   <ActiveStatusBadge isActive={c.isActive} />
