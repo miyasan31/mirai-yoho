@@ -88,4 +88,49 @@ export class ResendEmailService implements IEmailService {
 			`,
     });
   }
+
+  async sendInvitation(params: {
+    email: string;
+    role: string;
+    passwordResetLink: string;
+  }): Promise<void> {
+    const roleLabels: Record<string, string> = {
+      super_admin: "スーパー管理者",
+      operator: "オペレーター",
+      consultant: "相談員",
+    };
+    const roleLabel = roleLabels[params.role] ?? params.role;
+
+    await resend.emails.send({
+      from: fromEmail,
+      to: params.email,
+      subject: "【未来予報】アカウント招待のお知らせ",
+      html: `
+				<h2>未来予報へご招待します</h2>
+				<p>あなたのアカウントが作成されました。</p>
+				<ul>
+					<li><strong>ロール:</strong> ${roleLabel}</li>
+				</ul>
+				<p>以下のリンクからパスワードを設定してください。</p>
+				<p><a href="${params.passwordResetLink}">パスワードを設定する</a></p>
+			`,
+    });
+  }
+
+  async sendPasswordReset(params: {
+    email: string;
+    passwordResetLink: string;
+  }): Promise<void> {
+    await resend.emails.send({
+      from: fromEmail,
+      to: params.email,
+      subject: "【未来予報】パスワードリセットのお知らせ",
+      html: `
+				<h2>パ���ワードリセット</h2>
+				<p>管理者よりパスワードリセットのリクエストがありました。</p>
+				<p>以下のリンクから新しいパスワードを設定してください。</p>
+				<p><a href="${params.passwordResetLink}">パスワードを再設定する</a></p>
+			`,
+    });
+  }
 }

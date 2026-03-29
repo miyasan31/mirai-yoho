@@ -22,4 +22,15 @@ export interface IEmailService {
     amountJPY: number;
     bookingId: string;
   }): Promise<void>;
+
+  sendInvitation(params: {
+    email: string;
+    role: string;
+    passwordResetLink: string;
+  }): Promise<void>;
+
+  sendPasswordReset(params: {
+    email: string;
+    passwordResetLink: string;
+  }): Promise<void>;
 }

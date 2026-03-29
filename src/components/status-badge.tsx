@@ -44,6 +44,24 @@ export function PaymentStatusBadge({ status }: { status: string }) {
   );
 }
 
+const USER_STATUS_MAP: Record<string, { label: string; colorPalette: string }> =
+  {
+    pending: { label: "招待中", colorPalette: "yellow" },
+    registered: { label: "登録済み", colorPalette: "green" },
+  };
+
+export function UserStatusBadge({ status }: { status: string }) {
+  const config = USER_STATUS_MAP[status] ?? {
+    label: status,
+    colorPalette: "gray",
+  };
+  return (
+    <Badge variant="subtle" size="sm" colorPalette={config.colorPalette}>
+      {config.label}
+    </Badge>
+  );
+}
+
 export function ActiveStatusBadge({ isActive }: { isActive: boolean }) {
   return (
     <Badge variant="subtle" size="sm" colorPalette={isActive ? "green" : "red"}>
