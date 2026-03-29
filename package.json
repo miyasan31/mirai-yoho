@@ -15,7 +15,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "set-claims": "pnpm dlx tsx --env-file=.env.local scripts/set-custom-claims.ts",
-    "deploy:indexes": "firebase deploy --only firestore:indexes --project arc-dev-db342",
+    "deploy:indexes": "firebase deploy --only firestore:indexes --project mirai-yoho-dev",
     "seed:slots": "pnpm dlx tsx --env-file=.env.local scripts/seed-slots.ts"
   },
   "dependencies": {
