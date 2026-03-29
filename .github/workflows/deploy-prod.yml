@@ -6,6 +6,7 @@ on:
 jobs:
   deploy-prod:
     runs-on: ubuntu-latest
+    environment: prod
     steps:
       - uses: actions/checkout@v4
       - uses: jdx/mise-action@v2
@@ -14,6 +15,6 @@ jobs:
       - name: Authenticate with Google Cloud
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_PROD }}
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
       - name: Create App Hosting rollout
         run: npx firebase-tools apphosting:rollouts:create mirai-yoho-prod --project mirai-yoho-prod
