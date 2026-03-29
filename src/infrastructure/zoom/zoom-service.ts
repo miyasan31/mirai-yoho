@@ -7,6 +7,7 @@ interface ZoomTokenResponse {
 }
 
 interface ZoomMeetingResponse {
+  id: number;
   join_url: string;
 }
 
@@ -47,12 +48,14 @@ export class ZoomService implements IZoomService {
     return this.accessToken;
   }
 
-  async createMeetingUrl(params: {
-    startDatetime: Date;
-    consultantId: string;
-  }): Promise<string> {
+  async createDailyMeeting(params: {
+    sessionDate: string;
+    breakoutRooms: Array<{ name: string; participants: string[] }>;
+  }): Promise<{ meetingId: string; joinUrl: string }> {
     const token = await this.getAccessToken();
     const hostUserId = process.env.ZOOM_HOST_USER_ID as string;
+
+    const startTime = `${params.sessionDate}T09:00:00`;
 
     const response = await fetch(
       `https://api.zoom.us/v2/users/${hostUserId}/meetings`,
@@ -63,14 +66,21 @@ export class ZoomService implements IZoomService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          topic: "未来予報 相談セッション",
+          topic: `未来予報 セッション ${params.sessionDate}`,
           type: 2,
-          start_time: params.startDatetime.toISOString(),
-          duration: 60,
+          start_time: startTime,
+          duration: 480,
           timezone: "Asia/Tokyo",
           settings: {
             join_before_host: true,
             waiting_room: false,
+            breakout_room: {
+              enable: true,
+              rooms: params.breakoutRooms.map((room) => ({
+                name: room.name,
+                participants: room.participants,
+              })),
+            },
           },
         }),
       },
@@ -81,6 +91,39 @@ export class ZoomService implements IZoomService {
     }
 
     const data = (await response.json()) as ZoomMeetingResponse;
-    return data.join_url;
+    return { meetingId: String(data.id), joinUrl: data.join_url };
+  }
+
+  async updateBreakoutRooms(params: {
+    meetingId: string;
+    breakoutRooms: Array<{ name: string; participants: string[] }>;
+  }): Promise<void> {
+    const token = await this.getAccessToken();
+
+    const response = await fetch(
+      `https://api.zoom.us/v2/meetings/${params.meetingId}`,
+      {
+        method: "PATCH",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          settings: {
+            breakout_room: {
+              enable: true,
+              rooms: params.breakoutRooms.map((room) => ({
+                name: room.name,
+                participants: room.participants,
+              })),
+            },
+          },
+        }),
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`Zoom breakout room update failed: ${response.status}`);
+    }
   }
 }

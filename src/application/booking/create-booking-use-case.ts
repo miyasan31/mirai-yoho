@@ -9,8 +9,11 @@ import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
 import { Client } from "@/domain/client/client";
 import type { IClientRepository } from "@/domain/client/client-repository";
+import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
 import { DomainError } from "@/domain/shared/domain-error";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
+import { ZoomDailySession } from "@/domain/zoom-session/zoom-daily-session";
+import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
 
 interface CreateBookingInput {
   slotId: string;
@@ -25,6 +28,26 @@ interface CreateBookingOutput {
   zoomUrl: string;
 }
 
+function toSessionDate(date: Date): string {
+  return date
+    .toLocaleDateString("ja-JP", {
+      timeZone: "Asia/Tokyo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+    .replace(/\//g, "-");
+}
+
+function toBreakoutRoomParams(
+  session: ZoomDailySession,
+): Array<{ name: string; participants: string[] }> {
+  return session.getBreakoutRooms().map((r) => ({
+    name: r.getRoomName(),
+    participants: [...r.getParticipantEmails()],
+  }));
+}
+
 export class CreateBookingUseCase {
   constructor(
     private readonly slotRepository: ISlotRepository,
@@ -34,6 +57,8 @@ export class CreateBookingUseCase {
     private readonly unitOfWork: IUnitOfWork,
     private readonly emailService: IEmailService,
     private readonly blockedTimeRepository: IBlockedTimeRepository,
+    private readonly zoomDailySessionRepository: IZoomDailySessionRepository,
+    private readonly consultantRepository: IConsultantRepository,
   ) {}
 
   async execute(input: CreateBookingInput): Promise<CreateBookingOutput> {
@@ -75,18 +100,56 @@ export class CreateBookingUseCase {
       consultationContent: input.consultationContent,
     });
 
-    const meetingUrl = await this.zoomService.createMeetingUrl({
-      startDatetime: slot.getTimeRange().getStartAt(),
-      consultantId: slot.getConsultantId(),
-    });
+    const consultant = await this.consultantRepository.findById(
+      slot.getConsultantId(),
+    );
+    if (!consultant) {
+      throw new Error("Consultant not found");
+    }
+    const consultantName = consultant.getProfile().getDisplayName();
 
-    const zoomUrl = ZoomUrl.create(meetingUrl);
+    const sessionDate = toSessionDate(slot.getTimeRange().getStartAt());
+    const existingSession =
+      await this.zoomDailySessionRepository.findByDate(sessionDate);
+
+    let session: ZoomDailySession;
+
+    if (existingSession) {
+      session = existingSession;
+      session.assignParticipant(
+        slot.getConsultantId(),
+        consultantName,
+        input.clientEmail,
+      );
+      await this.zoomService.updateBreakoutRooms({
+        meetingId: session.getZoomMeetingId(),
+        breakoutRooms: toBreakoutRoomParams(session),
+      });
+    } else {
+      session = ZoomDailySession.create({
+        sessionId: crypto.randomUUID(),
+        sessionDate,
+      });
+      session.assignParticipant(
+        slot.getConsultantId(),
+        consultantName,
+        input.clientEmail,
+      );
+      const { meetingId, joinUrl } = await this.zoomService.createDailyMeeting({
+        sessionDate,
+        breakoutRooms: toBreakoutRoomParams(session),
+      });
+      session.setMeetingDetails(meetingId, joinUrl);
+    }
+
+    const zoomUrl = ZoomUrl.create(session.getJoinUrl());
     booking.confirm(zoomUrl);
 
     await this.unitOfWork.runInTransaction(async () => {
       await this.clientRepository.save(client);
       await this.slotRepository.save(slot);
       await this.bookingRepository.save(booking);
+      await this.zoomDailySessionRepository.save(session);
     });
 
     const events = booking.pullDomainEvents();
@@ -96,7 +159,7 @@ export class CreateBookingUseCase {
         await this.emailService.sendBookingConfirmation({
           clientEmail: input.clientEmail,
           clientName: input.clientName,
-          consultantName: slot.getConsultantId(),
+          consultantName: consultantName,
           zoomUrl: e.payload.zoomUrl,
           startDatetime: e.payload.startDatetime,
           bookingId: e.payload.bookingId,
@@ -104,6 +167,6 @@ export class CreateBookingUseCase {
       }
     }
 
-    return { bookingId, zoomUrl: meetingUrl };
+    return { bookingId, zoomUrl: session.getJoinUrl() };
   }
 }

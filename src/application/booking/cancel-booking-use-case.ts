@@ -1,13 +1,27 @@
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IStripeService } from "@/application/shared/stripe-service";
+import type { IZoomService } from "@/application/shared/zoom-service";
 import type { BookingCancelledEvent } from "@/domain/booking/booking-events";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
+import type { IClientRepository } from "@/domain/client/client-repository";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
+import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
 
 interface CancelBookingInput {
   bookingId: string;
   cancelledBy: "client" | "admin";
+}
+
+function toSessionDate(date: Date): string {
+  return date
+    .toLocaleDateString("ja-JP", {
+      timeZone: "Asia/Tokyo",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    })
+    .replace(/\//g, "-");
 }
 
 export class CancelBookingUseCase {
@@ -17,6 +31,9 @@ export class CancelBookingUseCase {
     private readonly slotRepository: ISlotRepository,
     private readonly stripeService: IStripeService,
     private readonly emailService: IEmailService,
+    private readonly zoomDailySessionRepository: IZoomDailySessionRepository,
+    private readonly zoomService: IZoomService,
+    private readonly clientRepository: IClientRepository,
   ) {}
 
   async execute(input: CancelBookingInput): Promise<void> {
@@ -53,10 +70,30 @@ export class CancelBookingUseCase {
       slot.release();
     }
 
+    const sessionDate = toSessionDate(booking.getStartDatetime());
+    const session =
+      await this.zoomDailySessionRepository.findByDate(sessionDate);
+    if (session) {
+      const client = await this.clientRepository.findById(
+        booking.getClientId(),
+      );
+      if (client) {
+        session.removeParticipant(client.getEmail());
+        await this.zoomService.updateBreakoutRooms({
+          meetingId: session.getZoomMeetingId(),
+          breakoutRooms: session.getBreakoutRooms().map((r) => ({
+            name: r.getRoomName(),
+            participants: [...r.getParticipantEmails()],
+          })),
+        });
+      }
+    }
+
     await Promise.all([
       this.bookingRepository.save(booking),
       ...(payment ? [this.paymentRepository.save(payment)] : []),
       ...(slot ? [this.slotRepository.save(slot)] : []),
+      ...(session ? [this.zoomDailySessionRepository.save(session)] : []),
     ]);
 
     const events = booking.pullDomainEvents();

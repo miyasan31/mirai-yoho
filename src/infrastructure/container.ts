@@ -11,6 +11,7 @@ import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firest
 import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore-payment-repository";
 import { FirestoreSlotRepository } from "@/infrastructure/firestore/firestore-slot-repository";
 import { FirestoreUnitOfWork } from "@/infrastructure/firestore/firestore-unit-of-work";
+import { FirestoreZoomDailySessionRepository } from "@/infrastructure/firestore/firestore-zoom-daily-session-repository";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
 import { StripeService } from "@/infrastructure/stripe/stripe-service";
 import { ZoomService } from "@/infrastructure/zoom/zoom-service";
@@ -36,6 +37,8 @@ export function createCreateBookingUseCase() {
     new FirestoreUnitOfWork(),
     new ResendEmailService(),
     new FirestoreBlockedTimeRepository(),
+    new FirestoreZoomDailySessionRepository(),
+    new FirestoreConsultantRepository(),
   );
 }
 
@@ -55,6 +58,9 @@ export function createCancelBookingUseCase() {
     new FirestoreSlotRepository(),
     new StripeService(),
     new ResendEmailService(),
+    new FirestoreZoomDailySessionRepository(),
+    new ZoomService(),
+    new FirestoreClientRepository(),
   );
 }
 
