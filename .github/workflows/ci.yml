@@ -18,6 +18,8 @@ jobs:
       - uses: jdx/mise-action@v2
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      - name: Generate PandaCSS
+        run: pnpm build:panda
       - name: Generate API client
         run: pnpm generate
       - name: Lint
@@ -26,5 +28,11 @@ jobs:
         run: pnpm tsc
       - name: Test
         run: pnpm test
-      # - name: Build
-      #   run: pnpm build
+      - name: Build
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_FIREBASE_API_KEY: ci-placeholder
+          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: ci-placeholder.firebaseapp.com
+          NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci-placeholder
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_ci_placeholder
+          NEXT_PUBLIC_APP_URL: http://localhost:3000

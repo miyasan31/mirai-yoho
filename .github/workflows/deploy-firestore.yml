@@ -1,0 +1,41 @@
+name: Deploy Firestore
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "firestore.rules"
+      - "firestore.indexes.json"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Deploy target"
+        required: true
+        default: "prod"
+        type: choice
+        options:
+          - dev
+          - prod
+
+jobs:
+  deploy-dev:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: w9jds/firebase-action@v13.28.0
+        with:
+          args: deploy --only firestore:rules,firestore:indexes --project dev
+        env:
+          GCP_SA_KEY: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DEV }}
+
+  deploy-manual:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: w9jds/firebase-action@v13.28.0
+        with:
+          args: deploy --only firestore:rules,firestore:indexes --project ${{ inputs.environment }}
+        env:
+          GCP_SA_KEY: ${{ secrets[format('FIREBASE_SERVICE_ACCOUNT_{0}', inputs.environment == 'dev' && 'DEV' || 'PROD')] }}
