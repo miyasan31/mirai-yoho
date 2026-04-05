@@ -1,14 +1,102 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { styled } from "styled-system/jsx";
+import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
+import {
+  useAdminBookingSettings,
+  useUpdateAdminBookingSettings,
+} from "@/hooks/use-booking-settings";
 
 export default function AdminSettingsPage() {
+  const { data, isLoading } = useAdminBookingSettings();
+  const updateBookingSettings = useUpdateAdminBookingSettings();
+  const [consultantSelectionEnabled, setConsultantSelectionEnabled] = useState<
+    boolean | undefined
+  >(undefined);
+
+  useEffect(() => {
+    if (
+      consultantSelectionEnabled === undefined &&
+      typeof data?.data?.consultantSelectionEnabled === "boolean"
+    ) {
+      setConsultantSelectionEnabled(data.data.consultantSelectionEnabled);
+    }
+  }, [consultantSelectionEnabled, data]);
+
+  const handleSave = async () => {
+    if (consultantSelectionEnabled === undefined) {
+      return;
+    }
+
+    const response = await updateBookingSettings.mutateAsync({
+      data: { consultantSelectionEnabled },
+    });
+    if ("consultantSelectionEnabled" in response.data) {
+      setConsultantSelectionEnabled(response.data.consultantSelectionEnabled);
+    }
+  };
+
   return (
-    <div>
+    <styled.div maxW="xl" display="flex" flexDirection="column" gap="6">
       <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
         設定
       </Text>
-      <Text>設定画面は準備中です。</Text>
-    </div>
+
+      <styled.div
+        shadow="sm"
+        rounded="l2"
+        border="1px solid"
+        borderColor="border"
+        p="6"
+        display="flex"
+        flexDirection="column"
+        gap="4"
+      >
+        <styled.div>
+          <Text as="h2" textStyle="lg" fontWeight="semibold" mb="1">
+            予約設定
+          </Text>
+          <Text color="fg.muted" textStyle="sm">
+            相談員を指名して予約する導線を有効にするか設定します。
+          </Text>
+        </styled.div>
+
+        <styled.label
+          display="flex"
+          alignItems="center"
+          gap="3"
+          cursor={isLoading ? "not-allowed" : "pointer"}
+          opacity={isLoading ? 0.6 : 1}
+        >
+          <input
+            type="checkbox"
+            checked={consultantSelectionEnabled ?? false}
+            disabled={isLoading || updateBookingSettings.isPending}
+            onChange={(event) =>
+              setConsultantSelectionEnabled(event.target.checked)
+            }
+          />
+          <styled.div display="flex" flexDirection="column" gap="1">
+            <Text fontWeight="medium">相談員を指名して予約できる</Text>
+            <Text textStyle="sm" color="fg.muted">
+              オフにすると、利用者は日時のみを選び、相談員は自動で割り当てられます。
+            </Text>
+          </styled.div>
+        </styled.label>
+
+        <styled.div display="flex" justifyContent="flex-end">
+          <Button
+            onClick={handleSave}
+            loading={updateBookingSettings.isPending}
+            loadingText="保存中..."
+            disabled={isLoading || consultantSelectionEnabled === undefined}
+          >
+            保存
+          </Button>
+        </styled.div>
+      </styled.div>
+    </styled.div>
   );
 }

@@ -38,11 +38,42 @@ function toFirestore(slot: Slot): Record<string, unknown> {
   };
 }
 
+function getJstDayRange(date: Date): { start: Date; end: Date } {
+  const nineHoursInMs = 9 * 60 * 60 * 1000;
+  const shifted = new Date(date.getTime() + nineHoursInMs);
+  const startUtcMs =
+    Date.UTC(
+      shifted.getUTCFullYear(),
+      shifted.getUTCMonth(),
+      shifted.getUTCDate(),
+    ) - nineHoursInMs;
+
+  return {
+    start: new Date(startUtcMs),
+    end: new Date(startUtcMs + 24 * 60 * 60 * 1000),
+  };
+}
+
 export class FirestoreSlotRepository implements ISlotRepository {
   async findById(slotId: string): Promise<Slot | null> {
     const doc = await db.collection(COLLECTION).doc(slotId).get();
     if (!doc.exists) return null;
     return toDomain(doc.data() as SlotDoc);
+  }
+
+  async findAllAvailable(): Promise<Slot[]> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("isReserved", "==", false)
+      .get();
+    return snapshot.docs
+      .map((doc) => toDomain(doc.data() as SlotDoc))
+      .filter((slot) => slot.getTimeRange().getStartAt() > new Date())
+      .sort(
+        (a, b) =>
+          a.getTimeRange().getStartAt().getTime() -
+          b.getTimeRange().getStartAt().getTime(),
+      );
   }
 
   async findByConsultantId(consultantId: string): Promise<Slot[]> {
@@ -69,6 +100,34 @@ export class FirestoreSlotRepository implements ISlotRepository {
       .orderBy("startAt", "asc")
       .get();
     return snapshot.docs.map((doc) => toDomain(doc.data() as SlotDoc));
+  }
+
+  async findAvailableByTimeRange(startAt: Date, endAt: Date): Promise<Slot[]> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("startAt", "==", startAt)
+      .get();
+    return snapshot.docs
+      .map((doc) => toDomain(doc.data() as SlotDoc))
+      .filter(
+        (slot) =>
+          !slot.getIsReserved() &&
+          slot.getTimeRange().getEndAt().getTime() === endAt.getTime(),
+      )
+      .sort((a, b) => a.getConsultantId().localeCompare(b.getConsultantId()));
+  }
+
+  async findAvailableByDate(date: Date): Promise<Slot[]> {
+    const { start, end } = getJstDayRange(date);
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("startAt", ">=", start)
+      .where("startAt", "<", end)
+      .orderBy("startAt", "asc")
+      .get();
+    return snapshot.docs
+      .map((doc) => toDomain(doc.data() as SlotDoc))
+      .filter((slot) => !slot.getIsReserved());
   }
 
   async save(slot: Slot): Promise<void> {

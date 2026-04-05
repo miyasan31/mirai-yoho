@@ -7,6 +7,7 @@ import { SetupPaymentUseCase } from "@/application/booking/setup-payment-use-cas
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
 import { FirestoreClientRepository } from "@/infrastructure/firestore/firestore-client-repository";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
+import { FirestoreOrganizationSettingsRepository } from "@/infrastructure/firestore/firestore-organization-settings-repository";
 import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore-payment-repository";
 import { FirestoreSlotRepository } from "@/infrastructure/firestore/firestore-slot-repository";
 import { FirestoreUnitOfWork } from "@/infrastructure/firestore/firestore-unit-of-work";
@@ -25,6 +26,10 @@ export function createSlotRepository() {
 
 export function createBookingRepository() {
   return new FirestoreBookingRepository();
+}
+
+export function createOrganizationSettingsRepository() {
+  return new FirestoreOrganizationSettingsRepository();
 }
 
 export function createCreateBookingUseCase() {

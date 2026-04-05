@@ -3,10 +3,13 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+const mockSearchParams = new URLSearchParams({ slotId: "slot-1" });
+const mockPush = vi.fn();
+
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: mockPush }),
   useSearchParams: () => ({
-    get: (key: string) => (key === "slotId" ? "slot-1" : null),
+    get: (key: string) => mockSearchParams.get(key),
   }),
 }));
 
@@ -153,6 +156,11 @@ describe("BookingPage", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    const keys = [...mockSearchParams.keys()];
+    for (const key of keys) {
+      mockSearchParams.delete(key);
+    }
+    mockSearchParams.set("slotId", "slot-1");
   });
 
   it("displays the booking form with required fields", () => {
@@ -224,9 +232,50 @@ describe("BookingPage", () => {
       expect(mockMutateAsync).toHaveBeenCalledWith({
         data: expect.objectContaining({
           slotId: "slot-1",
+          startDatetime: undefined,
+          endDatetime: undefined,
           clientName: "テスト太郎",
           clientEmail: "test@example.com",
           clientPhone: "090-0000-0000",
+        }),
+      });
+    });
+  });
+
+  it("submits the form with startDatetime/endDatetime when consultant is auto assigned", async () => {
+    mockMutateAsync.mockResolvedValue({
+      data: {
+        bookingId: "b2",
+        zoomUrl: "https://zoom.us/j/2",
+      },
+    });
+    mockSearchParams.delete("slotId");
+    mockSearchParams.set("startDatetime", "2026-05-01T10:00:00.000Z");
+    mockSearchParams.set("endDatetime", "2026-05-01T10:30:00.000Z");
+
+    const user = userEvent.setup();
+    render(<BookingPage />);
+
+    await user.type(screen.getByPlaceholderText("山田 太郎"), "自動割当太郎");
+    await user.type(
+      screen.getByPlaceholderText("example@email.com"),
+      "auto@example.com",
+    );
+    await user.type(
+      screen.getByPlaceholderText("090-1234-5678"),
+      "080-0000-0000",
+    );
+    await user.click(screen.getByText("お支払いへ進む"));
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          slotId: undefined,
+          startDatetime: "2026-05-01T10:00:00.000Z",
+          endDatetime: "2026-05-01T10:30:00.000Z",
+          clientName: "自動割当太郎",
+          clientEmail: "auto@example.com",
+          clientPhone: "080-0000-0000",
         }),
       });
     });

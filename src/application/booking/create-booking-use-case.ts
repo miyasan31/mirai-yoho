@@ -14,7 +14,9 @@ import { ZoomDailySession } from "@/domain/zoom-session/zoom-daily-session";
 import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
 
 interface CreateBookingInput {
-  slotId: string;
+  slotId?: string;
+  startDatetime?: Date;
+  endDatetime?: Date;
   clientName: string;
   clientEmail: string;
   clientPhone: string;
@@ -59,10 +61,7 @@ export class CreateBookingUseCase {
   ) {}
 
   async execute(input: CreateBookingInput): Promise<CreateBookingOutput> {
-    const slot = await this.slotRepository.findById(input.slotId);
-    if (!slot) {
-      throw new Error("Slot not found");
-    }
+    const slot = await this.resolveSlot(input);
 
     const bookingId = crypto.randomUUID();
     slot.reserve(bookingId);
@@ -152,5 +151,56 @@ export class CreateBookingUseCase {
     }
 
     return { bookingId, zoomUrl: session.getJoinUrl() };
+  }
+
+  private async resolveSlot(input: CreateBookingInput) {
+    if (input.slotId) {
+      const slot = await this.slotRepository.findById(input.slotId);
+      if (!slot) {
+        throw new Error("Slot not found");
+      }
+      return slot;
+    }
+
+    if (!input.startDatetime || !input.endDatetime) {
+      throw new Error("Booking slot information is required");
+    }
+
+    const candidateSlots = await this.slotRepository.findAvailableByTimeRange(
+      input.startDatetime,
+      input.endDatetime,
+    );
+
+    if (candidateSlots.length === 0) {
+      throw new Error("Slot is no longer available");
+    }
+
+    const dailySlots = await this.slotRepository.findAvailableByDate(
+      input.startDatetime,
+    );
+    const availableCountByConsultant = new Map<string, number>();
+
+    for (const slot of dailySlots) {
+      const consultantId = slot.getConsultantId();
+      availableCountByConsultant.set(
+        consultantId,
+        (availableCountByConsultant.get(consultantId) ?? 0) + 1,
+      );
+    }
+
+    return [...candidateSlots].sort((left, right) => {
+      const leftCount =
+        availableCountByConsultant.get(left.getConsultantId()) ??
+        Number.MAX_SAFE_INTEGER;
+      const rightCount =
+        availableCountByConsultant.get(right.getConsultantId()) ??
+        Number.MAX_SAFE_INTEGER;
+
+      if (leftCount !== rightCount) {
+        return leftCount - rightCount;
+      }
+
+      return left.getConsultantId().localeCompare(right.getConsultantId());
+    })[0];
   }
 }

@@ -80,7 +80,7 @@ export class Booking extends AggregateRoot {
     }
     this.status = BookingStatus.reconstruct("confirmed");
     this.zoomUrl = zoomUrl;
-    -this.addDomainEvent(
+    this.addDomainEvent(
       BookingConfirmedEvent.create({
         bookingId: this.bookingId,
         clientId: this.clientId,

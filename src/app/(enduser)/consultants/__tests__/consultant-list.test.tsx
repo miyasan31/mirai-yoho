@@ -81,6 +81,16 @@ vi.mock("@/hooks/use-consultants", () => ({
   useGetConsultants: () => mockUseGetConsultants(),
 }));
 
+const mockUsePublicBookingSettings = vi.fn();
+vi.mock("@/hooks/use-booking-settings", () => ({
+  usePublicBookingSettings: () => mockUsePublicBookingSettings(),
+}));
+
+const mockUseGetSlots = vi.fn();
+vi.mock("@/hooks/use-slots", () => ({
+  useGetSlots: (...args: unknown[]) => mockUseGetSlots(...args),
+}));
+
 import ConsultantsPage from "../page";
 
 describe("ConsultantsPage", () => {
@@ -90,6 +100,15 @@ describe("ConsultantsPage", () => {
   });
 
   it("shows skeleton loading while fetching", () => {
+    mockUsePublicBookingSettings.mockReturnValue({
+      data: undefined,
+      isLoading: true,
+    });
+    mockUseGetSlots.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    });
     mockUseGetConsultants.mockReturnValue({
       data: undefined,
       isLoading: true,
@@ -101,6 +120,15 @@ describe("ConsultantsPage", () => {
   });
 
   it("shows error message on failure", () => {
+    mockUsePublicBookingSettings.mockReturnValue({
+      data: { data: { consultantSelectionEnabled: true } },
+      isLoading: false,
+    });
+    mockUseGetSlots.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    });
     mockUseGetConsultants.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -112,6 +140,15 @@ describe("ConsultantsPage", () => {
   });
 
   it("shows empty message when no consultants", () => {
+    mockUsePublicBookingSettings.mockReturnValue({
+      data: { data: { consultantSelectionEnabled: true } },
+      isLoading: false,
+    });
+    mockUseGetSlots.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    });
     mockUseGetConsultants.mockReturnValue({
       data: { data: { consultants: [] } },
       isLoading: false,
@@ -123,6 +160,15 @@ describe("ConsultantsPage", () => {
   });
 
   it("renders consultant cards with name and specialties", () => {
+    mockUsePublicBookingSettings.mockReturnValue({
+      data: { data: { consultantSelectionEnabled: true } },
+      isLoading: false,
+    });
+    mockUseGetSlots.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    });
     mockUseGetConsultants.mockReturnValue({
       data: {
         data: {
@@ -146,5 +192,36 @@ describe("ConsultantsPage", () => {
     expect(screen.getByText("キャリア相談")).toBeDefined();
     expect(screen.getByText("転職支援")).toBeDefined();
     expect(screen.getByText("テスト自己紹介")).toBeDefined();
+  });
+
+  it("renders aggregated slots when consultant selection is disabled", () => {
+    mockUsePublicBookingSettings.mockReturnValue({
+      data: { data: { consultantSelectionEnabled: false } },
+      isLoading: false,
+    });
+    mockUseGetConsultants.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    });
+    mockUseGetSlots.mockReturnValue({
+      data: {
+        data: {
+          aggregatedSlots: [
+            {
+              startDatetime: "2026-05-01T10:00:00.000Z",
+              endDatetime: "2026-05-01T10:30:00.000Z",
+            },
+          ],
+        },
+      },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ConsultantsPage />);
+
+    expect(screen.getByText("予約可能な日時")).toBeDefined();
+    expect(screen.getByText("19:00 〜 19:30")).toBeDefined();
   });
 });

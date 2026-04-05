@@ -33,6 +33,9 @@ export default function BookingPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const slotId = searchParams.get("slotId");
+  const startDatetime = searchParams.get("startDatetime");
+  const endDatetime = searchParams.get("endDatetime");
+  const hasDateRange = Boolean(startDatetime && endDatetime);
 
   const {
     register,
@@ -44,17 +47,17 @@ export default function BookingPage() {
 
   const createBooking = useCreateBooking();
 
-  if (!slotId) {
+  if (!slotId && !hasDateRange) {
     return (
       <styled.div py="16" px="8">
         <EmptyState
           icon={CalendarX}
-          message="枠が選択されていません"
-          hint="相談員一覧から枠を選択してください"
+          message="予約する枠が選択されていません"
+          hint="予約可能な日時から希望の枠を選択してください"
         />
         <styled.div display="flex" justifyContent="center" mt="4">
           <Button asChild variant="outline">
-            <Link href="/consultants">相談員一覧へ</Link>
+            <Link href="/consultants">予約可能日時へ</Link>
           </Button>
         </styled.div>
       </styled.div>
@@ -64,7 +67,9 @@ export default function BookingPage() {
   const onSubmit = async (values: BookingFormValues) => {
     const result = await createBooking.mutateAsync({
       data: {
-        slotId,
+        slotId: slotId ?? undefined,
+        startDatetime: startDatetime ?? undefined,
+        endDatetime: endDatetime ?? undefined,
         clientName: values.clientName,
         clientEmail: values.clientEmail,
         clientPhone: values.clientPhone,
@@ -97,7 +102,9 @@ export default function BookingPage() {
         予約情報入力
       </Text>
       <Text textStyle="sm" color="fg.muted" mb="6">
-        以下の情報を入力して予約を確定してください
+        {slotId
+          ? "以下の情報を入力して予約を確定してください"
+          : "以下の情報を入力すると、相談員を自動で割り当てて予約を確定します"}
       </Text>
 
       <styled.div

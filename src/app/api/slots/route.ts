@@ -10,23 +10,45 @@ import { createSlotRepository } from "@/infrastructure/container";
 export async function GET(request: NextRequest) {
   try {
     const consultantId = request.nextUrl.searchParams.get("consultantId");
-    if (!consultantId) {
-      return NextResponse.json(
-        { code: "MISSING_PARAM", message: "consultantId is required" },
-        { status: 400 },
-      );
+    const repository = createSlotRepository();
+
+    if (consultantId) {
+      const availableSlots =
+        await repository.findAvailableByConsultantId(consultantId);
+
+      return NextResponse.json({
+        slots: availableSlots.map((s) => ({
+          slotId: s.getSlotId(),
+          consultantId: s.getConsultantId(),
+          startDatetime: s.getTimeRange().getStartAt().toISOString(),
+          endDatetime: s.getTimeRange().getEndAt().toISOString(),
+          isAvailable: !s.getIsReserved(),
+        })),
+      });
     }
 
-    const availableSlots =
-      await createSlotRepository().findAvailableByConsultantId(consultantId);
+    const aggregatedSlots = await repository.findAllAvailable();
+    const groupedSlots = new Map<
+      string,
+      { startDatetime: string; endDatetime: string }
+    >();
+
+    for (const slot of aggregatedSlots) {
+      const startDatetime = slot.getTimeRange().getStartAt().toISOString();
+      const endDatetime = slot.getTimeRange().getEndAt().toISOString();
+      const key = `${startDatetime}_${endDatetime}`;
+      if (!groupedSlots.has(key)) {
+        groupedSlots.set(key, {
+          startDatetime,
+          endDatetime,
+        });
+      }
+    }
 
     return NextResponse.json({
-      slots: availableSlots.map((s) => ({
-        slotId: s.getSlotId(),
-        consultantId: s.getConsultantId(),
-        startDatetime: s.getTimeRange().getStartAt().toISOString(),
-        endDatetime: s.getTimeRange().getEndAt().toISOString(),
-        isAvailable: !s.getIsReserved(),
+      aggregatedSlots: [...groupedSlots.values()].map((slot) => ({
+        startDatetime: slot.startDatetime,
+        endDatetime: slot.endDatetime,
       })),
     });
   } catch (_error) {
