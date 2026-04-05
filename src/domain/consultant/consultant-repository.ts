@@ -1,7 +1,11 @@
 import type { Consultant } from "@/domain/consultant/consultant";
 
 export interface IConsultantRepository {
-  findById(consultantId: string): Promise<Consultant | null>;
-  findAllActive(): Promise<Consultant[]>;
+  findById(
+    organizationId: string,
+    consultantId: string,
+  ): Promise<Consultant | null>;
+  findAllActive(organizationId: string): Promise<Consultant[]>;
   save(consultant: Consultant): Promise<void>;
+  delete(organizationId: string, consultantId: string): Promise<void>;
 }

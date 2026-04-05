@@ -3,8 +3,11 @@ import { Money } from "@/domain/payment/money";
 import { Payment } from "@/domain/payment/payment";
 import { DomainError } from "@/domain/shared/domain-error";
 
+const ORGANIZATION_ID = "org-1";
+
 function createDeferredPayment() {
   return Payment.createDeferred({
+    organizationId: ORGANIZATION_ID,
     paymentId: "pay-1",
     bookingId: "booking-1",
     clientId: "client-1",
@@ -35,6 +38,7 @@ describe("Payment", () => {
   describe("createImmediate", () => {
     it("ステータスが charged で作成される", () => {
       const payment = Payment.createImmediate({
+        organizationId: ORGANIZATION_ID,
         paymentId: "pay-2",
         bookingId: "booking-2",
         clientId: "client-2",

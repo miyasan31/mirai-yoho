@@ -30,9 +30,11 @@ export class BatchChargeUseCase {
     );
   }
 
-  async execute(): Promise<BatchChargeResult> {
-    const confirmedBookings =
-      await this.bookingRepository.findByStatus("confirmed");
+  async execute(organizationId: string): Promise<BatchChargeResult> {
+    const confirmedBookings = await this.bookingRepository.findByStatus(
+      organizationId,
+      "confirmed",
+    );
 
     const now = new Date();
     const eligibleBookings = confirmedBookings.filter(
@@ -46,6 +48,7 @@ export class BatchChargeUseCase {
     for (const booking of eligibleBookings) {
       try {
         const payment = await this.paymentRepository.findByBookingId(
+          organizationId,
           booking.getBookingId(),
         );
         if (!payment) {
@@ -61,6 +64,7 @@ export class BatchChargeUseCase {
 
         if (strategy.isDeferred() && status === "setup_complete") {
           await this.chargeUseCase.execute({
+            organizationId,
             bookingId: booking.getBookingId(),
             method: "batch",
           });

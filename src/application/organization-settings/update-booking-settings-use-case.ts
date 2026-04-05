@@ -2,7 +2,7 @@ import { OrganizationSettings } from "@/domain/organization-settings/organizatio
 import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
 
 interface UpdateBookingSettingsInput {
-  organizationId?: string;
+  organizationId: string;
   consultantSelectionEnabled: boolean;
 }
 
@@ -19,7 +19,7 @@ export class UpdateBookingSettingsUseCase {
   async execute(
     input: UpdateBookingSettingsInput,
   ): Promise<UpdateBookingSettingsOutput> {
-    const organizationId = input.organizationId ?? "default";
+    const { organizationId } = input;
     const existingSettings =
       await this.organizationSettingsRepository.findByOrganizationId(
         organizationId,

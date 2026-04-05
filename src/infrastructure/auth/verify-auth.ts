@@ -1,4 +1,5 @@
-import type { AuthUser, UserRole } from "@/infrastructure/auth/auth-types";
+import type { AuthUser } from "@/infrastructure/auth/auth-types";
+import { loadAuthUser } from "@/infrastructure/auth/load-auth-context";
 import { verifyIdToken } from "@/infrastructure/firebase/firebase-auth-admin";
 
 export async function verifyAuth(request: Request): Promise<AuthUser> {
@@ -13,13 +14,13 @@ export async function verifyAuth(request: Request): Promise<AuthUser> {
 
   const token = authorization.slice(7);
   const decoded = await verifyIdToken(token);
-  const role = (decoded.role as UserRole) ?? undefined;
+  const authUser = await loadAuthUser(decoded.uid);
 
-  if (!role) {
+  if (authUser.memberships.length === 0) {
     throw new AuthError(403, "NO_ROLE", "User has no assigned role");
   }
 
-  return { uid: decoded.uid, role };
+  return authUser;
 }
 
 export class AuthError extends Error {

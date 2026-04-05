@@ -1,9 +1,12 @@
 import type { Booking } from "@/domain/booking/booking";
 
 export interface IBookingRepository {
-  findById(bookingId: string): Promise<Booking | null>;
-  findByConsultantId(consultantId: string): Promise<Booking[]>;
-  findByStatus(status: string): Promise<Booking[]>;
-  findAll(): Promise<Booking[]>;
+  findById(organizationId: string, bookingId: string): Promise<Booking | null>;
+  findByConsultantId(
+    organizationId: string,
+    consultantId: string,
+  ): Promise<Booking[]>;
+  findByStatus(organizationId: string, status: string): Promise<Booking[]>;
+  findAll(organizationId: string): Promise<Booking[]>;
   save(booking: Booking): Promise<void>;
 }

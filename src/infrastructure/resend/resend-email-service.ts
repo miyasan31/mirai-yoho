@@ -95,7 +95,7 @@ export class ResendEmailService implements IEmailService {
     passwordResetLink: string;
   }): Promise<void> {
     const roleLabels: Record<string, string> = {
-      super_admin: "スーパー管理者",
+      admin: "管理者",
       operator: "オペレーター",
       consultant: "相談員",
     };

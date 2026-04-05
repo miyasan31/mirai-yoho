@@ -23,6 +23,7 @@ import {
   splitIntoSlotRanges,
 } from "@/domain/slot/slot-availability";
 import { useAuth } from "@/hooks/use-auth";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import { useCreateSlot, useDeleteSlot, useGetSlots } from "@/hooks/use-slots";
 
 const locales = { "ja-JP": ja };
@@ -47,6 +48,7 @@ interface CalendarEvent {
 
 export default function ConsultantSlotsPage() {
   const { user } = useAuth();
+  const { organizationId } = useOrganizationRouting();
   const [view, setView] = useState<View>("week");
   const [date, setDate] = useState(new Date());
   const [deleteTarget, setDeleteTarget] = useState<CalendarEvent | null>(null);
@@ -110,6 +112,7 @@ export default function ConsultantSlotsPage() {
         await Promise.all(
           ranges.map((range) =>
             createSlot.mutateAsync({
+              organizationId: organizationId ?? "",
               data: {
                 consultantId: user.uid,
                 startDatetime: range.start.toISOString(),
@@ -127,7 +130,7 @@ export default function ConsultantSlotsPage() {
         // エラーは custom-fetch の toaster で表示される
       }
     },
-    [createSlot, events, refetch, user],
+    [createSlot, events, organizationId, refetch, user],
   );
 
   const handleSelectEvent = useCallback((event: CalendarEvent) => {
@@ -138,6 +141,7 @@ export default function ConsultantSlotsPage() {
     if (!deleteTarget) return;
     try {
       await deleteSlot.mutateAsync({
+        organizationId: organizationId ?? "",
         slotId: deleteTarget.id,
       });
       refetch();
@@ -149,7 +153,7 @@ export default function ConsultantSlotsPage() {
     } catch {
       // エラーは custom-fetch の toaster で表示される
     }
-  }, [deleteSlot, deleteTarget, refetch]);
+  }, [deleteSlot, deleteTarget, organizationId, refetch]);
 
   const eventStyleGetter = useCallback(() => {
     return {

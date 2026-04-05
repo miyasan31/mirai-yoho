@@ -23,7 +23,7 @@ export class OrganizationSettings {
     );
   }
 
-  static createDefault(organizationId = "default"): OrganizationSettings {
+  static createDefault(organizationId: string): OrganizationSettings {
     return new OrganizationSettings(organizationId, true);
   }
 

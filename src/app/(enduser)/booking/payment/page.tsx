@@ -14,6 +14,7 @@ import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string,
@@ -47,9 +48,11 @@ function ErrorMessage({ message }: { message: string }) {
 function CheckoutForm({
   bookingId,
   mode,
+  organizationId,
 }: {
   bookingId: string;
   mode: PaymentMode;
+  organizationId: string;
 }) {
   const stripe = useStripe();
   const elements = useElements();
@@ -63,7 +66,7 @@ function CheckoutForm({
     setIsProcessing(true);
     setErrorMessage(undefined);
 
-    const returnUrl = `${window.location.origin}/booking/complete?bookingId=${bookingId}&mode=${mode}`;
+    const returnUrl = `${window.location.origin}/${organizationId}/booking/complete?bookingId=${bookingId}&mode=${mode}`;
 
     const result =
       mode === "setup"
@@ -105,7 +108,13 @@ function CheckoutForm({
   );
 }
 
-function PaymentMethodSelector({ bookingId }: { bookingId: string }) {
+function PaymentMethodSelector({
+  bookingId,
+  organizationId,
+}: {
+  bookingId: string;
+  organizationId: string;
+}) {
   const [selectedMethod, setSelectedMethod] =
     useState<PaymentMethodType>("card");
   const [clientSecret, setClientSecret] = useState<string>();
@@ -118,11 +127,14 @@ function PaymentMethodSelector({ bookingId }: { bookingId: string }) {
     setErrorMessage(undefined);
 
     try {
-      const response = await fetch(`/api/bookings/${bookingId}/setup-payment`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ paymentMethodType: selectedMethod }),
-      });
+      const response = await fetch(
+        `/api/organizations/${organizationId}/bookings/${bookingId}/setup-payment`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ paymentMethodType: selectedMethod }),
+        },
+      );
 
       if (!response.ok) {
         const error = await response.json();
@@ -144,7 +156,11 @@ function PaymentMethodSelector({ bookingId }: { bookingId: string }) {
   if (clientSecret && mode) {
     return (
       <Elements stripe={stripePromise} options={{ clientSecret, locale: "ja" }}>
-        <CheckoutForm bookingId={bookingId} mode={mode} />
+        <CheckoutForm
+          bookingId={bookingId}
+          mode={mode}
+          organizationId={organizationId}
+        />
       </Elements>
     );
   }
@@ -221,9 +237,10 @@ function PaymentMethodSelector({ bookingId }: { bookingId: string }) {
 
 export default function PaymentPage() {
   const searchParams = useSearchParams();
+  const { organizationId } = useOrganizationRouting();
   const bookingId = searchParams.get("bookingId");
 
-  if (!bookingId) {
+  if (!bookingId || !organizationId) {
     return (
       <styled.div py="16" px="8">
         <EmptyState
@@ -251,7 +268,10 @@ export default function PaymentPage() {
         borderColor="border"
         p="6"
       >
-        <PaymentMethodSelector bookingId={bookingId} />
+        <PaymentMethodSelector
+          bookingId={bookingId}
+          organizationId={organizationId}
+        />
       </styled.div>
     </styled.div>
   );

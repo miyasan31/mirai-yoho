@@ -3,6 +3,7 @@ import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
 
 interface UpdateProfileInput {
+  organizationId: string;
   consultantId: string;
   displayName: string;
   bio: string;
@@ -20,6 +21,7 @@ export class UpdateProfileUseCase {
     );
 
     let consultant = await this.consultantRepository.findById(
+      input.organizationId,
       input.consultantId,
     );
 
@@ -27,6 +29,7 @@ export class UpdateProfileUseCase {
       consultant.updateProfile(profile);
     } else {
       consultant = Consultant.create({
+        organizationId: input.organizationId,
         consultantId: input.consultantId,
         profile,
         zoomRoomIds: [],

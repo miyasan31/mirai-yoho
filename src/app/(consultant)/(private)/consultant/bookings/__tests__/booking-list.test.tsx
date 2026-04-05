@@ -4,6 +4,12 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("next/navigation", () => ({
+  useParams: () => ({ organizationId: "org-test" }),
+  usePathname: () => "/org-test/consultant/bookings",
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 const mockUseConsultantBookings = vi.fn();
 
 vi.mock("@/hooks/use-consultant-bookings", () => ({

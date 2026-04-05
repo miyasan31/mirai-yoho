@@ -17,10 +17,12 @@ import {
   useConsultantBookings,
   useUpdateConsultantMemo,
 } from "@/hooks/use-consultant-bookings";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export default function ConsultantMemoEditPage() {
   const params = useParams();
   const router = useRouter();
+  const { buildPath, organizationId } = useOrganizationRouting();
   const bookingId = params.id as string;
   const [memo, setMemo] = useState("");
 
@@ -39,11 +41,12 @@ export default function ConsultantMemoEditPage() {
     e.preventDefault();
     try {
       await updateMemo.mutateAsync({
-        bookingId,
+        organizationId: organizationId ?? "",
+        id: bookingId,
         data: { memo },
       });
       toaster.create({ type: "success", title: "メモを保存しました" });
-      router.push("/consultant/bookings");
+      router.push(buildPath("/consultant/bookings"));
     } catch (err) {
       toaster.create({
         type: "error",
@@ -84,7 +87,7 @@ export default function ConsultantMemoEditPage() {
       <styled.div display="flex" alignItems="center" gap="2" mb="6">
         <Tooltip content="予約一覧に戻る" showArrow>
           <IconButton variant="subtle" size="sm" asChild>
-            <Link href="/consultant/bookings">
+            <Link href={buildPath("/consultant/bookings")}>
               <ArrowLeft size={18} />
             </Link>
           </IconButton>
@@ -123,7 +126,7 @@ export default function ConsultantMemoEditPage() {
             <Button
               type="button"
               variant="outline"
-              onClick={() => router.push("/consultant/bookings")}
+              onClick={() => router.push(buildPath("/consultant/bookings"))}
             >
               キャンセル
             </Button>

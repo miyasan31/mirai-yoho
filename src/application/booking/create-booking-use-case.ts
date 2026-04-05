@@ -14,6 +14,7 @@ import { ZoomDailySession } from "@/domain/zoom-session/zoom-daily-session";
 import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
 
 interface CreateBookingInput {
+  organizationId: string;
   slotId?: string;
   startDatetime?: Date;
   endDatetime?: Date;
@@ -66,14 +67,30 @@ export class CreateBookingUseCase {
     const bookingId = crypto.randomUUID();
     slot.reserve(bookingId);
 
-    const client = Client.create({
-      clientId: crypto.randomUUID(),
-      name: input.clientName,
-      email: input.clientEmail,
-      phone: input.clientPhone,
-    });
+    const existingClient = await this.clientRepository.findByEmail(
+      input.organizationId,
+      input.clientEmail,
+    );
+    const client =
+      existingClient ??
+      Client.create({
+        organizationId: input.organizationId,
+        clientId: crypto.randomUUID(),
+        name: input.clientName,
+        email: input.clientEmail,
+        phone: input.clientPhone,
+      });
+
+    if (existingClient) {
+      existingClient.updateInfo({
+        name: input.clientName,
+        email: input.clientEmail,
+        phone: input.clientPhone,
+      });
+    }
 
     const booking = Booking.create({
+      organizationId: input.organizationId,
       bookingId,
       clientId: client.getClientId(),
       consultantId: slot.getConsultantId(),
@@ -84,6 +101,7 @@ export class CreateBookingUseCase {
     });
 
     const consultant = await this.consultantRepository.findById(
+      input.organizationId,
       slot.getConsultantId(),
     );
     if (!consultant) {
@@ -92,8 +110,10 @@ export class CreateBookingUseCase {
     const consultantName = consultant.getProfile().getDisplayName();
 
     const sessionDate = toSessionDate(slot.getTimeRange().getStartAt());
-    const existingSession =
-      await this.zoomDailySessionRepository.findByDate(sessionDate);
+    const existingSession = await this.zoomDailySessionRepository.findByDate(
+      input.organizationId,
+      sessionDate,
+    );
 
     let session: ZoomDailySession;
 
@@ -110,6 +130,7 @@ export class CreateBookingUseCase {
       });
     } else {
       session = ZoomDailySession.create({
+        organizationId: input.organizationId,
         sessionId: crypto.randomUUID(),
         sessionDate,
       });
@@ -155,7 +176,10 @@ export class CreateBookingUseCase {
 
   private async resolveSlot(input: CreateBookingInput) {
     if (input.slotId) {
-      const slot = await this.slotRepository.findById(input.slotId);
+      const slot = await this.slotRepository.findById(
+        input.organizationId,
+        input.slotId,
+      );
       if (!slot) {
         throw new Error("Slot not found");
       }
@@ -167,6 +191,7 @@ export class CreateBookingUseCase {
     }
 
     const candidateSlots = await this.slotRepository.findAvailableByTimeRange(
+      input.organizationId,
       input.startDatetime,
       input.endDatetime,
     );
@@ -176,6 +201,7 @@ export class CreateBookingUseCase {
     }
 
     const dailySlots = await this.slotRepository.findAvailableByDate(
+      input.organizationId,
       input.startDatetime,
     );
     const availableCountByConsultant = new Map<string, number>();

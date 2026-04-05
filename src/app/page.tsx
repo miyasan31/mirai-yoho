@@ -22,8 +22,8 @@ export default function Home() {
           あなたの未来を一緒に考える、オンライン相談サービス
         </Text>
         <Button asChild size="lg">
-          <Link href="/consultants">
-            相談員を探す
+          <Link href="/admin/login">
+            ログインする
             <ArrowRight size={18} />
           </Link>
         </Button>

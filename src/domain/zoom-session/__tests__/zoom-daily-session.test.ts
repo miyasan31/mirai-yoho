@@ -3,6 +3,8 @@ import { DomainError } from "@/domain/shared/domain-error";
 import { BreakoutRoom } from "@/domain/zoom-session/breakout-room";
 import { ZoomDailySession } from "@/domain/zoom-session/zoom-daily-session";
 
+const ORGANIZATION_ID = "org-1";
+
 describe("BreakoutRoom", () => {
   it("参加者を追加すると新しいインスタンスが返る", () => {
     const room = BreakoutRoom.create({
@@ -60,6 +62,7 @@ describe("BreakoutRoom", () => {
 describe("ZoomDailySession", () => {
   function createSession() {
     return ZoomDailySession.create({
+      organizationId: ORGANIZATION_ID,
       sessionId: "session-1",
       sessionDate: "2026-04-01",
     });
@@ -164,6 +167,7 @@ describe("ZoomDailySession", () => {
   describe("reconstruct", () => {
     it("永続化から復元できる", () => {
       const session = ZoomDailySession.reconstruct({
+        organizationId: ORGANIZATION_ID,
         sessionId: "session-1",
         sessionDate: "2026-04-01",
         zoomMeetingId: "12345",

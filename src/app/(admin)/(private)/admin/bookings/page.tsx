@@ -11,16 +11,20 @@ import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
 import { useAdminBookings } from "@/hooks/use-admin-bookings";
 import { useChargePayment } from "@/hooks/use-booking";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export default function AdminBookingsPage() {
+  const { organizationId } = useOrganizationRouting();
   const { data, isLoading } = useAdminBookings();
   const chargePayment = useChargePayment();
 
   const bookings = data?.data?.bookings ?? [];
 
   const handleCharge = async (bookingId: string) => {
+    if (!organizationId) return;
     try {
       await chargePayment.mutateAsync({
+        organizationId,
         bookingId,
         data: { method: "manual" },
       });

@@ -1,2 +1,10 @@
+# GUI Git / minimal sh PATH: include mise shims and ~/.local/bin so pnpm is found.
+export PATH="$HOME/.local/share/mise/shims:$HOME/.local/bin:/opt/homebrew/bin:$HOME/.volta/bin:$PATH"
 eval "$(mise activate bash --shims)" 2>/dev/null || true
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "husky - pnpm not found. Ensure mise or Volta is available in your PATH."
+  exit 127
+fi
+
 pnpm exec lint-staged

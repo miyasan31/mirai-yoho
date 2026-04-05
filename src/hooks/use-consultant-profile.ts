@@ -3,10 +3,14 @@ import {
   useUpdateConsultantProfile,
 } from "@/generated/api/consultant/consultant";
 import { useAuth } from "@/hooks/use-auth";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export function useConsultantProfile() {
   const { token } = useAuth();
-  return useGetConsultantProfile({ query: { enabled: !!token } });
+  const { organizationId } = useOrganizationRouting();
+  return useGetConsultantProfile(organizationId ?? "", {
+    query: { enabled: !!token && !!organizationId },
+  });
 }
 
 export { useUpdateConsultantProfile };

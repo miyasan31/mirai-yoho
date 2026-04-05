@@ -7,9 +7,11 @@ import { ZoomUrl } from "@/domain/booking/zoom-url";
 import { DomainError } from "@/domain/shared/domain-error";
 
 const futureDate = new Date("2026-05-01T10:00:00Z");
+const ORGANIZATION_ID = "org-1";
 
 function createPendingBooking() {
   return Booking.create({
+    organizationId: ORGANIZATION_ID,
     bookingId: "booking-1",
     clientId: "client-1",
     consultantId: "consultant-1",
@@ -100,6 +102,7 @@ describe("Booking", () => {
     it("admin はデッドライン後でもキャンセルできる", () => {
       const pastDate = new Date("2020-01-01T10:00:00Z");
       const booking = Booking.reconstruct({
+        organizationId: ORGANIZATION_ID,
         bookingId: "booking-1",
         clientId: "client-1",
         consultantId: "consultant-1",
@@ -115,6 +118,7 @@ describe("Booking", () => {
     it("client はデッドライン後にキャンセルすると DomainError", () => {
       const pastDate = new Date("2020-01-01T10:00:00Z");
       const booking = Booking.reconstruct({
+        organizationId: ORGANIZATION_ID,
         bookingId: "booking-1",
         clientId: "client-1",
         consultantId: "consultant-1",

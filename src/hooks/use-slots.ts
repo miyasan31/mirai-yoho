@@ -1,5 +1,32 @@
-export {
+import {
+  type GetSlotsQueryError,
+  type GetSlotsQueryResult,
   useCreateSlot,
   useDeleteSlot,
-  useGetSlots,
+  useGetSlots as useGeneratedGetSlots,
 } from "@/generated/api/slot/slot";
+import type { GetSlotsParams } from "@/generated/schemas";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
+
+export function useGetSlots(
+  params?: GetSlotsParams,
+  options?: Record<string, unknown>,
+) {
+  const { organizationId } = useOrganizationRouting();
+  return useGeneratedGetSlots<GetSlotsQueryResult, GetSlotsQueryError>(
+    organizationId ?? "",
+    params,
+    {
+      ...options,
+      query: {
+        ...((options?.query as Record<string, unknown> | undefined) ?? {}),
+        enabled:
+          ((options?.query as { enabled?: boolean } | undefined)?.enabled ??
+            true) &&
+          Boolean(organizationId),
+      },
+    },
+  );
+}
+
+export { useCreateSlot, useDeleteSlot };

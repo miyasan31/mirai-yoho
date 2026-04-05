@@ -3,6 +3,12 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("next/navigation", () => ({
+  useParams: () => ({ organizationId: "org-test" }),
+  usePathname: () => "/org-test/admin/settings",
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 vi.mock("styled-system/css", () => ({
   css: () => "",
   cva: () => () => "",
@@ -84,6 +90,7 @@ describe("AdminSettingsPage", () => {
     await user.click(screen.getByText("保存"));
 
     expect(mockMutateAsync).toHaveBeenCalledWith({
+      organizationId: "org-test",
       data: { consultantSelectionEnabled: false },
     });
   });

@@ -10,9 +10,11 @@ import * as Dialog from "@/components/ui/dialog";
 import { Text } from "@/components/ui/text";
 import type { CancelBookingBody } from "@/generated/schemas";
 import { useCancelBooking } from "@/hooks/use-booking";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export default function CancelPage() {
   const searchParams = useSearchParams();
+  const { organizationId } = useOrganizationRouting();
   const token = searchParams.get("token");
   const [status, setStatus] = useState<
     "idle" | "loading" | "success" | "error"
@@ -39,6 +41,7 @@ export default function CancelPage() {
     setStatus("loading");
     try {
       await cancelBooking.mutateAsync({
+        organizationId: organizationId ?? "",
         bookingId,
         // token は OpenAPI スキーマに未定義だが API 側で必要
         data: { cancelledBy: "client", token } as CancelBookingBody,

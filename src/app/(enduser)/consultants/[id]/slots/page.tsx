@@ -11,6 +11,7 @@ import { IconButton } from "@/components/ui/icon-button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { Tooltip } from "@/components/ui/tooltip";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import { useGetSlots } from "@/hooks/use-slots";
 
 function formatDate(isoString: string): string {
@@ -44,6 +45,7 @@ export default function SlotsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id: consultantId } = use(params);
+  const { buildPath } = useOrganizationRouting();
   const { data, isLoading, error } = useGetSlots({ consultantId });
 
   const slots = data?.data?.slots ?? [];
@@ -86,7 +88,7 @@ export default function SlotsPage({
       <styled.div display="flex" alignItems="center" gap="2" mb="4">
         <Tooltip content="相談員一覧に戻る" showArrow>
           <IconButton variant="subtle" size="sm" asChild>
-            <Link href="/consultants">
+            <Link href={buildPath("/consultants")}>
               <ArrowLeft size={18} />
             </Link>
           </IconButton>
@@ -130,7 +132,9 @@ export default function SlotsPage({
                 {dateSlots.map((slot) => (
                   <styled.a
                     key={slot.slotId}
-                    href={`/booking?slotId=${slot.slotId}&consultantId=${consultantId}`}
+                    href={buildPath(
+                      `/booking?slotId=${slot.slotId}&consultantId=${consultantId}`,
+                    )}
                     shadow="xs"
                     border="1px solid"
                     borderColor="border"

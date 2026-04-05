@@ -13,8 +13,10 @@ import {
   useConsultantProfile,
   useUpdateConsultantProfile,
 } from "@/hooks/use-consultant-profile";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export default function ConsultantProfilePage() {
+  const { organizationId } = useOrganizationRouting();
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
   const [specialties, setSpecialties] = useState("");
@@ -34,6 +36,7 @@ export default function ConsultantProfilePage() {
     e.preventDefault();
     try {
       await updateProfile.mutateAsync({
+        organizationId: organizationId ?? "",
         data: {
           displayName,
           bio,

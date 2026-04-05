@@ -18,43 +18,59 @@ import {
   SidebarLayoutSkeleton,
 } from "@/components/sidebar-layout";
 import { useAuth } from "@/hooks/use-auth";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
-const NAV_ITEMS: NavItem[] = [
-  { href: "/admin/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
-  { href: "/admin/bookings", label: "予約管理", icon: CalendarDays },
-  { href: "/admin/consultants", label: "相談員管理", icon: Users },
-  { href: "/admin/payments", label: "決済管理", icon: CreditCard },
-  { href: "/admin/clients", label: "クライアント管理", icon: Building2 },
-  { href: "/admin/users", label: "ユーザー管理", icon: UserCog },
-  { href: "/admin/settings", label: "設定", icon: Settings },
+const NAV_ITEMS: Array<Omit<NavItem, "href"> & { path: string }> = [
+  { path: "/admin/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
+  { path: "/admin/bookings", label: "予約管理", icon: CalendarDays },
+  { path: "/admin/consultants", label: "相談員管理", icon: Users },
+  { path: "/admin/payments", label: "決済管理", icon: CreditCard },
+  { path: "/admin/clients", label: "クライアント管理", icon: Building2 },
+  { path: "/admin/users", label: "ユーザー管理", icon: UserCog },
+  { path: "/admin/settings", label: "設定", icon: Settings },
 ];
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
-  const { user, role, isLoading, signOut } = useAuth();
+  const {
+    user,
+    role,
+    memberships,
+    currentOrganizationId,
+    isLoading,
+    signOut,
+    setCurrentOrganizationId,
+  } = useAuth();
   const router = useRouter();
+  const { organizationId, buildPath, replaceOrganization } =
+    useOrganizationRouting();
 
   useEffect(() => {
     if (
       !isLoading &&
-      (!user || (role !== "super_admin" && role !== "operator"))
+      (!user || !organizationId || (role !== "admin" && role !== "operator"))
     ) {
       router.push("/admin/login");
     }
-  }, [user, role, isLoading, router]);
+  }, [user, role, isLoading, router, organizationId]);
 
   const visibleItems = useMemo(
     () =>
-      role === "super_admin"
+      (role === "admin"
         ? NAV_ITEMS
-        : NAV_ITEMS.filter((item) => item.href !== "/admin/users"),
-    [role],
+        : NAV_ITEMS.filter((item) => item.path !== "/admin/users")
+      ).map((item) => ({
+        href: buildPath(item.path),
+        label: item.label,
+        icon: item.icon,
+      })),
+    [buildPath, role],
   );
 
   if (isLoading) {
     return <SidebarLayoutSkeleton navItemCount={NAV_ITEMS.length} />;
   }
 
-  if (!user || (role !== "super_admin" && role !== "operator")) {
+  if (!user || !organizationId || (role !== "admin" && role !== "operator")) {
     return null;
   }
 
@@ -62,6 +78,17 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     <SidebarLayout
       title="管理メニュー"
       navItems={visibleItems}
+      organizationSwitcher={{
+        items: memberships.map((membership) => ({
+          label: membership.organizationName,
+          value: membership.organizationId,
+        })),
+        value: currentOrganizationId,
+        onChange: async (nextOrganizationId) => {
+          await setCurrentOrganizationId(nextOrganizationId);
+          replaceOrganization(nextOrganizationId);
+        },
+      }}
       onSignOut={signOut}
     >
       {children}

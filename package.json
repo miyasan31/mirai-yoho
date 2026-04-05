@@ -12,6 +12,9 @@
     "lint": "biome check",
     "format": "biome format --write",
     "generate": "orval",
+    "setup:firestore-collections": "pnpm dlx tsx --env-file=.env.local scripts/setup-firestore-collections.ts",
+    "create:organization": "pnpm dlx tsx --env-file=.env.local scripts/create-organization.ts",
+    "seed:slots": "pnpm dlx tsx --env-file=.env.local scripts/seed-slots.ts",
     "delete:slots": "pnpm dlx tsx --env-file=.env.local scripts/delete-slots.ts",
     "test": "vitest run",
     "test:watch": "vitest"

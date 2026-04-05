@@ -4,10 +4,12 @@ import { Slot as SlotEntity } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import { TimeRange } from "@/domain/slot/time-range";
 import { db } from "@/infrastructure/firestore/firestore-client";
+import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 
-const COLLECTION = "slots";
+const COLLECTION = FIRESTORE_COLLECTIONS.slots;
 
 interface SlotDoc {
+  organizationId: string;
   slotId: string;
   consultantId: string;
   startAt: Timestamp;
@@ -18,6 +20,7 @@ interface SlotDoc {
 
 function toDomain(doc: SlotDoc): Slot {
   return SlotEntity.reconstruct({
+    organizationId: doc.organizationId,
     slotId: doc.slotId,
     consultantId: doc.consultantId,
     timeRange: TimeRange.reconstruct(doc.startAt.toDate(), doc.endAt.toDate()),
@@ -29,6 +32,7 @@ function toDomain(doc: SlotDoc): Slot {
 function toFirestore(slot: Slot): Record<string, unknown> {
   const timeRange = slot.getTimeRange();
   return {
+    organizationId: slot.getOrganizationId(),
     slotId: slot.getSlotId(),
     consultantId: slot.getConsultantId(),
     startAt: timeRange.getStartAt(),
@@ -55,15 +59,17 @@ function getJstDayRange(date: Date): { start: Date; end: Date } {
 }
 
 export class FirestoreSlotRepository implements ISlotRepository {
-  async findById(slotId: string): Promise<Slot | null> {
+  async findById(organizationId: string, slotId: string): Promise<Slot | null> {
     const doc = await db.collection(COLLECTION).doc(slotId).get();
     if (!doc.exists) return null;
-    return toDomain(doc.data() as SlotDoc);
+    const slot = toDomain(doc.data() as SlotDoc);
+    return slot.getOrganizationId() === organizationId ? slot : null;
   }
 
-  async findAllAvailable(): Promise<Slot[]> {
+  async findAllAvailable(organizationId: string): Promise<Slot[]> {
     const snapshot = await db
       .collection(COLLECTION)
+      .where("organizationId", "==", organizationId)
       .where("isReserved", "==", false)
       .get();
     return snapshot.docs
@@ -76,9 +82,13 @@ export class FirestoreSlotRepository implements ISlotRepository {
       );
   }
 
-  async findByConsultantId(consultantId: string): Promise<Slot[]> {
+  async findByConsultantId(
+    organizationId: string,
+    consultantId: string,
+  ): Promise<Slot[]> {
     const snapshot = await db
       .collection(COLLECTION)
+      .where("organizationId", "==", organizationId)
       .where("consultantId", "==", consultantId)
       .get();
     return snapshot.docs
@@ -91,9 +101,13 @@ export class FirestoreSlotRepository implements ISlotRepository {
       );
   }
 
-  async findAvailableByConsultantId(consultantId: string): Promise<Slot[]> {
+  async findAvailableByConsultantId(
+    organizationId: string,
+    consultantId: string,
+  ): Promise<Slot[]> {
     const snapshot = await db
       .collection(COLLECTION)
+      .where("organizationId", "==", organizationId)
       .where("consultantId", "==", consultantId)
       .where("isReserved", "==", false)
       .where("startAt", ">", new Date())
@@ -102,9 +116,14 @@ export class FirestoreSlotRepository implements ISlotRepository {
     return snapshot.docs.map((doc) => toDomain(doc.data() as SlotDoc));
   }
 
-  async findAvailableByTimeRange(startAt: Date, endAt: Date): Promise<Slot[]> {
+  async findAvailableByTimeRange(
+    organizationId: string,
+    startAt: Date,
+    endAt: Date,
+  ): Promise<Slot[]> {
     const snapshot = await db
       .collection(COLLECTION)
+      .where("organizationId", "==", organizationId)
       .where("startAt", "==", startAt)
       .get();
     return snapshot.docs
@@ -117,10 +136,14 @@ export class FirestoreSlotRepository implements ISlotRepository {
       .sort((a, b) => a.getConsultantId().localeCompare(b.getConsultantId()));
   }
 
-  async findAvailableByDate(date: Date): Promise<Slot[]> {
+  async findAvailableByDate(
+    organizationId: string,
+    date: Date,
+  ): Promise<Slot[]> {
     const { start, end } = getJstDayRange(date);
     const snapshot = await db
       .collection(COLLECTION)
+      .where("organizationId", "==", organizationId)
       .where("startAt", ">=", start)
       .where("startAt", "<", end)
       .orderBy("startAt", "asc")
@@ -137,7 +160,9 @@ export class FirestoreSlotRepository implements ISlotRepository {
       .set(toFirestore(slot));
   }
 
-  async delete(slotId: string): Promise<void> {
+  async delete(organizationId: string, slotId: string): Promise<void> {
+    const slot = await this.findById(organizationId, slotId);
+    if (!slot) return;
     await db.collection(COLLECTION).doc(slotId).delete();
   }
 }

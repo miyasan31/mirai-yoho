@@ -7,10 +7,12 @@ import { CancelDeadline } from "@/domain/booking/cancel-deadline";
 import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
 import { db } from "@/infrastructure/firestore/firestore-client";
+import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 
-const COLLECTION = "bookings";
+const COLLECTION = FIRESTORE_COLLECTIONS.bookings;
 
 interface BookingDoc {
+  organizationId: string;
   bookingId: string;
   clientId: string;
   consultantId: string;
@@ -25,6 +27,7 @@ interface BookingDoc {
 
 function toDomain(doc: BookingDoc): Booking {
   return BookingEntity.reconstruct({
+    organizationId: doc.organizationId,
     bookingId: doc.bookingId,
     clientId: doc.clientId,
     consultantId: doc.consultantId,
@@ -40,6 +43,7 @@ function toDomain(doc: BookingDoc): Booking {
 
 function toFirestore(booking: Booking): Record<string, unknown> {
   return {
+    organizationId: booking.getOrganizationId(),
     bookingId: booking.getBookingId(),
     clientId: booking.getClientId(),
     consultantId: booking.getConsultantId(),
@@ -54,30 +58,45 @@ function toFirestore(booking: Booking): Record<string, unknown> {
 }
 
 export class FirestoreBookingRepository implements IBookingRepository {
-  async findById(bookingId: string): Promise<Booking | null> {
+  async findById(
+    organizationId: string,
+    bookingId: string,
+  ): Promise<Booking | null> {
     const doc = await db.collection(COLLECTION).doc(bookingId).get();
     if (!doc.exists) return null;
-    return toDomain(doc.data() as BookingDoc);
+    const booking = toDomain(doc.data() as BookingDoc);
+    return booking.getOrganizationId() === organizationId ? booking : null;
   }
 
-  async findByConsultantId(consultantId: string): Promise<Booking[]> {
+  async findByConsultantId(
+    organizationId: string,
+    consultantId: string,
+  ): Promise<Booking[]> {
     const snapshot = await db
       .collection(COLLECTION)
+      .where("organizationId", "==", organizationId)
       .where("consultantId", "==", consultantId)
       .get();
     return snapshot.docs.map((doc) => toDomain(doc.data() as BookingDoc));
   }
 
-  async findByStatus(status: string): Promise<Booking[]> {
+  async findByStatus(
+    organizationId: string,
+    status: string,
+  ): Promise<Booking[]> {
     const snapshot = await db
       .collection(COLLECTION)
+      .where("organizationId", "==", organizationId)
       .where("status", "==", status)
       .get();
     return snapshot.docs.map((doc) => toDomain(doc.data() as BookingDoc));
   }
 
-  async findAll(): Promise<Booking[]> {
-    const snapshot = await db.collection(COLLECTION).get();
+  async findAll(organizationId: string): Promise<Booking[]> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("organizationId", "==", organizationId)
+      .get();
     return snapshot.docs.map((doc) => toDomain(doc.data() as BookingDoc));
   }
 

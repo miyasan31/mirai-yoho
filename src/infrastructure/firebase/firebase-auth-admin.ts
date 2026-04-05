@@ -32,6 +32,10 @@ export async function getUser(uid: string): Promise<UserRecord> {
   return auth.getUser(uid);
 }
 
+export async function getUserByEmail(email: string): Promise<UserRecord> {
+  return auth.getUserByEmail(email);
+}
+
 export async function listUsers(): Promise<UserRecord[]> {
   const users: UserRecord[] = [];
   let pageToken: string | undefined;

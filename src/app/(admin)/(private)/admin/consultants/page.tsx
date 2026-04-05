@@ -12,8 +12,10 @@ import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useAdminConsultants } from "@/hooks/use-admin-consultants";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export default function AdminConsultantsPage() {
+  const { buildPath } = useOrganizationRouting();
   const { data, isLoading } = useAdminConsultants();
 
   const consultants = data?.data?.consultants ?? [];
@@ -48,7 +50,7 @@ export default function AdminConsultantsPage() {
           相談員管理
         </Text>
         <Button asChild>
-          <Link href="/admin/consultants/new">新規追加</Link>
+          <Link href={buildPath("/admin/users")}>新規追加</Link>
         </Button>
       </styled.div>
       {consultants.length === 0 ? (
@@ -80,7 +82,9 @@ export default function AdminConsultantsPage() {
                 <Table.Cell>
                   <Tooltip content="編集">
                     <IconButton variant="subtle" size="sm" asChild>
-                      <Link href={`/admin/consultants/${c.consultantId}`}>
+                      <Link
+                        href={buildPath(`/admin/consultants/${c.consultantId}`)}
+                      >
                         <Pencil size={16} />
                       </Link>
                     </IconButton>

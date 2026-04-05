@@ -4,8 +4,9 @@ import type { ZoomDailySession } from "@/domain/zoom-session/zoom-daily-session"
 import { ZoomDailySession as ZoomDailySessionEntity } from "@/domain/zoom-session/zoom-daily-session";
 import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
 import { db } from "@/infrastructure/firestore/firestore-client";
+import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 
-const COLLECTION = "zoomDailySessions";
+const COLLECTION = FIRESTORE_COLLECTIONS.zoomDailySessions;
 
 interface BreakoutRoomDoc {
   consultantId: string;
@@ -14,6 +15,7 @@ interface BreakoutRoomDoc {
 }
 
 interface ZoomDailySessionDoc {
+  organizationId: string;
   sessionId: string;
   sessionDate: string;
   zoomMeetingId: string;
@@ -24,6 +26,7 @@ interface ZoomDailySessionDoc {
 
 function toDomain(doc: ZoomDailySessionDoc): ZoomDailySession {
   return ZoomDailySessionEntity.reconstruct({
+    organizationId: doc.organizationId,
     sessionId: doc.sessionId,
     sessionDate: doc.sessionDate,
     zoomMeetingId: doc.zoomMeetingId,
@@ -41,6 +44,7 @@ function toDomain(doc: ZoomDailySessionDoc): ZoomDailySession {
 
 function toFirestore(session: ZoomDailySession): Record<string, unknown> {
   return {
+    organizationId: session.getOrganizationId(),
     sessionId: session.getSessionId(),
     sessionDate: session.getSessionDate(),
     zoomMeetingId: session.getZoomMeetingId(),
@@ -57,8 +61,14 @@ function toFirestore(session: ZoomDailySession): Record<string, unknown> {
 export class FirestoreZoomDailySessionRepository
   implements IZoomDailySessionRepository
 {
-  async findByDate(sessionDate: string): Promise<ZoomDailySession | null> {
-    const doc = await db.collection(COLLECTION).doc(sessionDate).get();
+  async findByDate(
+    organizationId: string,
+    sessionDate: string,
+  ): Promise<ZoomDailySession | null> {
+    const doc = await db
+      .collection(COLLECTION)
+      .doc(`${organizationId}_${sessionDate}`)
+      .get();
     if (!doc.exists) return null;
     return toDomain(doc.data() as ZoomDailySessionDoc);
   }
@@ -66,7 +76,7 @@ export class FirestoreZoomDailySessionRepository
   async save(session: ZoomDailySession): Promise<void> {
     await db
       .collection(COLLECTION)
-      .doc(session.getSessionDate())
+      .doc(`${session.getOrganizationId()}_${session.getSessionDate()}`)
       .set(toFirestore(session));
   }
 }

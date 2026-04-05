@@ -17,10 +17,12 @@ import {
   useDeleteAdminConsultant,
   useUpdateAdminConsultant,
 } from "@/hooks/use-admin-consultants";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export default function AdminConsultantDetailPage() {
   const params = useParams();
   const router = useRouter();
+  const { buildPath, organizationId } = useOrganizationRouting();
   const consultantId = params.id as string;
   const [displayName, setDisplayName] = useState("");
   const [bio, setBio] = useState("");
@@ -48,6 +50,7 @@ export default function AdminConsultantDetailPage() {
     setError("");
     try {
       await updateConsultant.mutateAsync({
+        organizationId: organizationId ?? "",
         id: consultantId,
         data: {
           displayName,
@@ -58,7 +61,7 @@ export default function AdminConsultantDetailPage() {
             .filter(Boolean),
         },
       });
-      router.push("/admin/consultants");
+      router.push(buildPath("/admin/consultants"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "保存に失敗しました");
     }
@@ -66,8 +69,11 @@ export default function AdminConsultantDetailPage() {
 
   const handleDeactivate = async () => {
     try {
-      await deleteConsultant.mutateAsync({ id: consultantId });
-      router.push("/admin/consultants");
+      await deleteConsultant.mutateAsync({
+        organizationId: organizationId ?? "",
+        id: consultantId,
+      });
+      router.push(buildPath("/admin/consultants"));
     } catch (err) {
       setError(err instanceof Error ? err.message : "無効化に失敗しました");
     }
@@ -105,7 +111,10 @@ export default function AdminConsultantDetailPage() {
   return (
     <styled.div maxW="600px">
       <styled.div display="flex" alignItems="center" gap="2" mb="4">
-        <Link href="/admin/consultants" style={{ textDecoration: "none" }}>
+        <Link
+          href={buildPath("/admin/consultants")}
+          style={{ textDecoration: "none" }}
+        >
           <styled.span
             display="flex"
             alignItems="center"

@@ -5,11 +5,21 @@ export function requireRole(
   authUser: AuthUser,
   ...allowedRoles: UserRole[]
 ): void {
-  if (!allowedRoles.includes(authUser.role)) {
+  const role =
+    authUser.memberships.find(
+      (membership) =>
+        membership.organizationId === authUser.currentOrganizationId &&
+        membership.status === "active",
+    )?.role ??
+    authUser.memberships.find((membership) =>
+      allowedRoles.includes(membership.role),
+    )?.role;
+
+  if (!role) {
     throw new AuthError(
       403,
       "FORBIDDEN",
-      `Role '${authUser.role}' is not allowed. Required: ${allowedRoles.join(", ")}`,
+      `No allowed role found. Required: ${allowedRoles.join(", ")}`,
     );
   }
 }

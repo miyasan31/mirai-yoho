@@ -7,6 +7,7 @@ import type { PaymentChargedEvent } from "@/domain/payment/payment-events";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 
 interface ChargePaymentInput {
+  organizationId: string;
   bookingId: string;
   method: ChargeMethod;
 }
@@ -21,19 +22,26 @@ export class ChargePaymentUseCase {
   ) {}
 
   async execute(input: ChargePaymentInput): Promise<void> {
-    const booking = await this.bookingRepository.findById(input.bookingId);
+    const booking = await this.bookingRepository.findById(
+      input.organizationId,
+      input.bookingId,
+    );
     if (!booking) {
       throw new Error("Booking not found");
     }
 
     const payment = await this.paymentRepository.findByBookingId(
+      input.organizationId,
       input.bookingId,
     );
     if (!payment) {
       throw new Error("Payment not found");
     }
 
-    const client = await this.clientRepository.findById(booking.getClientId());
+    const client = await this.clientRepository.findById(
+      input.organizationId,
+      booking.getClientId(),
+    );
     if (!client) {
       throw new Error("Client not found");
     }

@@ -57,17 +57,14 @@ export async function POST(request: Request) {
     }
 
     case "payment_intent.payment_failed": {
-      const paymentIntent = event.data.object;
-      const bookingId = paymentIntent.metadata?.bookingId;
-      if (bookingId) {
-        const paymentRepo = new FirestorePaymentRepository();
-        const payment = await paymentRepo.findByBookingId(bookingId);
-        if (payment) {
-          const status = payment.getStatus().getValue();
-          if (status === "setup_complete") {
-            payment.failCharge();
-            await paymentRepo.save(payment);
-          }
+      const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      const paymentRepo = new FirestorePaymentRepository();
+      const payment = await paymentRepo.findByPaymentIntentId(paymentIntent.id);
+      if (payment) {
+        const status = payment.getStatus().getValue();
+        if (status === "setup_complete") {
+          payment.failCharge();
+          await paymentRepo.save(payment);
         }
       }
       break;

@@ -5,10 +5,12 @@ import { TimeRange } from "@/domain/slot/time-range";
 
 const futureStart = new Date("2026-05-01T10:00:00Z");
 const futureEnd = new Date("2026-05-01T11:00:00Z");
+const ORGANIZATION_ID = "org-1";
 
 function createSlot() {
   const timeRange = TimeRange.reconstruct(futureStart, futureEnd);
   return Slot.create({
+    organizationId: ORGANIZATION_ID,
     slotId: "slot-1",
     consultantId: "consultant-1",
     timeRange,
@@ -57,6 +59,7 @@ describe("Slot", () => {
         new Date("2020-01-01T11:00:00Z"),
       );
       const slot = Slot.create({
+        organizationId: ORGANIZATION_ID,
         slotId: "slot-2",
         consultantId: "consultant-1",
         timeRange: pastTimeRange,

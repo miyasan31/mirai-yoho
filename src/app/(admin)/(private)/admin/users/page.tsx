@@ -23,8 +23,8 @@ import type {
   UpdateUserRoleBodyRole,
 } from "@/generated/schemas";
 import {
-  getGetAdminUsersQueryKey,
   useAdminUsers,
+  useAdminUsersQueryKey,
   useDeleteAdminUser,
   useInviteUser,
   useResendUserInvite,
@@ -32,23 +32,27 @@ import {
   useUpdateUserRole,
 } from "@/hooks/use-admin-users";
 import { useAuth } from "@/hooks/use-auth";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 const roleCollection = createListCollection({
   items: [
+    { label: "管理者", value: "admin" },
     { label: "相談員", value: "consultant" },
     { label: "オペレーター", value: "operator" },
   ],
 });
 
 const ROLE_LABELS: Record<string, string> = {
-  super_admin: "スーパー管理者",
+  admin: "管理者",
   operator: "オペレーター",
   consultant: "相談員",
 };
 
 export default function AdminUsersPage() {
+  const { organizationId } = useOrganizationRouting();
   const { role } = useAuth();
   const { data, isLoading } = useAdminUsers();
+  const queryKey = useAdminUsersQueryKey();
   const queryClient = useQueryClient();
 
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -71,7 +75,7 @@ export default function AdminUsersPage() {
   const resendUserInvite = useResendUserInvite();
   const resetUserPassword = useResetUserPassword();
 
-  if (role !== "super_admin") {
+  if (!organizationId || role !== "admin") {
     return <Text>権限がありません</Text>;
   }
 
@@ -79,13 +83,14 @@ export default function AdminUsersPage() {
 
   const invalidate = () =>
     queryClient.invalidateQueries({
-      queryKey: getGetAdminUsersQueryKey(),
+      queryKey,
     });
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
       await inviteUser.mutateAsync({
+        organizationId,
         data: { email: inviteEmail, role: inviteRole },
       });
       toaster.success({
@@ -104,6 +109,7 @@ export default function AdminUsersPage() {
     e.preventDefault();
     try {
       await updateUserRole.mutateAsync({
+        organizationId,
         uid: editRoleUid,
         data: { role: editRoleValue },
       });
@@ -120,7 +126,7 @@ export default function AdminUsersPage() {
 
   const handleResendInvite = async (uid: string, email: string) => {
     try {
-      await resendUserInvite.mutateAsync({ uid });
+      await resendUserInvite.mutateAsync({ organizationId, uid });
       toaster.success({
         title: "成功",
         description: `${email} に招待メールを再送しました`,
@@ -132,7 +138,7 @@ export default function AdminUsersPage() {
 
   const handleResetPassword = async (uid: string, email: string) => {
     try {
-      await resetUserPassword.mutateAsync({ uid });
+      await resetUserPassword.mutateAsync({ organizationId, uid });
       toaster.success({
         title: "成功",
         description: `${email} にパスワードリセットメールを送信しました`,
@@ -144,7 +150,7 @@ export default function AdminUsersPage() {
 
   const handleDelete = async () => {
     try {
-      await deleteAdminUser.mutateAsync({ uid: deleteUid });
+      await deleteAdminUser.mutateAsync({ organizationId, uid: deleteUid });
       toaster.success({
         title: "成功",
         description: `${deleteEmail} を削除しました`,
@@ -270,7 +276,7 @@ export default function AdminUsersPage() {
                 </Table.Cell>
                 <Table.Cell>
                   <styled.div display="flex" gap="1">
-                    {user.role === "super_admin" ? (
+                    {user.role === "admin" ? (
                       <Text textStyle="xs" color="fg.muted">
                         —
                       </Text>

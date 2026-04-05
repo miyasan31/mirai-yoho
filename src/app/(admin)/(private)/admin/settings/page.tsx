@@ -8,8 +8,10 @@ import {
   useAdminBookingSettings,
   useUpdateAdminBookingSettings,
 } from "@/hooks/use-booking-settings";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export default function AdminSettingsPage() {
+  const { organizationId } = useOrganizationRouting();
   const { data, isLoading } = useAdminBookingSettings();
   const updateBookingSettings = useUpdateAdminBookingSettings();
   const [consultantSelectionEnabled, setConsultantSelectionEnabled] = useState<
@@ -26,16 +28,14 @@ export default function AdminSettingsPage() {
   }, [consultantSelectionEnabled, data]);
 
   const handleSave = async () => {
-    if (consultantSelectionEnabled === undefined) {
+    if (!organizationId || consultantSelectionEnabled === undefined) {
       return;
     }
 
-    const response = await updateBookingSettings.mutateAsync({
+    await updateBookingSettings.mutateAsync({
+      organizationId,
       data: { consultantSelectionEnabled },
     });
-    if ("consultantSelectionEnabled" in response.data) {
-      setConsultantSelectionEnabled(response.data.consultantSelectionEnabled);
-    }
   };
 
   return (

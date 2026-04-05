@@ -1,7 +1,11 @@
 import { useGetAdminClients } from "@/generated/api/admin/admin";
 import { useAuth } from "@/hooks/use-auth";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export function useAdminClients() {
   const { token } = useAuth();
-  return useGetAdminClients({ query: { enabled: !!token } });
+  const { organizationId } = useOrganizationRouting();
+  return useGetAdminClients(organizationId ?? "", {
+    query: { enabled: !!token && !!organizationId },
+  });
 }

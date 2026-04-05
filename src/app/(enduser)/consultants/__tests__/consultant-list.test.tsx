@@ -2,6 +2,12 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("next/navigation", () => ({
+  useParams: () => ({ organizationId: "org-test" }),
+  usePathname: () => "/org-test/consultants",
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 vi.mock("styled-system/css", () => ({
   css: () => "",
   cva: () => () => "",

@@ -3,6 +3,7 @@ import { AggregateRoot } from "@/domain/shared/aggregate-root";
 import { DomainError } from "@/domain/shared/domain-error";
 
 interface ConsultantCreateProps {
+  organizationId: string;
   consultantId: string;
   profile: ConsultantProfile;
   zoomRoomIds: string[];
@@ -14,6 +15,7 @@ interface ConsultantProps extends ConsultantCreateProps {
 
 export class Consultant extends AggregateRoot {
   private constructor(
+    private readonly organizationId: string,
     private readonly consultantId: string,
     private profile: ConsultantProfile,
     private zoomRoomIds: string[],
@@ -24,6 +26,7 @@ export class Consultant extends AggregateRoot {
 
   static create(props: ConsultantCreateProps): Consultant {
     return new Consultant(
+      props.organizationId,
       props.consultantId,
       props.profile,
       [...props.zoomRoomIds],
@@ -33,6 +36,7 @@ export class Consultant extends AggregateRoot {
 
   static reconstruct(props: ConsultantProps): Consultant {
     return new Consultant(
+      props.organizationId,
       props.consultantId,
       props.profile,
       [...props.zoomRoomIds],
@@ -60,6 +64,10 @@ export class Consultant extends AggregateRoot {
 
   getConsultantId(): string {
     return this.consultantId;
+  }
+
+  getOrganizationId(): string {
+    return this.organizationId;
   }
 
   getProfile(): ConsultantProfile {

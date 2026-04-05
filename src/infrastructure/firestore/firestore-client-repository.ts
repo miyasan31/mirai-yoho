@@ -2,10 +2,12 @@ import type { Client } from "@/domain/client/client";
 import { Client as ClientEntity } from "@/domain/client/client";
 import type { IClientRepository } from "@/domain/client/client-repository";
 import { db } from "@/infrastructure/firestore/firestore-client";
+import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 
-const COLLECTION = "clients";
+const COLLECTION = FIRESTORE_COLLECTIONS.clients;
 
 interface ClientDoc {
+  organizationId: string;
   clientId: string;
   name: string;
   email: string;
@@ -15,6 +17,7 @@ interface ClientDoc {
 
 function toDomain(doc: ClientDoc): Client {
   return ClientEntity.reconstruct({
+    organizationId: doc.organizationId,
     clientId: doc.clientId,
     name: doc.name,
     email: doc.email,
@@ -25,6 +28,7 @@ function toDomain(doc: ClientDoc): Client {
 
 function toFirestore(client: Client): ClientDoc {
   return {
+    organizationId: client.getOrganizationId(),
     clientId: client.getClientId(),
     name: client.getName(),
     email: client.getEmail(),
@@ -34,15 +38,23 @@ function toFirestore(client: Client): ClientDoc {
 }
 
 export class FirestoreClientRepository implements IClientRepository {
-  async findById(clientId: string): Promise<Client | null> {
+  async findById(
+    organizationId: string,
+    clientId: string,
+  ): Promise<Client | null> {
     const doc = await db.collection(COLLECTION).doc(clientId).get();
     if (!doc.exists) return null;
-    return toDomain(doc.data() as ClientDoc);
+    const client = toDomain(doc.data() as ClientDoc);
+    return client.getOrganizationId() === organizationId ? client : null;
   }
 
-  async findByEmail(email: string): Promise<Client | null> {
+  async findByEmail(
+    organizationId: string,
+    email: string,
+  ): Promise<Client | null> {
     const snapshot = await db
       .collection(COLLECTION)
+      .where("organizationId", "==", organizationId)
       .where("email", "==", email)
       .limit(1)
       .get();
@@ -50,8 +62,11 @@ export class FirestoreClientRepository implements IClientRepository {
     return toDomain(snapshot.docs[0].data() as ClientDoc);
   }
 
-  async findAll(): Promise<Client[]> {
-    const snapshot = await db.collection(COLLECTION).get();
+  async findAll(organizationId: string): Promise<Client[]> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("organizationId", "==", organizationId)
+      .get();
     return snapshot.docs.map((doc) => toDomain(doc.data() as ClientDoc));
   }
 

@@ -12,8 +12,10 @@ import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useConsultantBookings } from "@/hooks/use-consultant-bookings";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export default function ConsultantBookingsPage() {
+  const { buildPath } = useOrganizationRouting();
   const { data, isLoading } = useConsultantBookings();
   const bookings = data?.data?.bookings ?? [];
 
@@ -87,7 +89,11 @@ export default function ConsultantBookingsPage() {
                 <Table.Cell>
                   <Tooltip content="メモ編集" showArrow>
                     <IconButton variant="subtle" size="sm" asChild>
-                      <Link href={`/consultant/bookings/${b.bookingId}/memo`}>
+                      <Link
+                        href={buildPath(
+                          `/consultant/bookings/${b.bookingId}/memo`,
+                        )}
+                      >
                         <Pencil size={16} />
                       </Link>
                     </IconButton>

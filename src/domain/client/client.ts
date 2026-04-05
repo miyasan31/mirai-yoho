@@ -1,6 +1,7 @@
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 
 interface ClientCreateProps {
+  organizationId: string;
   clientId: string;
   name: string;
   email: string;
@@ -13,6 +14,7 @@ interface ClientProps extends ClientCreateProps {
 
 export class Client extends AggregateRoot {
   private constructor(
+    private readonly organizationId: string,
     private readonly clientId: string,
     private name: string,
     private email: string,
@@ -24,6 +26,7 @@ export class Client extends AggregateRoot {
 
   static create(props: ClientCreateProps): Client {
     return new Client(
+      props.organizationId,
       props.clientId,
       props.name,
       props.email,
@@ -34,6 +37,7 @@ export class Client extends AggregateRoot {
 
   static reconstruct(props: ClientProps): Client {
     return new Client(
+      props.organizationId,
       props.clientId,
       props.name,
       props.email,
@@ -54,6 +58,10 @@ export class Client extends AggregateRoot {
 
   getClientId(): string {
     return this.clientId;
+  }
+
+  getOrganizationId(): string {
+    return this.organizationId;
   }
 
   getName(): string {

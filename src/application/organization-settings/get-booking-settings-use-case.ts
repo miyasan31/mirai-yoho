@@ -1,7 +1,7 @@
 import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
 
 interface GetBookingSettingsInput {
-  organizationId?: string;
+  organizationId: string;
 }
 
 interface GetBookingSettingsOutput {
@@ -15,9 +15,9 @@ export class GetBookingSettingsUseCase {
   ) {}
 
   async execute(
-    input: GetBookingSettingsInput = {},
+    input: GetBookingSettingsInput,
   ): Promise<GetBookingSettingsOutput> {
-    const organizationId = input.organizationId ?? "default";
+    const { organizationId } = input;
     const settings =
       await this.organizationSettingsRepository.findByOrganizationId(
         organizationId,

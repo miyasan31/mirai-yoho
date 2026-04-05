@@ -1,8 +1,9 @@
 import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
 import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
 import { db } from "@/infrastructure/firestore/firestore-client";
+import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 
-const COLLECTION = "organizationSettings";
+const COLLECTION = FIRESTORE_COLLECTIONS.organizationSettings;
 
 interface OrganizationSettingsDoc {
   organizationId: string;

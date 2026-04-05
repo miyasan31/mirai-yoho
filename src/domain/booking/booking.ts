@@ -10,6 +10,7 @@ import { AggregateRoot } from "@/domain/shared/aggregate-root";
 import { DomainError } from "@/domain/shared/domain-error";
 
 interface BookingCreateProps {
+  organizationId: string;
   bookingId: string;
   clientId: string;
   consultantId: string;
@@ -27,6 +28,7 @@ interface BookingProps extends BookingCreateProps {
 
 export class Booking extends AggregateRoot {
   private constructor(
+    private readonly organizationId: string,
     private readonly bookingId: string,
     private readonly clientId: string,
     private readonly consultantId: string,
@@ -43,6 +45,7 @@ export class Booking extends AggregateRoot {
 
   static create(props: BookingCreateProps): Booking {
     return new Booking(
+      props.organizationId,
       props.bookingId,
       props.clientId,
       props.consultantId,
@@ -58,6 +61,7 @@ export class Booking extends AggregateRoot {
 
   static reconstruct(props: BookingProps): Booking {
     return new Booking(
+      props.organizationId,
       props.bookingId,
       props.clientId,
       props.consultantId,
@@ -132,6 +136,10 @@ export class Booking extends AggregateRoot {
 
   getBookingId(): string {
     return this.bookingId;
+  }
+
+  getOrganizationId(): string {
+    return this.organizationId;
   }
 
   getClientId(): string {

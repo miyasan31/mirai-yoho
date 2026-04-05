@@ -8,11 +8,13 @@ servers:
   - url: /api
 
 paths:
-  /consultants:
+  /organizations/{organizationId}/consultants:
     get:
       operationId: getConsultants
       summary: 相談員一覧取得
       tags: [consultant]
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
       responses:
         "200":
           description: OK
@@ -27,12 +29,13 @@ paths:
                     items:
                       $ref: "#/components/schemas/Consultant"
 
-  /slots:
+  /organizations/{organizationId}/slots:
     get:
       operationId: getSlots
       summary: 空き枠一覧取得
       tags: [slot]
       parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
         - name: consultantId
           in: query
           required: false
@@ -51,6 +54,8 @@ paths:
       tags: [slot]
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
       requestBody:
         required: true
         content:
@@ -78,14 +83,8 @@ paths:
                 properties:
                   slotId:
                     type: string
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
-  /slots/{slotId}:
+  /organizations/{organizationId}/slots/{slotId}:
     delete:
       operationId: deleteSlot
       summary: 空き枠削除
@@ -93,26 +92,19 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: slotId
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/SlotIdParam"
       responses:
         "200":
           description: OK
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
-  /bookings:
+  /organizations/{organizationId}/bookings:
     post:
       operationId: createBooking
       summary: 予約作成
       tags: [booking]
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
       requestBody:
         required: true
         content:
@@ -126,43 +118,15 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/CreateBookingResponse"
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "409":
-          description: Conflict
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
-  /settings/public:
-    get:
-      operationId: getPublicSettings
-      summary: 公開設定取得
-      tags: [settings]
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/PublicSettings"
-
-  /bookings/{bookingId}/cancel:
+  /organizations/{organizationId}/bookings/{bookingId}/cancel:
     post:
       operationId: cancelBooking
       summary: 予約キャンセル
       tags: [booking]
       parameters:
-        - name: bookingId
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/BookingIdParam"
       requestBody:
         required: true
         content:
@@ -174,27 +138,20 @@ paths:
                 cancelledBy:
                   type: string
                   enum: [client, admin]
+                token:
+                  type: string
       responses:
         "200":
           description: OK
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
-  /bookings/{bookingId}/setup-payment:
+  /organizations/{organizationId}/bookings/{bookingId}/setup-payment:
     post:
       operationId: setupPayment
       summary: 決済セットアップ
       tags: [booking]
       parameters:
-        - name: bookingId
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/BookingIdParam"
       requestBody:
         required: true
         content:
@@ -208,14 +165,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SetupPaymentResponse"
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
-  /bookings/{bookingId}/charge:
+  /organizations/{organizationId}/bookings/{bookingId}/charge:
     post:
       operationId: chargePayment
       summary: 手動課金
@@ -223,11 +174,8 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: bookingId
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/BookingIdParam"
       requestBody:
         required: true
         content:
@@ -242,18 +190,29 @@ paths:
       responses:
         "200":
           description: OK
-        "400":
-          description: Bad Request
+
+  /organizations/{organizationId}/settings/public:
+    get:
+      operationId: getPublicSettings
+      summary: 公開設定取得
+      tags: [settings]
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse"
+                $ref: "#/components/schemas/PublicSettings"
 
-  /batch/charge:
+  /organizations/{organizationId}/batch/charge:
     post:
       operationId: batchCharge
       summary: バッチ課金（Cloud Scheduler）
       tags: [batch]
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
       responses:
         "200":
           description: OK
@@ -268,13 +227,15 @@ paths:
                   completedCount:
                     type: integer
 
-  /consultant/bookings:
+  /organizations/{organizationId}/consultant/bookings:
     get:
       operationId: getConsultantBookings
-      summary: 自分の予約一覧取得
+      summary: 相談員予約一覧取得
       tags: [consultant]
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
       responses:
         "200":
           description: OK
@@ -289,19 +250,16 @@ paths:
                     items:
                       $ref: "#/components/schemas/BookingDetail"
 
-  /consultant/bookings/{bookingId}/memo:
+  /organizations/{organizationId}/consultant/bookings/{id}/memo:
     patch:
       operationId: updateConsultantMemo
-      summary: メモ更新
+      summary: 相談員メモ更新
       tags: [consultant]
       security:
         - bearerAuth: []
       parameters:
-        - name: bookingId
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/IdParam"
       requestBody:
         required: true
         content:
@@ -315,20 +273,16 @@ paths:
       responses:
         "200":
           description: OK
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
-  /consultant/profile:
+  /organizations/{organizationId}/consultant/profile:
     get:
       operationId: getConsultantProfile
-      summary: 自分のプロフィール取得
+      summary: 相談員プロフィール取得
       tags: [consultant]
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
       responses:
         "200":
           description: OK
@@ -338,10 +292,12 @@ paths:
                 $ref: "#/components/schemas/ConsultantProfile"
     patch:
       operationId: updateConsultantProfile
-      summary: プロフィール更新
+      summary: 相談員プロフィール更新
       tags: [consultant]
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
       requestBody:
         required: true
         content:
@@ -361,20 +317,16 @@ paths:
       responses:
         "200":
           description: OK
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
-  /admin/dashboard:
+  /organizations/{organizationId}/admin/dashboard:
     get:
       operationId: getAdminDashboard
-      summary: 統計情報取得
+      summary: 管理ダッシュボード取得
       tags: [admin]
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
       responses:
         "200":
           description: OK
@@ -383,13 +335,15 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardData"
 
-  /admin/consultants:
+  /organizations/{organizationId}/admin/consultants:
     get:
       operationId: getAdminConsultants
       summary: 相談員一覧取得（管理者）
       tags: [admin]
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
       responses:
         "200":
           description: OK
@@ -409,6 +363,8 @@ paths:
       tags: [admin]
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
       requestBody:
         required: true
         content:
@@ -434,16 +390,8 @@ paths:
       responses:
         "201":
           description: Created
-          content:
-            application/json:
-              schema:
-                type: object
-                required: [consultantId]
-                properties:
-                  consultantId:
-                    type: string
 
-  /admin/consultants/{id}:
+  /organizations/{organizationId}/admin/consultants/{id}:
     patch:
       operationId: updateAdminConsultant
       summary: 相談員更新
@@ -451,11 +399,8 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/IdParam"
       requestBody:
         required: true
         content:
@@ -485,22 +430,21 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: id
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/IdParam"
       responses:
         "200":
           description: OK
 
-  /admin/settings/booking:
+  /organizations/{organizationId}/admin/settings/booking:
     get:
       operationId: getAdminBookingSettings
       summary: 予約設定取得
       tags: [admin]
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
       responses:
         "200":
           description: OK
@@ -514,39 +458,32 @@ paths:
       tags: [admin]
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateBookingSettingsBody"
+              $ref: "#/components/schemas/BookingSettings"
       responses:
         "200":
           description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/BookingSettings"
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
-  /admin/bookings:
+  /organizations/{organizationId}/admin/bookings:
     get:
       operationId: getAdminBookings
-      summary: 全予約一覧取得
+      summary: 予約一覧取得（管理者）
       tags: [admin]
       security:
         - bearerAuth: []
       parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
         - name: status
           in: query
+          required: false
           schema:
             type: string
-            enum: [pending, confirmed, completed, cancelled]
       responses:
         "200":
           description: OK
@@ -561,13 +498,15 @@ paths:
                     items:
                       $ref: "#/components/schemas/BookingDetail"
 
-  /admin/payments:
+  /organizations/{organizationId}/admin/payments:
     get:
       operationId: getAdminPayments
-      summary: 全決済一覧取得
+      summary: 決済一覧取得（管理者）
       tags: [admin]
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
       responses:
         "200":
           description: OK
@@ -582,13 +521,15 @@ paths:
                     items:
                       $ref: "#/components/schemas/PaymentDetail"
 
-  /admin/clients:
+  /organizations/{organizationId}/admin/clients:
     get:
       operationId: getAdminClients
-      summary: 全クライアント一覧取得
+      summary: クライアント一覧取得（管理者）
       tags: [admin]
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
       responses:
         "200":
           description: OK
@@ -603,13 +544,15 @@ paths:
                     items:
                       $ref: "#/components/schemas/ClientDetail"
 
-  /admin/users:
+  /organizations/{organizationId}/admin/users:
     get:
       operationId: getAdminUsers
-      summary: ユーザー一覧取得（super_admin限定）
+      summary: 組織ユーザー一覧取得
       tags: [admin]
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
       responses:
         "200":
           description: OK
@@ -624,13 +567,15 @@ paths:
                     items:
                       $ref: "#/components/schemas/AdminUser"
 
-  /admin/users/invite:
+  /organizations/{organizationId}/admin/users/invite:
     post:
       operationId: inviteUser
-      summary: ユーザー招待（super_admin限定）
+      summary: 組織ユーザー招待
       tags: [admin]
       security:
         - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
       requestBody:
         required: true
         content:
@@ -644,7 +589,7 @@ paths:
                   format: email
                 role:
                   type: string
-                  enum: [super_admin, operator, consultant]
+                  enum: [admin, operator, consultant]
       responses:
         "201":
           description: Created
@@ -656,55 +601,31 @@ paths:
                 properties:
                   uid:
                     type: string
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "409":
-          description: Conflict
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
-  /admin/users/{uid}:
+  /organizations/{organizationId}/admin/users/{uid}:
     delete:
       operationId: deleteAdminUser
-      summary: ユーザー削除（super_admin限定）
+      summary: 組織ユーザー削除
       tags: [admin]
       security:
         - bearerAuth: []
       parameters:
-        - name: uid
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/UserIdParam"
       responses:
         "200":
           description: OK
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
-  /admin/users/{uid}/role:
+  /organizations/{organizationId}/admin/users/{uid}/role:
     patch:
       operationId: updateUserRole
-      summary: ロール管理（super_admin限定）
+      summary: 組織ユーザーロール更新
       tags: [admin]
       security:
         - bearerAuth: []
       parameters:
-        - name: uid
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/UserIdParam"
       requestBody:
         required: true
         content:
@@ -715,58 +636,72 @@ paths:
               properties:
                 role:
                   type: string
-                  enum: [super_admin, operator, consultant]
+                  enum: [admin, operator, consultant]
       responses:
         "200":
           description: OK
 
-  /admin/users/{uid}/resend-invite:
+  /organizations/{organizationId}/admin/users/{uid}/resend-invite:
     post:
       operationId: resendUserInvite
-      summary: 招待メール再送（super_admin限定）
+      summary: 招待メール再送
       tags: [admin]
       security:
         - bearerAuth: []
       parameters:
-        - name: uid
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/UserIdParam"
       responses:
         "200":
           description: OK
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
-  /admin/users/{uid}/reset-password:
+  /organizations/{organizationId}/admin/users/{uid}/reset-password:
     post:
       operationId: resetUserPassword
-      summary: パスワードリセットメール送信（super_admin限定）
+      summary: パスワードリセットメール送信
       tags: [admin]
       security:
         - bearerAuth: []
       parameters:
-        - name: uid
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/UserIdParam"
       responses:
         "200":
           description: OK
-        "400":
-          description: Bad Request
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
 
 components:
+  parameters:
+    OrganizationIdParam:
+      name: organizationId
+      in: path
+      required: true
+      schema:
+        type: string
+    BookingIdParam:
+      name: bookingId
+      in: path
+      required: true
+      schema:
+        type: string
+    SlotIdParam:
+      name: slotId
+      in: path
+      required: true
+      schema:
+        type: string
+    UserIdParam:
+      name: uid
+      in: path
+      required: true
+      schema:
+        type: string
+    IdParam:
+      name: id
+      in: path
+      required: true
+      schema:
+        type: string
+
   securitySchemes:
     bearerAuth:
       type: http
@@ -784,7 +719,7 @@ components:
           format: email
         role:
           type: string
-          enum: [super_admin, operator, consultant]
+          enum: [admin, operator, consultant]
         status:
           type: string
           enum: [pending, registered]

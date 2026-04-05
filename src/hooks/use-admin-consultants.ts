@@ -4,10 +4,14 @@ import {
   useUpdateAdminConsultant,
 } from "@/generated/api/admin/admin";
 import { useAuth } from "@/hooks/use-auth";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export function useAdminConsultants() {
   const { token } = useAuth();
-  return useGetAdminConsultants({ query: { enabled: !!token } });
+  const { organizationId } = useOrganizationRouting();
+  return useGetAdminConsultants(organizationId ?? "", {
+    query: { enabled: !!token && !!organizationId },
+  });
 }
 
 export { useUpdateAdminConsultant, useDeleteAdminConsultant };

@@ -1,5 +1,6 @@
 "use client";
 
+import { createListCollection } from "@ark-ui/react/select";
 import { Splitter, useSplitterContext } from "@ark-ui/react/splitter";
 import type { LucideIcon } from "lucide-react";
 import { LogOut, PanelLeft, PanelLeftClose } from "lucide-react";
@@ -10,6 +11,7 @@ import { useCallback, useState } from "react";
 import { css } from "styled-system/css";
 import { styled } from "styled-system/jsx";
 import { IconButton } from "@/components/ui/icon-button";
+import * as Select from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -25,6 +27,11 @@ export interface SidebarLayoutProps {
   navItems: NavItem[];
   children: ReactNode;
   onSignOut: () => void;
+  organizationSwitcher?: {
+    items: Array<{ label: string; value: string }>;
+    value: string | null;
+    onChange: (organizationId: string) => void;
+  };
 }
 
 /** サイドバーの初期幅 (%) */
@@ -114,9 +121,13 @@ export function SidebarLayout({
   navItems,
   children,
   onSignOut,
+  organizationSwitcher,
 }: SidebarLayoutProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const organizationCollection = createListCollection({
+    items: organizationSwitcher?.items ?? [],
+  });
 
   const handleResize = useCallback(({ size }: { size: number[] }) => {
     const sidebarSize = size[0];
@@ -229,7 +240,43 @@ export function SidebarLayout({
             })}
           </styled.nav>
 
-          <styled.div mt="auto">
+          <styled.div mt="auto" display="flex" flexDirection="column" gap="3">
+            {organizationSwitcher &&
+              organizationSwitcher.items.length > 0 &&
+              !collapsed && (
+                <Select.Root
+                  collection={organizationCollection}
+                  value={
+                    organizationSwitcher.value
+                      ? [organizationSwitcher.value]
+                      : undefined
+                  }
+                  onValueChange={(details) => {
+                    const nextOrganizationId = details.value[0];
+                    if (nextOrganizationId) {
+                      organizationSwitcher.onChange(nextOrganizationId);
+                    }
+                  }}
+                >
+                  <Select.Label>組織</Select.Label>
+                  <Select.Control>
+                    <Select.Trigger>
+                      <Select.ValueText placeholder="組織を選択" />
+                      <Select.Indicator />
+                    </Select.Trigger>
+                  </Select.Control>
+                  <Select.Positioner>
+                    <Select.Content>
+                      {organizationSwitcher.items.map((item) => (
+                        <Select.Item key={item.value} item={item}>
+                          <Select.ItemText>{item.label}</Select.ItemText>
+                          <Select.ItemIndicator />
+                        </Select.Item>
+                      ))}
+                    </Select.Content>
+                  </Select.Positioner>
+                </Select.Root>
+              )}
             <Tooltip
               content="ログアウト"
               showArrow

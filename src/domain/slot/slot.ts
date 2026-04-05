@@ -3,6 +3,7 @@ import { DomainError } from "@/domain/shared/domain-error";
 import type { TimeRange } from "@/domain/slot/time-range";
 
 interface SlotCreateProps {
+  organizationId: string;
   slotId: string;
   consultantId: string;
   timeRange: TimeRange;
@@ -15,6 +16,7 @@ interface SlotProps extends SlotCreateProps {
 
 export class Slot extends AggregateRoot {
   private constructor(
+    private readonly organizationId: string,
     private readonly slotId: string,
     private readonly consultantId: string,
     private readonly timeRange: TimeRange,
@@ -26,6 +28,7 @@ export class Slot extends AggregateRoot {
 
   static create(props: SlotCreateProps): Slot {
     return new Slot(
+      props.organizationId,
       props.slotId,
       props.consultantId,
       props.timeRange,
@@ -36,6 +39,7 @@ export class Slot extends AggregateRoot {
 
   static reconstruct(props: SlotProps): Slot {
     return new Slot(
+      props.organizationId,
       props.slotId,
       props.consultantId,
       props.timeRange,
@@ -71,6 +75,10 @@ export class Slot extends AggregateRoot {
 
   getSlotId(): string {
     return this.slotId;
+  }
+
+  getOrganizationId(): string {
+    return this.organizationId;
   }
 
   getConsultantId(): string {

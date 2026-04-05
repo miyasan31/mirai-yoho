@@ -2,20 +2,24 @@
  * 空き枠のテストデータ投入スクリプト
  *
  * Usage:
- *   pnpm seed:slots <consultantId>
+ *   pnpm dlx tsx --env-file=.env.local scripts/seed-slots.ts <organizationId> <consultantId>
  *
  * Example:
- *   pnpm seed:slots KE1A6PuKhxUaGf2OfWDU3XsSYuw2
+ *   pnpm dlx tsx --env-file=.env.local scripts/seed-slots.ts org-1 KE1A6PuKhxUaGf2OfWDU3XsSYuw2
  */
 
+import crypto from "node:crypto";
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore-collections";
 
 async function main() {
-  const [consultantId] = process.argv.slice(2);
+  const [organizationId, consultantId] = process.argv.slice(2);
 
-  if (!consultantId) {
-    console.error("Usage: pnpm seed:slots <consultantId>");
+  if (!organizationId || !consultantId) {
+    console.error(
+      "Usage: pnpm dlx tsx --env-file=.env.local scripts/seed-slots.ts <organizationId> <consultantId>",
+    );
     process.exit(1);
   }
 
@@ -48,9 +52,10 @@ async function main() {
         endAt.setMinutes(endAt.getMinutes() + 30);
 
         const slotId = crypto.randomUUID();
-        const ref = db.collection("slots").doc(slotId);
+        const ref = db.collection(FIRESTORE_COLLECTIONS.slots).doc(slotId);
 
         batch.set(ref, {
+          organizationId,
           slotId,
           consultantId,
           startAt,
@@ -68,7 +73,9 @@ async function main() {
   }
 
   await batch.commit();
-  console.log(`\n✅ ${count} slots created for consultant ${consultantId}`);
+  console.log(
+    `\n✅ ${count} slots created for consultant ${consultantId} in ${organizationId}`,
+  );
 }
 
 main().catch((error) => {

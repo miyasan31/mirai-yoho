@@ -7,6 +7,10 @@
 
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import {
+  FIRESTORE_BOOTSTRAP_DOC_ID,
+  FIRESTORE_COLLECTIONS,
+} from "../src/infrastructure/firestore/firestore-collections";
 
 const BATCH_SIZE = 400;
 
@@ -23,25 +27,35 @@ async function main() {
         });
 
   const db = getFirestore(app);
-  const collection = db.collection("slots");
+  const collection = db.collection(FIRESTORE_COLLECTIONS.slots);
 
   let deletedCount = 0;
 
   while (true) {
-    const snapshot = await collection.limit(BATCH_SIZE).get();
+    const snapshot = await collection.limit(BATCH_SIZE + 1).get();
 
     if (snapshot.empty) {
       break;
     }
 
     const batch = db.batch();
-    for (const doc of snapshot.docs) {
+    const deletableDocs = snapshot.docs.filter(
+      (doc) => doc.id !== FIRESTORE_BOOTSTRAP_DOC_ID,
+    );
+
+    if (deletableDocs.length === 0) {
+      break;
+    }
+
+    for (const doc of deletableDocs) {
       batch.delete(doc.ref);
     }
 
     await batch.commit();
-    deletedCount += snapshot.size;
-    console.log(`Deleted ${snapshot.size} slots... total=${deletedCount}`);
+    deletedCount += deletableDocs.length;
+    console.log(
+      `Deleted ${deletableDocs.length} slots... total=${deletedCount}`,
+    );
   }
 
   console.log(`\n✅ Deleted ${deletedCount} slots`);

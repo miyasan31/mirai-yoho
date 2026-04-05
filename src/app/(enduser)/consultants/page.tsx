@@ -13,6 +13,7 @@ import { Skeleton, SkeletonText } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { usePublicBookingSettings } from "@/hooks/use-booking-settings";
 import { useGetConsultants } from "@/hooks/use-consultants";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import { useGetSlots } from "@/hooks/use-slots";
 
 function formatDate(isoString: string): string {
@@ -65,6 +66,7 @@ function ConsultantCardSkeleton() {
 }
 
 export default function ConsultantsPage() {
+  const { buildPath } = useOrganizationRouting();
   const { data: settingsData, isLoading: isLoadingSettings } =
     usePublicBookingSettings();
   const consultantSelectionEnabled =
@@ -197,7 +199,11 @@ export default function ConsultantsPage() {
                 </styled.div>
 
                 <Button asChild mt="auto">
-                  <Link href={`/consultants/${consultant.consultantId}/slots`}>
+                  <Link
+                    href={buildPath(
+                      `/consultants/${consultant.consultantId}/slots`,
+                    )}
+                  >
                     空き枠を見る
                   </Link>
                 </Button>
@@ -230,7 +236,9 @@ export default function ConsultantsPage() {
                 {dateSlots.map((slot) => (
                   <styled.a
                     key={`${slot.startDatetime}_${slot.endDatetime}`}
-                    href={`/booking?startDatetime=${encodeURIComponent(slot.startDatetime)}&endDatetime=${encodeURIComponent(slot.endDatetime)}`}
+                    href={buildPath(
+                      `/booking?startDatetime=${encodeURIComponent(slot.startDatetime)}&endDatetime=${encodeURIComponent(slot.endDatetime)}`,
+                    )}
                     shadow="xs"
                     border="1px solid"
                     borderColor="border"

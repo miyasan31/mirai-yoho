@@ -8,6 +8,8 @@ const mockPush = vi.fn();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: mockPush }),
+  useParams: () => ({ organizationId: "org-test" }),
+  usePathname: () => "/org-test/booking",
   useSearchParams: () => ({
     get: (key: string) => mockSearchParams.get(key),
   }),
@@ -230,6 +232,7 @@ describe("BookingPage", () => {
 
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith({
+        organizationId: "org-test",
         data: expect.objectContaining({
           slotId: "slot-1",
           startDatetime: undefined,
@@ -269,6 +272,7 @@ describe("BookingPage", () => {
 
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith({
+        organizationId: "org-test",
         data: expect.objectContaining({
           slotId: undefined,
           startDatetime: "2026-05-01T10:00:00.000Z",

@@ -22,8 +22,14 @@ export default function ConsultantLoginPage() {
     e.preventDefault();
     setError("");
     try {
-      await signIn(email, password);
-      router.push("/consultant/bookings");
+      const result = await signIn(email, password);
+      if (
+        !result.currentOrganizationId ||
+        result.currentRole !== "consultant"
+      ) {
+        throw new Error("No consultant access");
+      }
+      router.push(`/${result.currentOrganizationId}/consultant/bookings`);
     } catch {
       setError("ログインに失敗しました");
     }

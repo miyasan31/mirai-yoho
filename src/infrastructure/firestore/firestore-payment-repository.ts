@@ -5,10 +5,12 @@ import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 import { PaymentStatus } from "@/domain/payment/payment-status";
 import { PaymentStrategy } from "@/domain/payment/payment-strategy";
 import { db } from "@/infrastructure/firestore/firestore-client";
+import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 
-const COLLECTION = "payments";
+const COLLECTION = FIRESTORE_COLLECTIONS.payments;
 
 interface PaymentDoc {
+  organizationId: string;
   paymentId: string;
   bookingId: string;
   clientId: string;
@@ -25,6 +27,7 @@ interface PaymentDoc {
 
 function toDomain(doc: PaymentDoc): Payment {
   return PaymentEntity.reconstruct({
+    organizationId: doc.organizationId,
     paymentId: doc.paymentId,
     bookingId: doc.bookingId,
     clientId: doc.clientId,
@@ -41,6 +44,7 @@ function toDomain(doc: PaymentDoc): Payment {
 function toFirestore(payment: Payment): Record<string, unknown> {
   const money = payment.getMoney();
   return {
+    organizationId: payment.getOrganizationId(),
     paymentId: payment.getPaymentId(),
     bookingId: payment.getBookingId(),
     clientId: payment.getClientId(),
@@ -57,9 +61,13 @@ function toFirestore(payment: Payment): Record<string, unknown> {
 }
 
 export class FirestorePaymentRepository implements IPaymentRepository {
-  async findByBookingId(bookingId: string): Promise<Payment | null> {
+  async findByBookingId(
+    organizationId: string,
+    bookingId: string,
+  ): Promise<Payment | null> {
     const snapshot = await db
       .collection(COLLECTION)
+      .where("organizationId", "==", organizationId)
       .where("bookingId", "==", bookingId)
       .limit(1)
       .get();
@@ -77,8 +85,23 @@ export class FirestorePaymentRepository implements IPaymentRepository {
     return toDomain(snapshot.docs[0].data() as PaymentDoc);
   }
 
-  async findAll(): Promise<Payment[]> {
-    const snapshot = await db.collection(COLLECTION).get();
+  async findByPaymentIntentId(
+    paymentIntentId: string,
+  ): Promise<Payment | null> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("stripePaymentIntentId", "==", paymentIntentId)
+      .limit(1)
+      .get();
+    if (snapshot.empty) return null;
+    return toDomain(snapshot.docs[0].data() as PaymentDoc);
+  }
+
+  async findAll(organizationId: string): Promise<Payment[]> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("organizationId", "==", organizationId)
+      .get();
     return snapshot.docs.map((doc) => toDomain(doc.data() as PaymentDoc));
   }
 

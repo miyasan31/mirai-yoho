@@ -1,17 +1,21 @@
 /**
- * 初期管理者のカスタムクレーム設定スクリプト
+ * 互換運用向けの最小カスタムクレーム設定スクリプト
  *
  * Usage:
  *   npx tsx scripts/set-custom-claims.ts <uid> <role>
  *
  * Example:
- *   npx tsx scripts/set-custom-claims.ts abc123 super_admin
+ *   npx tsx scripts/set-custom-claims.ts abc123 admin
+ *
+ * Note:
+ *   組織ロールは Firestore の organization-memberships で管理します。
+ *   このスクリプトは role claim 互換が必要な場合だけ利用してください。
  */
 
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
 
-const VALID_ROLES = ["super_admin", "operator", "consultant"] as const;
+const VALID_ROLES = ["admin", "operator", "consultant"] as const;
 
 async function main() {
   const [uid, role] = process.argv.slice(2);

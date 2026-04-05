@@ -8,6 +8,7 @@ import { DomainError } from "@/domain/shared/domain-error";
 export type ChargeMethod = "batch" | "manual";
 
 interface PaymentDeferredCreateProps {
+  organizationId: string;
   paymentId: string;
   bookingId: string;
   clientId: string;
@@ -16,6 +17,7 @@ interface PaymentDeferredCreateProps {
 }
 
 interface PaymentImmediateCreateProps {
+  organizationId: string;
   paymentId: string;
   bookingId: string;
   clientId: string;
@@ -24,6 +26,7 @@ interface PaymentImmediateCreateProps {
 }
 
 interface PaymentProps {
+  organizationId: string;
   paymentId: string;
   bookingId: string;
   clientId: string;
@@ -38,6 +41,7 @@ interface PaymentProps {
 
 export class Payment extends AggregateRoot {
   private constructor(
+    private readonly organizationId: string,
     private readonly paymentId: string,
     private readonly bookingId: string,
     private readonly clientId: string,
@@ -54,6 +58,7 @@ export class Payment extends AggregateRoot {
 
   static createDeferred(props: PaymentDeferredCreateProps): Payment {
     return new Payment(
+      props.organizationId,
       props.paymentId,
       props.bookingId,
       props.clientId,
@@ -69,6 +74,7 @@ export class Payment extends AggregateRoot {
 
   static createImmediate(props: PaymentImmediateCreateProps): Payment {
     return new Payment(
+      props.organizationId,
       props.paymentId,
       props.bookingId,
       props.clientId,
@@ -84,6 +90,7 @@ export class Payment extends AggregateRoot {
 
   static reconstruct(props: PaymentProps): Payment {
     return new Payment(
+      props.organizationId,
       props.paymentId,
       props.bookingId,
       props.clientId,
@@ -171,6 +178,10 @@ export class Payment extends AggregateRoot {
 
   getPaymentId(): string {
     return this.paymentId;
+  }
+
+  getOrganizationId(): string {
+    return this.organizationId;
   }
 
   getBookingId(): string {

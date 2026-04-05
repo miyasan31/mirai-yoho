@@ -16,8 +16,11 @@ import { TimeRange } from "@/domain/slot/time-range";
 import type { ZoomDailySession } from "@/domain/zoom-session/zoom-daily-session";
 import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
 
+const ORGANIZATION_ID = "org-1";
+
 function createConsultant(consultantId: string, displayName: string) {
   return Consultant.create({
+    organizationId: ORGANIZATION_ID,
     consultantId,
     profile: ConsultantProfile.create(displayName, "", []),
     zoomRoomIds: [],
@@ -31,6 +34,7 @@ function createSlot(
   endDatetime: string,
 ) {
   return Slot.create({
+    organizationId: ORGANIZATION_ID,
     slotId,
     consultantId,
     timeRange: TimeRange.reconstruct(
@@ -43,26 +47,39 @@ function createSlot(
 class InMemorySlotRepository implements ISlotRepository {
   constructor(private readonly slots: Slot[]) {}
 
-  async findById(slotId: string): Promise<Slot | null> {
+  async findById(
+    _organizationId: string,
+    slotId: string,
+  ): Promise<Slot | null> {
     return this.slots.find((slot) => slot.getSlotId() === slotId) ?? null;
   }
 
-  async findAllAvailable(): Promise<Slot[]> {
+  async findAllAvailable(_organizationId: string): Promise<Slot[]> {
     return this.slots.filter((slot) => !slot.getIsReserved());
   }
 
-  async findByConsultantId(consultantId: string): Promise<Slot[]> {
+  async findByConsultantId(
+    _organizationId: string,
+    consultantId: string,
+  ): Promise<Slot[]> {
     return this.slots.filter((slot) => slot.getConsultantId() === consultantId);
   }
 
-  async findAvailableByConsultantId(consultantId: string): Promise<Slot[]> {
+  async findAvailableByConsultantId(
+    _organizationId: string,
+    consultantId: string,
+  ): Promise<Slot[]> {
     return this.slots.filter(
       (slot) =>
         slot.getConsultantId() === consultantId && !slot.getIsReserved(),
     );
   }
 
-  async findAvailableByTimeRange(startAt: Date, endAt: Date): Promise<Slot[]> {
+  async findAvailableByTimeRange(
+    _organizationId: string,
+    startAt: Date,
+    endAt: Date,
+  ): Promise<Slot[]> {
     return this.slots.filter(
       (slot) =>
         !slot.getIsReserved() &&
@@ -71,7 +88,10 @@ class InMemorySlotRepository implements ISlotRepository {
     );
   }
 
-  async findAvailableByDate(date: Date): Promise<Slot[]> {
+  async findAvailableByDate(
+    _organizationId: string,
+    date: Date,
+  ): Promise<Slot[]> {
     return this.slots.filter(
       (slot) =>
         !slot.getIsReserved() &&
@@ -82,23 +102,29 @@ class InMemorySlotRepository implements ISlotRepository {
 
   async save(_slot: Slot): Promise<void> {}
 
-  async delete(_slotId: string): Promise<void> {}
+  async delete(_organizationId: string, _slotId: string): Promise<void> {}
 }
 
 class InMemoryClientRepository implements IClientRepository {
   public readonly clients: Client[] = [];
 
-  async findById(clientId: string): Promise<Client | null> {
+  async findById(
+    _organizationId: string,
+    clientId: string,
+  ): Promise<Client | null> {
     return (
       this.clients.find((client) => client.getClientId() === clientId) ?? null
     );
   }
 
-  async findByEmail(email: string): Promise<Client | null> {
+  async findByEmail(
+    _organizationId: string,
+    email: string,
+  ): Promise<Client | null> {
     return this.clients.find((client) => client.getEmail() === email) ?? null;
   }
 
-  async findAll(): Promise<Client[]> {
+  async findAll(_organizationId: string): Promise<Client[]> {
     return this.clients;
   }
 
@@ -110,26 +136,35 @@ class InMemoryClientRepository implements IClientRepository {
 class InMemoryBookingRepository implements IBookingRepository {
   public readonly bookings: Booking[] = [];
 
-  async findById(bookingId: string): Promise<Booking | null> {
+  async findById(
+    _organizationId: string,
+    bookingId: string,
+  ): Promise<Booking | null> {
     return (
       this.bookings.find((booking) => booking.getBookingId() === bookingId) ??
       null
     );
   }
 
-  async findByConsultantId(consultantId: string): Promise<Booking[]> {
+  async findByConsultantId(
+    _organizationId: string,
+    consultantId: string,
+  ): Promise<Booking[]> {
     return this.bookings.filter(
       (booking) => booking.getConsultantId() === consultantId,
     );
   }
 
-  async findByStatus(status: string): Promise<Booking[]> {
+  async findByStatus(
+    _organizationId: string,
+    status: string,
+  ): Promise<Booking[]> {
     return this.bookings.filter(
       (booking) => booking.getStatus().getValue() === status,
     );
   }
 
-  async findAll(): Promise<Booking[]> {
+  async findAll(_organizationId: string): Promise<Booking[]> {
     return this.bookings;
   }
 
@@ -143,7 +178,10 @@ class InMemoryZoomDailySessionRepository
 {
   public session: ZoomDailySession | null = null;
 
-  async findByDate(_sessionDate: string): Promise<ZoomDailySession | null> {
+  async findByDate(
+    _organizationId: string,
+    _sessionDate: string,
+  ): Promise<ZoomDailySession | null> {
     return this.session;
   }
 
@@ -155,7 +193,10 @@ class InMemoryZoomDailySessionRepository
 class InMemoryConsultantRepository implements IConsultantRepository {
   constructor(private readonly consultants: Consultant[]) {}
 
-  async findById(consultantId: string): Promise<Consultant | null> {
+  async findById(
+    _organizationId: string,
+    consultantId: string,
+  ): Promise<Consultant | null> {
     return (
       this.consultants.find(
         (consultant) => consultant.getConsultantId() === consultantId,
@@ -163,11 +204,13 @@ class InMemoryConsultantRepository implements IConsultantRepository {
     );
   }
 
-  async findAllActive(): Promise<Consultant[]> {
+  async findAllActive(_organizationId: string): Promise<Consultant[]> {
     return this.consultants.filter((consultant) => consultant.getIsActive());
   }
 
   async save(_consultant: Consultant): Promise<void> {}
+
+  async delete(_organizationId: string, _consultantId: string): Promise<void> {}
 }
 
 function createUseCase(slots: Slot[]) {
@@ -239,6 +282,7 @@ describe("CreateBookingUseCase", () => {
     ]);
 
     await useCase.execute({
+      organizationId: ORGANIZATION_ID,
       startDatetime: new Date("2026-05-01T10:00:00.000Z"),
       endDatetime: new Date("2026-05-01T10:30:00.000Z"),
       clientName: "山田太郎",
@@ -269,6 +313,7 @@ describe("CreateBookingUseCase", () => {
     ]);
 
     await useCase.execute({
+      organizationId: ORGANIZATION_ID,
       startDatetime: new Date("2026-05-01T10:00:00.000Z"),
       endDatetime: new Date("2026-05-01T10:30:00.000Z"),
       clientName: "山田太郎",
@@ -292,6 +337,7 @@ describe("CreateBookingUseCase", () => {
     ]);
 
     await useCase.execute({
+      organizationId: ORGANIZATION_ID,
       slotId: "slot-1",
       clientName: "山田太郎",
       clientEmail: "taro@example.com",
@@ -308,6 +354,7 @@ describe("CreateBookingUseCase", () => {
 
     await expect(
       useCase.execute({
+        organizationId: ORGANIZATION_ID,
         startDatetime: new Date("2026-05-01T10:00:00.000Z"),
         endDatetime: new Date("2026-05-01T10:30:00.000Z"),
         clientName: "山田太郎",

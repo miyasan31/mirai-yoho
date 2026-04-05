@@ -7,9 +7,11 @@ import { styled } from "styled-system/jsx";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { Tooltip } from "@/components/ui/tooltip";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export default function BookingCompletePage() {
   const searchParams = useSearchParams();
+  const { buildPath } = useOrganizationRouting();
   const bookingId = searchParams.get("bookingId");
   const zoomUrl = searchParams.get("zoomUrl");
   const mode = searchParams.get("mode");
@@ -72,7 +74,7 @@ export default function BookingCompletePage() {
       )}
 
       <Button asChild variant="outline">
-        <Link href="/consultants">相談員一覧に戻る</Link>
+        <Link href={buildPath("/consultants")}>相談員一覧に戻る</Link>
       </Button>
     </styled.div>
   );

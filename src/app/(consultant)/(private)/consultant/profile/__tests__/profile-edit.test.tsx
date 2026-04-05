@@ -5,6 +5,12 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+vi.mock("next/navigation", () => ({
+  useParams: () => ({ organizationId: "org-test" }),
+  usePathname: () => "/org-test/consultant/profile",
+  useRouter: () => ({ push: vi.fn() }),
+}));
+
 const mockUseConsultantProfile = vi.fn();
 const mockMutateAsync = vi.fn();
 const mockToasterCreate = vi.fn();
@@ -179,6 +185,7 @@ describe("ConsultantProfilePage", () => {
 
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith({
+        organizationId: "org-test",
         data: {
           displayName: "田中太郎",
           bio: "",

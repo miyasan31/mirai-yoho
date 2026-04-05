@@ -16,6 +16,7 @@ import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useCreateBooking } from "@/hooks/use-booking";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 const bookingSchema = v.object({
   clientName: v.pipe(v.string(), v.minLength(1, "お名前を入力してください")),
@@ -32,6 +33,7 @@ type BookingFormValues = v.InferOutput<typeof bookingSchema>;
 export default function BookingPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { organizationId, buildPath } = useOrganizationRouting();
   const slotId = searchParams.get("slotId");
   const startDatetime = searchParams.get("startDatetime");
   const endDatetime = searchParams.get("endDatetime");
@@ -57,7 +59,7 @@ export default function BookingPage() {
         />
         <styled.div display="flex" justifyContent="center" mt="4">
           <Button asChild variant="outline">
-            <Link href="/consultants">予約可能日時へ</Link>
+            <Link href={buildPath("/consultants")}>予約可能日時へ</Link>
           </Button>
         </styled.div>
       </styled.div>
@@ -65,7 +67,9 @@ export default function BookingPage() {
   }
 
   const onSubmit = async (values: BookingFormValues) => {
+    if (!organizationId) return;
     const result = await createBooking.mutateAsync({
+      organizationId,
       data: {
         slotId: slotId ?? undefined,
         startDatetime: startDatetime ?? undefined,
@@ -79,7 +83,9 @@ export default function BookingPage() {
 
     const responseData = result.data;
     if ("bookingId" in responseData) {
-      router.push(`/booking/payment?bookingId=${responseData.bookingId}`);
+      router.push(
+        buildPath(`/booking/payment?bookingId=${responseData.bookingId}`),
+      );
     }
   };
 
@@ -88,7 +94,7 @@ export default function BookingPage() {
       <styled.div display="flex" alignItems="center" gap="2" mb="4">
         <Tooltip content="空き枠選択に戻る" showArrow>
           <IconButton variant="subtle" size="sm" asChild>
-            <Link href="/consultants">
+            <Link href={buildPath("/consultants")}>
               <ArrowLeft size={18} />
             </Link>
           </IconButton>

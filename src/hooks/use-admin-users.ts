@@ -1,5 +1,5 @@
 import {
-  getGetAdminUsersQueryKey,
+  getGetAdminUsersQueryKey as getGeneratedAdminUsersQueryKey,
   useDeleteAdminUser,
   useGetAdminUsers,
   useInviteUser,
@@ -8,14 +8,22 @@ import {
   useUpdateUserRole,
 } from "@/generated/api/admin/admin";
 import { useAuth } from "@/hooks/use-auth";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export function useAdminUsers() {
   const { token } = useAuth();
-  return useGetAdminUsers({ query: { enabled: !!token } });
+  const { organizationId } = useOrganizationRouting();
+  return useGetAdminUsers(organizationId ?? "", {
+    query: { enabled: !!token && !!organizationId },
+  });
+}
+
+export function useAdminUsersQueryKey() {
+  const { organizationId } = useOrganizationRouting();
+  return getGeneratedAdminUsersQueryKey(organizationId ?? "");
 }
 
 export {
-  getGetAdminUsersQueryKey,
   useDeleteAdminUser,
   useInviteUser,
   useResendUserInvite,

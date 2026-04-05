@@ -3,11 +3,13 @@ import { DomainError } from "@/domain/shared/domain-error";
 import { BreakoutRoom } from "@/domain/zoom-session/breakout-room";
 
 interface ZoomDailySessionCreateProps {
+  organizationId: string;
   sessionId: string;
   sessionDate: string;
 }
 
 interface ZoomDailySessionProps {
+  organizationId: string;
   sessionId: string;
   sessionDate: string;
   zoomMeetingId: string;
@@ -18,6 +20,7 @@ interface ZoomDailySessionProps {
 
 export class ZoomDailySession extends AggregateRoot {
   private constructor(
+    private readonly organizationId: string,
     private readonly sessionId: string,
     private readonly sessionDate: string,
     private zoomMeetingId: string,
@@ -30,6 +33,7 @@ export class ZoomDailySession extends AggregateRoot {
 
   static create(props: ZoomDailySessionCreateProps): ZoomDailySession {
     return new ZoomDailySession(
+      props.organizationId,
       props.sessionId,
       props.sessionDate,
       "",
@@ -41,6 +45,7 @@ export class ZoomDailySession extends AggregateRoot {
 
   static reconstruct(props: ZoomDailySessionProps): ZoomDailySession {
     return new ZoomDailySession(
+      props.organizationId,
       props.sessionId,
       props.sessionDate,
       props.zoomMeetingId,
@@ -95,6 +100,10 @@ export class ZoomDailySession extends AggregateRoot {
 
   getSessionId(): string {
     return this.sessionId;
+  }
+
+  getOrganizationId(): string {
+    return this.organizationId;
   }
 
   getSessionDate(): string {

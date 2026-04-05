@@ -22,8 +22,14 @@ export default function AdminLoginPage() {
     e.preventDefault();
     setError("");
     try {
-      await signIn(email, password);
-      router.push("/admin/dashboard");
+      const result = await signIn(email, password);
+      if (!result.currentOrganizationId) {
+        throw new Error("No organization available");
+      }
+      if (result.currentRole !== "admin" && result.currentRole !== "operator") {
+        throw new Error("No admin access");
+      }
+      router.push(`/${result.currentOrganizationId}/admin/dashboard`);
     } catch {
       setError("ログインに失敗しました");
     }

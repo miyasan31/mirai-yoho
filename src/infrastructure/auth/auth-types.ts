@@ -1,6 +1,15 @@
-export type UserRole = "super_admin" | "operator" | "consultant";
+export type UserRole = "admin" | "operator" | "consultant";
+
+export interface OrganizationMembership {
+  organizationId: string;
+  organizationName: string;
+  role: UserRole;
+  status: "active" | "invited" | "disabled";
+  createdAt: string;
+}
 
 export interface AuthUser {
   uid: string;
-  role: UserRole;
+  memberships: OrganizationMembership[];
+  currentOrganizationId: string | null;
 }

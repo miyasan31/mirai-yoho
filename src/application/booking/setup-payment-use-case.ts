@@ -9,6 +9,7 @@ const AMOUNT_JPY = 5000;
 const TAX_RATE = 0.1;
 
 interface SetupPaymentInput {
+  organizationId: string;
   bookingId: string;
   paymentMethodType: "card" | "paypay";
 }
@@ -27,12 +28,16 @@ export class SetupPaymentUseCase {
   ) {}
 
   async execute(input: SetupPaymentInput): Promise<SetupPaymentOutput> {
-    const booking = await this.bookingRepository.findById(input.bookingId);
+    const booking = await this.bookingRepository.findById(
+      input.organizationId,
+      input.bookingId,
+    );
     if (!booking) {
       throw new Error("Booking not found");
     }
 
     const existingPayment = await this.paymentRepository.findByBookingId(
+      input.organizationId,
       input.bookingId,
     );
     if (existingPayment) {
@@ -48,6 +53,7 @@ export class SetupPaymentUseCase {
         });
 
       const payment = Payment.createDeferred({
+        organizationId: input.organizationId,
         paymentId: crypto.randomUUID(),
         bookingId: input.bookingId,
         clientId: booking.getClientId(),
@@ -69,6 +75,7 @@ export class SetupPaymentUseCase {
       });
 
     const payment = Payment.createImmediate({
+      organizationId: input.organizationId,
       paymentId: crypto.randomUUID(),
       bookingId: input.bookingId,
       clientId: booking.getClientId(),

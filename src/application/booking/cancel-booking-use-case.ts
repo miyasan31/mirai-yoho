@@ -9,6 +9,7 @@ import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
 
 interface CancelBookingInput {
+  organizationId: string;
   bookingId: string;
   cancelledBy: "client" | "admin";
 }
@@ -37,7 +38,10 @@ export class CancelBookingUseCase {
   ) {}
 
   async execute(input: CancelBookingInput): Promise<void> {
-    const booking = await this.bookingRepository.findById(input.bookingId);
+    const booking = await this.bookingRepository.findById(
+      input.organizationId,
+      input.bookingId,
+    );
     if (!booking) {
       throw new Error("Booking not found");
     }
@@ -45,6 +49,7 @@ export class CancelBookingUseCase {
     booking.cancel(input.cancelledBy);
 
     const payment = await this.paymentRepository.findByBookingId(
+      input.organizationId,
       input.bookingId,
     );
     if (payment) {
@@ -65,16 +70,22 @@ export class CancelBookingUseCase {
       }
     }
 
-    const slot = await this.slotRepository.findById(booking.getSlotId());
+    const slot = await this.slotRepository.findById(
+      input.organizationId,
+      booking.getSlotId(),
+    );
     if (slot) {
       slot.release();
     }
 
     const sessionDate = toSessionDate(booking.getStartDatetime());
-    const session =
-      await this.zoomDailySessionRepository.findByDate(sessionDate);
+    const session = await this.zoomDailySessionRepository.findByDate(
+      input.organizationId,
+      sessionDate,
+    );
     if (session) {
       const client = await this.clientRepository.findById(
+        input.organizationId,
         booking.getClientId(),
       );
       if (client) {
