@@ -12,6 +12,7 @@
     "lint": "biome check",
     "format": "biome format --write",
     "generate": "orval",
+    "delete:slots": "pnpm dlx tsx --env-file=.env.local scripts/delete-slots.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },

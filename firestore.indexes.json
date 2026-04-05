@@ -10,7 +10,7 @@
       ]
     },
     {
-      "collectionGroup": "blockedTimes",
+      "collectionGroup": "slots",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "consultantId", "order": "ASCENDING" },

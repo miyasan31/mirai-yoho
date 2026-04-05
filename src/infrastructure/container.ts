@@ -4,7 +4,6 @@ import { ChargePaymentUseCase } from "@/application/booking/charge-payment-use-c
 import { CompleteSetupUseCase } from "@/application/booking/complete-setup-use-case";
 import { CreateBookingUseCase } from "@/application/booking/create-booking-use-case";
 import { SetupPaymentUseCase } from "@/application/booking/setup-payment-use-case";
-import { FirestoreBlockedTimeRepository } from "@/infrastructure/firestore/firestore-blocked-time-repository";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
 import { FirestoreClientRepository } from "@/infrastructure/firestore/firestore-client-repository";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
@@ -36,7 +35,6 @@ export function createCreateBookingUseCase() {
     new ZoomService(),
     new FirestoreUnitOfWork(),
     new ResendEmailService(),
-    new FirestoreBlockedTimeRepository(),
     new FirestoreZoomDailySessionRepository(),
     new FirestoreConsultantRepository(),
   );
@@ -94,8 +92,4 @@ export function createBatchChargeUseCase() {
     new StripeService(),
     new ResendEmailService(),
   );
-}
-
-export function createBlockedTimeRepository() {
-  return new FirestoreBlockedTimeRepository();
 }

@@ -17,13 +17,17 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { toaster } from "@/components/ui/toast";
 import {
-  useCreateConsultantBlockedTime,
-  useDeleteConsultantBlockedTime,
-  useGetConsultantBlockedTimes,
-} from "@/generated/api/consultant/consultant";
+  getSlotUnitMinutes,
+  getSlotUnitMs,
+  isAlignedToSlotBoundary,
+  splitIntoSlotRanges,
+} from "@/domain/slot/slot-availability";
 import { useAuth } from "@/hooks/use-auth";
+import { useCreateSlot, useDeleteSlot, useGetSlots } from "@/hooks/use-slots";
 
 const locales = { "ja-JP": ja };
+const SLOT_UNIT_MINUTES = getSlotUnitMinutes();
+const SLOT_UNIT_MS = getSlotUnitMs();
 
 const localizer = dateFnsLocalizer({
   format,
@@ -38,7 +42,7 @@ interface CalendarEvent {
   title: string;
   start: Date;
   end: Date;
-  type: "blocked";
+  type: "available";
 }
 
 export default function ConsultantSlotsPage() {
@@ -47,38 +51,83 @@ export default function ConsultantSlotsPage() {
   const [date, setDate] = useState(new Date());
   const [deleteTarget, setDeleteTarget] = useState<CalendarEvent | null>(null);
 
-  const { data, isLoading, refetch } = useGetConsultantBlockedTimes({
-    query: { enabled: !!user },
-  });
-  const createBlockedTime = useCreateConsultantBlockedTime();
-  const deleteBlockedTime = useDeleteConsultantBlockedTime();
+  const { data, isLoading, refetch } = useGetSlots(
+    { consultantId: user?.uid ?? "" },
+    {
+      query: { enabled: !!user?.uid },
+    },
+  );
+  const createSlot = useCreateSlot();
+  const deleteSlot = useDeleteSlot();
 
   const events: CalendarEvent[] = useMemo(() => {
-    const blockedTimes = data?.data?.blockedTimes ?? [];
-    return blockedTimes.map((bt) => ({
-      id: bt.blockedTimeId,
-      title: "予約不可",
-      start: new Date(bt.startDatetime),
-      end: new Date(bt.endDatetime),
-      type: "blocked" as const,
+    const slots = data?.data?.slots ?? [];
+    return slots.map((slot) => ({
+      id: slot.slotId,
+      title: "予約可能",
+      start: new Date(slot.startDatetime),
+      end: new Date(slot.endDatetime),
+      type: "available" as const,
     }));
   }, [data]);
 
   const handleSelectSlot = useCallback(
     async (slotInfo: SlotInfo) => {
-      try {
-        await createBlockedTime.mutateAsync({
-          data: {
-            startDatetime: slotInfo.start.toISOString(),
-            endDatetime: slotInfo.end.toISOString(),
-          },
+      if (!user) return;
+
+      const { start, end } = slotInfo;
+      if (
+        start >= end ||
+        !isAlignedToSlotBoundary(start) ||
+        !isAlignedToSlotBoundary(end) ||
+        (end.getTime() - start.getTime()) % SLOT_UNIT_MS !== 0
+      ) {
+        toaster.create({
+          type: "error",
+          title: "30分単位で選択してください",
         });
+        return;
+      }
+
+      const ranges = splitIntoSlotRanges(start, end);
+      const hasOverlap = ranges.some((range) =>
+        events.some(
+          (event) =>
+            event.start.getTime() < range.end.getTime() &&
+            range.start.getTime() < event.end.getTime(),
+        ),
+      );
+
+      if (hasOverlap) {
+        toaster.create({
+          type: "error",
+          title: "既存の予約可能枠と重複しています",
+        });
+        return;
+      }
+
+      try {
+        await Promise.all(
+          ranges.map((range) =>
+            createSlot.mutateAsync({
+              data: {
+                consultantId: user.uid,
+                startDatetime: range.start.toISOString(),
+                endDatetime: range.end.toISOString(),
+              },
+            }),
+          ),
+        );
         refetch();
+        toaster.create({
+          type: "success",
+          title: "予約可能枠を追加しました",
+        });
       } catch {
         // エラーは custom-fetch の toaster で表示される
       }
     },
-    [createBlockedTime, refetch],
+    [createSlot, events, refetch, user],
   );
 
   const handleSelectEvent = useCallback((event: CalendarEvent) => {
@@ -88,25 +137,25 @@ export default function ConsultantSlotsPage() {
   const handleDelete = useCallback(async () => {
     if (!deleteTarget) return;
     try {
-      await deleteBlockedTime.mutateAsync({
-        blockedTimeId: deleteTarget.id,
+      await deleteSlot.mutateAsync({
+        slotId: deleteTarget.id,
       });
       refetch();
       setDeleteTarget(null);
       toaster.create({
         type: "success",
-        title: "ブロック時間を削除しました",
+        title: "予約可能枠を削除しました",
       });
     } catch {
       // エラーは custom-fetch の toaster で表示される
     }
-  }, [deleteTarget, deleteBlockedTime, refetch]);
+  }, [deleteSlot, deleteTarget, refetch]);
 
   const eventStyleGetter = useCallback(() => {
     return {
       style: {
-        backgroundColor: "#ef4444",
-        borderColor: "#dc2626",
+        backgroundColor: "#2563eb",
+        borderColor: "#1d4ed8",
         color: "#fff",
         opacity: 0.8,
       },
@@ -130,7 +179,7 @@ export default function ConsultantSlotsPage() {
           スケジュール管理
         </Text>
         <Text textStyle="sm" color="fg.muted">
-          カレンダー上でドラッグして予約不可の時間帯を設定できます。クリックで削除できます。
+          カレンダー上でドラッグして予約可能枠を追加できます。クリックで削除できます。
         </Text>
       </styled.div>
 
@@ -147,7 +196,7 @@ export default function ConsultantSlotsPage() {
           onSelectSlot={handleSelectSlot}
           onSelectEvent={handleSelectEvent}
           eventPropGetter={eventStyleGetter}
-          step={30}
+          step={SLOT_UNIT_MINUTES}
           timeslots={2}
           min={new Date(1970, 0, 1, 10, 0)}
           max={new Date(1970, 0, 1, 17, 0)}
@@ -174,9 +223,9 @@ export default function ConsultantSlotsPage() {
         <Dialog.Positioner>
           <Dialog.Content>
             <Dialog.Header>
-              <Dialog.Title>予約不可枠を削除しますか？</Dialog.Title>
+              <Dialog.Title>予約可能枠を削除しますか？</Dialog.Title>
               <Dialog.Description>
-                この時間帯のブロックが解除され、予約可能になります。
+                この時間帯は利用者から予約できなくなります。
               </Dialog.Description>
             </Dialog.Header>
             <Dialog.Footer display="flex" justifyContent="flex-end" gap="2">
@@ -186,7 +235,7 @@ export default function ConsultantSlotsPage() {
               <Button
                 colorPalette="red"
                 onClick={handleDelete}
-                loading={deleteBlockedTime.isPending}
+                loading={deleteSlot.isPending}
                 loadingText="削除中..."
               >
                 削除

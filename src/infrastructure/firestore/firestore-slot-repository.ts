@@ -45,6 +45,21 @@ export class FirestoreSlotRepository implements ISlotRepository {
     return toDomain(doc.data() as SlotDoc);
   }
 
+  async findByConsultantId(consultantId: string): Promise<Slot[]> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("consultantId", "==", consultantId)
+      .get();
+    return snapshot.docs
+      .map((doc) => toDomain(doc.data() as SlotDoc))
+      .filter((slot) => slot.getTimeRange().getStartAt() > new Date())
+      .sort(
+        (a, b) =>
+          a.getTimeRange().getStartAt().getTime() -
+          b.getTimeRange().getStartAt().getTime(),
+      );
+  }
+
   async findAvailableByConsultantId(consultantId: string): Promise<Slot[]> {
     const snapshot = await db
       .collection(COLLECTION)
@@ -61,5 +76,9 @@ export class FirestoreSlotRepository implements ISlotRepository {
       .collection(COLLECTION)
       .doc(slot.getSlotId())
       .set(toFirestore(slot));
+  }
+
+  async delete(slotId: string): Promise<void> {
+    await db.collection(COLLECTION).doc(slotId).delete();
   }
 }

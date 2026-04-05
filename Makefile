@@ -1,4 +1,4 @@
-.PHONY: set-claims seed-slots deploy-firestore setup-secrets
+.PHONY: set-claims seed-slots delete-slots deploy-firestore setup-secrets
 
 # ============================================================
 # Scripts（引数が必要なコマンド）
@@ -16,6 +16,10 @@ set-claims:
 seed-slots:
 	@test -n "$(CONSULTANT_ID)" || (echo "Error: CONSULTANT_ID is required. Usage: make seed-slots CONSULTANT_ID=<id>" && exit 1)
 	pnpm dlx tsx --env-file=.env.local scripts/seed-slots.ts $(CONSULTANT_ID)
+
+# Usage: make delete-slots
+delete-slots:
+	pnpm dlx tsx --env-file=.env.local scripts/delete-slots.ts
 
 # ============================================================
 # Firebase Deploy（プロジェクト指定）

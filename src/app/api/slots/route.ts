@@ -1,13 +1,11 @@
 import { type NextRequest, NextResponse } from "next/server";
 import { DomainError } from "@/domain/shared/domain-error";
 import { Slot } from "@/domain/slot/slot";
+import { isValidSlotRange } from "@/domain/slot/slot-availability";
 import { TimeRange } from "@/domain/slot/time-range";
 import { requireRole } from "@/infrastructure/auth/require-role";
 import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
-import {
-  createBlockedTimeRepository,
-  createSlotRepository,
-} from "@/infrastructure/container";
+import { createSlotRepository } from "@/infrastructure/container";
 
 export async function GET(request: NextRequest) {
   try {
@@ -19,17 +17,8 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const [slots, blockedTimes] = await Promise.all([
-      createSlotRepository().findAvailableByConsultantId(consultantId),
-      createBlockedTimeRepository().findByConsultantId(consultantId),
-    ]);
-
-    const availableSlots = slots.filter(
-      (slot) =>
-        !blockedTimes.some((bt) =>
-          slot.getTimeRange().overlaps(bt.getTimeRange()),
-        ),
-    );
+    const availableSlots =
+      await createSlotRepository().findAvailableByConsultantId(consultantId);
 
     return NextResponse.json({
       slots: availableSlots.map((s) => ({
@@ -66,14 +55,51 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (authUser.role === "consultant" && authUser.uid !== consultantId) {
+      return NextResponse.json(
+        {
+          code: "FORBIDDEN",
+          message: "Consultants can only create their own slots",
+        },
+        { status: 403 },
+      );
+    }
+
     const slotId = crypto.randomUUID();
-    const timeRange = TimeRange.create(
-      new Date(startDatetime),
-      new Date(endDatetime),
-    );
-    const slot = Slot.create({ slotId, consultantId, timeRange });
+    const start = new Date(startDatetime);
+    const end = new Date(endDatetime);
+
+    if (!isValidSlotRange(start, end)) {
+      return NextResponse.json(
+        {
+          code: "VALIDATION_ERROR",
+          message:
+            "Slots must be exactly 30 minutes and aligned to 30-minute boundaries",
+        },
+        { status: 400 },
+      );
+    }
 
     const repo = createSlotRepository();
+    const existingSlots = await repo.findByConsultantId(consultantId);
+    const newTimeRange = TimeRange.create(start, end);
+
+    const hasOverlap = existingSlots.some((existingSlot) =>
+      existingSlot.getTimeRange().overlaps(newTimeRange),
+    );
+    if (hasOverlap) {
+      return NextResponse.json(
+        {
+          code: "SLOT_CONFLICT",
+          message: "The selected slot overlaps an existing slot",
+        },
+        { status: 400 },
+      );
+    }
+
+    const timeRange = newTimeRange;
+    const slot = Slot.create({ slotId, consultantId, timeRange });
+
     await repo.save(slot);
 
     return NextResponse.json({ slotId }, { status: 201 });

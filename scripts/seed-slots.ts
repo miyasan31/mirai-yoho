@@ -33,36 +33,37 @@ async function main() {
   const db = getFirestore(app);
   const batch = db.batch();
 
-  // 今日から5日分、各日 10:00, 11:00, 14:00, 15:00, 16:00 (JST) の1時間枠を作成
-  const hours = [10, 11, 14, 15, 16];
+  // 今日から5日分、各日 10:00-17:00 の30分枠を作成
   const now = new Date();
   let count = 0;
 
   for (let dayOffset = 1; dayOffset <= 5; dayOffset++) {
-    for (const hour of hours) {
-      const startAt = new Date(now);
-      startAt.setDate(startAt.getDate() + dayOffset);
-      startAt.setHours(hour, 0, 0, 0);
+    for (let hour = 10; hour < 17; hour++) {
+      for (const minute of [0, 30]) {
+        const startAt = new Date(now);
+        startAt.setDate(startAt.getDate() + dayOffset);
+        startAt.setHours(hour, minute, 0, 0);
 
-      const endAt = new Date(startAt);
-      endAt.setHours(hour + 1);
+        const endAt = new Date(startAt);
+        endAt.setMinutes(endAt.getMinutes() + 30);
 
-      const slotId = crypto.randomUUID();
-      const ref = db.collection("slots").doc(slotId);
+        const slotId = crypto.randomUUID();
+        const ref = db.collection("slots").doc(slotId);
 
-      batch.set(ref, {
-        slotId,
-        consultantId,
-        startAt,
-        endAt,
-        bookingId: null,
-        isReserved: false,
-      });
+        batch.set(ref, {
+          slotId,
+          consultantId,
+          startAt,
+          endAt,
+          bookingId: null,
+          isReserved: false,
+        });
 
-      count++;
-      console.log(
-        `  ${slotId} | ${startAt.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })} - ${endAt.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}`,
-      );
+        count++;
+        console.log(
+          `  ${slotId} | ${startAt.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })} - ${endAt.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}`,
+        );
+      }
     }
   }
 
