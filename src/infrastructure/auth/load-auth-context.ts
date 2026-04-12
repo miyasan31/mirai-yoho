@@ -28,6 +28,10 @@ interface UserPreferencesDoc {
   lastOrganizationId?: string;
 }
 
+interface LoadAuthUserOptions {
+  activateInvitedMemberships?: boolean;
+}
+
 function toIsoString(value: Timestamp | Date | string): string {
   if (value instanceof Timestamp) {
     return value.toDate().toISOString();
@@ -45,7 +49,10 @@ export function getOrganizationMembershipDocId(
   return `${organizationId}_${uid}`;
 }
 
-export async function loadAuthUser(uid: string): Promise<AuthUser> {
+export async function loadAuthUser(
+  uid: string,
+  options?: LoadAuthUserOptions,
+): Promise<AuthUser> {
   const [membershipSnapshot, userPreferencesDoc] = await Promise.all([
     db
       .collection(MEMBERSHIP_COLLECTION)
@@ -59,14 +66,42 @@ export async function loadAuthUser(uid: string): Promise<AuthUser> {
     (doc) => doc.data() as OrganizationMembershipDoc,
   );
 
-  membershipDocs.sort(
+  const shouldActivateInvitedMemberships = membershipDocs.some(
+    (doc) => doc.status === "invited",
+  );
+
+  if (options?.activateInvitedMemberships && shouldActivateInvitedMemberships) {
+    const now = Timestamp.now();
+    const batch = db.batch();
+
+    for (const doc of membershipSnapshot.docs) {
+      const data = doc.data() as OrganizationMembershipDoc;
+      if (data.status !== "invited") continue;
+
+      batch.update(doc.ref, {
+        status: "active",
+        updatedAt: now,
+      });
+      data.status = "active";
+    }
+
+    await batch.commit();
+  }
+
+  const normalizedMembershipDocs = membershipDocs.map((doc) =>
+    options?.activateInvitedMemberships && doc.status === "invited"
+      ? { ...doc, status: "active" as const }
+      : doc,
+  );
+
+  normalizedMembershipDocs.sort(
     (left, right) =>
       new Date(toIsoString(left.createdAt)).getTime() -
       new Date(toIsoString(right.createdAt)).getTime(),
   );
 
   const organizationIds = [
-    ...new Set(membershipDocs.map((doc) => doc.organizationId)),
+    ...new Set(normalizedMembershipDocs.map((doc) => doc.organizationId)),
   ];
   const organizationDocs = await Promise.all(
     organizationIds.map((organizationId) =>
@@ -81,14 +116,16 @@ export async function loadAuthUser(uid: string): Promise<AuthUser> {
     organizationNameById.set(organization.organizationId, organization.name);
   }
 
-  const memberships: OrganizationMembership[] = membershipDocs.map((doc) => ({
-    organizationId: doc.organizationId,
-    organizationName:
-      organizationNameById.get(doc.organizationId) ?? doc.organizationId,
-    role: doc.role,
-    status: doc.status,
-    createdAt: toIsoString(doc.createdAt),
-  }));
+  const memberships: OrganizationMembership[] = normalizedMembershipDocs.map(
+    (doc) => ({
+      organizationId: doc.organizationId,
+      organizationName:
+        organizationNameById.get(doc.organizationId) ?? doc.organizationId,
+      role: doc.role,
+      status: doc.status,
+      createdAt: toIsoString(doc.createdAt),
+    }),
+  );
 
   const userPreferences = userPreferencesDoc.exists
     ? (userPreferencesDoc.data() as UserPreferencesDoc)

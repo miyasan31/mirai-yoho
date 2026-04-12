@@ -14,7 +14,9 @@ export async function verifyAuth(request: Request): Promise<AuthUser> {
 
   const token = authorization.slice(7);
   const decoded = await verifyIdToken(token);
-  const authUser = await loadAuthUser(decoded.uid);
+  const authUser = await loadAuthUser(decoded.uid, {
+    activateInvitedMemberships: true,
+  });
 
   if (authUser.memberships.length === 0) {
     throw new AuthError(403, "NO_ROLE", "User has no assigned role");
