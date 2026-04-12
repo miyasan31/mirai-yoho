@@ -8,6 +8,18 @@ export const icon = defineRecipe({
     flexShrink: "0",
     verticalAlign: "middle",
     lineHeight: "1em",
+    "&[data-type=info]": {
+      color: "blue.solid.bg",
+    },
+    "&[data-type=success]": {
+      color: "green.solid.bg",
+    },
+    "&[data-type=error]": {
+      color: "red.solid.bg",
+    },
+    "&[data-type=warning]": {
+      color: "amber.solid.bg",
+    },
   },
   defaultVariants: {
     size: "md",

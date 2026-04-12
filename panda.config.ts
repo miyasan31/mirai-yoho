@@ -1,5 +1,6 @@
 import { defineConfig } from "@pandacss/dev";
 import { animationStyles } from "@/theme/animation-styles";
+import { amber } from "@/theme/colors/amber";
 import { blue } from "@/theme/colors/blue";
 import { green } from "@/theme/colors/green";
 import { red } from "@/theme/colors/red";
@@ -71,6 +72,7 @@ export default defineConfig({
             },
           },
           blue: blue,
+          amber: amber,
           gray: slate,
           red: red,
           green: green,

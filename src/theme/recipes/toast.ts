@@ -9,6 +9,7 @@ export const toast = defineSlotRecipe({
     root: {
       alignItems: "start",
       background: "gray.surface.bg",
+      border: "1px solid",
       borderRadius: "l3",
       boxShadow: "lg",
       display: "flex",
@@ -26,6 +27,22 @@ export const toast = defineSlotRecipe({
       width: { base: "90dvw", md: "600px" },
       willChange: "translate, opacity, scale",
       zIndex: "var(--z-index)",
+      "&[data-type=info]": {
+        background: "blue.2",
+        borderColor: "blue.outline.border",
+      },
+      "&[data-type=success]": {
+        background: "green.2",
+        borderColor: "green.outline.border",
+      },
+      "&[data-type=error]": {
+        background: "red.2",
+        borderColor: "red.outline.border",
+      },
+      "&[data-type=warning]": {
+        background: "amber.2",
+        borderColor: "amber.outline.border",
+      },
     },
     title: {
       color: "fg.default",
@@ -37,7 +54,7 @@ export const toast = defineSlotRecipe({
       textStyle: "sm",
     },
     actionTrigger: {
-      color: "colorPalette.plain.fg",
+      color: "fg.default",
       cursor: "pointer",
       fontWeight: "semibold",
       textStyle: "sm",
