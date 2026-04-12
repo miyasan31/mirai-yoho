@@ -1,6 +1,93 @@
 import { toaster } from "@/components/ui/toast";
 import { getAuthToken } from "@/lib/auth-token";
 
+const REDIRECT_BY_STATUS: Record<number, string> = {
+  401: "/",
+  403: "/404",
+  404: "/404",
+};
+
+interface NormalizedError {
+  status: number;
+  code: string;
+  message: string;
+}
+
+export class ApiResponseError extends Error {
+  status: number;
+  code: string;
+
+  constructor({ status, code, message }: NormalizedError) {
+    super(message);
+    this.name = "ApiResponseError";
+    this.status = status;
+    this.code = code;
+  }
+}
+
+function normalizeErrorPayload(
+  status: number,
+  payload: unknown,
+  fallbackMessage: string,
+): NormalizedError {
+  if (
+    typeof payload === "object" &&
+    payload !== null &&
+    "message" in payload &&
+    typeof payload.message === "string"
+  ) {
+    return {
+      status,
+      code:
+        "code" in payload && typeof payload.code === "string"
+          ? payload.code
+          : "API_ERROR",
+      message: payload.message,
+    };
+  }
+
+  if (typeof payload === "string" && payload.length > 0) {
+    return {
+      status,
+      code: "API_ERROR",
+      message: payload,
+    };
+  }
+
+  return {
+    status,
+    code: "API_ERROR",
+    message: fallbackMessage,
+  };
+}
+
+async function parseErrorPayload(response: Response): Promise<unknown> {
+  const contentType = response.headers.get("Content-Type") ?? "";
+  if (contentType.includes("application/json")) {
+    try {
+      return await response.json();
+    } catch {
+      return null;
+    }
+  }
+
+  try {
+    return await response.text();
+  } catch {
+    return null;
+  }
+}
+
+function redirectByStatus(status: number): void {
+  const destination = REDIRECT_BY_STATUS[status];
+  if (!destination || typeof window === "undefined") {
+    return;
+  }
+  if (window.location.pathname !== destination) {
+    window.location.assign(destination);
+  }
+}
+
 export const customFetch = async <T>(
   url: string,
   options: RequestInit,
@@ -16,12 +103,23 @@ export const customFetch = async <T>(
   });
 
   if (!response.ok) {
-    const error = await response.json();
-    toaster.error({
-      title: "エラー",
-      description: error.message ?? "予期しないエラーが発生しました",
-    });
-    throw error;
+    const payload = await parseErrorPayload(response);
+    const normalizedError = normalizeErrorPayload(
+      response.status,
+      payload,
+      "予期しないエラーが発生しました",
+    );
+
+    if (response.status in REDIRECT_BY_STATUS) {
+      redirectByStatus(response.status);
+    } else {
+      toaster.error({
+        title: "エラー",
+        description: normalizedError.message,
+      });
+    }
+
+    throw new ApiResponseError(normalizedError);
   }
 
   const data = await response.json();

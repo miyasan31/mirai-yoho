@@ -28,14 +28,20 @@ export default function ConsultantMemoEditPage() {
 
   const { data, isLoading } = useConsultantBookings();
   const updateMemo = useUpdateConsultantMemo();
+  const bookings = data?.data?.bookings ?? [];
+  const booking = bookings.find((item) => item.bookingId === bookingId);
 
   useEffect(() => {
-    const bookings = data?.data?.bookings ?? [];
-    const booking = bookings.find((b) => b.bookingId === bookingId);
     if (booking) {
       setMemo(booking.consultantMemo ?? "");
     }
-  }, [data, bookingId]);
+  }, [booking]);
+
+  useEffect(() => {
+    if (!isLoading && data && !booking) {
+      router.replace("/404");
+    }
+  }, [booking, data, isLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -32,18 +32,24 @@ export default function AdminConsultantDetailPage() {
   const { data, isLoading } = useAdminConsultants();
   const updateConsultant = useUpdateAdminConsultant();
   const deleteConsultant = useDeleteAdminConsultant();
+  const consultants = data?.data?.consultants ?? [];
+  const consultant = consultants.find(
+    (item: { consultantId: string }) => item.consultantId === consultantId,
+  );
 
   useEffect(() => {
-    const consultants = data?.data?.consultants ?? [];
-    const c = consultants.find(
-      (c: { consultantId: string }) => c.consultantId === consultantId,
-    );
-    if (c) {
-      setDisplayName(c.displayName ?? "");
-      setBio(c.bio ?? "");
-      setSpecialties((c.specialties ?? []).join(", "));
+    if (consultant) {
+      setDisplayName(consultant.displayName ?? "");
+      setBio(consultant.bio ?? "");
+      setSpecialties((consultant.specialties ?? []).join(", "));
     }
-  }, [data, consultantId]);
+  }, [consultant]);
+
+  useEffect(() => {
+    if (!isLoading && data && !consultant) {
+      router.replace("/404");
+    }
+  }, [consultant, data, isLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

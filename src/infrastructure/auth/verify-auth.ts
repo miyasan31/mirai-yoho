@@ -13,7 +13,12 @@ export async function verifyAuth(request: Request): Promise<AuthUser> {
   }
 
   const token = authorization.slice(7);
-  const decoded = await verifyIdToken(token);
+  let decoded: Awaited<ReturnType<typeof verifyIdToken>>;
+  try {
+    decoded = await verifyIdToken(token);
+  } catch {
+    throw new AuthError(401, "UNAUTHORIZED", "Invalid or expired token");
+  }
   const authUser = await loadAuthUser(decoded.uid, {
     activateInvitedMemberships: true,
   });

@@ -45,13 +45,28 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     useOrganizationRouting();
 
   useEffect(() => {
-    if (
-      !isLoading &&
-      (!user || !organizationId || (role !== "admin" && role !== "operator"))
-    ) {
-      router.push("/admin/login");
+    if (isLoading) {
+      return;
     }
-  }, [user, role, isLoading, router, organizationId]);
+
+    if (!user) {
+      router.replace("/admin/login");
+      return;
+    }
+
+    if (!organizationId) {
+      if (currentOrganizationId) {
+        router.replace(`/${currentOrganizationId}/admin/dashboard`);
+        return;
+      }
+      router.replace("/404");
+      return;
+    }
+
+    if (role !== "admin" && role !== "operator") {
+      router.replace("/404");
+    }
+  }, [currentOrganizationId, isLoading, organizationId, role, router, user]);
 
   const visibleItems = useMemo(
     () =>

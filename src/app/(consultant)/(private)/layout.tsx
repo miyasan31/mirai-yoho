@@ -37,10 +37,28 @@ export default function ConsultantLayout({
     useOrganizationRouting();
 
   useEffect(() => {
-    if (!isLoading && (!user || !organizationId || role !== "consultant")) {
-      router.push("/consultant/login");
+    if (isLoading) {
+      return;
     }
-  }, [user, role, isLoading, router, organizationId]);
+
+    if (!user) {
+      router.replace("/consultant/login");
+      return;
+    }
+
+    if (!organizationId) {
+      if (currentOrganizationId) {
+        router.replace(`/${currentOrganizationId}/consultant/bookings`);
+        return;
+      }
+      router.replace("/404");
+      return;
+    }
+
+    if (role !== "consultant") {
+      router.replace("/404");
+    }
+  }, [currentOrganizationId, isLoading, organizationId, role, router, user]);
 
   if (isLoading) {
     return <SidebarLayoutSkeleton navItemCount={NAV_ITEMS.length} />;
