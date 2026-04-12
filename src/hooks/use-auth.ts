@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  sendPasswordResetEmail as firebaseSendPasswordResetEmail,
   signOut as firebaseSignOut,
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -35,6 +36,7 @@ export interface AuthState {
     currentOrganizationId: string | null;
     currentRole: UserRole | null;
   }>;
+  sendPasswordResetEmail: (email: string) => Promise<void>;
   setCurrentOrganizationId: (organizationId: string) => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -158,6 +160,26 @@ export function useAuthState(): AuthState {
     await firebaseSignOut(auth);
   }, []);
 
+  const sendPasswordResetEmail = useCallback(async (email: string) => {
+    try {
+      await firebaseSendPasswordResetEmail(auth, email);
+    } catch (error) {
+      const authErrorCode =
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        typeof error.code === "string"
+          ? error.code
+          : null;
+      if (authErrorCode === "auth/user-not-found") {
+        return;
+      }
+      throw new Error(
+        "メール送信に失敗しました。時間をおいて再度お試しください。",
+      );
+    }
+  }, []);
+
   const currentRole =
     memberships.find(
       (membership) => membership.organizationId === currentOrganizationId,
@@ -173,6 +195,7 @@ export function useAuthState(): AuthState {
       role: currentRole,
       isLoading,
       signIn,
+      sendPasswordResetEmail,
       setCurrentOrganizationId,
       signOut,
     }),
@@ -184,6 +207,7 @@ export function useAuthState(): AuthState {
       currentRole,
       isLoading,
       signIn,
+      sendPasswordResetEmail,
       setCurrentOrganizationId,
       signOut,
     ],

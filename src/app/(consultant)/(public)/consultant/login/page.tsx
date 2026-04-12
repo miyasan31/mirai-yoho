@@ -81,14 +81,14 @@ export default function ConsultantLoginPage() {
         {error && <Text color="fg.error">{error}</Text>}
         <Button type="submit">ログイン</Button>
       </styled.form>
-      <styled.div display="flex" justifyContent="center" mt="4">
-        <Link href="/admin/login">
+      <styled.div display="flex" justifyContent="center" mt="3">
+        <Link href="/consultant/password-reset">
           <Text
             textStyle="sm"
             color="fg.muted"
             _hover={{ color: "fg.default" }}
           >
-            管理者ログインはこちら
+            パスワードをお忘れですか？
           </Text>
         </Link>
       </styled.div>

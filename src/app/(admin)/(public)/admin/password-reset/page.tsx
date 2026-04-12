@@ -1,8 +1,6 @@
 "use client";
 
-import { ShieldCheck } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
 import { Button } from "@/components/ui/button";
@@ -11,27 +9,36 @@ import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { useAuth } from "@/hooks/use-auth";
 
-export default function AdminLoginPage() {
-  const { signIn } = useAuth();
-  const router = useRouter();
+const SUCCESS_MESSAGE =
+  "該当メールアドレスにパスワード再設定リンクを送信しました。メールをご確認ください。";
+
+export default function AdminPasswordResetPage() {
+  const { sendPasswordResetEmail } = useAuth();
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) {
+      return;
+    }
+
     setError("");
+    setIsSubmitting(true);
+
     try {
-      const result = await signIn(email, password);
-      if (!result.currentOrganizationId) {
-        throw new Error("No organization available");
-      }
-      if (result.currentRole !== "admin" && result.currentRole !== "operator") {
-        throw new Error("No admin access");
-      }
-      router.push(`/${result.currentOrganizationId}/admin/dashboard`);
-    } catch {
-      setError("ログインに失敗しました");
+      await sendPasswordResetEmail(email);
+      setIsSubmitted(true);
+    } catch (submitError) {
+      const nextError =
+        submitError instanceof Error
+          ? submitError.message
+          : "メール送信に失敗しました。時間をおいて再度お試しください。";
+      setError(nextError);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -47,11 +54,14 @@ export default function AdminLoginPage() {
       borderColor="border"
     >
       <styled.div display="flex" flexDir="column" alignItems="center" mb="6">
-        <ShieldCheck size={40} color="var(--colors-color-palette-default)" />
         <Text as="h1" textStyle="2xl" fontWeight="bold" mt="3">
-          管理者ログイン
+          管理者パスワード再設定
+        </Text>
+        <Text textStyle="sm" color="fg.muted" mt="2" textAlign="center">
+          登録済みメールアドレスを入力してください
         </Text>
       </styled.div>
+
       <styled.form
         onSubmit={handleSubmit}
         display="flex"
@@ -68,27 +78,21 @@ export default function AdminLoginPage() {
             required
           />
         </Field.Root>
-        <Field.Root>
-          <Field.Label>パスワード</Field.Label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </Field.Root>
         {error && <Text color="fg.error">{error}</Text>}
-        <Button type="submit">ログイン</Button>
+        {isSubmitted && <Text>{SUCCESS_MESSAGE}</Text>}
+        <Button type="submit" loading={isSubmitting} loadingText="送信中...">
+          再設定メールを送信
+        </Button>
       </styled.form>
-      <styled.div display="flex" justifyContent="center" mt="3">
-        <Link href="/admin/password-reset">
+
+      <styled.div display="flex" justifyContent="center" mt="4">
+        <Link href="/admin/login">
           <Text
             textStyle="sm"
             color="fg.muted"
             _hover={{ color: "fg.default" }}
           >
-            パスワードをお忘れですか？
+            管理者ログインに戻る
           </Text>
         </Link>
       </styled.div>
