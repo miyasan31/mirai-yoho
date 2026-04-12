@@ -62,7 +62,7 @@ export const Toaster = () => {
               ) : (
                 <Indicator />
               )}
-              <Stack gap="1">
+              <Stack gap="1" alignItems="start">
                 {toast.title && <Title>{toast.title}</Title>}
                 {toast.description && (
                   <Description>{toast.description}</Description>

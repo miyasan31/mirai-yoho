@@ -22,16 +22,17 @@ export const recipes = {
   spinner,
   badge,
   icon,
-  toast,
   skeleton,
-  field,
   input,
   textarea,
-  select,
-  dialog,
-  menu,
-  tooltip,
   text,
+};
+export const slotRecipes = {
+  toast,
+  menu,
+  dialog,
+  field,
+  select,
+  tooltip,
   table,
 };
-export const slotRecipes = {};

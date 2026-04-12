@@ -4,6 +4,7 @@ import { defineSlotRecipe } from "@pandacss/dev";
 export const toast = defineSlotRecipe({
   className: "toast",
   slots: toastAnatomy.keys(),
+  jsx: ["StyledToaster"],
   base: {
     root: {
       alignItems: "start",
@@ -22,7 +23,7 @@ export const toast = defineSlotRecipe({
       transitionProperty: "translate, scale, opacity, height",
       transitionTimingFunction: "default",
       translate: "var(--x) var(--y) 0",
-      width: { base: "90dvw", md: "300px" },
+      width: { base: "90dvw", md: "600px" },
       willChange: "translate, opacity, scale",
       zIndex: "var(--z-index)",
     },
