@@ -1,5 +1,6 @@
 "use client";
 
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import {
   Elements,
   PaymentElement,
@@ -10,11 +11,16 @@ import { loadStripe } from "@stripe/stripe-js";
 import { CircleX, FileQuestion } from "lucide-react";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
+import {
+  type CheckoutFormValues,
+  checkoutFormSchema,
+} from "./checkout-form-schema";
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string,
@@ -58,9 +64,11 @@ function CheckoutForm({
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string>();
+  const { handleSubmit } = useForm<CheckoutFormValues>({
+    resolver: valibotResolver(checkoutFormSchema),
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async () => {
     if (!stripe || !elements) return;
 
     setIsProcessing(true);
@@ -87,7 +95,7 @@ function CheckoutForm({
 
   return (
     <styled.form
-      onSubmit={handleSubmit}
+      onSubmit={handleSubmit(onSubmit)}
       display="flex"
       flexDirection="column"
       gap="6"

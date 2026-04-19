@@ -1,9 +1,11 @@
 "use client";
 
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { Button } from "@/components/ui/button";
 import * as Field from "@/components/ui/field";
@@ -18,24 +20,29 @@ import {
   useUpdateConsultantMemo,
 } from "@/hooks/use-consultant-bookings";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
+import { type MemoFormValues, memoFormSchema } from "./memo-form-schema";
 
 export default function ConsultantMemoEditPage() {
   const params = useParams();
   const router = useRouter();
   const { buildPath, organizationId } = useOrganizationRouting();
   const bookingId = params.id as string;
-  const [memo, setMemo] = useState("");
-
   const { data, isLoading } = useConsultantBookings();
   const updateMemo = useUpdateConsultantMemo();
+  const { register, handleSubmit, reset } = useForm<MemoFormValues>({
+    resolver: valibotResolver(memoFormSchema),
+    defaultValues: {
+      memo: "",
+    },
+  });
   const bookings = data?.data?.bookings ?? [];
   const booking = bookings.find((item) => item.bookingId === bookingId);
 
   useEffect(() => {
     if (booking) {
-      setMemo(booking.consultantMemo ?? "");
+      reset({ memo: booking.consultantMemo ?? "" });
     }
-  }, [booking]);
+  }, [booking, reset]);
 
   useEffect(() => {
     if (!isLoading && data && !booking) {
@@ -43,13 +50,12 @@ export default function ConsultantMemoEditPage() {
     }
   }, [booking, data, isLoading, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (values: MemoFormValues) => {
     try {
       await updateMemo.mutateAsync({
         organizationId: organizationId ?? "",
         id: bookingId,
-        data: { memo },
+        data: { memo: values.memo?.trim() ?? "" },
       });
       toaster.create({ type: "success", title: "メモを保存しました" });
       router.push(buildPath("/consultant/bookings"));
@@ -112,19 +118,14 @@ export default function ConsultantMemoEditPage() {
       </Text>
       <styled.div shadow="xs" rounded="l2" p="6">
         <styled.form
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(onSubmit)}
           display="flex"
           flexDir="column"
           gap="4"
         >
           <Field.Root>
             <Field.Label>相談員メモ</Field.Label>
-            <Textarea
-              id="memo"
-              value={memo}
-              onChange={(e) => setMemo(e.target.value)}
-              rows={6}
-            />
+            <Textarea id="memo" {...register("memo")} rows={6} />
             <Field.HelperText>
               相談内容やフォローアップ事項をメモできます
             </Field.HelperText>

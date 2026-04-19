@@ -1,6 +1,7 @@
 "use client";
 
 import { createListCollection } from "@ark-ui/react/select";
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   Contact,
@@ -8,11 +9,11 @@ import {
   RotateCcwKey,
   ShieldAlert,
   Trash2,
-  UserCircle2,
   UserPlus,
   Users,
 } from "lucide-react";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
 import { UserStatusBadge } from "@/components/status-badge";
@@ -28,10 +29,6 @@ import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
 import { toaster } from "@/components/ui/toast";
 import { Tooltip } from "@/components/ui/tooltip";
-import type {
-  InviteUserBodyRole,
-  UpdateUserRoleBodyRole,
-} from "@/generated/schemas";
 import {
   useAdminUsers,
   useAdminUsersQueryKey,
@@ -44,6 +41,18 @@ import {
 } from "@/hooks/use-admin-users";
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
+import {
+  type UserEditDisplayNameFormValues,
+  userEditDisplayNameFormSchema,
+} from "./user-edit-display-name-form-schema";
+import {
+  type UserEditRoleFormValues,
+  userEditRoleFormSchema,
+} from "./user-edit-role-form-schema";
+import {
+  type UserInviteFormValues,
+  userInviteFormSchema,
+} from "./user-invite-form-schema";
 import {
   canDeleteAdminUser,
   canEditDisplayName,
@@ -86,19 +95,52 @@ export default function AdminUsersPage() {
   const queryClient = useQueryClient();
 
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteDisplayName, setInviteDisplayName] = useState("");
-  const [inviteRole, setInviteRole] = useState<InviteUserBodyRole>("operator");
+  const {
+    register: registerInvite,
+    handleSubmit: handleInviteSubmit,
+    setValue: setInviteValue,
+    watch: watchInvite,
+    reset: resetInviteForm,
+    formState: { errors: inviteErrors },
+  } = useForm<UserInviteFormValues>({
+    resolver: valibotResolver(userInviteFormSchema),
+    defaultValues: {
+      email: "",
+      displayName: "",
+      role: "operator",
+    },
+  });
+  const inviteRole = watchInvite("role");
   const inviteUser = useInviteUser();
 
   const [editRoleOpen, setEditRoleOpen] = useState(false);
   const [editRoleUid, setEditRoleUid] = useState("");
-  const [editRoleValue, setEditRoleValue] =
-    useState<UpdateUserRoleBodyRole>("operator");
+  const {
+    handleSubmit: handleEditRoleSubmit,
+    setValue: setEditRoleValue,
+    watch: watchEditRole,
+    reset: resetEditRoleForm,
+  } = useForm<UserEditRoleFormValues>({
+    resolver: valibotResolver(userEditRoleFormSchema),
+    defaultValues: {
+      role: "operator",
+    },
+  });
+  const editRoleValue = watchEditRole("role");
   const updateUserRole = useUpdateUserRole();
   const [editDisplayNameOpen, setEditDisplayNameOpen] = useState(false);
   const [editDisplayNameUid, setEditDisplayNameUid] = useState("");
-  const [editDisplayNameValue, setEditDisplayNameValue] = useState("");
+  const {
+    register: registerEditDisplayName,
+    handleSubmit: handleEditDisplayNameSubmit,
+    reset: resetEditDisplayNameForm,
+    formState: { errors: editDisplayNameErrors },
+  } = useForm<UserEditDisplayNameFormValues>({
+    resolver: valibotResolver(userEditDisplayNameFormSchema),
+    defaultValues: {
+      displayName: "",
+    },
+  });
   const updateUserDisplayName = useUpdateUserDisplayName();
 
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -123,26 +165,21 @@ export default function AdminUsersPage() {
       queryKey,
     });
 
-  const handleInvite = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inviteDisplayName.trim()) {
-      return;
-    }
+  const onInvite = async (values: UserInviteFormValues) => {
     try {
       await inviteUser.mutateAsync({
         organizationId,
         data: {
-          email: inviteEmail,
-          displayName: inviteDisplayName.trim(),
-          role: inviteRole,
+          email: values.email,
+          displayName: values.displayName,
+          role: values.role,
         },
       });
       toaster.success({
         title: "成功",
-        description: `${inviteEmail} に招待メールを送信しました`,
+        description: `${values.email} に招待メールを送信しました`,
       });
-      setInviteEmail("");
-      setInviteDisplayName("");
+      resetInviteForm();
       setInviteOpen(false);
       await invalidate();
     } catch {
@@ -150,17 +187,16 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleEditRole = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onEditRole = async (values: UserEditRoleFormValues) => {
     try {
       await updateUserRole.mutateAsync({
         organizationId,
         uid: editRoleUid,
-        data: { role: editRoleValue },
+        data: { role: values.role },
       });
       toaster.success({
         title: "成功",
-        description: `ロールを ${ROLE_LABELS[editRoleValue] ?? editRoleValue} に変更しました`,
+        description: `ロールを ${ROLE_LABELS[values.role] ?? values.role} に変更しました`,
       });
       setEditRoleOpen(false);
       await invalidate();
@@ -169,16 +205,12 @@ export default function AdminUsersPage() {
     }
   };
 
-  const handleEditDisplayName = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editDisplayNameValue.trim()) {
-      return;
-    }
+  const onEditDisplayName = async (values: UserEditDisplayNameFormValues) => {
     try {
       await updateUserDisplayName.mutateAsync({
         organizationId,
         uid: editDisplayNameUid,
-        data: { displayName: editDisplayNameValue.trim() },
+        data: { displayName: values.displayName },
       });
       toaster.success({
         title: "成功",
@@ -249,7 +281,12 @@ export default function AdminUsersPage() {
         {canInviteAdminUsers(role) && (
           <Dialog.Root
             open={inviteOpen}
-            onOpenChange={(e) => setInviteOpen(e.open)}
+            onOpenChange={(e) => {
+              setInviteOpen(e.open);
+              if (!e.open) {
+                resetInviteForm();
+              }
+            }}
           >
             <Dialog.Trigger asChild>
               <Button>
@@ -260,7 +297,7 @@ export default function AdminUsersPage() {
             <Dialog.Backdrop />
             <Dialog.Positioner>
               <Dialog.Content asChild>
-                <styled.form onSubmit={handleInvite}>
+                <styled.form onSubmit={handleInviteSubmit(onInvite)}>
                   <Dialog.Header>
                     <Dialog.Title>ユーザー招待</Dialog.Title>
                     <Dialog.Description>
@@ -268,28 +305,32 @@ export default function AdminUsersPage() {
                     </Dialog.Description>
                   </Dialog.Header>
                   <Dialog.Body display="flex" flexDir="column" gap="4">
-                    <Field.Root>
+                    <Field.Root invalid={!!inviteErrors.email}>
                       <Field.Label>メールアドレス</Field.Label>
-                      <Input
-                        type="email"
-                        value={inviteEmail}
-                        onChange={(e) => setInviteEmail(e.target.value)}
-                        required
-                      />
+                      <Input type="email" {...registerInvite("email")} />
+                      {inviteErrors.email && (
+                        <Field.ErrorText>
+                          {inviteErrors.email.message}
+                        </Field.ErrorText>
+                      )}
                     </Field.Root>
-                    <Field.Root>
+                    <Field.Root invalid={!!inviteErrors.displayName}>
                       <Field.Label>表示名</Field.Label>
-                      <Input
-                        value={inviteDisplayName}
-                        onChange={(e) => setInviteDisplayName(e.target.value)}
-                        required
-                      />
+                      <Input {...registerInvite("displayName")} />
+                      {inviteErrors.displayName && (
+                        <Field.ErrorText>
+                          {inviteErrors.displayName.message}
+                        </Field.ErrorText>
+                      )}
                     </Field.Root>
                     <Select.Root
                       collection={inviteRoleCollection}
                       value={[inviteRole]}
                       onValueChange={(details) =>
-                        setInviteRole(details.value[0] as InviteUserBodyRole)
+                        setInviteValue(
+                          "role",
+                          details.value[0] as UserInviteFormValues["role"],
+                        )
                       }
                     >
                       <Select.Label>ロール</Select.Label>
@@ -394,9 +435,10 @@ export default function AdminUsersPage() {
                           size="sm"
                           onClick={() => {
                             setEditDisplayNameUid(adminUser.uid);
-                            setEditDisplayNameValue(
-                              adminUser.displayName || adminUser.email || "",
-                            );
+                            resetEditDisplayNameForm({
+                              displayName:
+                                adminUser.displayName || adminUser.email || "",
+                            });
                             setEditDisplayNameOpen(true);
                           }}
                         >
@@ -412,7 +454,8 @@ export default function AdminUsersPage() {
                           onClick={() => {
                             setEditRoleUid(adminUser.uid);
                             setEditRoleValue(
-                              adminUser.role as UpdateUserRoleBodyRole,
+                              "role",
+                              adminUser.role as UserEditRoleFormValues["role"],
                             );
                             setEditRoleOpen(true);
                           }}
@@ -482,12 +525,17 @@ export default function AdminUsersPage() {
       {/* ロール編集ダイアログ */}
       <Dialog.Root
         open={editRoleOpen}
-        onOpenChange={(e) => setEditRoleOpen(e.open)}
+        onOpenChange={(e) => {
+          setEditRoleOpen(e.open);
+          if (!e.open) {
+            resetEditRoleForm({ role: "operator" });
+          }
+        }}
       >
         <Dialog.Backdrop />
         <Dialog.Positioner>
           <Dialog.Content asChild>
-            <styled.form onSubmit={handleEditRole}>
+            <styled.form onSubmit={handleEditRoleSubmit(onEditRole)}>
               <Dialog.Header>
                 <Dialog.Title>ロール変更</Dialog.Title>
               </Dialog.Header>
@@ -496,7 +544,10 @@ export default function AdminUsersPage() {
                   collection={editRoleCollection}
                   value={[editRoleValue]}
                   onValueChange={(details) =>
-                    setEditRoleValue(details.value[0] as UpdateUserRoleBodyRole)
+                    setEditRoleValue(
+                      "role",
+                      details.value[0] as UserEditRoleFormValues["role"],
+                    )
                   }
                 >
                   <Select.Label>ロール</Select.Label>
@@ -538,23 +589,31 @@ export default function AdminUsersPage() {
       {/* 表示名編集ダイアログ */}
       <Dialog.Root
         open={editDisplayNameOpen}
-        onOpenChange={(e) => setEditDisplayNameOpen(e.open)}
+        onOpenChange={(e) => {
+          setEditDisplayNameOpen(e.open);
+          if (!e.open) {
+            resetEditDisplayNameForm();
+          }
+        }}
       >
         <Dialog.Backdrop />
         <Dialog.Positioner>
           <Dialog.Content asChild>
-            <styled.form onSubmit={handleEditDisplayName}>
+            <styled.form
+              onSubmit={handleEditDisplayNameSubmit(onEditDisplayName)}
+            >
               <Dialog.Header>
                 <Dialog.Title>表示名変更</Dialog.Title>
               </Dialog.Header>
               <Dialog.Body>
-                <Field.Root>
+                <Field.Root invalid={!!editDisplayNameErrors.displayName}>
                   <Field.Label>表示名</Field.Label>
-                  <Input
-                    value={editDisplayNameValue}
-                    onChange={(e) => setEditDisplayNameValue(e.target.value)}
-                    required
-                  />
+                  <Input {...registerEditDisplayName("displayName")} />
+                  {editDisplayNameErrors.displayName && (
+                    <Field.ErrorText>
+                      {editDisplayNameErrors.displayName.message}
+                    </Field.ErrorText>
+                  )}
                 </Field.Root>
               </Dialog.Body>
               <Dialog.Footer>

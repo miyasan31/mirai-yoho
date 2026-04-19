@@ -1,6 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { Button } from "@/components/ui/button";
 import * as Field from "@/components/ui/field";
@@ -14,33 +16,47 @@ import {
   useUpdateConsultantProfile,
 } from "@/hooks/use-consultant-profile";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
+import {
+  type ProfileFormValues,
+  profileFormSchema,
+} from "./profile-form-schema";
 
 export default function ConsultantProfilePage() {
   const { organizationId } = useOrganizationRouting();
-  const [displayName, setDisplayName] = useState("");
-  const [bio, setBio] = useState("");
-  const [specialties, setSpecialties] = useState("");
-
   const { data, isLoading } = useConsultantProfile();
   const updateProfile = useUpdateConsultantProfile();
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ProfileFormValues>({
+    resolver: valibotResolver(profileFormSchema),
+    defaultValues: {
+      displayName: "",
+      bio: "",
+      specialties: "",
+    },
+  });
 
   useEffect(() => {
     if (data?.data) {
-      setDisplayName(data.data.displayName ?? "");
-      setBio(data.data.bio ?? "");
-      setSpecialties((data.data.specialties ?? []).join(", "));
+      reset({
+        displayName: data.data.displayName ?? "",
+        bio: data.data.bio ?? "",
+        specialties: (data.data.specialties ?? []).join(", "),
+      });
     }
-  }, [data]);
+  }, [data, reset]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (values: ProfileFormValues) => {
     try {
       await updateProfile.mutateAsync({
         organizationId: organizationId ?? "",
         data: {
-          displayName,
-          bio,
-          specialties: specialties
+          displayName: values.displayName,
+          bio: values.bio?.trim() ?? "",
+          specialties: (values.specialties ?? "")
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean),
@@ -99,41 +115,28 @@ export default function ConsultantProfilePage() {
       </styled.div>
       <styled.div shadow="xs" rounded="l2" p="6">
         <styled.form
-          onSubmit={handleSubmit}
+          onSubmit={handleSubmit(onSubmit)}
           display="flex"
           flexDir="column"
           gap="4"
         >
-          <Field.Root required>
+          <Field.Root required invalid={!!errors.displayName}>
             <Field.Label>
               表示名
               <Field.RequiredIndicator />
             </Field.Label>
-            <Input
-              id="displayName"
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              required
-            />
+            <Input id="displayName" type="text" {...register("displayName")} />
+            {errors.displayName && (
+              <Field.ErrorText>{errors.displayName.message}</Field.ErrorText>
+            )}
           </Field.Root>
           <Field.Root>
             <Field.Label>自己紹介</Field.Label>
-            <Textarea
-              id="bio"
-              value={bio}
-              onChange={(e) => setBio(e.target.value)}
-              rows={4}
-            />
+            <Textarea id="bio" {...register("bio")} rows={4} />
           </Field.Root>
           <Field.Root>
             <Field.Label>専門分野</Field.Label>
-            <Input
-              id="specialties"
-              type="text"
-              value={specialties}
-              onChange={(e) => setSpecialties(e.target.value)}
-            />
+            <Input id="specialties" type="text" {...register("specialties")} />
             <Field.HelperText>
               カンマ区切りで入力してください（例: キャリア, メンタルヘルス）
             </Field.HelperText>

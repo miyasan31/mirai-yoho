@@ -6,7 +6,6 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
-import * as v from "valibot";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import * as Field from "@/components/ui/field";
@@ -17,18 +16,10 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useCreateBooking } from "@/hooks/use-booking";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
-
-const bookingSchema = v.object({
-  clientName: v.pipe(v.string(), v.minLength(1, "お名前を入力してください")),
-  clientEmail: v.pipe(
-    v.string(),
-    v.email("メールアドレスの形式が正しくありません"),
-  ),
-  clientPhone: v.pipe(v.string(), v.minLength(1, "電話番号を入力してください")),
-  consultantContent: v.optional(v.string()),
-});
-
-type BookingFormValues = v.InferOutput<typeof bookingSchema>;
+import {
+  type BookingFormValues,
+  bookingFormSchema,
+} from "./booking-form-schema";
 
 export default function BookingPage() {
   const searchParams = useSearchParams();
@@ -44,7 +35,13 @@ export default function BookingPage() {
     handleSubmit,
     formState: { errors },
   } = useForm<BookingFormValues>({
-    resolver: valibotResolver(bookingSchema),
+    resolver: valibotResolver(bookingFormSchema),
+    defaultValues: {
+      clientName: "",
+      clientEmail: "",
+      clientPhone: "",
+      consultantContent: "",
+    },
   });
 
   const createBooking = useCreateBooking();
@@ -77,7 +74,7 @@ export default function BookingPage() {
         clientName: values.clientName,
         clientEmail: values.clientEmail,
         clientPhone: values.clientPhone,
-        consultantContent: values.consultantContent,
+        consultantContent: values.consultantContent?.trim() || undefined,
       },
     });
 

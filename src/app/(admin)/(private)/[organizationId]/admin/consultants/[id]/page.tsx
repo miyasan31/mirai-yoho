@@ -1,9 +1,11 @@
 "use client";
 
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { Button } from "@/components/ui/button";
 import * as Dialog from "@/components/ui/dialog";
@@ -18,16 +20,30 @@ import {
   useUpdateAdminConsultant,
 } from "@/hooks/use-admin-consultants";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
+import {
+  type ConsultantFormValues,
+  consultantFormSchema,
+} from "./consultant-form-schema";
 
 export default function AdminConsultantDetailPage() {
   const params = useParams();
   const router = useRouter();
   const { buildPath, organizationId } = useOrganizationRouting();
   const consultantId = params.id as string;
-  const [displayName, setDisplayName] = useState("");
-  const [bio, setBio] = useState("");
-  const [specialties, setSpecialties] = useState("");
   const [error, setError] = useState("");
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ConsultantFormValues>({
+    resolver: valibotResolver(consultantFormSchema),
+    defaultValues: {
+      displayName: "",
+      bio: "",
+      specialties: "",
+    },
+  });
 
   const { data, isLoading } = useAdminConsultants();
   const updateConsultant = useUpdateAdminConsultant();
@@ -39,11 +55,13 @@ export default function AdminConsultantDetailPage() {
 
   useEffect(() => {
     if (consultant) {
-      setDisplayName(consultant.displayName ?? "");
-      setBio(consultant.bio ?? "");
-      setSpecialties((consultant.specialties ?? []).join(", "));
+      reset({
+        displayName: consultant.displayName ?? "",
+        bio: consultant.bio ?? "",
+        specialties: (consultant.specialties ?? []).join(", "),
+      });
     }
-  }, [consultant]);
+  }, [consultant, reset]);
 
   useEffect(() => {
     if (!isLoading && data && !consultant) {
@@ -51,17 +69,16 @@ export default function AdminConsultantDetailPage() {
     }
   }, [consultant, data, isLoading, router]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (values: ConsultantFormValues) => {
     setError("");
     try {
       await updateConsultant.mutateAsync({
         organizationId: organizationId ?? "",
         id: consultantId,
         data: {
-          displayName,
-          bio,
-          specialties: specialties
+          displayName: values.displayName,
+          bio: values.bio?.trim() ?? "",
+          specialties: (values.specialties ?? "")
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean),
@@ -146,38 +163,25 @@ export default function AdminConsultantDetailPage() {
         相談員の表示名・自己紹介・専門分野を更新し、必要に応じて無効化を行う画面です。
       </Text>
       <styled.form
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         display="flex"
         flexDir="column"
         gap="4"
       >
-        <Field.Root>
+        <Field.Root invalid={!!errors.displayName}>
           <Field.Label>表示名</Field.Label>
-          <Input
-            id="displayName"
-            type="text"
-            value={displayName}
-            onChange={(e) => setDisplayName(e.target.value)}
-            required
-          />
+          <Input id="displayName" type="text" {...register("displayName")} />
+          {errors.displayName && (
+            <Field.ErrorText>{errors.displayName.message}</Field.ErrorText>
+          )}
         </Field.Root>
         <Field.Root>
           <Field.Label>自己紹介</Field.Label>
-          <Textarea
-            id="bio"
-            value={bio}
-            onChange={(e) => setBio(e.target.value)}
-            rows={4}
-          />
+          <Textarea id="bio" {...register("bio")} rows={4} />
         </Field.Root>
         <Field.Root>
           <Field.Label>専門分野（カンマ区切り）</Field.Label>
-          <Input
-            id="specialties"
-            type="text"
-            value={specialties}
-            onChange={(e) => setSpecialties(e.target.value)}
-          />
+          <Input id="specialties" type="text" {...register("specialties")} />
         </Field.Root>
         {error && <Text color="fg.error">{error}</Text>}
         <styled.div display="flex" gap="2">

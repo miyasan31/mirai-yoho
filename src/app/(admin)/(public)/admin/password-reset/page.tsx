@@ -1,26 +1,40 @@
 "use client";
 
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import Link from "next/link";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { Button } from "@/components/ui/button";
 import * as Field from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { useAuth } from "@/hooks/use-auth";
+import {
+  type PasswordResetFormValues,
+  passwordResetFormSchema,
+} from "./password-reset-form-schema";
 
 const SUCCESS_MESSAGE =
   "該当メールアドレスにパスワード再設定リンクを送信しました。メールをご確認ください。";
 
 export default function AdminPasswordResetPage() {
   const { sendPasswordResetEmail } = useAuth();
-  const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<PasswordResetFormValues>({
+    resolver: valibotResolver(passwordResetFormSchema),
+    defaultValues: {
+      email: "",
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (values: PasswordResetFormValues) => {
     if (isSubmitting) {
       return;
     }
@@ -29,7 +43,7 @@ export default function AdminPasswordResetPage() {
     setIsSubmitting(true);
 
     try {
-      await sendPasswordResetEmail(email);
+      await sendPasswordResetEmail(values.email);
       setIsSubmitted(true);
     } catch (submitError) {
       const nextError =
@@ -66,20 +80,17 @@ export default function AdminPasswordResetPage() {
       </styled.div>
 
       <styled.form
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         display="flex"
         flexDir="column"
         gap="4"
       >
-        <Field.Root>
+        <Field.Root invalid={!!errors.email}>
           <Field.Label>メールアドレス</Field.Label>
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+          <Input id="email" type="email" {...register("email")} />
+          {errors.email && (
+            <Field.ErrorText>{errors.email.message}</Field.ErrorText>
+          )}
         </Field.Root>
         {error && <Text color="fg.error">{error}</Text>}
         {isSubmitted && <Text>{SUCCESS_MESSAGE}</Text>}

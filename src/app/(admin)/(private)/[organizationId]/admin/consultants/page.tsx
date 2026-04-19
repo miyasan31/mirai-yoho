@@ -1,9 +1,11 @@
 "use client";
 
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
 import { ActiveStatusBadge } from "@/components/status-badge";
@@ -22,6 +24,10 @@ import { useAdminConsultants } from "@/hooks/use-admin-consultants";
 import { useInviteUser } from "@/hooks/use-admin-users";
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
+import {
+  type ConsultantInviteFormValues,
+  consultantInviteFormSchema,
+} from "./consultant-invite-form-schema";
 
 export default function AdminConsultantsPage() {
   const { buildPath, organizationId } = useOrganizationRouting();
@@ -31,32 +37,40 @@ export default function AdminConsultantsPage() {
   const inviteUser = useInviteUser();
 
   const [inviteOpen, setInviteOpen] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteDisplayName, setInviteDisplayName] = useState("");
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ConsultantInviteFormValues>({
+    resolver: valibotResolver(consultantInviteFormSchema),
+    defaultValues: {
+      displayName: "",
+      email: "",
+    },
+  });
 
   const consultants = data?.data?.consultants ?? [];
   const isAdmin = role === "admin";
 
-  const handleInviteConsultant = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!organizationId || !inviteEmail || !inviteDisplayName.trim()) {
+  const onInviteConsultant = async (values: ConsultantInviteFormValues) => {
+    if (!organizationId) {
       return;
     }
     try {
       await inviteUser.mutateAsync({
         organizationId,
         data: {
-          email: inviteEmail,
-          displayName: inviteDisplayName.trim(),
+          email: values.email,
+          displayName: values.displayName,
           role: "consultant",
         },
       });
       toaster.success({
         title: "成功",
-        description: `${inviteEmail} に招待メールを送信しました`,
+        description: `${values.email} に招待メールを送信しました`,
       });
-      setInviteEmail("");
-      setInviteDisplayName("");
+      reset();
       setInviteOpen(false);
       await queryClient.invalidateQueries({
         queryKey: getGetAdminConsultantsQueryKey(organizationId),
@@ -108,7 +122,12 @@ export default function AdminConsultantsPage() {
         {isAdmin && (
           <Dialog.Root
             open={inviteOpen}
-            onOpenChange={(details) => setInviteOpen(details.open)}
+            onOpenChange={(details) => {
+              setInviteOpen(details.open);
+              if (!details.open) {
+                reset();
+              }
+            }}
           >
             <Dialog.Trigger asChild>
               <Button>
@@ -119,7 +138,7 @@ export default function AdminConsultantsPage() {
             <Dialog.Backdrop />
             <Dialog.Positioner>
               <Dialog.Content asChild>
-                <styled.form onSubmit={handleInviteConsultant}>
+                <styled.form onSubmit={handleSubmit(onInviteConsultant)}>
                   <Dialog.Header>
                     <Dialog.Title>相談員招待</Dialog.Title>
                     <Dialog.Description>
@@ -127,22 +146,23 @@ export default function AdminConsultantsPage() {
                     </Dialog.Description>
                   </Dialog.Header>
                   <Dialog.Body display="flex" flexDir="column" gap="4">
-                    <Field.Root>
+                    <Field.Root invalid={!!errors.displayName}>
                       <Field.Label>表示名</Field.Label>
-                      <Input
-                        value={inviteDisplayName}
-                        onChange={(e) => setInviteDisplayName(e.target.value)}
-                        required
-                      />
+                      <Input {...register("displayName")} />
+                      {errors.displayName && (
+                        <Field.ErrorText>
+                          {errors.displayName.message}
+                        </Field.ErrorText>
+                      )}
                     </Field.Root>
-                    <Field.Root>
+                    <Field.Root invalid={!!errors.email}>
                       <Field.Label>メールアドレス</Field.Label>
-                      <Input
-                        type="email"
-                        value={inviteEmail}
-                        onChange={(e) => setInviteEmail(e.target.value)}
-                        required
-                      />
+                      <Input type="email" {...register("email")} />
+                      {errors.email && (
+                        <Field.ErrorText>
+                          {errors.email.message}
+                        </Field.ErrorText>
+                      )}
                     </Field.Root>
                   </Dialog.Body>
                   <Dialog.Footer>

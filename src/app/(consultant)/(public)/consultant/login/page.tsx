@@ -1,28 +1,39 @@
 "use client";
 
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { UserCircle } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { Button } from "@/components/ui/button";
 import * as Field from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { useAuth } from "@/hooks/use-auth";
+import { type LoginFormValues, loginFormSchema } from "./login-form-schema";
 
 export default function ConsultantLoginPage() {
   const { signIn } = useAuth();
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormValues>({
+    resolver: valibotResolver(loginFormSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (values: LoginFormValues) => {
     setError("");
     try {
-      const result = await signIn(email, password);
+      const result = await signIn(values.email, values.password);
       if (
         !result.currentOrganizationId ||
         result.currentRole !== "consultant"
@@ -56,30 +67,24 @@ export default function ConsultantLoginPage() {
         </Text>
       </styled.div>
       <styled.form
-        onSubmit={handleSubmit}
+        onSubmit={handleSubmit(onSubmit)}
         display="flex"
         flexDir="column"
         gap="4"
       >
-        <Field.Root>
+        <Field.Root invalid={!!errors.email}>
           <Field.Label>メールアドレス</Field.Label>
-          <Input
-            id="email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-          />
+          <Input id="email" type="email" {...register("email")} />
+          {errors.email && (
+            <Field.ErrorText>{errors.email.message}</Field.ErrorText>
+          )}
         </Field.Root>
-        <Field.Root>
+        <Field.Root invalid={!!errors.password}>
           <Field.Label>パスワード</Field.Label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
+          <Input id="password" type="password" {...register("password")} />
+          {errors.password && (
+            <Field.ErrorText>{errors.password.message}</Field.ErrorText>
+          )}
         </Field.Root>
         {error && <Text color="fg.error">{error}</Text>}
         <Button type="submit">ログイン</Button>
