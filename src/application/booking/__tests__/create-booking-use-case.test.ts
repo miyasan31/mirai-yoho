@@ -1,4 +1,3 @@
-import { describe, expect, it, vi } from "vitest";
 import { CreateBookingUseCase } from "@/application/booking/create-booking-use-case";
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IUnitOfWork } from "@/application/shared/unit-of-work";

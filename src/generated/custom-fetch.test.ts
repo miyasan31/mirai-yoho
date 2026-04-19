@@ -1,6 +1,4 @@
 // @vitest-environment jsdom
-import { beforeEach, describe, expect, it, vi } from "vitest";
-
 const { toasterError, toasterSuccess, getAuthToken } = vi.hoisted(() => ({
   toasterError: vi.fn(),
   toasterSuccess: vi.fn(),

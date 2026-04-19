@@ -2,7 +2,6 @@
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { format, parseISO } from "date-fns";
-import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ organizationId: "org-test" }),

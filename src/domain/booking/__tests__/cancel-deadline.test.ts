@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { CancelDeadline } from "@/domain/booking/cancel-deadline";
 
 describe("CancelDeadline", () => {

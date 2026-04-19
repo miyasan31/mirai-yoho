@@ -1,4 +1,3 @@
-import { describe, expect, it } from "vitest";
 import { DomainError } from "@/domain/shared/domain-error";
 import { BreakoutRoom } from "@/domain/zoom-session/breakout-room";
 import { ZoomDailySession } from "@/domain/zoom-session/zoom-daily-session";

@@ -1,4 +1,3 @@
-import { describe, expect, it, vi } from "vitest";
 import { DomainError } from "@/domain/shared/domain-error";
 import { Slot } from "@/domain/slot/slot";
 import { TimeRange } from "@/domain/slot/time-range";

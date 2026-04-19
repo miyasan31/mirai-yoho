@@ -27,7 +27,9 @@ jobs:
       - name: Lint
         run: pnpm lint
       - name: Type check
-        run: pnpm tsc
+        run: |
+          pnpm tsc
+          pnpm tsc:test
       - name: Test
         run: pnpm test
       - name: Build

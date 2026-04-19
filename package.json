@@ -9,6 +9,7 @@
     "build:panda": "panda codegen",
     "start": "next start",
     "tsc": "tsc --noEmit",
+    "tsc:test": "tsc --noEmit -p tsconfig.test.json",
     "lint": "biome check",
     "lint:fix": "biome check --write",
     "format": "biome format --write",
