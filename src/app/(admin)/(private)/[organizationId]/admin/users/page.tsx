@@ -34,7 +34,14 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
-const roleCollection = createListCollection({
+const inviteRoleCollection = createListCollection({
+  items: [
+    { label: "管理者", value: "admin" },
+    { label: "オペレーター", value: "operator" },
+  ],
+});
+
+const editRoleCollection = createListCollection({
   items: [
     { label: "管理者", value: "admin" },
     { label: "相談員", value: "consultant" },
@@ -57,8 +64,7 @@ export default function AdminUsersPage() {
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteRole, setInviteRole] =
-    useState<InviteUserBodyRole>("consultant");
+  const [inviteRole, setInviteRole] = useState<InviteUserBodyRole>("operator");
   const inviteUser = useInviteUser();
 
   const [editRoleOpen, setEditRoleOpen] = useState(false);
@@ -205,7 +211,7 @@ export default function AdminUsersPage() {
                     />
                   </Field.Root>
                   <Select.Root
-                    collection={roleCollection}
+                    collection={inviteRoleCollection}
                     value={[inviteRole]}
                     onValueChange={(details) =>
                       setInviteRole(details.value[0] as InviteUserBodyRole)
@@ -220,7 +226,7 @@ export default function AdminUsersPage() {
                     </Select.Control>
                     <Select.Positioner>
                       <Select.Content>
-                        {roleCollection.items.map((item) => (
+                        {inviteRoleCollection.items.map((item) => (
                           <Select.Item key={item.value} item={item}>
                             <Select.ItemText>{item.label}</Select.ItemText>
                             <Select.ItemIndicator />
@@ -382,7 +388,7 @@ export default function AdminUsersPage() {
             <styled.form onSubmit={handleEditRole}>
               <Dialog.Body>
                 <Select.Root
-                  collection={roleCollection}
+                  collection={editRoleCollection}
                   value={[editRoleValue]}
                   onValueChange={(details) =>
                     setEditRoleValue(details.value[0] as UpdateUserRoleBodyRole)
@@ -397,7 +403,7 @@ export default function AdminUsersPage() {
                   </Select.Control>
                   <Select.Positioner>
                     <Select.Content>
-                      {roleCollection.items.map((item) => (
+                      {editRoleCollection.items.map((item) => (
                         <Select.Item key={item.value} item={item}>
                           <Select.ItemText>{item.label}</Select.ItemText>
                           <Select.ItemIndicator />

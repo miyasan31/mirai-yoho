@@ -10,6 +10,7 @@
     "start": "next start",
     "tsc": "tsc --noEmit",
     "lint": "biome check",
+    "lint:fix": "biome check --write",
     "format": "biome format --write",
     "generate": "orval",
     "setup:firestore-collections": "pnpm dlx tsx --env-file=.env.local scripts/setup-firestore-collections.ts",
