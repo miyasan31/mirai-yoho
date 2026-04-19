@@ -246,6 +246,7 @@ export function SidebarLayout({
               !collapsed && (
                 <Select.Root
                   collection={organizationCollection}
+                  positioning={{ placement: "top" }}
                   value={
                     organizationSwitcher.value
                       ? [organizationSwitcher.value]
