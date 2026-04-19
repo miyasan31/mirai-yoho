@@ -53,6 +53,12 @@ type RouteContext = {
   }>;
 };
 
+interface RequestErrorContext {
+  endpoint?: string;
+  organizationId?: string;
+  consultantId?: string | null;
+}
+
 function jsonError(status: number, code: string, message: string) {
   return NextResponse.json({ code, message }, { status });
 }
@@ -63,6 +69,24 @@ function parseSlug(slug?: string[]) {
 
 function isUserRole(role: unknown): role is UserRole {
   return role === "admin" || role === "operator" || role === "consultant";
+}
+
+function isFirestoreFailedPrecondition(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+
+  const candidate = error as { code?: unknown; message?: unknown };
+  const code = candidate.code;
+  const message =
+    typeof candidate.message === "string" ? candidate.message : "";
+
+  return (
+    code === 9 ||
+    code === "9" ||
+    code === "failed-precondition" ||
+    code === "FAILED_PRECONDITION" ||
+    message.includes("FAILED_PRECONDITION") ||
+    message.includes("requires an index")
+  );
 }
 
 async function listOrganizationMemberships(organizationId: string) {
@@ -146,9 +170,11 @@ async function handleGetPublicConsultants(organizationId: string) {
 }
 
 export async function GET(request: NextRequest, context: RouteContext) {
+  const requestErrorContext: RequestErrorContext = {};
   try {
     const { organizationId, slug } = await context.params;
     const segments = parseSlug(slug);
+    requestErrorContext.organizationId = organizationId;
 
     if (segments.length === 1 && segments[0] === "consultants") {
       return handleGetPublicConsultants(organizationId);
@@ -156,6 +182,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     if (segments.length === 1 && segments[0] === "slots") {
       const consultantId = request.nextUrl.searchParams.get("consultantId");
+      requestErrorContext.endpoint = "GET /organizations/:organizationId/slots";
+      requestErrorContext.consultantId = consultantId;
       const repository = createSlotRepository();
 
       if (consultantId) {
@@ -460,6 +488,19 @@ export async function GET(request: NextRequest, context: RouteContext) {
   } catch (error) {
     if (error instanceof AuthError) {
       return jsonError(error.statusCode, error.code, error.message);
+    }
+    if (isFirestoreFailedPrecondition(error)) {
+      console.error("Firestore failed precondition on slots query", {
+        endpoint: requestErrorContext.endpoint ?? request.nextUrl.pathname,
+        organizationId: requestErrorContext.organizationId,
+        consultantId: requestErrorContext.consultantId,
+        error,
+      });
+      return jsonError(
+        500,
+        "FIRESTORE_INDEX_MISSING",
+        "Required Firestore index is missing. Please deploy Firestore indexes.",
+      );
     }
     return jsonError(500, "INTERNAL_ERROR", "Internal server error");
   }

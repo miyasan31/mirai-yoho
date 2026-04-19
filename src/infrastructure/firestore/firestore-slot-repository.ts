@@ -18,6 +18,24 @@ interface SlotDoc {
   isReserved: boolean;
 }
 
+function isFirestoreFailedPrecondition(error: unknown): boolean {
+  if (typeof error !== "object" || error === null) return false;
+
+  const candidate = error as { code?: unknown; message?: unknown };
+  const code = candidate.code;
+  const message =
+    typeof candidate.message === "string" ? candidate.message : "";
+
+  return (
+    code === 9 ||
+    code === "9" ||
+    code === "failed-precondition" ||
+    code === "FAILED_PRECONDITION" ||
+    message.includes("FAILED_PRECONDITION") ||
+    message.includes("requires an index")
+  );
+}
+
 function toDomain(doc: SlotDoc): Slot {
   return SlotEntity.reconstruct({
     organizationId: doc.organizationId,
@@ -67,19 +85,42 @@ export class FirestoreSlotRepository implements ISlotRepository {
   }
 
   async findAllAvailable(organizationId: string): Promise<Slot[]> {
-    const snapshot = await db
-      .collection(COLLECTION)
-      .where("organizationId", "==", organizationId)
-      .where("isReserved", "==", false)
-      .get();
-    return snapshot.docs
-      .map((doc) => toDomain(doc.data() as SlotDoc))
-      .filter((slot) => slot.getTimeRange().getStartAt() > new Date())
-      .sort(
-        (a, b) =>
-          a.getTimeRange().getStartAt().getTime() -
-          b.getTimeRange().getStartAt().getTime(),
-      );
+    try {
+      const snapshot = await db
+        .collection(COLLECTION)
+        .where("organizationId", "==", organizationId)
+        .where("isReserved", "==", false)
+        .get();
+      return snapshot.docs
+        .map((doc) => toDomain(doc.data() as SlotDoc))
+        .filter((slot) => slot.getTimeRange().getStartAt() > new Date())
+        .sort(
+          (a, b) =>
+            a.getTimeRange().getStartAt().getTime() -
+            b.getTimeRange().getStartAt().getTime(),
+        );
+    } catch (error) {
+      if (!isFirestoreFailedPrecondition(error)) {
+        throw error;
+      }
+
+      const fallbackSnapshot = await db
+        .collection(COLLECTION)
+        .where("organizationId", "==", organizationId)
+        .get();
+      return fallbackSnapshot.docs
+        .map((doc) => toDomain(doc.data() as SlotDoc))
+        .filter(
+          (slot) =>
+            !slot.getIsReserved() &&
+            slot.getTimeRange().getStartAt() > new Date(),
+        )
+        .sort(
+          (a, b) =>
+            a.getTimeRange().getStartAt().getTime() -
+            b.getTimeRange().getStartAt().getTime(),
+        );
+    }
   }
 
   async findByConsultantId(
@@ -105,15 +146,39 @@ export class FirestoreSlotRepository implements ISlotRepository {
     organizationId: string,
     consultantId: string,
   ): Promise<Slot[]> {
-    const snapshot = await db
-      .collection(COLLECTION)
-      .where("organizationId", "==", organizationId)
-      .where("consultantId", "==", consultantId)
-      .where("isReserved", "==", false)
-      .where("startAt", ">", new Date())
-      .orderBy("startAt", "asc")
-      .get();
-    return snapshot.docs.map((doc) => toDomain(doc.data() as SlotDoc));
+    try {
+      const snapshot = await db
+        .collection(COLLECTION)
+        .where("organizationId", "==", organizationId)
+        .where("consultantId", "==", consultantId)
+        .where("isReserved", "==", false)
+        .where("startAt", ">", new Date())
+        .orderBy("startAt", "asc")
+        .get();
+      return snapshot.docs.map((doc) => toDomain(doc.data() as SlotDoc));
+    } catch (error) {
+      if (!isFirestoreFailedPrecondition(error)) {
+        throw error;
+      }
+
+      const fallbackSnapshot = await db
+        .collection(COLLECTION)
+        .where("organizationId", "==", organizationId)
+        .where("consultantId", "==", consultantId)
+        .get();
+      return fallbackSnapshot.docs
+        .map((doc) => toDomain(doc.data() as SlotDoc))
+        .filter(
+          (slot) =>
+            !slot.getIsReserved() &&
+            slot.getTimeRange().getStartAt() > new Date(),
+        )
+        .sort(
+          (a, b) =>
+            a.getTimeRange().getStartAt().getTime() -
+            b.getTimeRange().getStartAt().getTime(),
+        );
+    }
   }
 
   async findAvailableByTimeRange(
@@ -141,16 +206,39 @@ export class FirestoreSlotRepository implements ISlotRepository {
     date: Date,
   ): Promise<Slot[]> {
     const { start, end } = getJstDayRange(date);
-    const snapshot = await db
-      .collection(COLLECTION)
-      .where("organizationId", "==", organizationId)
-      .where("startAt", ">=", start)
-      .where("startAt", "<", end)
-      .orderBy("startAt", "asc")
-      .get();
-    return snapshot.docs
-      .map((doc) => toDomain(doc.data() as SlotDoc))
-      .filter((slot) => !slot.getIsReserved());
+    try {
+      const snapshot = await db
+        .collection(COLLECTION)
+        .where("organizationId", "==", organizationId)
+        .where("startAt", ">=", start)
+        .where("startAt", "<", end)
+        .orderBy("startAt", "asc")
+        .get();
+      return snapshot.docs
+        .map((doc) => toDomain(doc.data() as SlotDoc))
+        .filter((slot) => !slot.getIsReserved());
+    } catch (error) {
+      if (!isFirestoreFailedPrecondition(error)) {
+        throw error;
+      }
+
+      const fallbackSnapshot = await db
+        .collection(COLLECTION)
+        .where("organizationId", "==", organizationId)
+        .get();
+      return fallbackSnapshot.docs
+        .map((doc) => toDomain(doc.data() as SlotDoc))
+        .filter((slot) => {
+          if (slot.getIsReserved()) return false;
+          const startAt = slot.getTimeRange().getStartAt().getTime();
+          return startAt >= start.getTime() && startAt < end.getTime();
+        })
+        .sort(
+          (a, b) =>
+            a.getTimeRange().getStartAt().getTime() -
+            b.getTimeRange().getStartAt().getTime(),
+        );
+    }
   }
 
   async save(slot: Slot): Promise<void> {
