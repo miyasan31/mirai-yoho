@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { styled } from "styled-system/jsx";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
+import { useAuth } from "@/hooks/use-auth";
 import {
   useAdminBookingSettings,
   useUpdateAdminBookingSettings,
@@ -12,8 +13,10 @@ import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export default function AdminSettingsPage() {
   const { organizationId } = useOrganizationRouting();
+  const { role } = useAuth();
   const { data, isLoading } = useAdminBookingSettings();
   const updateBookingSettings = useUpdateAdminBookingSettings();
+  const isReadOnly = role === "operator";
   const [consultantSelectionEnabled, setConsultantSelectionEnabled] = useState<
     boolean | undefined
   >(undefined);
@@ -28,7 +31,11 @@ export default function AdminSettingsPage() {
   }, [consultantSelectionEnabled, data]);
 
   const handleSave = async () => {
-    if (!organizationId || consultantSelectionEnabled === undefined) {
+    if (
+      !organizationId ||
+      consultantSelectionEnabled === undefined ||
+      isReadOnly
+    ) {
       return;
     }
 
@@ -47,6 +54,11 @@ export default function AdminSettingsPage() {
         <Text textStyle="sm" color="fg.muted">
           予約導線など、組織全体の運用ルールを設定する画面です。
         </Text>
+        {isReadOnly && (
+          <Text textStyle="sm" color="fg.muted" mt="2">
+            オペレーター権限では設定を編集できません。閲覧のみ可能です。
+          </Text>
+        )}
       </styled.div>
 
       <styled.div
@@ -72,13 +84,15 @@ export default function AdminSettingsPage() {
           display="flex"
           alignItems="center"
           gap="3"
-          cursor={isLoading ? "not-allowed" : "pointer"}
-          opacity={isLoading ? 0.6 : 1}
+          cursor={isLoading || isReadOnly ? "not-allowed" : "pointer"}
+          opacity={isLoading || isReadOnly ? 0.6 : 1}
         >
           <input
             type="checkbox"
             checked={consultantSelectionEnabled ?? false}
-            disabled={isLoading || updateBookingSettings.isPending}
+            disabled={
+              isLoading || updateBookingSettings.isPending || isReadOnly
+            }
             onChange={(event) =>
               setConsultantSelectionEnabled(event.target.checked)
             }
@@ -96,7 +110,11 @@ export default function AdminSettingsPage() {
             onClick={handleSave}
             loading={updateBookingSettings.isPending}
             loadingText="保存中..."
-            disabled={isLoading || consultantSelectionEnabled === undefined}
+            disabled={
+              isLoading ||
+              consultantSelectionEnabled === undefined ||
+              isReadOnly
+            }
           >
             保存
           </Button>

@@ -59,6 +59,7 @@ vi.mock("@/components/ui/text", () => ({
 }));
 
 const mockMutateAsync = vi.fn();
+const mockUseAuth = vi.fn();
 vi.mock("@/hooks/use-booking-settings", () => ({
   useAdminBookingSettings: () => ({
     data: { data: { consultantSelectionEnabled: true } },
@@ -69,6 +70,9 @@ vi.mock("@/hooks/use-booking-settings", () => ({
     isPending: false,
   }),
 }));
+vi.mock("@/hooks/use-auth", () => ({
+  useAuth: () => mockUseAuth(),
+}));
 
 import AdminSettingsPage from "../page";
 
@@ -76,9 +80,11 @@ describe("AdminSettingsPage", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    mockUseAuth.mockReturnValue({ role: "admin" });
   });
 
   it("updates consultant selection setting", async () => {
+    mockUseAuth.mockReturnValue({ role: "admin" });
     mockMutateAsync.mockResolvedValue({
       data: { consultantSelectionEnabled: false },
     });
@@ -93,5 +99,25 @@ describe("AdminSettingsPage", () => {
       organizationId: "org-test",
       data: { consultantSelectionEnabled: false },
     });
+  });
+
+  it("operator cannot edit settings", async () => {
+    mockUseAuth.mockReturnValue({ role: "operator" });
+    const user = userEvent.setup();
+    render(<AdminSettingsPage />);
+
+    const checkbox = screen.getByRole("checkbox");
+    const saveButton = screen.getByRole("button", { name: "保存" });
+
+    expect(checkbox).toBeDisabled();
+    expect(saveButton).toBeDisabled();
+    expect(
+      screen.getByText(
+        "オペレーター権限では設定を編集できません。閲覧のみ可能です。",
+      ),
+    ).toBeInTheDocument();
+
+    await user.click(saveButton);
+    expect(mockMutateAsync).not.toHaveBeenCalled();
   });
 });

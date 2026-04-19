@@ -1,13 +1,13 @@
 "use client";
 
 import {
-  Building2,
   CalendarDays,
   CreditCard,
   LayoutDashboard,
   Settings,
-  UserCog,
-  Users,
+  UserLock,
+  UserRoundSearch,
+  UserStar,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
@@ -22,11 +22,11 @@ import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 const NAV_ITEMS: Array<Omit<NavItem, "href"> & { path: string }> = [
   { path: "/admin/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
-  { path: "/admin/clients", label: "クライアント管理", icon: Building2 },
   { path: "/admin/bookings", label: "予約管理", icon: CalendarDays },
   { path: "/admin/payments", label: "決済管理", icon: CreditCard },
-  { path: "/admin/consultants", label: "相談員管理", icon: Users },
-  { path: "/admin/users", label: "ユーザー管理", icon: UserCog },
+  { path: "/admin/clients", label: "クライアント管理", icon: UserStar },
+  { path: "/admin/consultants", label: "相談員管理", icon: UserRoundSearch },
+  { path: "/admin/users", label: "ユーザー管理", icon: UserLock },
   { path: "/admin/settings", label: "設定", icon: Settings },
 ];
 
@@ -71,15 +71,12 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
   const visibleItems = useMemo(
     () =>
-      (role === "admin"
-        ? NAV_ITEMS
-        : NAV_ITEMS.filter((item) => item.path !== "/admin/users")
-      ).map((item) => ({
+      NAV_ITEMS.map((item) => ({
         href: buildPath(item.path),
         label: item.label,
         icon: item.icon,
       })),
-    [buildPath, role],
+    [buildPath],
   );
 
   if (isLoading) {

@@ -41,6 +41,10 @@ import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-coll
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
 import { HmacCancelTokenService } from "@/infrastructure/token/cancel-token-service";
+import {
+  canUpdateDisplayNameTarget,
+  isLastAdminSelfDemotion,
+} from "./admin-user-policy";
 
 const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
 const USER_PREFERENCES_COLLECTION = FIRESTORE_COLLECTIONS.userPreferences;
@@ -389,7 +393,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[0] === "admin" &&
       segments[1] === "users"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin");
+      requireOrganizationRole(authUser, organizationId, "admin", "operator");
       const memberships = (
         await listOrganizationMemberships(organizationId)
       ).filter((membership) => isAdminPanelUserRole(membership.role));
@@ -732,7 +736,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       segments[1] === "users" &&
       segments[2] === "invite"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin");
+      requireOrganizationRole(authUser, organizationId, "admin", "operator");
       const body = await request.json();
       const { email, role, displayName } = body;
 
@@ -817,7 +821,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       segments[1] === "users" &&
       segments[3] === "resend-invite"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin");
+      requireOrganizationRole(authUser, organizationId, "admin", "operator");
       const userRecord = await getUser(segments[2]);
       const membership = await getOrganizationMembership(
         organizationId,
@@ -857,7 +861,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       segments[1] === "users" &&
       segments[3] === "reset-password"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin");
+      requireOrganizationRole(authUser, organizationId, "admin", "operator");
       const membership = await getOrganizationMembership(
         organizationId,
         segments[2],
@@ -925,7 +929,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       segments[1] === "settings" &&
       segments[2] === "booking"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      requireOrganizationRole(authUser, organizationId, "admin");
       const body = await request.json();
       if (typeof body.consultantSelectionEnabled !== "boolean") {
         return jsonError(
@@ -987,7 +991,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       segments[1] === "users" &&
       segments[3] === "display-name"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin");
+      const actorMembership = requireOrganizationRole(
+        authUser,
+        organizationId,
+        "admin",
+        "operator",
+      );
       const body = await request.json();
       const membership = await getOrganizationMembership(
         organizationId,
@@ -1002,6 +1011,19 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           400,
           "VALIDATION_ERROR",
           "consultant display name must be updated from consultant profile",
+        );
+      }
+      if (
+        !canUpdateDisplayNameTarget(
+          actorMembership.role,
+          authUser.uid,
+          segments[2],
+        )
+      ) {
+        return jsonError(
+          403,
+          "FORBIDDEN",
+          "operator can only update their own display name",
         );
       }
       if (!body.displayName || typeof body.displayName !== "string") {
@@ -1034,6 +1056,42 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           400,
           "VALIDATION_ERROR",
           "role must be one of: admin, operator",
+        );
+      }
+      const membership = await getOrganizationMembership(
+        organizationId,
+        segments[2],
+      );
+      if (!membership) {
+        return jsonError(404, "NOT_FOUND", "Membership not found");
+      }
+      if (!isAdminPanelUserRole(membership.role)) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "consultant must be managed from consultant management",
+        );
+      }
+      const activeAdminCount = (
+        await listOrganizationMemberships(organizationId)
+      ).filter(
+        (organizationMembership) =>
+          organizationMembership.role === "admin" &&
+          organizationMembership.status === "active",
+      ).length;
+
+      if (
+        isLastAdminSelfDemotion({
+          actorUid: authUser.uid,
+          targetUid: segments[2],
+          nextRole: body.role,
+          activeAdminCount,
+        })
+      ) {
+        return jsonError(
+          400,
+          "LAST_ADMIN_ROLE_CHANGE_FORBIDDEN",
+          "最後の管理者は自分自身をオペレーターに変更できません",
         );
       }
 

@@ -2,12 +2,22 @@
 
 import { createListCollection } from "@ark-ui/react/select";
 import { useQueryClient } from "@tanstack/react-query";
-import { KeyRound, Mail, Pencil, Trash2, UserPlus, Users } from "lucide-react";
+import {
+  Contact,
+  Mail,
+  RotateCcwKey,
+  ShieldAlert,
+  Trash2,
+  UserCircle2,
+  UserPlus,
+  Users,
+} from "lucide-react";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
 import { UserStatusBadge } from "@/components/status-badge";
 import { TableSkeleton } from "@/components/table-skeleton";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import * as Dialog from "@/components/ui/dialog";
 import * as Field from "@/components/ui/field";
@@ -34,6 +44,15 @@ import {
 } from "@/hooks/use-admin-users";
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
+import {
+  canDeleteAdminUser,
+  canEditDisplayName,
+  canEditRole,
+  canInviteAdminUsers,
+  canManageAdminUsers,
+  canResendInvite,
+  canResetPassword,
+} from "./user-permissions";
 
 const inviteRoleCollection = createListCollection({
   items: [
@@ -61,7 +80,7 @@ function isAdminPanelUserRole(role: string): role is "admin" | "operator" {
 
 export default function AdminUsersPage() {
   const { organizationId } = useOrganizationRouting();
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const { data, isLoading } = useAdminUsers();
   const queryKey = useAdminUsersQueryKey();
   const queryClient = useQueryClient();
@@ -90,13 +109,14 @@ export default function AdminUsersPage() {
   const resendUserInvite = useResendUserInvite();
   const resetUserPassword = useResetUserPassword();
 
-  if (!organizationId || role !== "admin") {
+  if (!organizationId || !canManageAdminUsers(role)) {
     return <Text>権限がありません</Text>;
   }
 
   const users = (data?.data?.users ?? []).filter((user) =>
     isAdminPanelUserRole(user.role),
   );
+  const currentUid = user?.uid;
 
   const invalidate = () =>
     queryClient.invalidateQueries({
@@ -222,90 +242,92 @@ export default function AdminUsersPage() {
             ユーザー管理
           </Text>
           <Text textStyle="sm" color="fg.muted">
-            管理者とオペレーターの招待・ロール変更・アカウント管理を行う画面です。
+            管理者とオペレーターの招待・アカウント管理を行う画面です。
           </Text>
         </styled.div>
 
-        <Dialog.Root
-          open={inviteOpen}
-          onOpenChange={(e) => setInviteOpen(e.open)}
-        >
-          <Dialog.Trigger asChild>
-            <Button>
-              <UserPlus size={16} />
-              ユーザー招待
-            </Button>
-          </Dialog.Trigger>
-          <Dialog.Backdrop />
-          <Dialog.Positioner>
-            <Dialog.Content asChild>
-              <styled.form onSubmit={handleInvite}>
-                <Dialog.Header>
-                  <Dialog.Title>ユーザー招待</Dialog.Title>
-                  <Dialog.Description>
-                    メールアドレス・表示名・ロールを入力してください
-                  </Dialog.Description>
-                </Dialog.Header>
-                <Dialog.Body display="flex" flexDir="column" gap="4">
-                  <Field.Root>
-                    <Field.Label>メールアドレス</Field.Label>
-                    <Input
-                      type="email"
-                      value={inviteEmail}
-                      onChange={(e) => setInviteEmail(e.target.value)}
-                      required
-                    />
-                  </Field.Root>
-                  <Field.Root>
-                    <Field.Label>表示名</Field.Label>
-                    <Input
-                      value={inviteDisplayName}
-                      onChange={(e) => setInviteDisplayName(e.target.value)}
-                      required
-                    />
-                  </Field.Root>
-                  <Select.Root
-                    collection={inviteRoleCollection}
-                    value={[inviteRole]}
-                    onValueChange={(details) =>
-                      setInviteRole(details.value[0] as InviteUserBodyRole)
-                    }
-                  >
-                    <Select.Label>ロール</Select.Label>
-                    <Select.Control>
-                      <Select.Trigger>
-                        <Select.ValueText placeholder="ロールを選択" />
-                        <Select.Indicator />
-                      </Select.Trigger>
-                    </Select.Control>
-                    <Select.Positioner>
-                      <Select.Content>
-                        {inviteRoleCollection.items.map((item) => (
-                          <Select.Item key={item.value} item={item}>
-                            <Select.ItemText>{item.label}</Select.ItemText>
-                            <Select.ItemIndicator />
-                          </Select.Item>
-                        ))}
-                      </Select.Content>
-                    </Select.Positioner>
-                  </Select.Root>
-                </Dialog.Body>
-                <Dialog.Footer>
-                  <Dialog.CloseTrigger asChild>
-                    <Button variant="outline">キャンセル</Button>
-                  </Dialog.CloseTrigger>
-                  <Button
-                    type="submit"
-                    loading={inviteUser.isPending}
-                    loadingText="送信中..."
-                  >
-                    招待メール送信
-                  </Button>
-                </Dialog.Footer>
-              </styled.form>
-            </Dialog.Content>
-          </Dialog.Positioner>
-        </Dialog.Root>
+        {canInviteAdminUsers(role) && (
+          <Dialog.Root
+            open={inviteOpen}
+            onOpenChange={(e) => setInviteOpen(e.open)}
+          >
+            <Dialog.Trigger asChild>
+              <Button>
+                <UserPlus size={16} />
+                ユーザー招待
+              </Button>
+            </Dialog.Trigger>
+            <Dialog.Backdrop />
+            <Dialog.Positioner>
+              <Dialog.Content asChild>
+                <styled.form onSubmit={handleInvite}>
+                  <Dialog.Header>
+                    <Dialog.Title>ユーザー招待</Dialog.Title>
+                    <Dialog.Description>
+                      メールアドレス・表示名・ロールを入力してください
+                    </Dialog.Description>
+                  </Dialog.Header>
+                  <Dialog.Body display="flex" flexDir="column" gap="4">
+                    <Field.Root>
+                      <Field.Label>メールアドレス</Field.Label>
+                      <Input
+                        type="email"
+                        value={inviteEmail}
+                        onChange={(e) => setInviteEmail(e.target.value)}
+                        required
+                      />
+                    </Field.Root>
+                    <Field.Root>
+                      <Field.Label>表示名</Field.Label>
+                      <Input
+                        value={inviteDisplayName}
+                        onChange={(e) => setInviteDisplayName(e.target.value)}
+                        required
+                      />
+                    </Field.Root>
+                    <Select.Root
+                      collection={inviteRoleCollection}
+                      value={[inviteRole]}
+                      onValueChange={(details) =>
+                        setInviteRole(details.value[0] as InviteUserBodyRole)
+                      }
+                    >
+                      <Select.Label>ロール</Select.Label>
+                      <Select.Control>
+                        <Select.Trigger>
+                          <Select.ValueText placeholder="ロールを選択" />
+                          <Select.Indicator />
+                        </Select.Trigger>
+                      </Select.Control>
+                      <Select.Positioner>
+                        <Select.Content>
+                          {inviteRoleCollection.items.map((item) => (
+                            <Select.Item key={item.value} item={item}>
+                              <Select.ItemText>{item.label}</Select.ItemText>
+                              <Select.ItemIndicator />
+                            </Select.Item>
+                          ))}
+                        </Select.Content>
+                      </Select.Positioner>
+                    </Select.Root>
+                  </Dialog.Body>
+                  <Dialog.Footer>
+                    <Dialog.CloseTrigger asChild>
+                      <Button variant="outline">キャンセル</Button>
+                    </Dialog.CloseTrigger>
+                    <Button
+                      type="submit"
+                      loading={inviteUser.isPending}
+                      loadingText="送信中..."
+                    >
+                      招待メール送信
+                    </Button>
+                  </Dialog.Footer>
+                </styled.form>
+              </Dialog.Content>
+            </Dialog.Positioner>
+          </Dialog.Root>
+        )}
       </styled.div>
 
       {isLoading ? (
@@ -328,93 +350,129 @@ export default function AdminUsersPage() {
             </Table.Row>
           </Table.Head>
           <Table.Body>
-            {users.map((user) => (
-              <Table.Row key={user.uid}>
-                <Table.Cell>{user.email}</Table.Cell>
-                <Table.Cell>{user.displayName || user.email || "-"}</Table.Cell>
-                <Table.Cell>{ROLE_LABELS[user.role] ?? user.role}</Table.Cell>
+            {users.map((adminUser) => (
+              <Table.Row
+                key={adminUser.uid}
+                bg={currentUid === adminUser.uid ? "blue.50" : undefined}
+              >
+                <Table.Cell>{adminUser.email}</Table.Cell>
                 <Table.Cell>
-                  <UserStatusBadge status={user.status} />
+                  <styled.div display="inline-flex" alignItems="center" gap="2">
+                    <Text as="span">
+                      {adminUser.displayName || adminUser.email || "-"}
+                    </Text>
+                    {currentUid === adminUser.uid && (
+                      <styled.div
+                        display="inline-flex"
+                        alignItems="center"
+                        gap="1"
+                      >
+                        <Badge
+                          variant="subtle"
+                          size="sm"
+                          colorPalette="blue"
+                          aria-label="現在ログイン中のユーザー"
+                        >
+                          あなた
+                        </Badge>
+                        <Tooltip content="現在ログイン中のユーザー">
+                          <styled.span
+                            display="inline-flex"
+                            alignItems="center"
+                            color="fg.muted"
+                          >
+                            <UserCircle2 size={14} />
+                          </styled.span>
+                        </Tooltip>
+                      </styled.div>
+                    )}
+                  </styled.div>
+                </Table.Cell>
+                <Table.Cell>
+                  {ROLE_LABELS[adminUser.role] ?? adminUser.role}
+                </Table.Cell>
+                <Table.Cell>
+                  <UserStatusBadge status={adminUser.status} />
                 </Table.Cell>
                 <Table.Cell>
                   <styled.div display="flex" gap="1">
-                    {(user.role === "admin" || user.role === "operator") && (
+                    {canEditDisplayName(role, user?.uid, adminUser.uid) && (
                       <Tooltip content="表示名変更">
                         <IconButton
                           variant="subtle"
                           size="sm"
                           onClick={() => {
-                            setEditDisplayNameUid(user.uid);
+                            setEditDisplayNameUid(adminUser.uid);
                             setEditDisplayNameValue(
-                              user.displayName || user.email || "",
+                              adminUser.displayName || adminUser.email || "",
                             );
                             setEditDisplayNameOpen(true);
                           }}
                         >
-                          <Pencil size={16} />
+                          <Contact size={16} />
                         </IconButton>
                       </Tooltip>
                     )}
-                    {user.role !== "admin" && user.status !== "pending" && (
+                    {canEditRole(role, adminUser.status) && (
                       <Tooltip content="ロール変更">
                         <IconButton
                           variant="subtle"
                           size="sm"
                           onClick={() => {
-                            setEditRoleUid(user.uid);
+                            setEditRoleUid(adminUser.uid);
                             setEditRoleValue(
-                              user.role as UpdateUserRoleBodyRole,
+                              adminUser.role as UpdateUserRoleBodyRole,
                             );
                             setEditRoleOpen(true);
                           }}
                         >
-                          <Pencil size={16} />
+                          <ShieldAlert size={16} />
                         </IconButton>
                       </Tooltip>
                     )}
-                    {user.role !== "admin" && user.status === "pending" && (
+                    {canResendInvite(role, adminUser.status) && (
                       <Tooltip content="招待メール再送">
                         <IconButton
                           variant="subtle"
                           size="sm"
                           onClick={() =>
-                            handleResendInvite(user.uid, user.email)
+                            handleResendInvite(adminUser.uid, adminUser.email)
                           }
                           loading={
                             resendUserInvite.isPending &&
-                            resendUserInvite.variables?.uid === user.uid
+                            resendUserInvite.variables?.uid === adminUser.uid
                           }
                         >
                           <Mail size={16} />
                         </IconButton>
                       </Tooltip>
                     )}
-                    {user.role !== "admin" && user.status !== "pending" && (
+                    {canResetPassword(role, adminUser.status) && (
                       <Tooltip content="パスワードリセット">
                         <IconButton
                           variant="subtle"
                           size="sm"
                           onClick={() =>
-                            handleResetPassword(user.uid, user.email)
+                            handleResetPassword(adminUser.uid, adminUser.email)
                           }
                           loading={
                             resetUserPassword.isPending &&
-                            resetUserPassword.variables?.uid === user.uid
+                            resetUserPassword.variables?.uid === adminUser.uid
                           }
                         >
-                          <KeyRound size={16} />
+                          <RotateCcwKey size={16} />
                         </IconButton>
                       </Tooltip>
                     )}
-                    {user.role !== "admin" && (
+                    {canDeleteAdminUser(role) && (
                       <Tooltip content="削除">
                         <IconButton
                           variant="subtle"
                           size="sm"
                           colorPalette="red"
                           onClick={() => {
-                            setDeleteUid(user.uid);
-                            setDeleteEmail(user.email);
+                            setDeleteUid(adminUser.uid);
+                            setDeleteEmail(adminUser.email);
                             setDeleteOpen(true);
                           }}
                         >

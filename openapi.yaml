@@ -439,7 +439,7 @@ paths:
   /organizations/{organizationId}/admin/settings/booking:
     get:
       operationId: getAdminBookingSettings
-      summary: 予約設定取得
+      summary: 予約設定取得（管理者・オペレーター）
       tags: [admin]
       security:
         - bearerAuth: []
@@ -454,7 +454,7 @@ paths:
                 $ref: "#/components/schemas/BookingSettings"
     patch:
       operationId: updateAdminBookingSettings
-      summary: 予約設定更新
+      summary: 予約設定更新（管理者のみ）
       tags: [admin]
       security:
         - bearerAuth: []
@@ -547,7 +547,7 @@ paths:
   /organizations/{organizationId}/admin/users:
     get:
       operationId: getAdminUsers
-      summary: 組織ユーザー一覧取得
+      summary: 組織ユーザー一覧取得（管理者・オペレーター）
       tags: [admin]
       security:
         - bearerAuth: []
@@ -570,7 +570,7 @@ paths:
   /organizations/{organizationId}/admin/users/invite:
     post:
       operationId: inviteUser
-      summary: 組織ユーザー招待
+      summary: 組織ユーザー招待（管理者・オペレーター）
       tags: [admin]
       security:
         - bearerAuth: []
@@ -646,7 +646,7 @@ paths:
   /organizations/{organizationId}/admin/users/{uid}/display-name:
     patch:
       operationId: updateUserDisplayName
-      summary: 組織ユーザー表示名更新
+      summary: 組織ユーザー表示名更新（管理者、またはオペレーター本人）
       tags: [admin]
       security:
         - bearerAuth: []
@@ -670,7 +670,7 @@ paths:
   /organizations/{organizationId}/admin/users/{uid}/resend-invite:
     post:
       operationId: resendUserInvite
-      summary: 招待メール再送
+      summary: 招待メール再送（管理者・オペレーター）
       tags: [admin]
       security:
         - bearerAuth: []
@@ -684,7 +684,7 @@ paths:
   /organizations/{organizationId}/admin/users/{uid}/reset-password:
     post:
       operationId: resetUserPassword
-      summary: パスワードリセットメール送信
+      summary: パスワードリセットメール送信（管理者・オペレーター）
       tags: [admin]
       security:
         - bearerAuth: []
