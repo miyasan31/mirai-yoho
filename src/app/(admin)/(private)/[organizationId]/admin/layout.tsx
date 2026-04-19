@@ -22,10 +22,10 @@ import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 const NAV_ITEMS: Array<Omit<NavItem, "href"> & { path: string }> = [
   { path: "/admin/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
-  { path: "/admin/bookings", label: "予約管理", icon: CalendarDays },
-  { path: "/admin/consultants", label: "相談員管理", icon: Users },
-  { path: "/admin/payments", label: "決済管理", icon: CreditCard },
   { path: "/admin/clients", label: "クライアント管理", icon: Building2 },
+  { path: "/admin/bookings", label: "予約管理", icon: CalendarDays },
+  { path: "/admin/payments", label: "決済管理", icon: CreditCard },
+  { path: "/admin/consultants", label: "相談員管理", icon: Users },
   { path: "/admin/users", label: "ユーザー管理", icon: UserCog },
   { path: "/admin/settings", label: "設定", icon: Settings },
 ];
