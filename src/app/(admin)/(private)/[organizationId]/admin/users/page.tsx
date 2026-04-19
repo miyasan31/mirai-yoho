@@ -375,15 +375,6 @@ export default function AdminUsersPage() {
                         >
                           あなた
                         </Badge>
-                        <Tooltip content="現在ログイン中のユーザー">
-                          <styled.span
-                            display="inline-flex"
-                            alignItems="center"
-                            color="fg.muted"
-                          >
-                            <UserCircle2 size={14} />
-                          </styled.span>
-                        </Tooltip>
                       </styled.div>
                     )}
                   </styled.div>
