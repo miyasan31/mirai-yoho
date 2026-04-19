@@ -45,7 +45,6 @@ const inviteRoleCollection = createListCollection({
 const editRoleCollection = createListCollection({
   items: [
     { label: "管理者", value: "admin" },
-    { label: "相談員", value: "consultant" },
     { label: "オペレーター", value: "operator" },
   ],
 });
@@ -55,6 +54,10 @@ const ROLE_LABELS: Record<string, string> = {
   operator: "オペレーター",
   consultant: "相談員",
 };
+
+function isAdminPanelUserRole(role: string): role is "admin" | "operator" {
+  return role === "admin" || role === "operator";
+}
 
 export default function AdminUsersPage() {
   const { organizationId } = useOrganizationRouting();
@@ -72,7 +75,7 @@ export default function AdminUsersPage() {
   const [editRoleOpen, setEditRoleOpen] = useState(false);
   const [editRoleUid, setEditRoleUid] = useState("");
   const [editRoleValue, setEditRoleValue] =
-    useState<UpdateUserRoleBodyRole>("consultant");
+    useState<UpdateUserRoleBodyRole>("operator");
   const updateUserRole = useUpdateUserRole();
   const [editDisplayNameOpen, setEditDisplayNameOpen] = useState(false);
   const [editDisplayNameUid, setEditDisplayNameUid] = useState("");
@@ -91,7 +94,9 @@ export default function AdminUsersPage() {
     return <Text>権限がありません</Text>;
   }
 
-  const users = data?.data?.users ?? [];
+  const users = (data?.data?.users ?? []).filter((user) =>
+    isAdminPanelUserRole(user.role),
+  );
 
   const invalidate = () =>
     queryClient.invalidateQueries({
@@ -209,12 +214,17 @@ export default function AdminUsersPage() {
       <styled.div
         display="flex"
         justifyContent="space-between"
-        alignItems="center"
+        alignItems="flex-start"
         mb="4"
       >
-        <Text as="h1" textStyle="2xl" fontWeight="bold">
-          ユーザー管理
-        </Text>
+        <styled.div>
+          <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+            ユーザー管理
+          </Text>
+          <Text textStyle="sm" color="fg.muted">
+            管理者とオペレーターの招待・ロール変更・アカウント管理を行う画面です。
+          </Text>
+        </styled.div>
 
         <Dialog.Root
           open={inviteOpen}

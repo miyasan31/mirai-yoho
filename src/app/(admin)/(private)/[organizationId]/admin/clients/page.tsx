@@ -16,9 +16,14 @@ export default function AdminClientsPage() {
   if (isLoading) {
     return (
       <styled.div>
-        <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
-          クライアント管理
-        </Text>
+        <styled.div mb="4">
+          <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+            クライアント管理
+          </Text>
+          <Text textStyle="sm" color="fg.muted">
+            利用者情報を一覧で確認し、連絡先や登録内容を参照する画面です。
+          </Text>
+        </styled.div>
         <TableSkeleton columns={4} rows={5} />
       </styled.div>
     );
@@ -26,9 +31,14 @@ export default function AdminClientsPage() {
 
   return (
     <styled.div>
-      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
-        クライアント管理
-      </Text>
+      <styled.div mb="4">
+        <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+          クライアント管理
+        </Text>
+        <Text textStyle="sm" color="fg.muted">
+          利用者情報を一覧で確認し、連絡先や登録内容を参照する画面です。
+        </Text>
+      </styled.div>
       {clients.length === 0 ? (
         <EmptyState
           icon={Building2}

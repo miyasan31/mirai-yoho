@@ -36,9 +36,14 @@ export default function AdminBookingsPage() {
   if (isLoading) {
     return (
       <styled.div>
-        <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
-          予約管理
-        </Text>
+        <styled.div mb="4">
+          <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+            予約管理
+          </Text>
+          <Text textStyle="sm" color="fg.muted">
+            予約の状況を確認し、必要に応じて手動課金を実行する画面です。
+          </Text>
+        </styled.div>
         <TableSkeleton columns={5} rows={5} />
       </styled.div>
     );
@@ -46,9 +51,14 @@ export default function AdminBookingsPage() {
 
   return (
     <styled.div>
-      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
-        予約管理
-      </Text>
+      <styled.div mb="4">
+        <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+          予約管理
+        </Text>
+        <Text textStyle="sm" color="fg.muted">
+          予約の状況を確認し、必要に応じて手動課金を実行する画面です。
+        </Text>
+      </styled.div>
       {bookings.length === 0 ? (
         <EmptyState
           icon={CalendarDays}

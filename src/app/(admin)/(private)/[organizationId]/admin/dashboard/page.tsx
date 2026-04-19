@@ -24,7 +24,14 @@ export default function AdminDashboardPage() {
   if (isLoading) {
     return (
       <styled.div>
-        <Skeleton height="8" width="200px" mb="6" />
+        <styled.div mb="6">
+          <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+            ダッシュボード
+          </Text>
+          <Text textStyle="sm" color="fg.muted">
+            予約・売上・ユーザー状況など、運用状況の全体を確認する画面です。
+          </Text>
+        </styled.div>
         <styled.div
           display="grid"
           gridTemplateColumns="repeat(auto-fit, minmax(200px, 1fr))"
@@ -60,9 +67,14 @@ export default function AdminDashboardPage() {
 
   return (
     <styled.div>
-      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="6">
-        ダッシュボード
-      </Text>
+      <styled.div mb="6">
+        <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+          ダッシュボード
+        </Text>
+        <Text textStyle="sm" color="fg.muted">
+          予約・売上・ユーザー状況など、運用状況の全体を確認する画面です。
+        </Text>
+      </styled.div>
       <styled.div
         display="grid"
         gridTemplateColumns="repeat(auto-fit, minmax(200px, 1fr))"

@@ -59,7 +59,14 @@ export default function ConsultantProfilePage() {
   if (isLoading) {
     return (
       <styled.div maxW="600px">
-        <Skeleton height="8" width="200px" mb="6" />
+        <styled.div mb="4">
+          <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+            プロフィール編集
+          </Text>
+          <Text textStyle="sm" color="fg.muted">
+            利用者に表示される相談員プロフィールを編集・保存する画面です。
+          </Text>
+        </styled.div>
         <styled.div
           display="flex"
           flexDir="column"
@@ -82,9 +89,14 @@ export default function ConsultantProfilePage() {
 
   return (
     <styled.div maxW="600px">
-      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
-        プロフィール編集
-      </Text>
+      <styled.div mb="4">
+        <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+          プロフィール編集
+        </Text>
+        <Text textStyle="sm" color="fg.muted">
+          利用者に表示される相談員プロフィールを編集・保存する画面です。
+        </Text>
+      </styled.div>
       <styled.div shadow="xs" rounded="l2" p="6">
         <styled.form
           onSubmit={handleSubmit}

@@ -40,9 +40,14 @@ export default function AdminSettingsPage() {
 
   return (
     <styled.div maxW="xl" display="flex" flexDirection="column" gap="6">
-      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
-        設定
-      </Text>
+      <styled.div>
+        <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+          設定
+        </Text>
+        <Text textStyle="sm" color="fg.muted">
+          予約導線など、組織全体の運用ルールを設定する画面です。
+        </Text>
+      </styled.div>
 
       <styled.div
         shadow="sm"

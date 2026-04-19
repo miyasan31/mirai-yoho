@@ -58,7 +58,10 @@ export default function ConsultantPasswordResetPage() {
           相談員パスワード再設定
         </Text>
         <Text textStyle="sm" color="fg.muted" mt="2" textAlign="center">
-          登録済みメールアドレスを入力してください
+          相談員アカウントの再設定メールを送信します。
+        </Text>
+        <Text textStyle="sm" color="fg.muted" textAlign="center">
+          登録済みメールアドレスを入力してください。
         </Text>
       </styled.div>
 

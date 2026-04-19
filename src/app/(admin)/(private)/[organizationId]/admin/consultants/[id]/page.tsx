@@ -90,8 +90,13 @@ export default function AdminConsultantDetailPage() {
       <styled.div maxW="600px">
         <styled.div display="flex" alignItems="center" gap="2" mb="4">
           <Skeleton height="5" width="5" rounded="full" />
-          <Skeleton height="8" width="160px" />
+          <Text as="h1" textStyle="2xl" fontWeight="bold">
+            相談員編集
+          </Text>
         </styled.div>
+        <Text textStyle="sm" color="fg.muted" mb="4">
+          相談員の表示名・自己紹介・専門分野を更新し、必要に応じて無効化を行う画面です。
+        </Text>
         <styled.div display="flex" flexDir="column" gap="4">
           <styled.div>
             <Skeleton height="4" width="80px" mb="2" />
@@ -137,6 +142,9 @@ export default function AdminConsultantDetailPage() {
           相談員編集
         </Text>
       </styled.div>
+      <Text textStyle="sm" color="fg.muted" mb="4">
+        相談員の表示名・自己紹介・専門分野を更新し、必要に応じて無効化を行う画面です。
+      </Text>
       <styled.form
         onSubmit={handleSubmit}
         display="flex"

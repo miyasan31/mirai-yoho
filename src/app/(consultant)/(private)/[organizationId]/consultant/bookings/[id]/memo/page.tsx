@@ -67,8 +67,13 @@ export default function ConsultantMemoEditPage() {
       <styled.div maxW="600px">
         <styled.div display="flex" alignItems="center" gap="2" mb="6">
           <Skeleton height="9" width="9" rounded="l2" />
-          <Skeleton height="8" width="120px" />
+          <Text as="h1" textStyle="2xl" fontWeight="bold">
+            メモ編集
+          </Text>
         </styled.div>
+        <Text textStyle="sm" color="fg.muted" mb="4">
+          相談内容や対応履歴など、予約ごとの記録を保存する画面です。
+        </Text>
         <styled.div
           display="flex"
           flexDir="column"
@@ -102,6 +107,9 @@ export default function ConsultantMemoEditPage() {
           メモ編集
         </Text>
       </styled.div>
+      <Text textStyle="sm" color="fg.muted" mb="4">
+        相談内容や対応履歴など、予約ごとの記録を保存する画面です。
+      </Text>
       <styled.div shadow="xs" rounded="l2" p="6">
         <styled.form
           onSubmit={handleSubmit}

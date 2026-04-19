@@ -169,8 +169,14 @@ export default function ConsultantSlotsPage() {
   if (isLoading) {
     return (
       <styled.div>
-        <Skeleton height="8" width="200px" mb="2" />
-        <Skeleton height="4" width="400px" mb="6" />
+        <styled.div mb="6">
+          <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+            スケジュール管理
+          </Text>
+          <Text textStyle="sm" color="fg.muted">
+            カレンダー上で予約可能枠の追加・削除を行う画面です。
+          </Text>
+        </styled.div>
         <Skeleton height="calc(100vh - 200px)" rounded="l2" />
       </styled.div>
     );
@@ -183,7 +189,7 @@ export default function ConsultantSlotsPage() {
           スケジュール管理
         </Text>
         <Text textStyle="sm" color="fg.muted">
-          カレンダー上でドラッグして予約可能枠を追加できます。クリックで削除できます。
+          カレンダー上で予約可能枠の追加・削除を行う画面です。
         </Text>
       </styled.div>
 

@@ -18,9 +18,14 @@ export default function AdminPaymentsPage() {
   if (isLoading) {
     return (
       <styled.div>
-        <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
-          決済管理
-        </Text>
+        <styled.div mb="4">
+          <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+            決済管理
+          </Text>
+          <Text textStyle="sm" color="fg.muted">
+            決済履歴とステータスを確認し、請求処理の状況を把握する画面です。
+          </Text>
+        </styled.div>
         <TableSkeleton columns={7} rows={5} />
       </styled.div>
     );
@@ -28,9 +33,14 @@ export default function AdminPaymentsPage() {
 
   return (
     <styled.div>
-      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
-        決済管理
-      </Text>
+      <styled.div mb="4">
+        <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+          決済管理
+        </Text>
+        <Text textStyle="sm" color="fg.muted">
+          決済履歴とステータスを確認し、請求処理の状況を把握する画面です。
+        </Text>
+      </styled.div>
       {payments.length === 0 ? (
         <EmptyState
           icon={CreditCard}

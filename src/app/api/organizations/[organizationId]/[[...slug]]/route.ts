@@ -44,7 +44,6 @@ import { HmacCancelTokenService } from "@/infrastructure/token/cancel-token-serv
 
 const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
 const USER_PREFERENCES_COLLECTION = FIRESTORE_COLLECTIONS.userPreferences;
-const CONSULTANTS_COLLECTION = FIRESTORE_COLLECTIONS.consultants;
 
 type RouteContext = {
   params: Promise<{
@@ -69,6 +68,10 @@ function parseSlug(slug?: string[]) {
 
 function isUserRole(role: unknown): role is UserRole {
   return role === "admin" || role === "operator" || role === "consultant";
+}
+
+function isAdminPanelUserRole(role: unknown): role is "admin" | "operator" {
+  return role === "admin" || role === "operator";
 }
 
 function isFirestoreFailedPrecondition(error: unknown): boolean {
@@ -134,21 +137,6 @@ async function getAdminOrOperatorDisplayName(uid: string): Promise<string> {
     .get();
   if (!userPreferencesDoc.exists) return "";
   const data = userPreferencesDoc.data() as {
-    displayName?: string;
-  };
-  return data.displayName ?? "";
-}
-
-async function getConsultantDisplayName(
-  organizationId: string,
-  uid: string,
-): Promise<string> {
-  const consultantDoc = await db
-    .collection(CONSULTANTS_COLLECTION)
-    .doc(`${organizationId}_${uid}`)
-    .get();
-  if (!consultantDoc.exists) return "";
-  const data = consultantDoc.data() as {
     displayName?: string;
   };
   return data.displayName ?? "";
@@ -402,15 +390,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[1] === "users"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin");
-      const memberships = await listOrganizationMemberships(organizationId);
+      const memberships = (
+        await listOrganizationMemberships(organizationId)
+      ).filter((membership) => isAdminPanelUserRole(membership.role));
 
       const users = await Promise.all(
         memberships.map(async (membership) => {
           const userRecord = await getUser(membership.uid).catch(() => null);
-          const displayName =
-            membership.role === "consultant"
-              ? await getConsultantDisplayName(organizationId, membership.uid)
-              : await getAdminOrOperatorDisplayName(membership.uid);
+          const displayName = await getAdminOrOperatorDisplayName(
+            membership.uid,
+          );
 
           return {
             uid: membership.uid,
@@ -834,6 +823,16 @@ export async function POST(request: NextRequest, context: RouteContext) {
         organizationId,
         segments[2],
       );
+      if (!membership) {
+        return jsonError(404, "NOT_FOUND", "Membership not found");
+      }
+      if (!isAdminPanelUserRole(membership.role)) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "consultant must be managed from consultant management",
+        );
+      }
 
       if (!userRecord.email) {
         return jsonError(
@@ -845,7 +844,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
       await new ResendEmailService().sendInvitation({
         email: userRecord.email,
-        role: membership?.role ?? "consultant",
+        role: membership.role,
         passwordResetLink: await generatePasswordResetLink(userRecord.email),
       });
 
@@ -859,6 +858,20 @@ export async function POST(request: NextRequest, context: RouteContext) {
       segments[3] === "reset-password"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin");
+      const membership = await getOrganizationMembership(
+        organizationId,
+        segments[2],
+      );
+      if (!membership) {
+        return jsonError(404, "NOT_FOUND", "Membership not found");
+      }
+      if (!isAdminPanelUserRole(membership.role)) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "consultant must be managed from consultant management",
+        );
+      }
       const userRecord = await getUser(segments[2]);
       if (!userRecord.email) {
         return jsonError(
@@ -1016,11 +1029,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     ) {
       requireOrganizationRole(authUser, organizationId, "admin");
       const body = await request.json();
-      if (!isUserRole(body.role)) {
+      if (!isAdminPanelUserRole(body.role)) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
-          "role must be one of: admin, operator, consultant",
+          "role must be one of: admin, operator",
         );
       }
 
@@ -1035,21 +1048,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         },
         { merge: true },
       );
-
-      if (body.role === "consultant") {
-        const repo = createConsultantRepository();
-        const existing = await repo.findById(organizationId, segments[2]);
-        if (!existing) {
-          await repo.save(
-            Consultant.create({
-              organizationId,
-              consultantId: segments[2],
-              profile: ConsultantProfile.create(segments[2], "", []),
-              zoomRoomIds: [],
-            }),
-          );
-        }
-      }
 
       return NextResponse.json({ success: true });
     }
@@ -1187,11 +1185,15 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       if (!membership) {
         return jsonError(404, "NOT_FOUND", "Membership not found");
       }
+      if (!isAdminPanelUserRole(membership.role)) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "consultant must be managed from consultant management",
+        );
+      }
 
       await db.collection(MEMBERSHIP_COLLECTION).doc(membershipId).delete();
-      if (membership.role === "consultant") {
-        await createConsultantRepository().delete(organizationId, segments[2]);
-      }
 
       return NextResponse.json({ success: true });
     }

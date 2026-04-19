@@ -22,7 +22,14 @@ export default function ConsultantBookingsPage() {
   if (isLoading) {
     return (
       <styled.div>
-        <Skeleton height="8" width="120px" mb="4" />
+        <styled.div mb="4">
+          <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+            予約一覧
+          </Text>
+          <Text textStyle="sm" color="fg.muted">
+            担当予約の日時・ステータスを確認し、Zoom参加やメモ編集へ進む画面です。
+          </Text>
+        </styled.div>
         <TableSkeleton columns={5} rows={5} />
       </styled.div>
     );
@@ -30,9 +37,14 @@ export default function ConsultantBookingsPage() {
 
   return (
     <styled.div>
-      <Text as="h1" textStyle="2xl" fontWeight="bold" mb="4">
-        予約一覧
-      </Text>
+      <styled.div mb="4">
+        <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+          予約一覧
+        </Text>
+        <Text textStyle="sm" color="fg.muted">
+          担当予約の日時・ステータスを確認し、Zoom参加やメモ編集へ進む画面です。
+        </Text>
+      </styled.div>
 
       {bookings.length === 0 ? (
         <EmptyState

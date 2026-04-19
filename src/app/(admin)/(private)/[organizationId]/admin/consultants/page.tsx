@@ -72,12 +72,17 @@ export default function AdminConsultantsPage() {
         <styled.div
           display="flex"
           justifyContent="space-between"
-          alignItems="center"
+          alignItems="flex-start"
           mb="4"
         >
-          <Text as="h1" textStyle="2xl" fontWeight="bold">
-            相談員管理
-          </Text>
+          <styled.div>
+            <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+              相談員管理
+            </Text>
+            <Text textStyle="sm" color="fg.muted">
+              相談員の招待・稼働状況の確認・プロフィール編集導線を管理する画面です。
+            </Text>
+          </styled.div>
         </styled.div>
         <TableSkeleton columns={5} rows={5} />
       </styled.div>
@@ -89,12 +94,17 @@ export default function AdminConsultantsPage() {
       <styled.div
         display="flex"
         justifyContent="space-between"
-        alignItems="center"
+        alignItems="flex-start"
         mb="4"
       >
-        <Text as="h1" textStyle="2xl" fontWeight="bold">
-          相談員管理
-        </Text>
+        <styled.div>
+          <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
+            相談員管理
+          </Text>
+          <Text textStyle="sm" color="fg.muted">
+            相談員の招待・稼働状況の確認・プロフィール編集導線を管理する画面です。
+          </Text>
+        </styled.div>
         {isAdmin && (
           <Dialog.Root
             open={inviteOpen}

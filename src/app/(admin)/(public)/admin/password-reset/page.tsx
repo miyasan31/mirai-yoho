@@ -58,7 +58,10 @@ export default function AdminPasswordResetPage() {
           管理者パスワード再設定
         </Text>
         <Text textStyle="sm" color="fg.muted" mt="2" textAlign="center">
-          登録済みメールアドレスを入力してください
+          管理者・オペレーターアカウントの再設定メールを送信します。
+        </Text>
+        <Text textStyle="sm" color="fg.muted" textAlign="center">
+          登録済みメールアドレスを入力してください。
         </Text>
       </styled.div>
 

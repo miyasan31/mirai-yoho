@@ -51,6 +51,9 @@ export default function ConsultantLoginPage() {
         <Text as="h1" textStyle="2xl" fontWeight="bold" mt="3">
           相談員ログイン
         </Text>
+        <Text textStyle="sm" color="fg.muted" mt="2" textAlign="center">
+          相談員向けメニューにログインして予約対応やスケジュール管理を行います。
+        </Text>
       </styled.div>
       <styled.form
         onSubmit={handleSubmit}

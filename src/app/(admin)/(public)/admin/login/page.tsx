@@ -51,6 +51,9 @@ export default function AdminLoginPage() {
         <Text as="h1" textStyle="2xl" fontWeight="bold" mt="3">
           管理者ログイン
         </Text>
+        <Text textStyle="sm" color="fg.muted" mt="2" textAlign="center">
+          管理者・オペレーター向けの管理画面にログインします。
+        </Text>
       </styled.div>
       <styled.form
         onSubmit={handleSubmit}
