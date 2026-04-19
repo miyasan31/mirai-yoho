@@ -570,7 +570,7 @@ paths:
   /organizations/{organizationId}/admin/users/invite:
     post:
       operationId: inviteUser
-      summary: 組織ユーザー招待（管理者・オペレーター）
+      summary: 組織ユーザー招待（管理者・オペレーター・相談員）
       tags: [admin]
       security:
         - bearerAuth: []
@@ -591,7 +591,7 @@ paths:
                   type: string
                 role:
                   type: string
-                  enum: [admin, operator]
+                  enum: [admin, operator, consultant]
       responses:
         "201":
           description: Created
