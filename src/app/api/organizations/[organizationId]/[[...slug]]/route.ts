@@ -31,6 +31,7 @@ import {
 } from "@/infrastructure/container";
 import {
   createUser,
+  deleteUser,
   generatePasswordResetLink,
   getUser,
   getUserByEmail,
@@ -41,9 +42,11 @@ import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-coll
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
 import { HmacCancelTokenService } from "@/infrastructure/token/cancel-token-service";
+import { deleteAdminUserWithAuthCleanup } from "./admin-user-deletion";
 import {
   canUpdateDisplayNameTarget,
   isLastAdminSelfDemotion,
+  validateAdminUserDeletionTarget,
 } from "./admin-user-policy";
 
 const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
@@ -1228,10 +1231,6 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       segments[1] === "users"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin");
-      if (segments[2] === authUser.uid) {
-        return jsonError(400, "VALIDATION_ERROR", "自分自身は削除できません");
-      }
-
       const membershipId = getOrganizationMembershipDocId(
         organizationId,
         segments[2],
@@ -1243,15 +1242,45 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       if (!membership) {
         return jsonError(404, "NOT_FOUND", "Membership not found");
       }
-      if (!isAdminPanelUserRole(membership.role)) {
+      const deletionTargetValidation = validateAdminUserDeletionTarget(
+        authUser.uid,
+        segments[2],
+        membership.role,
+      );
+      if (!deletionTargetValidation.isAllowed) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
-          "consultant must be managed from consultant management",
+          deletionTargetValidation.message ?? "Invalid user delete target",
         );
       }
+      const membershipDocRef = db
+        .collection(MEMBERSHIP_COLLECTION)
+        .doc(membershipId);
+      const membershipDoc = await membershipDocRef.get();
+      const membershipData = membershipDoc.data();
+      if (!membershipData) {
+        return jsonError(404, "NOT_FOUND", "Membership not found");
+      }
 
-      await db.collection(MEMBERSHIP_COLLECTION).doc(membershipId).delete();
+      await deleteAdminUserWithAuthCleanup({
+        uid: segments[2],
+        membershipData,
+        countMembershipsByUid: async (uid) => {
+          const memberships = await db
+            .collection(MEMBERSHIP_COLLECTION)
+            .where("uid", "==", uid)
+            .get();
+          return memberships.size;
+        },
+        deleteMembership: async () => {
+          await membershipDocRef.delete();
+        },
+        restoreMembership: async (restorableMembershipData) => {
+          await membershipDocRef.set(restorableMembershipData);
+        },
+        deleteAuthUser: deleteUser,
+      });
 
       return NextResponse.json({ success: true });
     }

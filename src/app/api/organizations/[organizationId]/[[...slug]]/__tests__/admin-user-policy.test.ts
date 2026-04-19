@@ -1,6 +1,7 @@
 import {
   canUpdateDisplayNameTarget,
   isLastAdminSelfDemotion,
+  validateAdminUserDeletionTarget,
 } from "../admin-user-policy";
 
 describe("admin-user-policy", () => {
@@ -37,5 +38,23 @@ describe("admin-user-policy", () => {
         activeAdminCount: 1,
       }),
     ).toBe(false);
+  });
+
+  it("blocks deleting self from admin users", () => {
+    expect(
+      validateAdminUserDeletionTarget("admin-1", "admin-1", "admin"),
+    ).toEqual({
+      isAllowed: false,
+      message: "自分自身は削除できません",
+    });
+  });
+
+  it("blocks deleting consultant from admin users", () => {
+    expect(
+      validateAdminUserDeletionTarget("admin-1", "consultant-1", "consultant"),
+    ).toEqual({
+      isAllowed: false,
+      message: "consultant must be managed from consultant management",
+    });
   });
 });

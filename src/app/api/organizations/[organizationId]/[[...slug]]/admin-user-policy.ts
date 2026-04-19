@@ -24,3 +24,25 @@ export function isLastAdminSelfDemotion(params: {
     params.activeAdminCount <= 1
   );
 }
+
+export function validateAdminUserDeletionTarget(
+  actorUid: string,
+  targetUid: string,
+  targetRole: UserRole,
+): { isAllowed: boolean; message?: string } {
+  if (actorUid === targetUid) {
+    return {
+      isAllowed: false,
+      message: "自分自身は削除できません",
+    };
+  }
+
+  if (targetRole === "consultant") {
+    return {
+      isAllowed: false,
+      message: "consultant must be managed from consultant management",
+    };
+  }
+
+  return { isAllowed: true };
+}
