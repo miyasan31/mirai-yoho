@@ -228,14 +228,14 @@ export default function AdminUsersPage() {
           </Dialog.Trigger>
           <Dialog.Backdrop />
           <Dialog.Positioner>
-            <Dialog.Content>
-              <Dialog.Header>
-                <Dialog.Title>ユーザー招待</Dialog.Title>
-                <Dialog.Description>
-                  メールアドレス・表示名・ロールを入力してください
-                </Dialog.Description>
-              </Dialog.Header>
+            <Dialog.Content asChild>
               <styled.form onSubmit={handleInvite}>
+                <Dialog.Header>
+                  <Dialog.Title>ユーザー招待</Dialog.Title>
+                  <Dialog.Description>
+                    メールアドレス・表示名・ロールを入力してください
+                  </Dialog.Description>
+                </Dialog.Header>
                 <Dialog.Body display="flex" flexDir="column" gap="4">
                   <Field.Root>
                     <Field.Label>メールアドレス</Field.Label>
@@ -427,11 +427,11 @@ export default function AdminUsersPage() {
       >
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.Header>
-              <Dialog.Title>ロール変更</Dialog.Title>
-            </Dialog.Header>
+          <Dialog.Content asChild>
             <styled.form onSubmit={handleEditRole}>
+              <Dialog.Header>
+                <Dialog.Title>ロール変更</Dialog.Title>
+              </Dialog.Header>
               <Dialog.Body>
                 <Select.Root
                   collection={editRoleCollection}
@@ -483,11 +483,11 @@ export default function AdminUsersPage() {
       >
         <Dialog.Backdrop />
         <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.Header>
-              <Dialog.Title>表示名変更</Dialog.Title>
-            </Dialog.Header>
+          <Dialog.Content asChild>
             <styled.form onSubmit={handleEditDisplayName}>
+              <Dialog.Header>
+                <Dialog.Title>表示名変更</Dialog.Title>
+              </Dialog.Header>
               <Dialog.Body>
                 <Field.Root>
                   <Field.Label>表示名</Field.Label>

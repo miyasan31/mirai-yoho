@@ -45,11 +45,7 @@ export const dialog = defineSlotRecipe({
       color: "fg.muted",
       textStyle: "sm",
     },
-    closeTrigger: {
-      pos: "absolute",
-      top: "3",
-      insetEnd: "3",
-    },
+    closeTrigger: {},
     content: {
       "--dialog-z-index": "zIndex.modal",
       bg: "gray.surface.bg",
@@ -64,7 +60,7 @@ export const dialog = defineSlotRecipe({
       width: "100%",
       zIndex: "calc(var(--dialog-z-index) + var(--layer-index, 0))",
       py: { base: "4", md: "6" },
-      gap: { base: "4", md: "6" },
+      gap: { base: "2", md: "4" },
       _open: {
         animationDuration: "slowest",
       },
@@ -91,7 +87,7 @@ export const dialog = defineSlotRecipe({
       alignItems: "center",
       justifyContent: "flex-end",
       flex: "0",
-      gap: "3",
+      gap: "2",
       px: { base: "4", md: "6" },
     },
   },

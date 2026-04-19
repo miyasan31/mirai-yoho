@@ -108,14 +108,14 @@ export default function AdminConsultantsPage() {
             </Dialog.Trigger>
             <Dialog.Backdrop />
             <Dialog.Positioner>
-              <Dialog.Content>
-                <Dialog.Header>
-                  <Dialog.Title>相談員招待</Dialog.Title>
-                  <Dialog.Description>
-                    相談員として招待するメールアドレスと表示名を入力してください
-                  </Dialog.Description>
-                </Dialog.Header>
+              <Dialog.Content asChild>
                 <styled.form onSubmit={handleInviteConsultant}>
+                  <Dialog.Header>
+                    <Dialog.Title>相談員招待</Dialog.Title>
+                    <Dialog.Description>
+                      相談員として招待するメールアドレスと表示名を入力してください
+                    </Dialog.Description>
+                  </Dialog.Header>
                   <Dialog.Body display="flex" flexDir="column" gap="4">
                     <Field.Root>
                       <Field.Label>表示名</Field.Label>
