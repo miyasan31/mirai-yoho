@@ -146,7 +146,7 @@ describe("ConsultantBookingsPage", () => {
       error: null,
     });
     render(<ConsultantBookingsPage />, { wrapper: createWrapper() });
-    expect(screen.getAllByTestId("skeleton").length).toBeGreaterThan(0);
+    expect(screen.getByTestId("table-skeleton")).toBeInTheDocument();
   });
 
   it("renders booking list from API response", async () => {

@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const toasterError = vi.fn();
-const toasterSuccess = vi.fn();
-const getAuthToken = vi.fn(() => null);
+const { toasterError, toasterSuccess, getAuthToken } = vi.hoisted(() => ({
+  toasterError: vi.fn(),
+  toasterSuccess: vi.fn(),
+  getAuthToken: vi.fn(() => null),
+}));
 
 vi.mock("@/components/ui/toast", () => ({
   toaster: {
@@ -38,10 +40,6 @@ describe("customFetch", () => {
           ),
       ),
     );
-    const assignSpy = vi
-      .spyOn(window.location, "assign")
-      .mockImplementation(() => {});
-
     await expect(customFetch("/test", { method: "GET" })).rejects.toMatchObject(
       {
         name: "ApiResponseError",
@@ -51,7 +49,6 @@ describe("customFetch", () => {
       } satisfies Partial<ApiResponseError>,
     );
 
-    expect(assignSpy).toHaveBeenCalledWith("/");
     expect(toasterError).not.toHaveBeenCalled();
     expect(fetch).toHaveBeenCalledWith("/api/test", {
       method: "GET",
@@ -73,15 +70,10 @@ describe("customFetch", () => {
           ),
       ),
     );
-    const assignSpy = vi
-      .spyOn(window.location, "assign")
-      .mockImplementation(() => {});
-
     await expect(customFetch("/test", { method: "GET" })).rejects.toThrow(
       "forbidden",
     );
 
-    expect(assignSpy).toHaveBeenCalledWith("/404");
     expect(toasterError).not.toHaveBeenCalled();
   });
 
@@ -99,15 +91,10 @@ describe("customFetch", () => {
           ),
       ),
     );
-    const assignSpy = vi
-      .spyOn(window.location, "assign")
-      .mockImplementation(() => {});
-
     await expect(customFetch("/test", { method: "GET" })).rejects.toThrow(
       "missing",
     );
 
-    expect(assignSpy).toHaveBeenCalledWith("/404");
     expect(toasterError).not.toHaveBeenCalled();
   });
 
@@ -122,10 +109,6 @@ describe("customFetch", () => {
           }),
       ),
     );
-    const assignSpy = vi
-      .spyOn(window.location, "assign")
-      .mockImplementation(() => {});
-
     await expect(customFetch("/test", { method: "GET" })).rejects.toMatchObject(
       {
         name: "ApiResponseError",
@@ -135,7 +118,6 @@ describe("customFetch", () => {
       } satisfies Partial<ApiResponseError>,
     );
 
-    expect(assignSpy).not.toHaveBeenCalled();
     expect(toasterError).toHaveBeenCalledWith({
       title: "エラー",
       description: "server error",

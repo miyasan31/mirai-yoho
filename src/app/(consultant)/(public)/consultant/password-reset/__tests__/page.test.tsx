@@ -1,6 +1,11 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mockSendPasswordResetEmail = vi.fn();
@@ -96,14 +101,12 @@ describe("ConsultantPasswordResetPage", () => {
   it("shows success message after submit", async () => {
     mockSendPasswordResetEmail.mockResolvedValueOnce(undefined);
 
-    const user = userEvent.setup();
     render(<ConsultantPasswordResetPage />);
 
-    await user.type(
-      screen.getByLabelText("メールアドレス"),
-      "test@example.com",
-    );
-    await user.click(screen.getByText("再設定メールを送信"));
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "test@example.com" },
+    });
+    fireEvent.click(screen.getByText("再設定メールを送信"));
 
     await waitFor(() => {
       expect(
@@ -119,14 +122,12 @@ describe("ConsultantPasswordResetPage", () => {
       new Error("メール送信に失敗しました。時間をおいて再度お試しください。"),
     );
 
-    const user = userEvent.setup();
     render(<ConsultantPasswordResetPage />);
 
-    await user.type(
-      screen.getByLabelText("メールアドレス"),
-      "test@example.com",
-    );
-    await user.click(screen.getByText("再設定メールを送信"));
+    fireEvent.change(screen.getByRole("textbox"), {
+      target: { value: "test@example.com" },
+    });
+    fireEvent.click(screen.getByText("再設定メールを送信"));
 
     await waitFor(() => {
       expect(
