@@ -582,11 +582,13 @@ paths:
           application/json:
             schema:
               type: object
-              required: [email, role]
+              required: [email, role, displayName]
               properties:
                 email:
                   type: string
                   format: email
+                displayName:
+                  type: string
                 role:
                   type: string
                   enum: [admin, operator, consultant]
@@ -637,6 +639,30 @@ paths:
                 role:
                   type: string
                   enum: [admin, operator, consultant]
+      responses:
+        "200":
+          description: OK
+
+  /organizations/{organizationId}/admin/users/{uid}/display-name:
+    patch:
+      operationId: updateUserDisplayName
+      summary: 組織ユーザー表示名更新
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/UserIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [displayName]
+              properties:
+                displayName:
+                  type: string
       responses:
         "200":
           description: OK
@@ -710,13 +736,15 @@ components:
   schemas:
     AdminUser:
       type: object
-      required: [uid, email, role, status]
+      required: [uid, email, displayName, role, status]
       properties:
         uid:
           type: string
         email:
           type: string
           format: email
+        displayName:
+          type: string
         role:
           type: string
           enum: [admin, operator, consultant]

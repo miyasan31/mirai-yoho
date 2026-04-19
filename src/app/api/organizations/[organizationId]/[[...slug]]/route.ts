@@ -10,7 +10,10 @@ import { Slot } from "@/domain/slot/slot";
 import { isValidSlotRange } from "@/domain/slot/slot-availability";
 import { TimeRange } from "@/domain/slot/time-range";
 import type { UserRole } from "@/infrastructure/auth/auth-types";
-import { getOrganizationMembershipDocId } from "@/infrastructure/auth/load-auth-context";
+import {
+  getOrganizationMembershipDocId,
+  setUserDisplayName,
+} from "@/infrastructure/auth/load-auth-context";
 import { requireOrganizationRole } from "@/infrastructure/auth/require-organization-role";
 import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
@@ -40,6 +43,8 @@ import { ResendEmailService } from "@/infrastructure/resend/resend-email-service
 import { HmacCancelTokenService } from "@/infrastructure/token/cancel-token-service";
 
 const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
+const USER_PREFERENCES_COLLECTION = FIRESTORE_COLLECTIONS.userPreferences;
+const CONSULTANTS_COLLECTION = FIRESTORE_COLLECTIONS.consultants;
 
 type RouteContext = {
   params: Promise<{
@@ -96,6 +101,33 @@ async function getOrganizationMembership(
     role: UserRole;
     status: string;
   };
+}
+
+async function getAdminOrOperatorDisplayName(uid: string): Promise<string> {
+  const userPreferencesDoc = await db
+    .collection(USER_PREFERENCES_COLLECTION)
+    .doc(uid)
+    .get();
+  if (!userPreferencesDoc.exists) return "";
+  const data = userPreferencesDoc.data() as {
+    displayName?: string;
+  };
+  return data.displayName ?? "";
+}
+
+async function getConsultantDisplayName(
+  organizationId: string,
+  uid: string,
+): Promise<string> {
+  const consultantDoc = await db
+    .collection(CONSULTANTS_COLLECTION)
+    .doc(`${organizationId}_${uid}`)
+    .get();
+  if (!consultantDoc.exists) return "";
+  const data = consultantDoc.data() as {
+    displayName?: string;
+  };
+  return data.displayName ?? "";
 }
 
 async function handleGetPublicConsultants(organizationId: string) {
@@ -347,9 +379,15 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const users = await Promise.all(
         memberships.map(async (membership) => {
           const userRecord = await getUser(membership.uid).catch(() => null);
+          const displayName =
+            membership.role === "consultant"
+              ? await getConsultantDisplayName(organizationId, membership.uid)
+              : await getAdminOrOperatorDisplayName(membership.uid);
+
           return {
             uid: membership.uid,
             email: userRecord?.email ?? "",
+            displayName: displayName || userRecord?.email || "",
             role: membership.role,
             status: membership.status === "active" ? "registered" : "pending",
           };
@@ -666,7 +704,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     ) {
       requireOrganizationRole(authUser, organizationId, "admin");
       const body = await request.json();
-      const { email, role } = body;
+      const { email, role, displayName } = body;
 
       if (!email || typeof email !== "string") {
         return jsonError(400, "VALIDATION_ERROR", "email is required");
@@ -676,6 +714,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
           400,
           "VALIDATION_ERROR",
           "role must be one of: admin, operator, consultant",
+        );
+      }
+      if (!displayName || typeof displayName !== "string") {
+        return jsonError(400, "VALIDATION_ERROR", "displayName is required");
+      }
+      const normalizedDisplayName = displayName.trim();
+      if (!normalizedDisplayName) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "displayName must not be empty",
         );
       }
 
@@ -713,11 +762,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
             Consultant.create({
               organizationId,
               consultantId: uid,
-              profile: ConsultantProfile.create(uid, "", []),
+              profile: ConsultantProfile.create(normalizedDisplayName, "", []),
               zoomRoomIds: [],
             }),
           );
         }
+      } else {
+        await setUserDisplayName(uid, normalizedDisplayName);
       }
 
       const passwordResetLink = await generatePasswordResetLink(email);
@@ -873,6 +924,46 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       }
 
       await repo.save(consultant);
+      return NextResponse.json({ success: true });
+    }
+
+    if (
+      segments.length === 4 &&
+      segments[0] === "admin" &&
+      segments[1] === "users" &&
+      segments[3] === "display-name"
+    ) {
+      requireOrganizationRole(authUser, organizationId, "admin");
+      const body = await request.json();
+      const membership = await getOrganizationMembership(
+        organizationId,
+        segments[2],
+      );
+
+      if (!membership) {
+        return jsonError(404, "NOT_FOUND", "Membership not found");
+      }
+      if (membership.role === "consultant") {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "consultant display name must be updated from consultant profile",
+        );
+      }
+      if (!body.displayName || typeof body.displayName !== "string") {
+        return jsonError(400, "VALIDATION_ERROR", "displayName is required");
+      }
+
+      const normalizedDisplayName = body.displayName.trim();
+      if (!normalizedDisplayName) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "displayName must not be empty",
+        );
+      }
+
+      await setUserDisplayName(segments[2], normalizedDisplayName);
       return NextResponse.json({ success: true });
     }
 

@@ -26,6 +26,7 @@ export interface AuthState {
   token: string | null;
   memberships: OrganizationMembership[];
   currentOrganizationId: string | null;
+  currentDisplayName: string | null;
   currentRole: UserRole | null;
   role: UserRole | null;
   isLoading: boolean;
@@ -50,6 +51,9 @@ export function useAuthState(): AuthState {
   const [currentOrganizationId, setCurrentOrganizationIdState] = useState<
     string | null
   >(null);
+  const [currentDisplayName, setCurrentDisplayName] = useState<string | null>(
+    null,
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   const syncAuthContext = useCallback(async (nextUser: User | null) => {
@@ -58,7 +62,12 @@ export function useAuthState(): AuthState {
       setToken(null);
       setMemberships([]);
       setCurrentOrganizationIdState(null);
-      return { memberships: [], currentOrganizationId: null };
+      setCurrentDisplayName(null);
+      return {
+        memberships: [],
+        currentOrganizationId: null,
+        currentDisplayName: null,
+      };
     }
 
     const idTokenResult = await nextUser.getIdTokenResult();
@@ -95,10 +104,12 @@ export function useAuthState(): AuthState {
     const data = (await response.json()) as {
       memberships: OrganizationMembership[];
       currentOrganizationId: string | null;
+      currentDisplayName: string | null;
     };
 
     setMemberships(data.memberships);
     setCurrentOrganizationIdState(data.currentOrganizationId);
+    setCurrentDisplayName(data.currentDisplayName);
     return data;
   }, []);
 
@@ -191,6 +202,7 @@ export function useAuthState(): AuthState {
       token,
       memberships,
       currentOrganizationId,
+      currentDisplayName,
       currentRole,
       role: currentRole,
       isLoading,
@@ -204,6 +216,7 @@ export function useAuthState(): AuthState {
       token,
       memberships,
       currentOrganizationId,
+      currentDisplayName,
       currentRole,
       isLoading,
       signIn,

@@ -29,6 +29,7 @@ import {
   useInviteUser,
   useResendUserInvite,
   useResetUserPassword,
+  useUpdateUserDisplayName,
   useUpdateUserRole,
 } from "@/hooks/use-admin-users";
 import { useAuth } from "@/hooks/use-auth";
@@ -64,6 +65,7 @@ export default function AdminUsersPage() {
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteDisplayName, setInviteDisplayName] = useState("");
   const [inviteRole, setInviteRole] = useState<InviteUserBodyRole>("operator");
   const inviteUser = useInviteUser();
 
@@ -72,6 +74,10 @@ export default function AdminUsersPage() {
   const [editRoleValue, setEditRoleValue] =
     useState<UpdateUserRoleBodyRole>("consultant");
   const updateUserRole = useUpdateUserRole();
+  const [editDisplayNameOpen, setEditDisplayNameOpen] = useState(false);
+  const [editDisplayNameUid, setEditDisplayNameUid] = useState("");
+  const [editDisplayNameValue, setEditDisplayNameValue] = useState("");
+  const updateUserDisplayName = useUpdateUserDisplayName();
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteUid, setDeleteUid] = useState("");
@@ -94,16 +100,24 @@ export default function AdminUsersPage() {
 
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!inviteDisplayName.trim()) {
+      return;
+    }
     try {
       await inviteUser.mutateAsync({
         organizationId,
-        data: { email: inviteEmail, role: inviteRole },
+        data: {
+          email: inviteEmail,
+          displayName: inviteDisplayName.trim(),
+          role: inviteRole,
+        },
       });
       toaster.success({
         title: "成功",
         description: `${inviteEmail} に招待メールを送信しました`,
       });
       setInviteEmail("");
+      setInviteDisplayName("");
       setInviteOpen(false);
       await invalidate();
     } catch {
@@ -124,6 +138,28 @@ export default function AdminUsersPage() {
         description: `ロールを ${ROLE_LABELS[editRoleValue] ?? editRoleValue} に変更しました`,
       });
       setEditRoleOpen(false);
+      await invalidate();
+    } catch {
+      // custom-fetch.ts がエラー Toast を自動表示
+    }
+  };
+
+  const handleEditDisplayName = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editDisplayNameValue.trim()) {
+      return;
+    }
+    try {
+      await updateUserDisplayName.mutateAsync({
+        organizationId,
+        uid: editDisplayNameUid,
+        data: { displayName: editDisplayNameValue.trim() },
+      });
+      toaster.success({
+        title: "成功",
+        description: "表示名を更新しました",
+      });
+      setEditDisplayNameOpen(false);
       await invalidate();
     } catch {
       // custom-fetch.ts がエラー Toast を自動表示
@@ -196,7 +232,7 @@ export default function AdminUsersPage() {
               <Dialog.Header>
                 <Dialog.Title>ユーザー招待</Dialog.Title>
                 <Dialog.Description>
-                  メールアドレスとロールを入力してください
+                  メールアドレス・表示名・ロールを入力してください
                 </Dialog.Description>
               </Dialog.Header>
               <styled.form onSubmit={handleInvite}>
@@ -207,6 +243,14 @@ export default function AdminUsersPage() {
                       type="email"
                       value={inviteEmail}
                       onChange={(e) => setInviteEmail(e.target.value)}
+                      required
+                    />
+                  </Field.Root>
+                  <Field.Root>
+                    <Field.Label>表示名</Field.Label>
+                    <Input
+                      value={inviteDisplayName}
+                      onChange={(e) => setInviteDisplayName(e.target.value)}
                       required
                     />
                   </Field.Root>
@@ -255,7 +299,7 @@ export default function AdminUsersPage() {
       </styled.div>
 
       {isLoading ? (
-        <TableSkeleton columns={4} rows={5} />
+        <TableSkeleton columns={5} rows={5} />
       ) : users.length === 0 ? (
         <EmptyState
           icon={Users}
@@ -267,6 +311,7 @@ export default function AdminUsersPage() {
           <Table.Head>
             <Table.Row>
               <Table.Header>メール</Table.Header>
+              <Table.Header>表示名</Table.Header>
               <Table.Header>ロール</Table.Header>
               <Table.Header>ステータス</Table.Header>
               <Table.Header>操作</Table.Header>
@@ -276,95 +321,96 @@ export default function AdminUsersPage() {
             {users.map((user) => (
               <Table.Row key={user.uid}>
                 <Table.Cell>{user.email}</Table.Cell>
+                <Table.Cell>{user.displayName || user.email || "-"}</Table.Cell>
                 <Table.Cell>{ROLE_LABELS[user.role] ?? user.role}</Table.Cell>
                 <Table.Cell>
                   <UserStatusBadge status={user.status} />
                 </Table.Cell>
                 <Table.Cell>
                   <styled.div display="flex" gap="1">
-                    {user.role === "admin" ? (
-                      <Text textStyle="xs" color="fg.muted">
-                        —
-                      </Text>
-                    ) : user.status === "pending" ? (
-                      <>
-                        <Tooltip content="招待メール再送">
-                          <IconButton
-                            variant="subtle"
-                            size="sm"
-                            onClick={() =>
-                              handleResendInvite(user.uid, user.email)
-                            }
-                            loading={
-                              resendUserInvite.isPending &&
-                              resendUserInvite.variables?.uid === user.uid
-                            }
-                          >
-                            <Mail size={16} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip content="削除">
-                          <IconButton
-                            variant="subtle"
-                            size="sm"
-                            colorPalette="red"
-                            onClick={() => {
-                              setDeleteUid(user.uid);
-                              setDeleteEmail(user.email);
-                              setDeleteOpen(true);
-                            }}
-                          >
-                            <Trash2 size={16} />
-                          </IconButton>
-                        </Tooltip>
-                      </>
-                    ) : (
-                      <>
-                        <Tooltip content="ロール変更">
-                          <IconButton
-                            variant="subtle"
-                            size="sm"
-                            onClick={() => {
-                              setEditRoleUid(user.uid);
-                              setEditRoleValue(
-                                user.role as UpdateUserRoleBodyRole,
-                              );
-                              setEditRoleOpen(true);
-                            }}
-                          >
-                            <Pencil size={16} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip content="パスワードリセット">
-                          <IconButton
-                            variant="subtle"
-                            size="sm"
-                            onClick={() =>
-                              handleResetPassword(user.uid, user.email)
-                            }
-                            loading={
-                              resetUserPassword.isPending &&
-                              resetUserPassword.variables?.uid === user.uid
-                            }
-                          >
-                            <KeyRound size={16} />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip content="削除">
-                          <IconButton
-                            variant="subtle"
-                            size="sm"
-                            colorPalette="red"
-                            onClick={() => {
-                              setDeleteUid(user.uid);
-                              setDeleteEmail(user.email);
-                              setDeleteOpen(true);
-                            }}
-                          >
-                            <Trash2 size={16} />
-                          </IconButton>
-                        </Tooltip>
-                      </>
+                    {(user.role === "admin" || user.role === "operator") && (
+                      <Tooltip content="表示名変更">
+                        <IconButton
+                          variant="subtle"
+                          size="sm"
+                          onClick={() => {
+                            setEditDisplayNameUid(user.uid);
+                            setEditDisplayNameValue(
+                              user.displayName || user.email || "",
+                            );
+                            setEditDisplayNameOpen(true);
+                          }}
+                        >
+                          <Pencil size={16} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {user.role !== "admin" && user.status !== "pending" && (
+                      <Tooltip content="ロール変更">
+                        <IconButton
+                          variant="subtle"
+                          size="sm"
+                          onClick={() => {
+                            setEditRoleUid(user.uid);
+                            setEditRoleValue(
+                              user.role as UpdateUserRoleBodyRole,
+                            );
+                            setEditRoleOpen(true);
+                          }}
+                        >
+                          <Pencil size={16} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {user.role !== "admin" && user.status === "pending" && (
+                      <Tooltip content="招待メール再送">
+                        <IconButton
+                          variant="subtle"
+                          size="sm"
+                          onClick={() =>
+                            handleResendInvite(user.uid, user.email)
+                          }
+                          loading={
+                            resendUserInvite.isPending &&
+                            resendUserInvite.variables?.uid === user.uid
+                          }
+                        >
+                          <Mail size={16} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {user.role !== "admin" && user.status !== "pending" && (
+                      <Tooltip content="パスワードリセット">
+                        <IconButton
+                          variant="subtle"
+                          size="sm"
+                          onClick={() =>
+                            handleResetPassword(user.uid, user.email)
+                          }
+                          loading={
+                            resetUserPassword.isPending &&
+                            resetUserPassword.variables?.uid === user.uid
+                          }
+                        >
+                          <KeyRound size={16} />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {user.role !== "admin" && (
+                      <Tooltip content="削除">
+                        <IconButton
+                          variant="subtle"
+                          size="sm"
+                          colorPalette="red"
+                          onClick={() => {
+                            setDeleteUid(user.uid);
+                            setDeleteEmail(user.email);
+                            setDeleteOpen(true);
+                          }}
+                        >
+                          <Trash2 size={16} />
+                        </IconButton>
+                      </Tooltip>
                     )}
                   </styled.div>
                 </Table.Cell>
@@ -420,6 +466,45 @@ export default function AdminUsersPage() {
                 <Button
                   type="submit"
                   loading={updateUserRole.isPending}
+                  loadingText="変更中..."
+                >
+                  変更する
+                </Button>
+              </Dialog.Footer>
+            </styled.form>
+          </Dialog.Content>
+        </Dialog.Positioner>
+      </Dialog.Root>
+
+      {/* 表示名編集ダイアログ */}
+      <Dialog.Root
+        open={editDisplayNameOpen}
+        onOpenChange={(e) => setEditDisplayNameOpen(e.open)}
+      >
+        <Dialog.Backdrop />
+        <Dialog.Positioner>
+          <Dialog.Content>
+            <Dialog.Header>
+              <Dialog.Title>表示名変更</Dialog.Title>
+            </Dialog.Header>
+            <styled.form onSubmit={handleEditDisplayName}>
+              <Dialog.Body>
+                <Field.Root>
+                  <Field.Label>表示名</Field.Label>
+                  <Input
+                    value={editDisplayNameValue}
+                    onChange={(e) => setEditDisplayNameValue(e.target.value)}
+                    required
+                  />
+                </Field.Root>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <Dialog.CloseTrigger asChild>
+                  <Button variant="outline">キャンセル</Button>
+                </Dialog.CloseTrigger>
+                <Button
+                  type="submit"
+                  loading={updateUserDisplayName.isPending}
                   loadingText="変更中..."
                 >
                   変更する

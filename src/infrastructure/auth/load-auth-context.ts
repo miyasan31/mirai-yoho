@@ -26,6 +26,7 @@ interface OrganizationDoc {
 
 interface UserPreferencesDoc {
   lastOrganizationId?: string;
+  displayName?: string;
 }
 
 interface LoadAuthUserOptions {
@@ -143,6 +144,7 @@ export async function loadAuthUser(
     uid,
     memberships,
     currentOrganizationId,
+    currentDisplayName: userPreferences?.displayName ?? null,
   };
 }
 
@@ -153,6 +155,19 @@ export async function setLastOrganizationId(
   await db.collection(USER_PREFERENCES_COLLECTION).doc(uid).set(
     {
       lastOrganizationId: organizationId,
+      updatedAt: new Date(),
+    },
+    { merge: true },
+  );
+}
+
+export async function setUserDisplayName(
+  uid: string,
+  displayName: string,
+): Promise<void> {
+  await db.collection(USER_PREFERENCES_COLLECTION).doc(uid).set(
+    {
+      displayName,
       updatedAt: new Date(),
     },
     { merge: true },

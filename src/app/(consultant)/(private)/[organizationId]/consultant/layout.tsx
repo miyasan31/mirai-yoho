@@ -28,6 +28,7 @@ export default function ConsultantLayout({
     role,
     memberships,
     currentOrganizationId,
+    currentDisplayName,
     isLoading,
     signOut,
     setCurrentOrganizationId,
@@ -87,6 +88,7 @@ export default function ConsultantLayout({
           replaceOrganization(nextOrganizationId);
         },
       }}
+      currentDisplayName={currentDisplayName ?? user.email ?? "-"}
       onSignOut={signOut}
     >
       {children}

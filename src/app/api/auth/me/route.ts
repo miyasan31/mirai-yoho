@@ -9,6 +9,7 @@ export async function GET(request: Request) {
       uid: authUser.uid,
       memberships: authUser.memberships,
       currentOrganizationId: authUser.currentOrganizationId,
+      currentDisplayName: authUser.currentDisplayName,
     });
   } catch (error) {
     if (error instanceof AuthError) {

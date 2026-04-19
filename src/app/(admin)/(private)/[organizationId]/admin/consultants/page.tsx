@@ -32,25 +32,31 @@ export default function AdminConsultantsPage() {
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteDisplayName, setInviteDisplayName] = useState("");
 
   const consultants = data?.data?.consultants ?? [];
   const isAdmin = role === "admin";
 
   const handleInviteConsultant = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!organizationId || !inviteEmail) {
+    if (!organizationId || !inviteEmail || !inviteDisplayName.trim()) {
       return;
     }
     try {
       await inviteUser.mutateAsync({
         organizationId,
-        data: { email: inviteEmail, role: "consultant" },
+        data: {
+          email: inviteEmail,
+          displayName: inviteDisplayName.trim(),
+          role: "consultant",
+        },
       });
       toaster.success({
         title: "成功",
         description: `${inviteEmail} に招待メールを送信しました`,
       });
       setInviteEmail("");
+      setInviteDisplayName("");
       setInviteOpen(false);
       await queryClient.invalidateQueries({
         queryKey: getGetAdminConsultantsQueryKey(organizationId),
@@ -106,11 +112,19 @@ export default function AdminConsultantsPage() {
                 <Dialog.Header>
                   <Dialog.Title>相談員招待</Dialog.Title>
                   <Dialog.Description>
-                    相談員として招待するメールアドレスを入力してください
+                    相談員として招待するメールアドレスと表示名を入力してください
                   </Dialog.Description>
                 </Dialog.Header>
                 <styled.form onSubmit={handleInviteConsultant}>
-                  <Dialog.Body>
+                  <Dialog.Body display="flex" flexDir="column" gap="4">
+                    <Field.Root>
+                      <Field.Label>表示名</Field.Label>
+                      <Input
+                        value={inviteDisplayName}
+                        onChange={(e) => setInviteDisplayName(e.target.value)}
+                        required
+                      />
+                    </Field.Root>
                     <Field.Root>
                       <Field.Label>メールアドレス</Field.Label>
                       <Input

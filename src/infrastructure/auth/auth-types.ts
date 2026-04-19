@@ -12,4 +12,5 @@ export interface AuthUser {
   uid: string;
   memberships: OrganizationMembership[];
   currentOrganizationId: string | null;
+  currentDisplayName: string | null;
 }

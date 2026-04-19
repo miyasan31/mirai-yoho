@@ -5,6 +5,7 @@ import {
   useInviteUser,
   useResendUserInvite,
   useResetUserPassword,
+  useUpdateUserDisplayName,
   useUpdateUserRole,
 } from "@/generated/api/admin/admin";
 import { useAuth } from "@/hooks/use-auth";
@@ -28,5 +29,6 @@ export {
   useInviteUser,
   useResendUserInvite,
   useResetUserPassword,
+  useUpdateUserDisplayName,
   useUpdateUserRole,
 };

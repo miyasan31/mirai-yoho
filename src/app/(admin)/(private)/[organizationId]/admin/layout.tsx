@@ -36,6 +36,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     role,
     memberships,
     currentOrganizationId,
+    currentDisplayName,
     isLoading,
     signOut,
     setCurrentOrganizationId,
@@ -104,6 +105,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           replaceOrganization(nextOrganizationId);
         },
       }}
+      currentDisplayName={currentDisplayName ?? user.email ?? "-"}
       onSignOut={signOut}
     >
       {children}

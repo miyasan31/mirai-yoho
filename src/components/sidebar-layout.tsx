@@ -27,6 +27,7 @@ export interface SidebarLayoutProps {
   navItems: NavItem[];
   children: ReactNode;
   onSignOut: () => void;
+  currentDisplayName?: string | null;
   organizationSwitcher?: {
     items: Array<{ label: string; value: string }>;
     value: string | null;
@@ -121,6 +122,7 @@ export function SidebarLayout({
   navItems,
   children,
   onSignOut,
+  currentDisplayName,
   organizationSwitcher,
 }: SidebarLayoutProps) {
   const pathname = usePathname();
@@ -244,40 +246,87 @@ export function SidebarLayout({
             {organizationSwitcher &&
               organizationSwitcher.items.length > 0 &&
               !collapsed && (
-                <Select.Root
-                  collection={organizationCollection}
-                  positioning={{ placement: "top" }}
-                  value={
-                    organizationSwitcher.value
-                      ? [organizationSwitcher.value]
-                      : undefined
-                  }
-                  onValueChange={(details) => {
-                    const nextOrganizationId = details.value[0];
-                    if (nextOrganizationId) {
-                      organizationSwitcher.onChange(nextOrganizationId);
-                    }
-                  }}
+                <styled.div
+                  px="3"
+                  py="2"
+                  rounded="l2"
+                  bg="bg.default"
+                  borderWidth="1px"
+                  borderColor="border"
+                  display="flex"
+                  flexDir="column"
+                  gap="1"
                 >
-                  <Select.Label>組織</Select.Label>
-                  <Select.Control>
-                    <Select.Trigger>
-                      <Select.ValueText placeholder="組織を選択" />
-                      <Select.Indicator />
-                    </Select.Trigger>
-                  </Select.Control>
-                  <Select.Positioner>
-                    <Select.Content>
-                      {organizationSwitcher.items.map((item) => (
-                        <Select.Item key={item.value} item={item}>
-                          <Select.ItemText>{item.label}</Select.ItemText>
-                          <Select.ItemIndicator />
-                        </Select.Item>
-                      ))}
-                    </Select.Content>
-                  </Select.Positioner>
-                </Select.Root>
+                  <Select.Root
+                    collection={organizationCollection}
+                    positioning={{ placement: "top" }}
+                    value={
+                      organizationSwitcher.value
+                        ? [organizationSwitcher.value]
+                        : undefined
+                    }
+                    onValueChange={(details) => {
+                      const nextOrganizationId = details.value[0];
+                      if (nextOrganizationId) {
+                        organizationSwitcher.onChange(nextOrganizationId);
+                      }
+                    }}
+                  >
+                    <Select.Label
+                      textStyle="xs"
+                      color="fg.muted"
+                      fontWeight="normal"
+                    >
+                      組織
+                    </Select.Label>
+                    <Select.Control>
+                      <Select.Trigger>
+                        <Select.ValueText placeholder="組織を選択" />
+                        <Select.Indicator />
+                      </Select.Trigger>
+                    </Select.Control>
+                    <Select.Positioner>
+                      <Select.Content>
+                        {organizationSwitcher.items.map((item) => (
+                          <Select.Item key={item.value} item={item}>
+                            <Select.ItemText>{item.label}</Select.ItemText>
+                            <Select.ItemIndicator />
+                          </Select.Item>
+                        ))}
+                      </Select.Content>
+                    </Select.Positioner>
+                  </Select.Root>
+                </styled.div>
               )}
+
+            {!collapsed && currentDisplayName && (
+              <styled.div
+                px="3"
+                py="2"
+                rounded="l2"
+                bg="bg.default"
+                borderWidth="1px"
+                borderColor="border"
+                display="flex"
+                flexDir="column"
+                gap="1"
+                title={currentDisplayName}
+              >
+                <Text textStyle="xs" color="fg.muted">
+                  表示名
+                </Text>
+                <Text
+                  textStyle="sm"
+                  fontWeight="medium"
+                  whiteSpace="nowrap"
+                  overflow="hidden"
+                  textOverflow="ellipsis"
+                >
+                  {currentDisplayName}
+                </Text>
+              </styled.div>
+            )}
+
             <Tooltip
               content="ログアウト"
               showArrow
