@@ -244,6 +244,31 @@ describe("BookingPage", () => {
     });
   });
 
+  it("handles API failure without unhandled rejection", async () => {
+    mockMutateAsync.mockRejectedValue(
+      new Error("Cannot reserve a slot in the past"),
+    );
+
+    const user = userEvent.setup();
+    render(<BookingPage />);
+
+    await user.type(screen.getByPlaceholderText("山田 太郎"), "テスト太郎");
+    await user.type(
+      screen.getByPlaceholderText("example@email.com"),
+      "test@example.com",
+    );
+    await user.type(
+      screen.getByPlaceholderText("090-1234-5678"),
+      "090-0000-0000",
+    );
+    await user.click(screen.getByText("お支払いへ進む"));
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalled();
+      expect(mockPush).not.toHaveBeenCalled();
+    });
+  });
+
   it("submits the form with startDatetime/endDatetime when consultant is auto assigned", async () => {
     mockMutateAsync.mockResolvedValue({
       data: {

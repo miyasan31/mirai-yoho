@@ -48,6 +48,7 @@ import {
   isLastAdminSelfDemotion,
   validateAdminUserDeletionTarget,
 } from "./admin-user-policy";
+import { logUnexpectedPostError, mapApiError } from "./api-error-mapper";
 
 const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
 const USER_PREFERENCES_COLLECTION = FIRESTORE_COLLECTIONS.userPreferences;
@@ -503,9 +504,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
+  const postErrorContext = {
+    endpoint: `POST ${request.nextUrl.pathname}`,
+    organizationId: "unknown",
+    segments: [] as string[],
+  };
+
   try {
     const { organizationId, slug } = await context.params;
     const segments = parseSlug(slug);
+    postErrorContext.organizationId = organizationId;
+    postErrorContext.segments = segments;
 
     if (segments.length === 1 && segments[0] === "bookings") {
       const body = await request.json();
@@ -910,13 +919,9 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     return jsonError(404, "NOT_FOUND", "Endpoint not found");
   } catch (error) {
-    if (error instanceof AuthError) {
-      return jsonError(error.statusCode, error.code, error.message);
-    }
-    if (error instanceof DomainError) {
-      return jsonError(400, error.code, error.message);
-    }
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    logUnexpectedPostError(error, postErrorContext);
+    const mappedError = mapApiError(error);
+    return jsonError(mappedError.status, mappedError.code, mappedError.message);
   }
 }
 

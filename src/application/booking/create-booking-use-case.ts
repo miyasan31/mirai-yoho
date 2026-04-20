@@ -1,14 +1,15 @@
+import { AppError } from "@/application/shared/app-error";
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IUnitOfWork } from "@/application/shared/unit-of-work";
 import type { IZoomService } from "@/application/shared/zoom-service";
 import { Booking } from "@/domain/booking/booking";
-import type { BookingConfirmedEvent } from "@/domain/booking/booking-events";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
 import { Client } from "@/domain/client/client";
 import type { IClientRepository } from "@/domain/client/client-repository";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
+import { DomainError } from "@/domain/shared/domain-error";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import { ZoomDailySession } from "@/domain/zoom-session/zoom-daily-session";
 import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
@@ -105,7 +106,7 @@ export class CreateBookingUseCase {
       slot.getConsultantId(),
     );
     if (!consultant) {
-      throw new Error("Consultant not found");
+      throw new DomainError("CONSULTANT_NOT_FOUND", "Consultant not found");
     }
     const consultantName = consultant.getProfile().getDisplayName();
 
@@ -117,37 +118,64 @@ export class CreateBookingUseCase {
 
     let session: ZoomDailySession;
 
-    if (existingSession) {
-      session = existingSession;
-      session.assignParticipant(
-        slot.getConsultantId(),
-        consultantName,
-        input.clientEmail,
+    try {
+      if (existingSession) {
+        session = existingSession;
+        session.assignParticipant(
+          slot.getConsultantId(),
+          consultantName,
+          input.clientEmail,
+        );
+        await this.zoomService.updateBreakoutRooms({
+          meetingId: session.getZoomMeetingId(),
+          breakoutRooms: toBreakoutRoomParams(session),
+        });
+      } else {
+        session = ZoomDailySession.create({
+          organizationId: input.organizationId,
+          sessionId: crypto.randomUUID(),
+          sessionDate,
+        });
+        session.assignParticipant(
+          slot.getConsultantId(),
+          consultantName,
+          input.clientEmail,
+        );
+        const { meetingId, joinUrl } =
+          await this.zoomService.createDailyMeeting({
+            sessionDate,
+            breakoutRooms: toBreakoutRoomParams(session),
+          });
+        session.setMeetingDetails(meetingId, joinUrl);
+      }
+    } catch {
+      throw new AppError(
+        502,
+        "ZOOM_INTEGRATION_ERROR",
+        "Zoom integration failed. Please try again later.",
       );
-      await this.zoomService.updateBreakoutRooms({
-        meetingId: session.getZoomMeetingId(),
-        breakoutRooms: toBreakoutRoomParams(session),
-      });
-    } else {
-      session = ZoomDailySession.create({
-        organizationId: input.organizationId,
-        sessionId: crypto.randomUUID(),
-        sessionDate,
-      });
-      session.assignParticipant(
-        slot.getConsultantId(),
-        consultantName,
-        input.clientEmail,
-      );
-      const { meetingId, joinUrl } = await this.zoomService.createDailyMeeting({
-        sessionDate,
-        breakoutRooms: toBreakoutRoomParams(session),
-      });
-      session.setMeetingDetails(meetingId, joinUrl);
     }
 
     const zoomUrl = ZoomUrl.create(session.getJoinUrl());
     booking.confirm(zoomUrl);
+
+    try {
+      await this.emailService.sendBookingConfirmation({
+        clientEmail: input.clientEmail,
+        clientName: input.clientName,
+        consultantName,
+        zoomUrl: session.getJoinUrl(),
+        startDatetime: booking.getStartDatetime(),
+        bookingId,
+      });
+    } catch {
+      throw new AppError(
+        502,
+        "EMAIL_DELIVERY_ERROR",
+        "Failed to send booking confirmation email. Please try again later.",
+      );
+    }
+    booking.pullDomainEvents();
 
     await this.unitOfWork.runInTransaction(async () => {
       await this.clientRepository.save(client);
@@ -155,21 +183,6 @@ export class CreateBookingUseCase {
       await this.bookingRepository.save(booking);
       await this.zoomDailySessionRepository.save(session);
     });
-
-    const events = booking.pullDomainEvents();
-    for (const event of events) {
-      if (event.eventName === "BookingConfirmed") {
-        const e = event as BookingConfirmedEvent;
-        await this.emailService.sendBookingConfirmation({
-          clientEmail: input.clientEmail,
-          clientName: input.clientName,
-          consultantName: consultantName,
-          zoomUrl: e.payload.zoomUrl,
-          startDatetime: e.payload.startDatetime,
-          bookingId: e.payload.bookingId,
-        });
-      }
-    }
 
     return { bookingId, zoomUrl: session.getJoinUrl() };
   }

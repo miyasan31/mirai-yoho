@@ -65,24 +65,28 @@ export default function BookingPage() {
 
   const onSubmit = async (values: BookingFormValues) => {
     if (!organizationId) return;
-    const result = await createBooking.mutateAsync({
-      organizationId,
-      data: {
-        slotId: slotId ?? undefined,
-        startDatetime: startDatetime ?? undefined,
-        endDatetime: endDatetime ?? undefined,
-        clientName: values.clientName,
-        clientEmail: values.clientEmail,
-        clientPhone: values.clientPhone,
-        consultantContent: values.consultantContent?.trim() || undefined,
-      },
-    });
+    try {
+      const result = await createBooking.mutateAsync({
+        organizationId,
+        data: {
+          slotId: slotId ?? undefined,
+          startDatetime: startDatetime ?? undefined,
+          endDatetime: endDatetime ?? undefined,
+          clientName: values.clientName,
+          clientEmail: values.clientEmail,
+          clientPhone: values.clientPhone,
+          consultantContent: values.consultantContent?.trim() || undefined,
+        },
+      });
 
-    const responseData = result.data;
-    if ("bookingId" in responseData) {
-      router.push(
-        buildPath(`/booking/payment?bookingId=${responseData.bookingId}`),
-      );
+      const responseData = result.data;
+      if ("bookingId" in responseData) {
+        router.push(
+          buildPath(`/booking/payment?bookingId=${responseData.bookingId}`),
+        );
+      }
+    } catch {
+      // customFetch already displays a toast; prevent unhandled promise rejection here.
     }
   };
 

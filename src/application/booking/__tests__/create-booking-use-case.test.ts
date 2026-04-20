@@ -212,17 +212,26 @@ class InMemoryConsultantRepository implements IConsultantRepository {
   async delete(_organizationId: string, _consultantId: string): Promise<void> {}
 }
 
-function createUseCase(slots: Slot[]) {
+function createUseCase(
+  slots: Slot[],
+  options?: {
+    consultants?: Consultant[];
+    zoomService?: IZoomService;
+    emailService?: IEmailService;
+  },
+) {
   const slotRepository = new InMemorySlotRepository(slots);
   const clientRepository = new InMemoryClientRepository();
   const bookingRepository = new InMemoryBookingRepository();
   const zoomDailySessionRepository = new InMemoryZoomDailySessionRepository();
   const consultantRepository = new InMemoryConsultantRepository([
-    createConsultant("consultant-1", "田中"),
-    createConsultant("consultant-2", "佐藤"),
+    ...(options?.consultants ?? [
+      createConsultant("consultant-1", "田中"),
+      createConsultant("consultant-2", "佐藤"),
+    ]),
   ]);
 
-  const zoomService: IZoomService = {
+  const defaultZoomService: IZoomService = {
     createDailyMeeting: vi.fn().mockResolvedValue({
       meetingId: "meeting-1",
       joinUrl: "https://zoom.us/j/meeting-1",
@@ -234,7 +243,7 @@ function createUseCase(slots: Slot[]) {
       await fn();
     },
   };
-  const emailService: IEmailService = {
+  const defaultEmailService: IEmailService = {
     sendBookingConfirmation: vi.fn().mockResolvedValue(undefined),
     sendBookingCancellation: vi.fn().mockResolvedValue(undefined),
     sendPaymentReceipt: vi.fn().mockResolvedValue(undefined),
@@ -247,13 +256,14 @@ function createUseCase(slots: Slot[]) {
       slotRepository,
       clientRepository,
       bookingRepository,
-      zoomService,
+      options?.zoomService ?? defaultZoomService,
       unitOfWork,
-      emailService,
+      options?.emailService ?? defaultEmailService,
       zoomDailySessionRepository,
       consultantRepository,
     ),
     bookingRepository,
+    clientRepository,
   };
 }
 
@@ -361,5 +371,104 @@ describe("CreateBookingUseCase", () => {
         clientPhone: "090-1234-5678",
       }),
     ).rejects.toThrow("Slot is no longer available");
+  });
+
+  it("throws domain error when consultant cannot be resolved", async () => {
+    const { useCase } = createUseCase(
+      [
+        createSlot(
+          "slot-1",
+          "consultant-missing",
+          "2026-05-01T10:00:00.000Z",
+          "2026-05-01T10:30:00.000Z",
+        ),
+      ],
+      { consultants: [] },
+    );
+
+    await expect(
+      useCase.execute({
+        organizationId: ORGANIZATION_ID,
+        slotId: "slot-1",
+        clientName: "山田太郎",
+        clientEmail: "taro@example.com",
+        clientPhone: "090-1234-5678",
+      }),
+    ).rejects.toMatchObject({
+      code: "CONSULTANT_NOT_FOUND",
+    });
+  });
+
+  it("throws app error and does not persist booking when zoom integration fails", async () => {
+    const zoomService: IZoomService = {
+      createDailyMeeting: vi.fn().mockRejectedValue(new Error("zoom error")),
+      updateBreakoutRooms: vi.fn().mockResolvedValue(undefined),
+    };
+    const { useCase, bookingRepository, clientRepository } = createUseCase(
+      [
+        createSlot(
+          "slot-1",
+          "consultant-1",
+          "2026-05-01T10:00:00.000Z",
+          "2026-05-01T10:30:00.000Z",
+        ),
+      ],
+      { zoomService },
+    );
+
+    await expect(
+      useCase.execute({
+        organizationId: ORGANIZATION_ID,
+        slotId: "slot-1",
+        clientName: "山田太郎",
+        clientEmail: "taro@example.com",
+        clientPhone: "090-1234-5678",
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 502,
+      code: "ZOOM_INTEGRATION_ERROR",
+    });
+
+    expect(bookingRepository.bookings).toHaveLength(0);
+    expect(clientRepository.clients).toHaveLength(0);
+  });
+
+  it("throws app error and does not persist booking when email delivery fails", async () => {
+    const emailService: IEmailService = {
+      sendBookingConfirmation: vi
+        .fn()
+        .mockRejectedValue(new Error("email delivery failed")),
+      sendBookingCancellation: vi.fn().mockResolvedValue(undefined),
+      sendPaymentReceipt: vi.fn().mockResolvedValue(undefined),
+      sendInvitation: vi.fn().mockResolvedValue(undefined),
+      sendPasswordReset: vi.fn().mockResolvedValue(undefined),
+    };
+    const { useCase, bookingRepository, clientRepository } = createUseCase(
+      [
+        createSlot(
+          "slot-1",
+          "consultant-1",
+          "2026-05-01T10:00:00.000Z",
+          "2026-05-01T10:30:00.000Z",
+        ),
+      ],
+      { emailService },
+    );
+
+    await expect(
+      useCase.execute({
+        organizationId: ORGANIZATION_ID,
+        slotId: "slot-1",
+        clientName: "山田太郎",
+        clientEmail: "taro@example.com",
+        clientPhone: "090-1234-5678",
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 502,
+      code: "EMAIL_DELIVERY_ERROR",
+    });
+
+    expect(bookingRepository.bookings).toHaveLength(0);
+    expect(clientRepository.clients).toHaveLength(0);
   });
 });

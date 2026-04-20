@@ -27,13 +27,14 @@ function toDomain(doc: ClientDoc): Client {
 }
 
 function toFirestore(client: Client): ClientDoc {
+  const memo = client.getMemo();
   return {
     organizationId: client.getOrganizationId(),
     clientId: client.getClientId(),
     name: client.getName(),
     email: client.getEmail(),
     phone: client.getPhone(),
-    memo: client.getMemo(),
+    ...(memo !== undefined ? { memo } : {}),
   };
 }
 

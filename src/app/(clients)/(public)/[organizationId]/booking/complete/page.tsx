@@ -41,7 +41,7 @@ export default function BookingCompletePage() {
       {bookingId && (
         <Tooltip content={bookingId}>
           <Text textStyle="sm" color="fg.muted" mb="4" cursor="default">
-            予約ID: {bookingId.slice(0, 8)}...
+            予約ID: {bookingId}
           </Text>
         </Tooltip>
       )}
