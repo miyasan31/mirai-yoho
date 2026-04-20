@@ -9,6 +9,7 @@ import { TruncatedId } from "@/components/truncated-id";
 import { Button } from "@/components/ui/button";
 import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
+import { Tooltip } from "@/components/ui/tooltip";
 import { useAdminBookings } from "@/hooks/use-admin-bookings";
 import { useChargePayment } from "@/hooks/use-booking";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
@@ -19,6 +20,14 @@ export default function AdminBookingsPage() {
   const chargePayment = useChargePayment();
 
   const bookings = data?.data?.bookings ?? [];
+  const formatBookingDatetime = (value: string) =>
+    new Date(value).toLocaleString("ja-JP", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
 
   const handleCharge = async (bookingId: string) => {
     if (!organizationId) return;
@@ -77,37 +86,65 @@ export default function AdminBookingsPage() {
             </Table.Row>
           </Table.Head>
           <Table.Body>
-            {bookings.map((b) => (
-              <Table.Row key={b.bookingId}>
-                <Table.Cell>
-                  {new Date(b.startDatetime).toLocaleString("ja-JP")}
-                </Table.Cell>
-                <Table.Cell>
-                  <BookingStatusBadge status={b.status} />
-                </Table.Cell>
-                <Table.Cell>
-                  <TruncatedId id={b.clientId} />
-                </Table.Cell>
-                <Table.Cell>
-                  <TruncatedId id={b.consultantId} />
-                </Table.Cell>
-                <Table.Cell>
-                  {b.status === "confirmed" && (
-                    <Button
-                      size="sm"
-                      onClick={() => handleCharge(b.bookingId)}
-                      loading={
-                        chargePayment.isPending &&
-                        chargePayment.variables?.bookingId === b.bookingId
+            {bookings.map((b) => {
+              const chargeable =
+                "chargeable" in b
+                  ? Boolean(
+                      (b as typeof b & { chargeable?: boolean }).chargeable,
+                    )
+                  : false;
+              const chargeDisabledReason =
+                "chargeDisabledReason" in b
+                  ? (
+                      b as typeof b & {
+                        chargeDisabledReason?: string | null;
                       }
-                      loadingText="処理中..."
-                    >
-                      課金
-                    </Button>
-                  )}
-                </Table.Cell>
-              </Table.Row>
-            ))}
+                    ).chargeDisabledReason
+                  : null;
+
+              return (
+                <Table.Row key={b.bookingId}>
+                  <Table.Cell>
+                    {formatBookingDatetime(b.startDatetime)}
+                  </Table.Cell>
+                  <Table.Cell>
+                    <BookingStatusBadge status={b.status} />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <TruncatedId id={b.clientId} />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <TruncatedId id={b.consultantId} />
+                  </Table.Cell>
+                  <Table.Cell>
+                    {b.status === "confirmed" && (
+                      <Tooltip
+                        content={chargeDisabledReason ?? ""}
+                        disabled={chargeable || !chargeDisabledReason}
+                        positioning={{ placement: "top-start" }}
+                        showArrow
+                      >
+                        <styled.span display="inline-flex">
+                          <Button
+                            size="sm"
+                            disabled={!chargeable}
+                            onClick={() => handleCharge(b.bookingId)}
+                            loading={
+                              chargePayment.isPending &&
+                              chargePayment.variables?.bookingId === b.bookingId
+                            }
+                            loadingText="処理中..."
+                            w="fit-content"
+                          >
+                            課金
+                          </Button>
+                        </styled.span>
+                      </Tooltip>
+                    )}
+                  </Table.Cell>
+                </Table.Row>
+              );
+            })}
           </Table.Body>
         </Table.Root>
       )}

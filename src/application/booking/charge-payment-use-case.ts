@@ -1,3 +1,5 @@
+import { evaluateChargeEligibility } from "@/application/booking/charge-eligibility";
+import { AppError } from "@/application/shared/app-error";
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IStripeService } from "@/application/shared/stripe-service";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
@@ -27,28 +29,43 @@ export class ChargePaymentUseCase {
       input.bookingId,
     );
     if (!booking) {
-      throw new Error("Booking not found");
+      throw new AppError(404, "BOOKING_NOT_FOUND", "Booking not found");
     }
 
     const payment = await this.paymentRepository.findByBookingId(
       input.organizationId,
       input.bookingId,
     );
-    if (!payment) {
-      throw new Error("Payment not found");
-    }
 
     const client = await this.clientRepository.findById(
       input.organizationId,
       booking.getClientId(),
     );
     if (!client) {
-      throw new Error("Client not found");
+      throw new AppError(404, "CLIENT_NOT_FOUND", "Client not found");
+    }
+
+    const chargeEligibility = evaluateChargeEligibility({ booking, payment });
+    if (!chargeEligibility.chargeable) {
+      const statusCode =
+        chargeEligibility.code === "PAYMENT_NOT_FOUND" ? 404 : 400;
+      throw new AppError(
+        statusCode,
+        chargeEligibility.code ?? "PAYMENT_NOT_CHARGEABLE",
+        chargeEligibility.reason ?? "Payment is not chargeable",
+      );
+    }
+    if (!payment) {
+      throw new AppError(404, "PAYMENT_NOT_FOUND", "決済情報が見つかりません");
     }
 
     const paymentMethodId = payment.getStripePaymentMethodId();
     if (!paymentMethodId) {
-      throw new Error("Payment method not found");
+      throw new AppError(
+        400,
+        "PAYMENT_SETUP_INCOMPLETE",
+        "カード情報の登録が完了していないため課金できません",
+      );
     }
 
     try {

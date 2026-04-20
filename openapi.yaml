@@ -857,7 +857,8 @@ components:
 
     BookingDetail:
       type: object
-      required: [bookingId, clientId, consultantId, slotId, startDatetime, status]
+      required:
+        [bookingId, clientId, consultantId, slotId, startDatetime, status, chargeable, chargeDisabledReason]
       properties:
         bookingId:
           type: string
@@ -880,6 +881,11 @@ components:
         consultantMemo:
           type: string
         consultationContent:
+          type: string
+          nullable: true
+        chargeable:
+          type: boolean
+        chargeDisabledReason:
           type: string
           nullable: true
 

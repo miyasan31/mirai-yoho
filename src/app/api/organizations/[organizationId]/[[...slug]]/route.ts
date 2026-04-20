@@ -1,5 +1,6 @@
 import crypto from "node:crypto";
 import { type NextRequest, NextResponse } from "next/server";
+import { evaluateChargeEligibility } from "@/application/booking/charge-eligibility";
 import { UpdateMemoUseCase } from "@/application/consultant/update-memo-use-case";
 import { UpdateProfileUseCase } from "@/application/consultant/update-profile-use-case";
 import { Consultant } from "@/domain/consultant/consultant";
@@ -282,24 +283,37 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[1] === "bookings"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
-      const repo = createBookingRepository();
+      const bookingRepo = createBookingRepository();
+      const paymentRepo = createPaymentRepository();
       const status = request.nextUrl.searchParams.get("status");
       const bookings = status
-        ? await repo.findByStatus(organizationId, status)
-        : await repo.findAll(organizationId);
+        ? await bookingRepo.findByStatus(organizationId, status)
+        : await bookingRepo.findAll(organizationId);
+      const payments = await paymentRepo.findAll(organizationId);
+      const paymentByBookingId = new Map(
+        payments.map((payment) => [payment.getBookingId(), payment]),
+      );
 
       return NextResponse.json({
-        bookings: bookings.map((b) => ({
-          bookingId: b.getBookingId(),
-          clientId: b.getClientId(),
-          consultantId: b.getConsultantId(),
-          slotId: b.getSlotId(),
-          startDatetime: b.getStartDatetime().toISOString(),
-          status: b.getStatus().getValue(),
-          zoomUrl: b.getZoomUrl()?.getValue() ?? null,
-          consultantMemo: b.getConsultantMemo().getValue(),
-          consultationContent: b.getConsultationContent() ?? null,
-        })),
+        bookings: bookings.map((b) => {
+          const eligibility = evaluateChargeEligibility({
+            booking: b,
+            payment: paymentByBookingId.get(b.getBookingId()) ?? null,
+          });
+          return {
+            bookingId: b.getBookingId(),
+            clientId: b.getClientId(),
+            consultantId: b.getConsultantId(),
+            slotId: b.getSlotId(),
+            startDatetime: b.getStartDatetime().toISOString(),
+            status: b.getStatus().getValue(),
+            zoomUrl: b.getZoomUrl()?.getValue() ?? null,
+            consultantMemo: b.getConsultantMemo().getValue(),
+            consultationContent: b.getConsultationContent() ?? null,
+            chargeable: eligibility.chargeable,
+            chargeDisabledReason: eligibility.reason,
+          };
+        }),
       });
     }
 
