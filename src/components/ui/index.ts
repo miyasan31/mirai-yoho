@@ -10,6 +10,7 @@ export { CloseButton, type CloseButtonProps } from "./close-button";
 export * as Dialog from "./dialog";
 export * as Field from "./field";
 export { Group, type GroupProps } from "./group";
+export { HoverCard, type HoverCardProps } from "./hover-card";
 export { Icon, type IconProps } from "./icon";
 export { IconButton, type IconButtonProps } from "./icon-button";
 export { Input, type InputProps } from "./input";
