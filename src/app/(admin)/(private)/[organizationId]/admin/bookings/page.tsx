@@ -80,12 +80,7 @@ function ClientCell({
     >
       <styled.span cursor="default" display="inline-block">
         {client ? (
-          <styled.div display="flex" flexDir="column" gap="0.5">
-            <Text textStyle="sm">{client.name}</Text>
-            <styled.span textStyle="xs" color="fg.muted" fontFamily="mono">
-              {toShortId(client.clientId)}
-            </styled.span>
-          </styled.div>
+          <Text textStyle="sm">{client.name}</Text>
         ) : (
           <TruncatedId id={clientId} />
         )}
@@ -125,7 +120,7 @@ function ConsultantCell({
                 専門分野: {consultant.specialties.join(", ") || "-"}
               </Text>
               <Text textStyle="xs" color="fg.muted">
-                bio: {consultant.bio ?? "-"}
+                自己紹介: {consultant.bio ?? "-"}
               </Text>
             </>
           ) : (
@@ -136,12 +131,7 @@ function ConsultantCell({
     >
       <styled.span cursor="default" display="inline-block">
         {consultant ? (
-          <styled.div display="flex" flexDir="column" gap="0.5">
-            <Text textStyle="sm">{consultant.displayName}</Text>
-            <styled.span textStyle="xs" color="fg.muted" fontFamily="mono">
-              {toShortId(consultant.consultantId)}
-            </styled.span>
-          </styled.div>
+          <Text textStyle="sm">{consultant.displayName}</Text>
         ) : (
           <TruncatedId id={consultantId} />
         )}
