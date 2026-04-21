@@ -40,7 +40,7 @@ export default function ConsultantLoginPage() {
       ) {
         throw new Error("No consultant access");
       }
-      router.push(`/${result.currentOrganizationId}/consultant/bookings`);
+      router.push(`/${result.currentOrganizationId}/consultant/home`);
     } catch {
       setError("ログインに失敗しました");
     }

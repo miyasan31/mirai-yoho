@@ -76,5 +76,7 @@ describe("AdminLayout", () => {
     );
 
     expect(screen.getByText("ユーザー管理")).toBeInTheDocument();
+    expect(screen.getByText("ホーム")).toBeInTheDocument();
+    expect(screen.getByText("ダッシュボード（集計）")).toBeInTheDocument();
   });
 });

@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
       if (result.currentRole !== "admin" && result.currentRole !== "operator") {
         throw new Error("No admin access");
       }
-      router.push(`/${result.currentOrganizationId}/admin/dashboard`);
+      router.push(`/${result.currentOrganizationId}/admin/home`);
     } catch {
       setError("ログインに失敗しました");
     }

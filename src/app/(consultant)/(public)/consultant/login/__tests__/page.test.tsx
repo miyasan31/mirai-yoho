@@ -1,14 +1,23 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+
+const mockSignIn = vi.fn();
+const mockPush = vi.fn();
 
 vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => ({
-    signIn: vi.fn(),
+    signIn: mockSignIn,
   }),
 }));
 
 vi.mock("next/navigation", () => ({
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: mockPush }),
 }));
 
 vi.mock("next/link", () => ({
@@ -105,5 +114,26 @@ describe("ConsultantLoginPage", () => {
 
     expect(link.getAttribute("href")).toBe("/consultant/password-reset");
     expect(screen.queryByText("管理者ログインはこちら")).toBeNull();
+  });
+
+  it("redirects to consultant home after successful login", async () => {
+    mockSignIn.mockResolvedValue({
+      currentOrganizationId: "org-test",
+      currentRole: "consultant",
+    });
+
+    const { container } = render(<ConsultantLoginPage />);
+
+    fireEvent.change(container.querySelector("#email") as HTMLInputElement, {
+      target: { value: "consultant@example.com" },
+    });
+    fireEvent.change(container.querySelector("#password") as HTMLInputElement, {
+      target: { value: "password" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
+
+    await waitFor(() => {
+      expect(mockPush).toHaveBeenCalledWith("/org-test/consultant/home");
+    });
   });
 });

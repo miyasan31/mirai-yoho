@@ -3,6 +3,7 @@
 import {
   CalendarDays,
   CreditCard,
+  House,
   LayoutDashboard,
   Settings,
   UserLock,
@@ -21,7 +22,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 const NAV_ITEMS: Array<Omit<NavItem, "href"> & { path: string }> = [
-  { path: "/admin/dashboard", label: "ダッシュボード", icon: LayoutDashboard },
+  { path: "/admin/home", label: "ホーム", icon: House },
+  {
+    path: "/admin/dashboard",
+    label: "ダッシュボード（集計）",
+    icon: LayoutDashboard,
+  },
   { path: "/admin/bookings", label: "予約管理", icon: CalendarDays },
   { path: "/admin/payments", label: "決済管理", icon: CreditCard },
   { path: "/admin/clients", label: "クライアント管理", icon: UserStar },
@@ -57,7 +63,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
 
     if (!organizationId) {
       if (currentOrganizationId) {
-        router.replace(`/${currentOrganizationId}/admin/dashboard`);
+        router.replace(`/${currentOrganizationId}/admin/home`);
         return;
       }
       router.replace("/404");
