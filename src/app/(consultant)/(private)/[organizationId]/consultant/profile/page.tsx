@@ -63,12 +63,8 @@ export default function ConsultantProfilePage() {
         },
       });
       toaster.create({ type: "success", title: "プロフィールを保存しました" });
-    } catch (err) {
-      toaster.create({
-        type: "error",
-        title: "保存に失敗しました",
-        description: err instanceof Error ? err.message : undefined,
-      });
+    } catch {
+      // custom-fetch.ts がエラー Toast を自動表示
     }
   };
 

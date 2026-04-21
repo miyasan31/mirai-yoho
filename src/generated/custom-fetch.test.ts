@@ -122,6 +122,28 @@ describe("customFetch", () => {
     });
   });
 
+  it("does not show success toaster for non-GET success responses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    );
+
+    await expect(
+      customFetch("/test", { method: "POST" }),
+    ).resolves.toMatchObject({
+      data: { ok: true },
+      status: 200,
+    });
+
+    expect(toasterSuccess).not.toHaveBeenCalled();
+  });
+
   it("handles non-JSON error responses safely", async () => {
     vi.stubGlobal(
       "fetch",

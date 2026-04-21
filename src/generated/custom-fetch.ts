@@ -124,14 +124,6 @@ export const customFetch = async <T>(
 
   const data = await response.json();
 
-  const method = (options.method ?? "GET").toUpperCase();
-  if (method !== "GET") {
-    toaster.success({
-      title: "成功",
-      description: "処理が完了しました",
-    });
-  }
-
   return {
     data,
     status: response.status,

@@ -59,12 +59,8 @@ export default function ConsultantMemoEditPage() {
       });
       toaster.create({ type: "success", title: "メモを保存しました" });
       router.push(buildPath("/consultant/bookings"));
-    } catch (err) {
-      toaster.create({
-        type: "error",
-        title: "保存に失敗しました",
-        description: err instanceof Error ? err.message : undefined,
-      });
+    } catch {
+      // custom-fetch.ts がエラー Toast を自動表示
     }
   };
 
