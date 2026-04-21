@@ -5,8 +5,9 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
-import { Tabs } from "@/components/ui";
+import { Checkbox, Tabs } from "@/components/ui";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { toaster } from "@/components/ui/toast";
 import { BusinessHours } from "@/domain/organization-settings/business-hours";
@@ -107,7 +108,7 @@ export default function AdminSettingsPage() {
   const [currentTab, setCurrentTab] = useState<SettingsTab>("booking");
 
   const {
-    register: bookingRegister,
+    control: bookingControl,
     handleSubmit: handleBookingSubmit,
     reset: resetBookingForm,
     watch: watchBookingForm,
@@ -145,7 +146,6 @@ export default function AdminSettingsPage() {
   const consultantSelectionEnabled = watchBookingForm(
     "consultantSelectionEnabled",
   );
-  const includePublicHolidays = watchBusinessForm("includePublicHolidays");
   const weeklyRows = watchBusinessForm("weekly");
   const exceptions = watchBusinessForm("exceptions");
 
@@ -321,27 +321,38 @@ export default function AdminSettingsPage() {
               </Text>
             </styled.div>
 
-            <styled.label
-              display="flex"
-              alignItems="center"
-              gap="3"
-              cursor={isLoading || isReadOnly ? "not-allowed" : "pointer"}
-              opacity={isLoading || isReadOnly ? 0.6 : 1}
-            >
-              <input
-                type="checkbox"
-                {...bookingRegister("consultantSelectionEnabled")}
-                disabled={
-                  isLoading || updateBookingSettings.isPending || isReadOnly
-                }
-              />
-              <styled.div display="flex" flexDirection="column" gap="1">
-                <Text fontWeight="medium">相談員を指名して予約できる</Text>
-                <Text textStyle="sm" color="fg.muted">
-                  オフにすると、利用者は日時のみを選び、相談員は自動で割り当てられます。
-                </Text>
-              </styled.div>
-            </styled.label>
+            <Controller
+              control={bookingControl}
+              name="consultantSelectionEnabled"
+              render={({ field }) => (
+                <Checkbox.Root
+                  checked={field.value}
+                  cursor={isLoading || isReadOnly ? "not-allowed" : "pointer"}
+                  disabled={
+                    isLoading || updateBookingSettings.isPending || isReadOnly
+                  }
+                  opacity={isLoading || isReadOnly ? 0.6 : 1}
+                  onCheckedChange={(details) =>
+                    field.onChange(details.checked === true)
+                  }
+                >
+                  <Checkbox.HiddenInput
+                    name={field.name}
+                    onBlur={field.onBlur}
+                    ref={field.ref}
+                  />
+                  <Checkbox.Control>
+                    <Checkbox.Indicator />
+                  </Checkbox.Control>
+                  <styled.div display="flex" flexDirection="column" gap="1">
+                    <Text fontWeight="medium">相談員を指名して予約できる</Text>
+                    <Text textStyle="sm" color="fg.muted">
+                      オフにすると、利用者は日時のみを選び、相談員は自動で割り当てられます。
+                    </Text>
+                  </styled.div>
+                </Checkbox.Root>
+              )}
+            />
 
             <styled.div display="flex">
               <Button
@@ -369,23 +380,33 @@ export default function AdminSettingsPage() {
             <Text color="fg.muted" textStyle="sm">
               通常営業は曜日ごとに設定し、必要に応じて単日例外を追加します。
             </Text>
-            <styled.label
-              display="flex"
-              alignItems="center"
-              gap="3"
-              cursor={isLoading || isReadOnly ? "not-allowed" : "pointer"}
-              opacity={isLoading || isReadOnly ? 0.6 : 1}
-            >
-              <input
-                type="checkbox"
-                {...businessRegister("includePublicHolidays")}
-                checked={includePublicHolidays}
-                disabled={
-                  isLoading || updateBookingSettings.isPending || isReadOnly
-                }
-              />
-              <Text textStyle="sm">祝日を通常営業として扱う</Text>
-            </styled.label>
+            <Controller
+              control={businessControl}
+              name="includePublicHolidays"
+              render={({ field }) => (
+                <Checkbox.Root
+                  checked={field.value}
+                  cursor={isLoading || isReadOnly ? "not-allowed" : "pointer"}
+                  disabled={
+                    isLoading || updateBookingSettings.isPending || isReadOnly
+                  }
+                  opacity={isLoading || isReadOnly ? 0.6 : 1}
+                  onCheckedChange={(details) =>
+                    field.onChange(details.checked === true)
+                  }
+                >
+                  <Checkbox.HiddenInput
+                    name={field.name}
+                    onBlur={field.onBlur}
+                    ref={field.ref}
+                  />
+                  <Checkbox.Control>
+                    <Checkbox.Indicator />
+                  </Checkbox.Control>
+                  <Checkbox.Label>祝日を通常営業として扱う</Checkbox.Label>
+                </Checkbox.Root>
+              )}
+            />
 
             <styled.div display="grid" gap="2">
               {weeklyRows?.map((row, index) => (
@@ -402,23 +423,31 @@ export default function AdminSettingsPage() {
                       control={businessControl}
                       name={`weekly.${index}.isClosed`}
                       render={({ field }) => (
-                        <input
-                          type="checkbox"
+                        <Checkbox.Root
                           checked={!field.value}
                           disabled={
                             isLoading ||
                             updateBookingSettings.isPending ||
                             isReadOnly
                           }
-                          onChange={(event) =>
-                            field.onChange(!event.target.checked)
+                          onCheckedChange={(details) =>
+                            field.onChange(details.checked !== true)
                           }
-                        />
+                        >
+                          <Checkbox.HiddenInput
+                            name={field.name}
+                            onBlur={field.onBlur}
+                            ref={field.ref}
+                          />
+                          <Checkbox.Control>
+                            <Checkbox.Indicator />
+                          </Checkbox.Control>
+                        </Checkbox.Root>
                       )}
                     />
                     <Text textStyle="sm">営業</Text>
                   </styled.div>
-                  <input
+                  <Input
                     type="time"
                     step={1800}
                     {...businessRegister(`weekly.${index}.startTime`)}
@@ -429,7 +458,7 @@ export default function AdminSettingsPage() {
                       isReadOnly
                     }
                   />
-                  <input
+                  <Input
                     type="time"
                     step={1800}
                     {...businessRegister(`weekly.${index}.endTime`)}
@@ -487,7 +516,7 @@ export default function AdminSettingsPage() {
                     gap="2"
                     alignItems="center"
                   >
-                    <input
+                    <Input
                       type="date"
                       {...businessRegister(`exceptions.${index}.date`)}
                       disabled={
@@ -496,19 +525,34 @@ export default function AdminSettingsPage() {
                         isReadOnly
                       }
                     />
-                    <styled.label display="flex" alignItems="center" gap="1">
-                      <input
-                        type="checkbox"
-                        {...businessRegister(`exceptions.${index}.isClosed`)}
-                        disabled={
-                          isLoading ||
-                          updateBookingSettings.isPending ||
-                          isReadOnly
-                        }
-                      />
-                      <Text textStyle="sm">休業</Text>
-                    </styled.label>
-                    <input
+                    <Controller
+                      control={businessControl}
+                      name={`exceptions.${index}.isClosed`}
+                      render={({ field: checkboxField }) => (
+                        <Checkbox.Root
+                          checked={checkboxField.value}
+                          disabled={
+                            isLoading ||
+                            updateBookingSettings.isPending ||
+                            isReadOnly
+                          }
+                          onCheckedChange={(details) =>
+                            checkboxField.onChange(details.checked === true)
+                          }
+                        >
+                          <Checkbox.HiddenInput
+                            name={checkboxField.name}
+                            onBlur={checkboxField.onBlur}
+                            ref={checkboxField.ref}
+                          />
+                          <Checkbox.Control>
+                            <Checkbox.Indicator />
+                          </Checkbox.Control>
+                          <Checkbox.Label>休業</Checkbox.Label>
+                        </Checkbox.Root>
+                      )}
+                    />
+                    <Input
                       type="time"
                       step={1800}
                       {...businessRegister(`exceptions.${index}.startTime`)}
@@ -519,7 +563,7 @@ export default function AdminSettingsPage() {
                         isReadOnly
                       }
                     />
-                    <input
+                    <Input
                       type="time"
                       step={1800}
                       {...businessRegister(`exceptions.${index}.endTime`)}

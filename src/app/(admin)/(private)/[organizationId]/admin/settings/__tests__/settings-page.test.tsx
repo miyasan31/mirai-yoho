@@ -234,12 +234,7 @@ describe("AdminSettingsPage", () => {
     );
     fireEvent.change(dateInputs[0], { target: { value: "2026-08-13" } });
 
-    const exceptionClosedCheckboxes = screen
-      .getAllByRole("checkbox")
-      .filter((checkbox) =>
-        checkbox.parentElement?.textContent?.includes("休業"),
-      );
-    await user.click(exceptionClosedCheckboxes[0]);
+    await user.click(screen.getByText("休業"));
 
     const timeInputs = Array.from(
       document.querySelectorAll<HTMLInputElement>('input[type="time"]'),
@@ -284,15 +279,7 @@ describe("AdminSettingsPage", () => {
     }
     fireEvent.change(dateInput, { target: { value: "2026-08-13" } });
 
-    const exceptionClosedCheckbox = screen
-      .getAllByRole("checkbox")
-      .find((checkbox) =>
-        checkbox.parentElement?.textContent?.includes("休業"),
-      );
-    if (!exceptionClosedCheckbox) {
-      throw new Error("exception closed checkbox not found");
-    }
-    await user.click(exceptionClosedCheckbox);
+    await user.click(screen.getByText("休業"));
 
     const startInput = Array.from(
       document.querySelectorAll<HTMLInputElement>('input[type="time"]'),

@@ -14,6 +14,7 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
+import { RadioGroup } from "@/components/ui";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
 import { envClient } from "@/config/env.client";
@@ -176,7 +177,13 @@ function PaymentMethodSelector({
     <styled.div display="flex" flexDirection="column" gap="6">
       <Text fontWeight="medium">お支払い方法を選択してください</Text>
 
-      <styled.div display="flex" flexDirection="column" gap="3">
+      <RadioGroup.Root
+        name="paymentMethod"
+        onValueChange={(details) =>
+          setSelectedMethod(details.value as PaymentMethodType)
+        }
+        value={selectedMethod}
+      >
         {(
           [
             {
@@ -192,42 +199,22 @@ function PaymentMethodSelector({
             },
           ] as const
         ).map((method) => (
-          <styled.label
-            key={method.value}
-            display="flex"
-            alignItems="flex-start"
-            gap="3"
-            p="4"
-            shadow="xs"
-            border="1px solid"
-            borderColor={
-              selectedMethod === method.value
-                ? "colorPalette.default"
-                : "border"
-            }
-            rounded="l2"
-            cursor="pointer"
-            transition="all"
-            transitionDuration="normal"
-            _hover={{ borderColor: "colorPalette.default", shadow: "sm" }}
-          >
-            <input
-              type="radio"
-              name="paymentMethod"
-              value={method.value}
-              checked={selectedMethod === method.value}
-              onChange={() => setSelectedMethod(method.value)}
-              style={{ marginTop: "4px" }}
-            />
-            <styled.div>
-              <Text fontWeight="medium">{method.label}</Text>
-              <Text textStyle="sm" color="fg.muted" mt="1">
-                {method.description}
-              </Text>
-            </styled.div>
-          </styled.label>
+          <RadioGroup.Item key={method.value} value={method.value}>
+            <RadioGroup.ItemHiddenInput />
+            <RadioGroup.ItemControl>
+              <RadioGroup.Indicator />
+            </RadioGroup.ItemControl>
+            <RadioGroup.ItemText asChild>
+              <styled.div>
+                <Text fontWeight="medium">{method.label}</Text>
+                <Text textStyle="sm" color="fg.muted" mt="1">
+                  {method.description}
+                </Text>
+              </styled.div>
+            </RadioGroup.ItemText>
+          </RadioGroup.Item>
         ))}
-      </styled.div>
+      </RadioGroup.Root>
 
       {errorMessage && <ErrorMessage message={errorMessage} />}
 

@@ -1,12 +1,14 @@
 import { absoluteCenter } from "./absolute-center";
 import { badge } from "./badge";
 import { button } from "./button";
+import { checkbox } from "./checkbox";
 import { dialog } from "./dialog";
 import { field } from "./field";
 import { group } from "./group";
 import { icon } from "./icon";
 import { input } from "./input";
 import { menu } from "./menu";
+import { radioGroup } from "./radio-group";
 import { select } from "./select";
 import { skeleton } from "./skeleton";
 import { spinner } from "./spinner";
@@ -28,12 +30,14 @@ export const recipes = {
   textarea,
   text,
   tabs,
+  checkbox,
 };
 export const slotRecipes = {
   toast,
   menu,
   dialog,
   field,
+  radioGroup,
   select,
   tooltip,
   table,
