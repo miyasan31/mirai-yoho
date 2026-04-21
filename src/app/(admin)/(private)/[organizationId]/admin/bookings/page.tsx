@@ -34,10 +34,6 @@ type ConsultantSummary = {
   bio?: string;
 };
 
-function toShortId(id: string) {
-  return `${id.slice(0, 8)}…`;
-}
-
 function ClientCell({
   clientId,
   client,

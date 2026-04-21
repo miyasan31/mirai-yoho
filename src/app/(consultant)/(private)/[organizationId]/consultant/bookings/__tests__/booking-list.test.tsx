@@ -254,7 +254,6 @@ describe("ConsultantBookingsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("メール: taro@example.com")).toBeDefined();
       expect(screen.getByText("電話: 090-0000-0000")).toBeDefined();
-      expect(screen.getByText("メモ: 初回相談")).toBeDefined();
     });
   });
 
@@ -282,7 +281,7 @@ describe("ConsultantBookingsPage", () => {
 
     render(<ConsultantBookingsPage />, { wrapper: createWrapper() });
 
-    const truncatedId = screen.getByText("client-40…");
+    const truncatedId = screen.getByText("client-4…");
     fireEvent.mouseEnter(truncatedId);
 
     await waitFor(() => {

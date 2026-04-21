@@ -6,6 +6,12 @@ function initializeFirebaseAdmin() {
     return getApps()[0];
   }
 
+  if (process.env.NODE_ENV === "test") {
+    return initializeApp({
+      projectId: process.env.FIREBASE_PROJECT_ID ?? "test-project",
+    });
+  }
+
   return initializeApp({
     credential: cert({
       projectId: process.env.FIREBASE_PROJECT_ID,

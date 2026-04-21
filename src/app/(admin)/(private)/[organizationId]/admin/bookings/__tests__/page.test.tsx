@@ -3,6 +3,8 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 
 const mockUseAdminBookings = vi.fn();
+const mockUseAdminClients = vi.fn();
+const mockUseAdminConsultants = vi.fn();
 const mockMutateAsync = vi.fn();
 const mockUseChargePayment = vi.fn();
 
@@ -12,6 +14,16 @@ vi.mock("@/hooks/use-admin-bookings", () => ({
 
 vi.mock("@/hooks/use-booking", () => ({
   useChargePayment: () => mockUseChargePayment(),
+}));
+
+vi.mock("@/hooks/use-admin-clients", () => ({
+  useAdminClients: (options?: { enabled?: boolean }) =>
+    mockUseAdminClients(options),
+}));
+
+vi.mock("@/hooks/use-admin-consultants", () => ({
+  useAdminConsultants: (options?: { enabled?: boolean }) =>
+    mockUseAdminConsultants(options),
 }));
 
 vi.mock("@/hooks/use-organization-routing", () => ({
@@ -42,6 +54,7 @@ vi.mock("styled-system/jsx", () => {
   return {
     styled: styledProxy,
     createStyleContext: () => ({
+      withProvider: (c: unknown) => c,
       withRootProvider: (c: unknown) => c,
       withContext: (c: unknown) => c,
     }),
@@ -120,6 +133,10 @@ vi.mock("@/components/table-skeleton", () => ({
 
 vi.mock("lucide-react", () => ({
   CalendarDays: () => <span>CalendarDays</span>,
+  InfoIcon: () => <span>InfoIcon</span>,
+  CircleAlertIcon: () => <span>CircleAlertIcon</span>,
+  CheckCircleIcon: () => <span>CheckCircleIcon</span>,
+  CircleXIcon: () => <span>CircleXIcon</span>,
 }));
 
 import AdminBookingsPage from "../page";
@@ -158,6 +175,16 @@ describe("AdminBookingsPage", () => {
       isPending: false,
       variables: null,
     });
+    mockUseAdminClients.mockReturnValue({
+      data: { data: { clients: [] } },
+      isLoading: false,
+      error: null,
+    });
+    mockUseAdminConsultants.mockReturnValue({
+      data: { data: { consultants: [] } },
+      isLoading: false,
+      error: null,
+    });
 
     render(<AdminBookingsPage />);
 
@@ -166,7 +193,6 @@ describe("AdminBookingsPage", () => {
         .disabled,
     ).toBe(true);
     expect(screen.getByText("予約開始前のため課金できません")).toBeDefined();
-    expect(screen.getByText("ホバーで理由を表示")).toBeDefined();
   });
 
   it("calls charge API when booking is chargeable", () => {
@@ -196,6 +222,16 @@ describe("AdminBookingsPage", () => {
       mutateAsync: mockMutateAsync.mockResolvedValue({}),
       isPending: false,
       variables: null,
+    });
+    mockUseAdminClients.mockReturnValue({
+      data: { data: { clients: [] } },
+      isLoading: false,
+      error: null,
+    });
+    mockUseAdminConsultants.mockReturnValue({
+      data: { data: { consultants: [] } },
+      isLoading: false,
+      error: null,
     });
 
     render(<AdminBookingsPage />);

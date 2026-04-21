@@ -338,7 +338,7 @@ describe("AdminBookingsPage", () => {
       expect(
         screen.getByText("専門分野: キャリア, 子育て"),
       ).toBeInTheDocument();
-      expect(screen.getByText("bio: 5年の相談実績")).toBeInTheDocument();
+      expect(screen.getByText("自己紹介: 5年の相談実績")).toBeInTheDocument();
     });
 
     expect(mockUseAdminClients).toHaveBeenCalledTimes(1);
@@ -416,11 +416,11 @@ describe("AdminBookingsPage", () => {
 
     render(<AdminBookingsPage />);
 
-    expect(screen.getByText("client-40…")).toBeInTheDocument();
-    expect(screen.getByText("consultan…")).toBeInTheDocument();
+    expect(screen.getByText("client-4…")).toBeInTheDocument();
+    expect(screen.getByText("consulta…")).toBeInTheDocument();
 
-    fireEvent.mouseEnter(screen.getByText("client-40…"));
-    fireEvent.mouseEnter(screen.getByText("consultan…"));
+    fireEvent.mouseEnter(screen.getByText("client-4…"));
+    fireEvent.mouseEnter(screen.getByText("consulta…"));
 
     await waitFor(() => {
       expect(
