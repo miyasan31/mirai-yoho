@@ -1,11 +1,34 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+
+const mockMutateAsync = vi.fn();
+const mockUseAuth = vi.fn();
+const mockToasterCreate = vi.fn();
+const mockReplace = vi.fn();
+let currentTabParam: string | null = null;
+
+class MockResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+
+vi.stubGlobal("ResizeObserver", MockResizeObserver);
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ organizationId: "org-test" }),
   usePathname: () => "/org-test/admin/settings",
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: (url: string) => {
+      mockReplace(url);
+      const parsed = new URL(url, "http://localhost");
+      currentTabParam = parsed.searchParams.get("tab");
+    },
+  }),
+  useSearchParams: () =>
+    new URLSearchParams(currentTabParam ? `tab=${currentTabParam}` : ""),
 }));
 
 vi.mock("styled-system/css", () => ({
@@ -32,6 +55,7 @@ vi.mock("styled-system/jsx", () => {
   return {
     styled: styledProxy,
     createStyleContext: () => ({
+      withProvider: (c: unknown) => c,
       withRootProvider: (c: unknown) => c,
       withContext: (c: unknown) => c,
     }),
@@ -56,12 +80,29 @@ vi.mock("@/components/ui/text", () => ({
     return <Element {...props}>{children}</Element>;
   },
 }));
+vi.mock("@/components/ui/toast", () => ({
+  toaster: {
+    create: (...args: unknown[]) => mockToasterCreate(...args),
+  },
+}));
 
-const mockMutateAsync = vi.fn();
-const mockUseAuth = vi.fn();
+const defaultBusinessHours = {
+  weekly: Array.from({ length: 7 }, (_, dayOfWeek) => ({
+    dayOfWeek,
+    isClosed: false,
+    timeWindows: [{ startTime: "10:00", endTime: "17:00" }],
+  })),
+  includePublicHolidays: true,
+  exceptions: [],
+};
 vi.mock("@/hooks/use-booking-settings", () => ({
   useAdminBookingSettings: () => ({
-    data: { data: { consultantSelectionEnabled: true } },
+    data: {
+      data: {
+        consultantSelectionEnabled: true,
+        businessHours: defaultBusinessHours,
+      },
+    },
     isLoading: false,
   }),
   useUpdateAdminBookingSettings: () => ({
@@ -76,27 +117,192 @@ vi.mock("@/hooks/use-auth", () => ({
 import AdminSettingsPage from "../page";
 
 describe("AdminSettingsPage", () => {
-  afterEach(() => {
-    cleanup();
-    vi.clearAllMocks();
+  beforeEach(() => {
     mockUseAuth.mockReturnValue({ role: "admin" });
   });
 
-  it("updates consultant selection setting", async () => {
+  afterEach(() => {
+    cleanup();
+    vi.clearAllMocks();
+    currentTabParam = null;
+  });
+
+  it("shows booking tab by default", () => {
+    render(<AdminSettingsPage />);
+    const tabPanels = screen.getAllByRole("tabpanel", { hidden: true });
+    const businessHoursPanel = tabPanels.find((panel) =>
+      panel.id.includes("content-business-hours"),
+    );
+
+    expect(screen.getByRole("tab", { name: "予約" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("tabpanel", { name: "予約" })).toHaveAttribute(
+      "data-state",
+      "open",
+    );
+    expect(businessHoursPanel).toHaveAttribute("data-state", "closed");
+  });
+
+  it("opens business-hours tab from query", () => {
+    currentTabParam = "business-hours";
+    render(<AdminSettingsPage />);
+    const tabPanels = screen.getAllByRole("tabpanel", { hidden: true });
+    const bookingPanel = tabPanels.find((panel) =>
+      panel.id.includes("content-booking"),
+    );
+
+    expect(screen.getByRole("tab", { name: "営業時間" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("tabpanel", { name: "営業時間" })).toHaveAttribute(
+      "data-state",
+      "open",
+    );
+    expect(bookingPanel).toHaveAttribute("data-state", "closed");
+  });
+
+  it("updates tab query when switching tabs", async () => {
+    const user = userEvent.setup();
+    render(<AdminSettingsPage />);
+
+    await user.click(screen.getByRole("tab", { name: "営業時間" }));
+
+    expect(mockReplace).toHaveBeenCalled();
+    expect(currentTabParam).toBe("business-hours");
+  });
+
+  it("keeps unsaved booking form state across tab switches", async () => {
+    const user = userEvent.setup();
+    render(<AdminSettingsPage />);
+
+    const bookingCheckbox = screen.getAllByRole("checkbox")[0];
+    expect(bookingCheckbox).toBeChecked();
+    await user.click(bookingCheckbox);
+    expect(bookingCheckbox).not.toBeChecked();
+
+    await user.click(screen.getByRole("tab", { name: "営業時間" }));
+    await user.click(screen.getByRole("tab", { name: "予約" }));
+
+    expect(screen.getAllByRole("checkbox")[0]).not.toBeChecked();
+  });
+
+  it("saves booking tab with persisted business hours", async () => {
     mockUseAuth.mockReturnValue({ role: "admin" });
     mockMutateAsync.mockResolvedValue({
-      data: { consultantSelectionEnabled: false },
+      data: {
+        consultantSelectionEnabled: false,
+        businessHours: defaultBusinessHours,
+      },
     });
 
     const user = userEvent.setup();
     render(<AdminSettingsPage />);
 
-    await user.click(screen.getByRole("checkbox"));
-    await user.click(screen.getByText("保存"));
+    const bookingCheckbox = screen.getAllByRole("checkbox")[0];
+    await user.click(bookingCheckbox);
+    await user.click(screen.getByRole("button", { name: "保存" }));
 
     expect(mockMutateAsync).toHaveBeenCalledWith({
       organizationId: "org-test",
-      data: { consultantSelectionEnabled: false },
+      data: {
+        consultantSelectionEnabled: false,
+        businessHours: defaultBusinessHours,
+      },
+    });
+  });
+
+  it("saves business-hours tab with edited exception", async () => {
+    mockUseAuth.mockReturnValue({ role: "admin" });
+    mockMutateAsync.mockResolvedValue({
+      data: {
+        consultantSelectionEnabled: true,
+        businessHours: defaultBusinessHours,
+      },
+    });
+
+    const user = userEvent.setup();
+    render(<AdminSettingsPage />);
+
+    await user.click(screen.getByRole("tab", { name: "営業時間" }));
+    await user.click(screen.getByRole("button", { name: "例外日を追加" }));
+
+    const dateInputs = screen.getAllByDisplayValue("", {
+      selector: 'input[type="date"]',
+    });
+    fireEvent.change(dateInputs[0], { target: { value: "2026-08-13" } });
+
+    const exceptionClosedCheckboxes = screen
+      .getAllByRole("checkbox")
+      .filter((checkbox) =>
+        checkbox.parentElement?.textContent?.includes("休業"),
+      );
+    await user.click(exceptionClosedCheckboxes[0]);
+
+    const timeInputs = screen.getAllByDisplayValue("10:00", {
+      selector: 'input[type="time"]',
+    });
+    const lastStart = timeInputs[timeInputs.length - 1];
+    fireEvent.change(lastStart, { target: { value: "13:00" } });
+
+    await user.click(screen.getByRole("button", { name: "保存" }));
+
+    expect(mockMutateAsync).toHaveBeenCalledWith({
+      organizationId: "org-test",
+      data: {
+        consultantSelectionEnabled: true,
+        businessHours: {
+          weekly: defaultBusinessHours.weekly,
+          includePublicHolidays: true,
+          exceptions: [
+            {
+              startDate: "2026-08-13",
+              endDate: "2026-08-13",
+              isClosed: false,
+              timeWindows: [{ startTime: "13:00", endTime: "17:00" }],
+            },
+          ],
+        },
+      },
+    });
+  });
+
+  it("shows validation error on invalid business-hours range", async () => {
+    mockUseAuth.mockReturnValue({ role: "admin" });
+    const user = userEvent.setup();
+    render(<AdminSettingsPage />);
+
+    await user.click(screen.getByRole("tab", { name: "営業時間" }));
+    await user.click(screen.getByRole("button", { name: "例外日を追加" }));
+
+    const dateInput = screen.getByDisplayValue("", {
+      selector: 'input[type="date"]',
+    });
+    fireEvent.change(dateInput, { target: { value: "2026-08-13" } });
+
+    const exceptionClosedCheckbox = screen
+      .getAllByRole("checkbox")
+      .find((checkbox) =>
+        checkbox.parentElement?.textContent?.includes("休業"),
+      );
+    if (!exceptionClosedCheckbox) {
+      throw new Error("exception closed checkbox not found");
+    }
+    await user.click(exceptionClosedCheckbox);
+
+    const startInput = screen.getAllByDisplayValue("10:00", {
+      selector: 'input[type="time"]',
+    });
+    const lastStart = startInput[startInput.length - 1];
+    fireEvent.change(lastStart, { target: { value: "18:00" } });
+
+    await user.click(screen.getByRole("button", { name: "保存" }));
+    expect(mockMutateAsync).not.toHaveBeenCalled();
+    expect(mockToasterCreate).toHaveBeenCalledWith({
+      type: "error",
+      title: "例外日の入力内容が不正です",
     });
   });
 
@@ -105,16 +311,13 @@ describe("AdminSettingsPage", () => {
     const user = userEvent.setup();
     render(<AdminSettingsPage />);
 
-    const checkbox = screen.getByRole("checkbox");
+    const checkboxes = screen.getAllByRole("checkbox");
     const saveButton = screen.getByRole("button", { name: "保存" });
 
-    expect(checkbox).toBeDisabled();
-    expect(saveButton).toBeDisabled();
     expect(
-      screen.getByText(
-        "オペレーター権限では設定を編集できません。閲覧のみ可能です。",
-      ),
-    ).toBeInTheDocument();
+      checkboxes.every((checkbox) => checkbox.hasAttribute("disabled")),
+    ).toBe(true);
+    expect(saveButton).toBeDisabled();
 
     await user.click(saveButton);
     expect(mockMutateAsync).not.toHaveBeenCalled();

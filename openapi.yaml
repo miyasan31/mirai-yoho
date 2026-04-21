@@ -982,24 +982,88 @@ components:
 
     BookingSettings:
       type: object
-      required: [consultantSelectionEnabled]
+      required: [consultantSelectionEnabled, businessHours]
       properties:
         consultantSelectionEnabled:
           type: boolean
+        businessHours:
+          $ref: "#/components/schemas/BusinessHours"
 
     PublicSettings:
       type: object
-      required: [consultantSelectionEnabled]
+      required: [consultantSelectionEnabled, businessHours]
       properties:
         consultantSelectionEnabled:
           type: boolean
+        businessHours:
+          $ref: "#/components/schemas/BusinessHours"
 
     UpdateBookingSettingsBody:
       type: object
-      required: [consultantSelectionEnabled]
+      required: [consultantSelectionEnabled, businessHours]
       properties:
         consultantSelectionEnabled:
           type: boolean
+        businessHours:
+          $ref: "#/components/schemas/BusinessHours"
+
+    BusinessHours:
+      type: object
+      required: [weekly, includePublicHolidays, exceptions]
+      properties:
+        weekly:
+          type: array
+          items:
+            $ref: "#/components/schemas/WeeklyBusinessHours"
+        includePublicHolidays:
+          type: boolean
+        exceptions:
+          type: array
+          items:
+            $ref: "#/components/schemas/BusinessHoursException"
+
+    WeeklyBusinessHours:
+      type: object
+      required: [dayOfWeek, isClosed, timeWindows]
+      properties:
+        dayOfWeek:
+          type: integer
+          minimum: 0
+          maximum: 6
+        isClosed:
+          type: boolean
+        timeWindows:
+          type: array
+          items:
+            $ref: "#/components/schemas/BusinessTimeWindow"
+
+    BusinessHoursException:
+      type: object
+      required: [startDate, endDate, isClosed, timeWindows]
+      properties:
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        isClosed:
+          type: boolean
+        timeWindows:
+          type: array
+          items:
+            $ref: "#/components/schemas/BusinessTimeWindow"
+
+    BusinessTimeWindow:
+      type: object
+      required: [startTime, endTime]
+      properties:
+        startTime:
+          type: string
+          pattern: "^([01]\\\\d|2[0-3]):([03]0)$"
+        endTime:
+          type: string
+          pattern: "^([01]\\\\d|2[0-3]):([03]0)$"
 
     CreateBookingRequest:
       type: object

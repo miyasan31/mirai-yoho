@@ -57,6 +57,10 @@ class InMemorySlotRepository implements ISlotRepository {
     return this.slots.filter((slot) => !slot.getIsReserved());
   }
 
+  async findByOrganizationId(_organizationId: string): Promise<Slot[]> {
+    return this.slots;
+  }
+
   async findByConsultantId(
     _organizationId: string,
     consultantId: string,

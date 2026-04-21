@@ -2,6 +2,7 @@ import type { Slot } from "@/domain/slot/slot";
 
 export interface ISlotRepository {
   findById(organizationId: string, slotId: string): Promise<Slot | null>;
+  findByOrganizationId(organizationId: string): Promise<Slot[]>;
   findAllAvailable(organizationId: string): Promise<Slot[]>;
   findByConsultantId(
     organizationId: string,

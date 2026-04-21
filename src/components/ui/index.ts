@@ -28,6 +28,7 @@ export {
 export { Span, type SpanProps } from "./span";
 export { Spinner, type SpinnerProps } from "./spinner";
 export * as Table from "./table";
+export * as Tabs from "./tabs";
 export { Text, type TextProps } from "./text";
 export { Textarea, type TextareaProps } from "./textarea";
 export { Toaster, toaster } from "./toast";

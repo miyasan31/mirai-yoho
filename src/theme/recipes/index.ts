@@ -11,6 +11,7 @@ import { select } from "./select";
 import { skeleton } from "./skeleton";
 import { spinner } from "./spinner";
 import { table } from "./table";
+import { tabs } from "./tabs";
 import { text } from "./text";
 import { textarea } from "./textarea";
 import { toast } from "./toast";
@@ -26,6 +27,7 @@ export const recipes = {
   input,
   textarea,
   text,
+  tabs,
 };
 export const slotRecipes = {
   toast,

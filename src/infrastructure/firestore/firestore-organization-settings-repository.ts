@@ -1,3 +1,4 @@
+import { BusinessHours } from "@/domain/organization-settings/business-hours";
 import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
 import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
 import { db } from "@/infrastructure/firestore/firestore-client";
@@ -8,12 +9,14 @@ const COLLECTION = FIRESTORE_COLLECTIONS.organizationSettings;
 interface OrganizationSettingsDoc {
   organizationId: string;
   consultantSelectionEnabled: boolean;
+  businessHours?: ReturnType<BusinessHours["toJSON"]>;
 }
 
 function toDomain(doc: OrganizationSettingsDoc): OrganizationSettings {
   return OrganizationSettings.reconstruct({
     organizationId: doc.organizationId,
     consultantSelectionEnabled: doc.consultantSelectionEnabled,
+    businessHours: doc.businessHours ?? BusinessHours.createDefault().toJSON(),
   });
 }
 
@@ -21,6 +24,7 @@ function toFirestore(settings: OrganizationSettings): OrganizationSettingsDoc {
   return {
     organizationId: settings.getOrganizationId(),
     consultantSelectionEnabled: settings.getConsultantSelectionEnabled(),
+    businessHours: settings.getBusinessHours().toJSON(),
   };
 }
 

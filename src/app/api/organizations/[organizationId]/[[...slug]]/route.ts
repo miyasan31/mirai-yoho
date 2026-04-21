@@ -5,6 +5,7 @@ import { UpdateMemoUseCase } from "@/application/consultant/update-memo-use-case
 import { UpdateProfileUseCase } from "@/application/consultant/update-profile-use-case";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
+import { BusinessHours } from "@/domain/organization-settings/business-hours";
 import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
 import { DomainError } from "@/domain/shared/domain-error";
 import { Slot } from "@/domain/slot/slot";
@@ -69,6 +70,13 @@ interface RequestErrorContext {
 
 function jsonError(status: number, code: string, message: string) {
   return NextResponse.json({ code, message }, { status });
+}
+
+function toBookingSettingsResponse(settings: OrganizationSettings) {
+  return {
+    consultantSelectionEnabled: settings.getConsultantSelectionEnabled(),
+    businessHours: settings.getBusinessHours().toJSON(),
+  };
 }
 
 function parseSlug(slug?: string[]) {
@@ -182,15 +190,26 @@ export async function GET(request: NextRequest, context: RouteContext) {
       requestErrorContext.endpoint = "GET /organizations/:organizationId/slots";
       requestErrorContext.consultantId = consultantId;
       const repository = createSlotRepository();
+      const settings =
+        (await createOrganizationSettingsRepository().findByOrganizationId(
+          organizationId,
+        )) ?? OrganizationSettings.createDefault(organizationId);
+      const businessHours = settings.getBusinessHours();
 
       if (consultantId) {
         const availableSlots = await repository.findAvailableByConsultantId(
           organizationId,
           consultantId,
         );
+        const filteredSlots = availableSlots.filter((slot) =>
+          businessHours.containsRange(
+            slot.getTimeRange().getStartAt(),
+            slot.getTimeRange().getEndAt(),
+          ),
+        );
 
         return NextResponse.json({
-          slots: availableSlots.map((s) => ({
+          slots: filteredSlots.map((s) => ({
             slotId: s.getSlotId(),
             consultantId: s.getConsultantId(),
             startDatetime: s.getTimeRange().getStartAt().toISOString(),
@@ -207,6 +226,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
       >();
 
       for (const slot of aggregatedSlots) {
+        if (
+          !businessHours.containsRange(
+            slot.getTimeRange().getStartAt(),
+            slot.getTimeRange().getEndAt(),
+          )
+        ) {
+          continue;
+        }
         const startDatetime = slot.getTimeRange().getStartAt().toISOString();
         const endDatetime = slot.getTimeRange().getEndAt().toISOString();
         const key = `${startDatetime}_${endDatetime}`;
@@ -226,12 +253,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[1] === "public"
     ) {
       const repository = createOrganizationSettingsRepository();
-      const settings = await repository.findByOrganizationId(organizationId);
+      const settings =
+        (await repository.findByOrganizationId(organizationId)) ??
+        OrganizationSettings.createDefault(organizationId);
 
-      return NextResponse.json({
-        consultantSelectionEnabled:
-          settings?.getConsultantSelectionEnabled() ?? true,
-      });
+      return NextResponse.json(toBookingSettingsResponse(settings));
     }
 
     const authUser = await verifyAuth(request);
@@ -400,10 +426,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
         await createOrganizationSettingsRepository().findByOrganizationId(
           organizationId,
         );
-      return NextResponse.json({
-        consultantSelectionEnabled:
-          settings?.getConsultantSelectionEnabled() ?? true,
-      });
+      const resolvedSettings =
+        settings ?? OrganizationSettings.createDefault(organizationId);
+      return NextResponse.json(toBookingSettingsResponse(resolvedSettings));
     }
 
     if (
@@ -737,6 +762,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
         organizationId,
         consultantId,
       );
+      const settings =
+        (await createOrganizationSettingsRepository().findByOrganizationId(
+          organizationId,
+        )) ?? OrganizationSettings.createDefault(organizationId);
 
       if (!isValidSlotRange(start, end)) {
         return jsonError(
@@ -747,6 +776,13 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }
 
       const newTimeRange = TimeRange.create(start, end);
+      if (!settings.getBusinessHours().containsRange(start, end)) {
+        return jsonError(
+          400,
+          "SLOT_OUTSIDE_BUSINESS_HOURS",
+          "The selected slot is outside business hours",
+        );
+      }
       const hasOverlap = existingSlots.some((existingSlot) =>
         existingSlot.getTimeRange().overlaps(newTimeRange),
       );
@@ -1010,14 +1046,39 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       const settings =
         (await repository.findByOrganizationId(organizationId)) ??
         OrganizationSettings.createDefault(organizationId);
+      const nextBusinessHours = BusinessHours.create(
+        (body.businessHours ??
+          settings.getBusinessHours().toJSON()) as ReturnType<
+          BusinessHours["toJSON"]
+        >,
+      );
       settings.updateConsultantSelectionEnabled(
         body.consultantSelectionEnabled,
       );
+      settings.updateBusinessHours(nextBusinessHours.toJSON());
       await repository.save(settings);
 
-      return NextResponse.json({
-        consultantSelectionEnabled: settings.getConsultantSelectionEnabled(),
-      });
+      const slotRepository = createSlotRepository();
+      const now = new Date();
+      const allSlots =
+        await slotRepository.findByOrganizationId(organizationId);
+      const removableSlotIds = allSlots
+        .filter((slot) => {
+          if (slot.getIsReserved()) return false;
+          if (slot.getTimeRange().getStartAt() <= now) return false;
+          return !nextBusinessHours.containsRange(
+            slot.getTimeRange().getStartAt(),
+            slot.getTimeRange().getEndAt(),
+          );
+        })
+        .map((slot) => slot.getSlotId());
+      await Promise.all(
+        removableSlotIds.map((slotId) =>
+          slotRepository.delete(organizationId, slotId),
+        ),
+      );
+
+      return NextResponse.json(toBookingSettingsResponse(settings));
     }
 
     if (

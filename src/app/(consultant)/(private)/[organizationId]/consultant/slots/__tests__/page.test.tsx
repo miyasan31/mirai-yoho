@@ -12,6 +12,7 @@ const mockCreateSlotMutateAsync = vi.fn();
 const mockDeleteSlotMutateAsync = vi.fn();
 const mockRefetch = vi.fn();
 const mockToasterCreate = vi.fn();
+const mockUsePublicBookingSettings = vi.fn();
 
 let futureSlotStart = new Date();
 let futureSlotEnd = new Date();
@@ -180,6 +181,10 @@ vi.mock("@/hooks/use-organization-routing", () => ({
   useOrganizationRouting: () => ({ organizationId: "org-1" }),
 }));
 
+vi.mock("@/hooks/use-booking-settings", () => ({
+  usePublicBookingSettings: () => mockUsePublicBookingSettings(),
+}));
+
 vi.mock("@/hooks/use-slots", () => ({
   useGetSlots: () => ({
     data: { data: { slots: [] } },
@@ -197,12 +202,18 @@ import ConsultantSlotsPage from "../page";
 
 describe("ConsultantSlotsPage", () => {
   beforeEach(() => {
-    const now = Date.now();
-    futureSlotStart = new Date(now + 60 * 60 * 1000);
-    futureSlotEnd = new Date(now + 90 * 60 * 1000);
-    pastSlotStart = new Date(now - 60 * 60 * 1000);
-    pastSlotEnd = new Date(now - 30 * 60 * 1000);
-    allDaySingleStart = new Date(now + 24 * 60 * 60 * 1000);
+    const now = new Date();
+    const tomorrow = new Date(now);
+    tomorrow.setDate(now.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+
+    futureSlotStart = new Date(tomorrow);
+    futureSlotStart.setHours(11, 0, 0, 0);
+    futureSlotEnd = new Date(tomorrow);
+    futureSlotEnd.setHours(11, 30, 0, 0);
+    pastSlotStart = new Date(now.getTime() - 60 * 60 * 1000);
+    pastSlotEnd = new Date(now.getTime() - 30 * 60 * 1000);
+    allDaySingleStart = new Date(tomorrow);
     allDaySingleStart.setHours(0, 0, 0, 0);
     allDaySingleEnd = new Date(allDaySingleStart);
     allDaySingleEnd.setDate(allDaySingleEnd.getDate() + 1);
@@ -210,6 +221,22 @@ describe("ConsultantSlotsPage", () => {
     allDayMultiEnd = new Date(allDaySingleStart);
     allDayMultiEnd.setDate(allDayMultiEnd.getDate() + 2);
 
+    mockUsePublicBookingSettings.mockReturnValue({
+      data: {
+        data: {
+          consultantSelectionEnabled: true,
+          businessHours: {
+            weekly: Array.from({ length: 7 }, (_, dayOfWeek) => ({
+              dayOfWeek,
+              isClosed: false,
+              timeWindows: [{ startTime: "10:00", endTime: "17:00" }],
+            })),
+            includePublicHolidays: true,
+            exceptions: [],
+          },
+        },
+      },
+    });
     mockCreateSlotMutateAsync.mockResolvedValue(undefined);
     mockDeleteSlotMutateAsync.mockResolvedValue(undefined);
   });
@@ -297,5 +324,92 @@ describe("ConsultantSlotsPage", () => {
       }),
     );
     expect(days.size).toBe(2);
+  });
+
+  it("skips all-day registration when selected day is closed", async () => {
+    const closedDate = new Date(allDaySingleStart);
+    const closedDayOfWeek = closedDate.getDay();
+    mockUsePublicBookingSettings.mockReturnValue({
+      data: {
+        data: {
+          consultantSelectionEnabled: true,
+          businessHours: {
+            weekly: Array.from({ length: 7 }, (_, dayOfWeek) => ({
+              dayOfWeek,
+              isClosed: dayOfWeek === closedDayOfWeek,
+              timeWindows:
+                dayOfWeek === closedDayOfWeek
+                  ? []
+                  : [{ startTime: "10:00", endTime: "17:00" }],
+            })),
+            includePublicHolidays: true,
+            exceptions: [],
+          },
+        },
+      },
+    });
+
+    render(<ConsultantSlotsPage />);
+    fireEvent.click(screen.getByText("select-all-day-single"));
+
+    expect(mockCreateSlotMutateAsync).not.toHaveBeenCalled();
+    expect(mockToasterCreate).toHaveBeenCalledWith({
+      type: "error",
+      title: "選択した日には営業時間が設定されていません",
+    });
+  });
+
+  it("shows error and skips API call when selecting outside business hours", async () => {
+    const targetDate = new Date(allDaySingleStart);
+    futureSlotStart = new Date(targetDate);
+    futureSlotStart.setHours(9, 0, 0, 0);
+    futureSlotEnd = new Date(targetDate);
+    futureSlotEnd.setHours(9, 30, 0, 0);
+
+    render(<ConsultantSlotsPage />);
+    fireEvent.click(screen.getByText("select-future-slot"));
+
+    expect(mockCreateSlotMutateAsync).not.toHaveBeenCalled();
+    expect(mockToasterCreate).toHaveBeenCalledWith({
+      type: "error",
+      title: "営業時間外の時間は選択できません",
+    });
+  });
+
+  it("does not switch to day view in month view when selected day is closed", async () => {
+    const closedDayOfWeek = allDaySingleStart.getDay();
+    futureSlotStart = new Date(allDaySingleStart);
+    futureSlotEnd = new Date(allDaySingleStart);
+    futureSlotEnd.setHours(0, 30, 0, 0);
+
+    mockUsePublicBookingSettings.mockReturnValue({
+      data: {
+        data: {
+          consultantSelectionEnabled: true,
+          businessHours: {
+            weekly: Array.from({ length: 7 }, (_, dayOfWeek) => ({
+              dayOfWeek,
+              isClosed: dayOfWeek === closedDayOfWeek,
+              timeWindows:
+                dayOfWeek === closedDayOfWeek
+                  ? []
+                  : [{ startTime: "10:00", endTime: "17:00" }],
+            })),
+            includePublicHolidays: true,
+            exceptions: [],
+          },
+        },
+      },
+    });
+
+    render(<ConsultantSlotsPage />);
+    fireEvent.click(screen.getByText("change-to-month"));
+    fireEvent.click(screen.getByText("select-future-slot"));
+
+    expect(screen.getByTestId("calendar-view")).toHaveTextContent("month");
+    expect(mockToasterCreate).toHaveBeenCalledWith({
+      type: "error",
+      title: "選択した日は営業時間外のため選択できません",
+    });
   });
 });

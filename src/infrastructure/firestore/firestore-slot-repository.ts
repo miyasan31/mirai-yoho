@@ -84,6 +84,14 @@ export class FirestoreSlotRepository implements ISlotRepository {
     return slot.getOrganizationId() === organizationId ? slot : null;
   }
 
+  async findByOrganizationId(organizationId: string): Promise<Slot[]> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("organizationId", "==", organizationId)
+      .get();
+    return snapshot.docs.map((doc) => toDomain(doc.data() as SlotDoc));
+  }
+
   async findAllAvailable(organizationId: string): Promise<Slot[]> {
     try {
       const snapshot = await db

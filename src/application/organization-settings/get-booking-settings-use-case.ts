@@ -1,3 +1,5 @@
+import type { BusinessHoursProps } from "@/domain/organization-settings/business-hours";
+import { BusinessHours } from "@/domain/organization-settings/business-hours";
 import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
 
 interface GetBookingSettingsInput {
@@ -7,6 +9,7 @@ interface GetBookingSettingsInput {
 interface GetBookingSettingsOutput {
   organizationId: string;
   consultantSelectionEnabled: boolean;
+  businessHours: BusinessHoursProps;
 }
 
 export class GetBookingSettingsUseCase {
@@ -27,12 +30,14 @@ export class GetBookingSettingsUseCase {
       return {
         organizationId,
         consultantSelectionEnabled: true,
+        businessHours: BusinessHours.createDefault().toJSON(),
       };
     }
 
     return {
       organizationId: settings.getOrganizationId(),
       consultantSelectionEnabled: settings.getConsultantSelectionEnabled(),
+      businessHours: settings.getBusinessHours().toJSON(),
     };
   }
 }
