@@ -2,16 +2,78 @@
 
 import { CalendarX, ExternalLink, Pencil } from "lucide-react";
 import Link from "next/link";
+import { useState } from "react";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
 import { BookingStatusBadge } from "@/components/status-badge";
 import { TableSkeleton } from "@/components/table-skeleton";
+import { TruncatedId } from "@/components/truncated-id";
+import { HoverCard } from "@/components/ui/hover-card";
 import { IconButton } from "@/components/ui/icon-button";
 import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useConsultantBookings } from "@/hooks/use-consultant-bookings";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
+
+type ClientSummary = {
+  clientId: string;
+  name: string;
+  email: string;
+  phone: string;
+  memo?: string | null;
+};
+
+function ClientCell({
+  clientId,
+  client,
+}: {
+  clientId: string;
+  client: ClientSummary | null;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <HoverCard
+      open={open}
+      onOpenChange={(details) => setOpen(details.open)}
+      openDelay={150}
+      closeDelay={100}
+      positioning={{ placement: "top-start" }}
+      showArrow
+      content={
+        <styled.div display="flex" flexDir="column" gap="1" minW="240px">
+          {client ? (
+            <>
+              <Text textStyle="sm" fontWeight="bold">
+                {client.name}
+              </Text>
+              <Text textStyle="xs" color="fg.muted">
+                メール: {client.email}
+              </Text>
+              <Text textStyle="xs" color="fg.muted">
+                電話: {client.phone}
+              </Text>
+              <Text textStyle="xs" color="fg.muted">
+                メモ: {client.memo ?? "-"}
+              </Text>
+            </>
+          ) : (
+            <Text textStyle="sm">情報が見つかりません</Text>
+          )}
+        </styled.div>
+      }
+    >
+      <styled.span cursor="default" display="inline-block">
+        {client ? (
+          <Text textStyle="sm">{client.name}</Text>
+        ) : (
+          <TruncatedId id={clientId} />
+        )}
+      </styled.span>
+    </HoverCard>
+  );
+}
 
 export default function ConsultantBookingsPage() {
   const { buildPath } = useOrganizationRouting();
@@ -29,7 +91,7 @@ export default function ConsultantBookingsPage() {
             担当予約の日時・ステータスを確認し、Zoom参加やメモ編集へ進む画面です。
           </Text>
         </styled.div>
-        <TableSkeleton columns={5} rows={5} />
+        <TableSkeleton columns={6} rows={5} />
       </styled.div>
     );
   }
@@ -57,6 +119,7 @@ export default function ConsultantBookingsPage() {
             <Table.Row>
               <Table.Header>日時</Table.Header>
               <Table.Header>ステータス</Table.Header>
+              <Table.Header>クライアント</Table.Header>
               <Table.Header>Zoom</Table.Header>
               <Table.Header>メモ</Table.Header>
               <Table.Header>操作</Table.Header>
@@ -70,6 +133,9 @@ export default function ConsultantBookingsPage() {
                 </Table.Cell>
                 <Table.Cell>
                   <BookingStatusBadge status={b.status} />
+                </Table.Cell>
+                <Table.Cell>
+                  <ClientCell clientId={b.clientId} client={b.client ?? null} />
                 </Table.Cell>
                 <Table.Cell>
                   {b.zoomUrl ? (

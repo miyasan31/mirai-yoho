@@ -248,7 +248,7 @@ paths:
                   bookings:
                     type: array
                     items:
-                      $ref: "#/components/schemas/BookingDetail"
+                      $ref: "#/components/schemas/ConsultantBookingDetail"
 
   /organizations/{organizationId}/consultant/bookings/{id}/memo:
     patch:
@@ -888,6 +888,17 @@ components:
         chargeDisabledReason:
           type: string
           nullable: true
+
+    ConsultantBookingDetail:
+      allOf:
+        - $ref: "#/components/schemas/BookingDetail"
+        - type: object
+          required: [client]
+          properties:
+            client:
+              allOf:
+                - $ref: "#/components/schemas/ClientDetail"
+              nullable: true
 
     PaymentDetail:
       type: object

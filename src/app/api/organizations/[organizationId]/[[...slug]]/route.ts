@@ -442,23 +442,68 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[1] === "bookings"
     ) {
       requireOrganizationRole(authUser, organizationId, "consultant");
-      const bookings = await createBookingRepository().findByConsultantId(
-        organizationId,
-        authUser.uid,
+      const bookingRepository = createBookingRepository();
+      const paymentRepository = createPaymentRepository();
+      const clientRepository = createClientRepository();
+      const [bookings, payments] = await Promise.all([
+        bookingRepository.findByConsultantId(organizationId, authUser.uid),
+        paymentRepository.findAll(organizationId),
+      ]);
+      const paymentByBookingId = new Map(
+        payments.map((payment) => [payment.getBookingId(), payment]),
       );
+      const uniqueClientIds = [
+        ...new Set(bookings.map((b) => b.getClientId())),
+      ];
+      const clients = await Promise.all(
+        uniqueClientIds.map(
+          async (
+            clientId,
+          ): Promise<
+            readonly [
+              string,
+              Awaited<ReturnType<typeof clientRepository.findById>>,
+            ]
+          > =>
+            [
+              clientId,
+              await clientRepository.findById(organizationId, clientId),
+            ] as const,
+        ),
+      );
+      const clientById = new Map(clients);
 
       return NextResponse.json({
-        bookings: bookings.map((b) => ({
-          bookingId: b.getBookingId(),
-          clientId: b.getClientId(),
-          consultantId: b.getConsultantId(),
-          slotId: b.getSlotId(),
-          startDatetime: b.getStartDatetime().toISOString(),
-          status: b.getStatus().getValue(),
-          zoomUrl: b.getZoomUrl()?.getValue() ?? null,
-          consultantMemo: b.getConsultantMemo().getValue(),
-          consultationContent: b.getConsultationContent() ?? null,
-        })),
+        bookings: bookings.map((b) => {
+          const eligibility = evaluateChargeEligibility({
+            booking: b,
+            payment: paymentByBookingId.get(b.getBookingId()) ?? null,
+          });
+          const client = clientById.get(b.getClientId()) ?? null;
+
+          return {
+            bookingId: b.getBookingId(),
+            clientId: b.getClientId(),
+            consultantId: b.getConsultantId(),
+            slotId: b.getSlotId(),
+            startDatetime: b.getStartDatetime().toISOString(),
+            status: b.getStatus().getValue(),
+            zoomUrl: b.getZoomUrl()?.getValue() ?? null,
+            consultantMemo: b.getConsultantMemo().getValue(),
+            consultationContent: b.getConsultationContent() ?? null,
+            chargeable: eligibility.chargeable,
+            chargeDisabledReason: eligibility.reason,
+            client: client
+              ? {
+                  clientId: client.getClientId(),
+                  name: client.getName(),
+                  email: client.getEmail(),
+                  phone: client.getPhone(),
+                  memo: client.getMemo() ?? null,
+                }
+              : null,
+          };
+        }),
       });
     }
 

@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { ReactNode } from "react";
 
 vi.mock("next/navigation", () => ({
@@ -98,6 +104,29 @@ vi.mock("@/components/ui/icon-button", () => ({
   >) => <button {...props}>{children}</button>,
 }));
 
+vi.mock("@/components/ui/hover-card", () => ({
+  HoverCard: ({
+    children,
+    content,
+    open,
+    onOpenChange,
+  }: {
+    children: React.ReactNode;
+    content: React.ReactNode;
+    open?: boolean;
+    onOpenChange?: (details: { open: boolean }) => void;
+  }) => (
+    <button
+      type="button"
+      onMouseEnter={() => onOpenChange?.({ open: true })}
+      style={{ all: "unset", display: "contents" }}
+    >
+      {children}
+      {open ? <div>{content}</div> : null}
+    </button>
+  ),
+}));
+
 vi.mock("@/components/ui/table", () => ({
   Root: (props: React.ComponentProps<"table">) => <table {...props} />,
   Head: (props: React.ComponentProps<"thead">) => <thead {...props} />,
@@ -113,6 +142,10 @@ vi.mock("@/components/status-badge", () => ({
 
 vi.mock("@/components/table-skeleton", () => ({
   TableSkeleton: () => <div data-testid="table-skeleton" />,
+}));
+
+vi.mock("@/components/truncated-id", () => ({
+  TruncatedId: ({ id }: { id: string }) => <span>{`${id.slice(0, 8)}…`}</span>,
 }));
 
 vi.mock("lucide-react", () => ({
@@ -161,6 +194,13 @@ describe("ConsultantBookingsPage", () => {
               zoomUrl: "https://zoom.us/j/123",
               consultantMemo: "テストメモ",
               consultationContent: null,
+              client: {
+                clientId: "c1",
+                name: "山田 太郎",
+                email: "taro@example.com",
+                phone: "090-0000-0000",
+                memo: "初回相談",
+              },
             },
           ],
         },
@@ -174,6 +214,79 @@ describe("ConsultantBookingsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("confirmed")).toBeDefined();
       expect(screen.getByText("テストメモ")).toBeDefined();
+      expect(screen.getByText("山田 太郎")).toBeDefined();
+      expect(screen.getByText("クライアント")).toBeDefined();
+    });
+  });
+
+  it("shows client hover card details", async () => {
+    mockUseConsultantBookings.mockReturnValue({
+      data: {
+        data: {
+          bookings: [
+            {
+              bookingId: "b1",
+              clientId: "client-001-abcdef",
+              startDatetime: "2026-04-01T10:00:00Z",
+              status: "confirmed",
+              zoomUrl: "https://zoom.us/j/123",
+              consultantMemo: "テストメモ",
+              consultationContent: null,
+              client: {
+                clientId: "client-001-abcdef",
+                name: "山田 太郎",
+                email: "taro@example.com",
+                phone: "090-0000-0000",
+                memo: "初回相談",
+              },
+            },
+          ],
+        },
+      },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ConsultantBookingsPage />, { wrapper: createWrapper() });
+
+    fireEvent.mouseEnter(screen.getByText("山田 太郎"));
+
+    await waitFor(() => {
+      expect(screen.getByText("メール: taro@example.com")).toBeDefined();
+      expect(screen.getByText("電話: 090-0000-0000")).toBeDefined();
+      expect(screen.getByText("メモ: 初回相談")).toBeDefined();
+    });
+  });
+
+  it("falls back to truncated id and missing message when client is null", async () => {
+    mockUseConsultantBookings.mockReturnValue({
+      data: {
+        data: {
+          bookings: [
+            {
+              bookingId: "b2",
+              clientId: "client-404-abcdef",
+              startDatetime: "2026-04-01T10:00:00Z",
+              status: "pending",
+              zoomUrl: null,
+              consultantMemo: "",
+              consultationContent: null,
+              client: null,
+            },
+          ],
+        },
+      },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ConsultantBookingsPage />, { wrapper: createWrapper() });
+
+    const truncatedId = screen.getByText("client-40…");
+    fireEvent.mouseEnter(truncatedId);
+
+    await waitFor(() => {
+      expect(screen.getByText("情報が見つかりません")).toBeDefined();
     });
   });
 
