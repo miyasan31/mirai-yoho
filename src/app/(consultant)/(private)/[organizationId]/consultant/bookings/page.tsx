@@ -54,9 +54,6 @@ function ClientCell({
               <Text textStyle="xs" color="fg.muted">
                 電話: {client.phone}
               </Text>
-              <Text textStyle="xs" color="fg.muted">
-                メモ: {client.memo ?? "-"}
-              </Text>
             </>
           ) : (
             <Text textStyle="sm">情報が見つかりません</Text>
