@@ -1,7 +1,9 @@
 "use client";
 
+import { valibotResolver } from "@hookform/resolvers/valibot";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
+import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { Tabs } from "@/components/ui";
 import { Button } from "@/components/ui/button";
@@ -14,27 +16,23 @@ import {
   useUpdateAdminBookingSettings,
 } from "@/hooks/use-booking-settings";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
+import {
+  type BookingSettingsFormValues,
+  bookingSettingsFormSchema,
+} from "./booking-settings-form-schema";
+import {
+  type BusinessHoursFormValues,
+  businessHoursFormSchema,
+} from "./business-hours-form-schema";
 
 const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"] as const;
 type SettingsTab = "booking" | "business-hours";
 
+type WeeklyRowForm = BusinessHoursFormValues["weekly"][number];
+type ExceptionDayForm = BusinessHoursFormValues["exceptions"][number];
+
 function isSettingsTab(value: string | null): value is SettingsTab {
   return value === "booking" || value === "business-hours";
-}
-
-interface WeeklyRowForm {
-  dayOfWeek: number;
-  isClosed: boolean;
-  startTime: string;
-  endTime: string;
-}
-
-interface ExceptionDayForm {
-  id: string;
-  date: string;
-  isClosed: boolean;
-  startTime: string;
-  endTime: string;
 }
 
 function isValidHalfHourTime(value: string): boolean {
@@ -102,50 +100,91 @@ export default function AdminSettingsPage() {
   const { data, isLoading } = useAdminBookingSettings();
   const updateBookingSettings = useUpdateAdminBookingSettings();
   const isReadOnly = role === "operator";
-  const [consultantSelectionEnabled, setConsultantSelectionEnabled] = useState<
-    boolean | undefined
-  >(undefined);
-  const [includePublicHolidays, setIncludePublicHolidays] = useState(true);
-  const [weeklyRows, setWeeklyRows] = useState<WeeklyRowForm[]>(
-    getDefaultWeeklyRows(),
-  );
-  const [exceptions, setExceptions] = useState<ExceptionDayForm[]>([]);
   const [initialized, setInitialized] = useState(false);
   const [persistedBusinessHours, setPersistedBusinessHours] = useState(
     BusinessHours.createDefault().toJSON(),
   );
   const [currentTab, setCurrentTab] = useState<SettingsTab>("booking");
 
+  const {
+    register: bookingRegister,
+    handleSubmit: handleBookingSubmit,
+    reset: resetBookingForm,
+    watch: watchBookingForm,
+  } = useForm<BookingSettingsFormValues>({
+    resolver: valibotResolver(bookingSettingsFormSchema),
+    defaultValues: {
+      consultantSelectionEnabled: true,
+    },
+  });
+
+  const {
+    control: businessControl,
+    register: businessRegister,
+    handleSubmit: handleBusinessSubmit,
+    reset: resetBusinessForm,
+    watch: watchBusinessForm,
+  } = useForm<BusinessHoursFormValues>({
+    resolver: valibotResolver(businessHoursFormSchema),
+    defaultValues: {
+      includePublicHolidays: true,
+      weekly: getDefaultWeeklyRows(),
+      exceptions: [],
+    },
+  });
+
+  const {
+    fields: exceptionFields,
+    append,
+    remove,
+  } = useFieldArray({
+    control: businessControl,
+    name: "exceptions",
+  });
+
+  const consultantSelectionEnabled = watchBookingForm(
+    "consultantSelectionEnabled",
+  );
+  const includePublicHolidays = watchBusinessForm("includePublicHolidays");
+  const weeklyRows = watchBusinessForm("weekly");
+  const exceptions = watchBusinessForm("exceptions");
+
   useEffect(() => {
     if (initialized || !data?.data) return;
-    setConsultantSelectionEnabled(data.data.consultantSelectionEnabled);
-    const rawBusinessHours =
-      data.data.businessHours ?? BusinessHours.createDefault().toJSON();
-    const normalizedBusinessHours =
-      BusinessHours.create(rawBusinessHours).toJSON();
-    setIncludePublicHolidays(normalizedBusinessHours.includePublicHolidays);
-    setWeeklyRows(toWeeklyRows(normalizedBusinessHours));
-    setExceptions(toExceptions(normalizedBusinessHours));
+
+    const normalizedBusinessHours = BusinessHours.create(
+      data.data.businessHours ?? BusinessHours.createDefault().toJSON(),
+    ).toJSON();
+
+    resetBookingForm({
+      consultantSelectionEnabled: data.data.consultantSelectionEnabled,
+    });
+    resetBusinessForm({
+      includePublicHolidays: normalizedBusinessHours.includePublicHolidays,
+      weekly: toWeeklyRows(normalizedBusinessHours),
+      exceptions: toExceptions(normalizedBusinessHours),
+    });
+
     setPersistedBusinessHours(normalizedBusinessHours);
     setInitialized(true);
-  }, [data, initialized]);
+  }, [data, initialized, resetBookingForm, resetBusinessForm]);
 
   useEffect(() => {
     const tabParam = searchParams.get("tab");
     setCurrentTab(isSettingsTab(tabParam) ? tabParam : "booking");
   }, [searchParams]);
 
-  const buildBusinessHoursOrShowError = () => {
+  const buildBusinessHoursOrShowError = (values: BusinessHoursFormValues) => {
     const businessHoursInput = {
-      weekly: weeklyRows.map((row) => ({
+      weekly: values.weekly.map((row) => ({
         dayOfWeek: row.dayOfWeek,
         isClosed: row.isClosed,
         timeWindows: row.isClosed
           ? []
           : [{ startTime: row.startTime, endTime: row.endTime }],
       })),
-      includePublicHolidays,
-      exceptions: exceptions.map((item) => ({
+      includePublicHolidays: values.includePublicHolidays,
+      exceptions: values.exceptions.map((item) => ({
         startDate: item.date,
         endDate: item.date,
         isClosed: item.isClosed,
@@ -166,34 +205,26 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const saveBookingSettings = async () => {
-    if (
-      !organizationId ||
-      consultantSelectionEnabled === undefined ||
-      isReadOnly
-    ) {
+  const saveBookingSettings = async (values: BookingSettingsFormValues) => {
+    if (!organizationId || !initialized || isReadOnly) {
       return;
     }
 
     await updateBookingSettings.mutateAsync({
       organizationId,
       data: {
-        consultantSelectionEnabled,
+        consultantSelectionEnabled: values.consultantSelectionEnabled,
         businessHours: persistedBusinessHours,
       },
     });
   };
 
-  const saveBusinessHoursSettings = async () => {
-    if (
-      !organizationId ||
-      consultantSelectionEnabled === undefined ||
-      isReadOnly
-    ) {
+  const saveBusinessHoursSettings = async (values: BusinessHoursFormValues) => {
+    if (!organizationId || !initialized || isReadOnly) {
       return;
     }
 
-    const invalidWeeklyRow = weeklyRows.find(
+    const invalidWeeklyRow = values.weekly.find(
       (row) => !row.isClosed && !isValidRange(row.startTime, row.endTime),
     );
     if (invalidWeeklyRow) {
@@ -203,7 +234,8 @@ export default function AdminSettingsPage() {
       });
       return;
     }
-    const invalidException = exceptions.find((item) => {
+
+    const invalidException = values.exceptions.find((item) => {
       if (!item.date) return true;
       if (item.isClosed) return false;
       return !isValidRange(item.startTime, item.endTime);
@@ -216,7 +248,7 @@ export default function AdminSettingsPage() {
       return;
     }
 
-    const validatedBusinessHours = buildBusinessHoursOrShowError();
+    const validatedBusinessHours = buildBusinessHoursOrShowError(values);
     if (!validatedBusinessHours) {
       return;
     }
@@ -274,7 +306,12 @@ export default function AdminSettingsPage() {
         </Tabs.List>
 
         <Tabs.Content value="booking">
-          <styled.div display="flex" flexDirection="column" gap="4">
+          <styled.form
+            onSubmit={handleBookingSubmit(saveBookingSettings)}
+            display="flex"
+            flexDirection="column"
+            gap="4"
+          >
             <styled.div>
               <Text as="h2" textStyle="lg" fontWeight="semibold" mb="1">
                 予約設定
@@ -293,12 +330,9 @@ export default function AdminSettingsPage() {
             >
               <input
                 type="checkbox"
-                checked={consultantSelectionEnabled ?? false}
+                {...bookingRegister("consultantSelectionEnabled")}
                 disabled={
                   isLoading || updateBookingSettings.isPending || isReadOnly
-                }
-                onChange={(event) =>
-                  setConsultantSelectionEnabled(event.target.checked)
                 }
               />
               <styled.div display="flex" flexDirection="column" gap="1">
@@ -311,23 +345,24 @@ export default function AdminSettingsPage() {
 
             <styled.div display="flex">
               <Button
-                onClick={saveBookingSettings}
+                type="submit"
                 loading={updateBookingSettings.isPending}
                 loadingText="保存中..."
-                disabled={
-                  isLoading ||
-                  consultantSelectionEnabled === undefined ||
-                  isReadOnly
-                }
+                disabled={isLoading || !initialized || isReadOnly}
               >
                 保存
               </Button>
             </styled.div>
-          </styled.div>
+          </styled.form>
         </Tabs.Content>
 
         <Tabs.Content value="business-hours">
-          <styled.div display="flex" flexDirection="column" gap="3">
+          <styled.form
+            onSubmit={handleBusinessSubmit(saveBusinessHoursSettings)}
+            display="flex"
+            flexDirection="column"
+            gap="3"
+          >
             <Text as="h2" textStyle="lg" fontWeight="semibold">
               営業時間設定
             </Text>
@@ -343,19 +378,17 @@ export default function AdminSettingsPage() {
             >
               <input
                 type="checkbox"
+                {...businessRegister("includePublicHolidays")}
                 checked={includePublicHolidays}
                 disabled={
                   isLoading || updateBookingSettings.isPending || isReadOnly
-                }
-                onChange={(event) =>
-                  setIncludePublicHolidays(event.target.checked)
                 }
               />
               <Text textStyle="sm">祝日を通常営業として扱う</Text>
             </styled.label>
 
             <styled.div display="grid" gap="2">
-              {weeklyRows.map((row, index) => (
+              {weeklyRows?.map((row, index) => (
                 <styled.div
                   key={row.dayOfWeek}
                   display="grid"
@@ -364,65 +397,47 @@ export default function AdminSettingsPage() {
                   alignItems="center"
                 >
                   <Text>{DAY_LABELS[row.dayOfWeek]}</Text>
-                  <styled.label display="flex" alignItems="center" gap="2">
-                    <input
-                      type="checkbox"
-                      checked={!row.isClosed}
-                      disabled={
-                        isLoading ||
-                        updateBookingSettings.isPending ||
-                        isReadOnly
-                      }
-                      onChange={(event) =>
-                        setWeeklyRows((previous) =>
-                          previous.map((item, itemIndex) =>
-                            itemIndex === index
-                              ? { ...item, isClosed: !event.target.checked }
-                              : item,
-                          ),
-                        )
-                      }
+                  <styled.div display="flex" alignItems="center" gap="2">
+                    <Controller
+                      control={businessControl}
+                      name={`weekly.${index}.isClosed`}
+                      render={({ field }) => (
+                        <input
+                          type="checkbox"
+                          checked={!field.value}
+                          disabled={
+                            isLoading ||
+                            updateBookingSettings.isPending ||
+                            isReadOnly
+                          }
+                          onChange={(event) =>
+                            field.onChange(!event.target.checked)
+                          }
+                        />
+                      )}
                     />
                     <Text textStyle="sm">営業</Text>
-                  </styled.label>
+                  </styled.div>
                   <input
                     type="time"
                     step={1800}
-                    value={row.startTime}
+                    {...businessRegister(`weekly.${index}.startTime`)}
                     disabled={
                       row.isClosed ||
                       isLoading ||
                       updateBookingSettings.isPending ||
                       isReadOnly
-                    }
-                    onChange={(event) =>
-                      setWeeklyRows((previous) =>
-                        previous.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? { ...item, startTime: event.target.value }
-                            : item,
-                        ),
-                      )
                     }
                   />
                   <input
                     type="time"
                     step={1800}
-                    value={row.endTime}
+                    {...businessRegister(`weekly.${index}.endTime`)}
                     disabled={
                       row.isClosed ||
                       isLoading ||
                       updateBookingSettings.isPending ||
                       isReadOnly
-                    }
-                    onChange={(event) =>
-                      setWeeklyRows((previous) =>
-                        previous.map((item, itemIndex) =>
-                          itemIndex === index
-                            ? { ...item, endTime: event.target.value }
-                            : item,
-                        ),
-                      )
                     }
                   />
                 </styled.div>
@@ -439,22 +454,20 @@ export default function AdminSettingsPage() {
                 単日例外
               </Text>
               <Button
+                type="button"
                 variant="outline"
                 size="sm"
                 disabled={
                   isLoading || updateBookingSettings.isPending || isReadOnly
                 }
                 onClick={() =>
-                  setExceptions((previous) => [
-                    ...previous,
-                    {
-                      id: crypto.randomUUID(),
-                      date: "",
-                      isClosed: true,
-                      startTime: "10:00",
-                      endTime: "17:00",
-                    },
-                  ])
+                  append({
+                    id: crypto.randomUUID(),
+                    date: "",
+                    isClosed: true,
+                    startTime: "10:00",
+                    endTime: "17:00",
+                  })
                 }
               >
                 例外日を追加
@@ -462,128 +475,89 @@ export default function AdminSettingsPage() {
             </styled.div>
 
             <styled.div display="grid" gap="2">
-              {exceptions.map((item, index) => (
-                <styled.div
-                  key={item.id}
-                  display="grid"
-                  gridTemplateColumns="1fr 80px 1fr 1fr 72px"
-                  gap="2"
-                  alignItems="center"
-                >
-                  <input
-                    type="date"
-                    value={item.date}
-                    disabled={
-                      isLoading || updateBookingSettings.isPending || isReadOnly
-                    }
-                    onChange={(event) =>
-                      setExceptions((previous) =>
-                        previous.map((exception, exceptionIndex) =>
-                          exceptionIndex === index
-                            ? { ...exception, date: event.target.value }
-                            : exception,
-                        ),
-                      )
-                    }
-                  />
-                  <styled.label display="flex" alignItems="center" gap="1">
+              {exceptionFields.map((field, index) => {
+                const exception = exceptions?.[index];
+                const isExceptionClosed = exception?.isClosed ?? field.isClosed;
+
+                return (
+                  <styled.div
+                    key={field.id}
+                    display="grid"
+                    gridTemplateColumns="1fr 80px 1fr 1fr 72px"
+                    gap="2"
+                    alignItems="center"
+                  >
                     <input
-                      type="checkbox"
-                      checked={item.isClosed}
+                      type="date"
+                      {...businessRegister(`exceptions.${index}.date`)}
                       disabled={
                         isLoading ||
                         updateBookingSettings.isPending ||
                         isReadOnly
                       }
-                      onChange={(event) =>
-                        setExceptions((previous) =>
-                          previous.map((exception, exceptionIndex) =>
-                            exceptionIndex === index
-                              ? {
-                                  ...exception,
-                                  isClosed: event.target.checked,
-                                }
-                              : exception,
-                          ),
-                        )
+                    />
+                    <styled.label display="flex" alignItems="center" gap="1">
+                      <input
+                        type="checkbox"
+                        {...businessRegister(`exceptions.${index}.isClosed`)}
+                        disabled={
+                          isLoading ||
+                          updateBookingSettings.isPending ||
+                          isReadOnly
+                        }
+                      />
+                      <Text textStyle="sm">休業</Text>
+                    </styled.label>
+                    <input
+                      type="time"
+                      step={1800}
+                      {...businessRegister(`exceptions.${index}.startTime`)}
+                      disabled={
+                        isExceptionClosed ||
+                        isLoading ||
+                        updateBookingSettings.isPending ||
+                        isReadOnly
                       }
                     />
-                    <Text textStyle="sm">休業</Text>
-                  </styled.label>
-                  <input
-                    type="time"
-                    step={1800}
-                    value={item.startTime}
-                    disabled={
-                      item.isClosed ||
-                      isLoading ||
-                      updateBookingSettings.isPending ||
-                      isReadOnly
-                    }
-                    onChange={(event) =>
-                      setExceptions((previous) =>
-                        previous.map((exception, exceptionIndex) =>
-                          exceptionIndex === index
-                            ? { ...exception, startTime: event.target.value }
-                            : exception,
-                        ),
-                      )
-                    }
-                  />
-                  <input
-                    type="time"
-                    step={1800}
-                    value={item.endTime}
-                    disabled={
-                      item.isClosed ||
-                      isLoading ||
-                      updateBookingSettings.isPending ||
-                      isReadOnly
-                    }
-                    onChange={(event) =>
-                      setExceptions((previous) =>
-                        previous.map((exception, exceptionIndex) =>
-                          exceptionIndex === index
-                            ? { ...exception, endTime: event.target.value }
-                            : exception,
-                        ),
-                      )
-                    }
-                  />
-                  <Button
-                    variant="plain"
-                    size="sm"
-                    disabled={
-                      isLoading || updateBookingSettings.isPending || isReadOnly
-                    }
-                    onClick={() =>
-                      setExceptions((previous) =>
-                        previous.filter(
-                          (_, exceptionIndex) => exceptionIndex !== index,
-                        ),
-                      )
-                    }
-                  >
-                    削除
-                  </Button>
-                </styled.div>
-              ))}
+                    <input
+                      type="time"
+                      step={1800}
+                      {...businessRegister(`exceptions.${index}.endTime`)}
+                      disabled={
+                        isExceptionClosed ||
+                        isLoading ||
+                        updateBookingSettings.isPending ||
+                        isReadOnly
+                      }
+                    />
+                    <Button
+                      type="button"
+                      variant="plain"
+                      size="sm"
+                      disabled={
+                        isLoading ||
+                        updateBookingSettings.isPending ||
+                        isReadOnly
+                      }
+                      onClick={() => remove(index)}
+                    >
+                      削除
+                    </Button>
+                  </styled.div>
+                );
+              })}
             </styled.div>
             <styled.div display="flex" mt="4">
               <Button
-                onClick={saveBusinessHoursSettings}
+                type="submit"
                 loading={updateBookingSettings.isPending}
                 loadingText="保存中..."
-                disabled={
-                  isLoading ||
-                  consultantSelectionEnabled === undefined ||
-                  isReadOnly
-                }
+                disabled={isLoading || !initialized || isReadOnly}
               >
                 保存
               </Button>
             </styled.div>
-          </styled.div>
+          </styled.form>
         </Tabs.Content>
       </Tabs.Root>
     </styled.div>
