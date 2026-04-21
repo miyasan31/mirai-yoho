@@ -23,7 +23,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: dev
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: w9jds/firebase-action@v13.28.0
         with:
           args: deploy --only firestore:rules,firestore:indexes --project dev
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ inputs.environment }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: w9jds/firebase-action@v13.28.0
         with:
           args: deploy --only firestore:rules,firestore:indexes --project ${{ inputs.environment }}

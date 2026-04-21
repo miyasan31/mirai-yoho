@@ -16,6 +16,7 @@ jobs:
     env:
       TZ: Asia/Tokyo
     steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: ./.github/actions/ci-setup
       - name: Type check
         run: |
@@ -27,6 +28,7 @@ jobs:
     env:
       TZ: Asia/Tokyo
     steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: ./.github/actions/ci-setup
       - name: Test
         run: pnpm test
@@ -36,6 +38,7 @@ jobs:
     env:
       TZ: Asia/Tokyo
     steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: ./.github/actions/ci-setup
       - name: Lint
         run: pnpm lint
@@ -47,6 +50,7 @@ jobs:
     env:
       TZ: Asia/Tokyo
     steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: ./.github/actions/ci-setup
       - name: Build
         run: pnpm build
