@@ -1,0 +1,29 @@
+name: CI Setup
+description: Common setup for CI jobs
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/checkout@v4
+
+    - uses: jdx/mise-action@v2
+
+    - name: Cache pnpm store
+      uses: actions/cache@v4
+      with:
+        path: ~/.pnpm-store
+        key: ${{ runner.os }}-pnpm-${{ hashFiles('pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-
+
+    - name: Install dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    - name: Generate PandaCSS
+      shell: bash
+      run: pnpm build:panda
+
+    - name: Generate API client
+      shell: bash
+      run: pnpm generate

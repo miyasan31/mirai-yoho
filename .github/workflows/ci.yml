@@ -11,27 +11,43 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  ci:
+  tsc:
     runs-on: ubuntu-latest
     env:
       TZ: Asia/Tokyo
     steps:
-      - uses: actions/checkout@v4
-      - uses: jdx/mise-action@v2
-      - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-      - name: Generate PandaCSS
-        run: pnpm build:panda
-      - name: Generate API client
-        run: pnpm generate
-      - name: Lint
-        run: pnpm lint
+      - uses: ./.github/actions/ci-setup
       - name: Type check
         run: |
           pnpm tsc
           pnpm tsc:test
+
+  test:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Tokyo
+    steps:
+      - uses: ./.github/actions/ci-setup
       - name: Test
         run: pnpm test
+
+  lint-format:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Tokyo
+    steps:
+      - uses: ./.github/actions/ci-setup
+      - name: Lint
+        run: pnpm lint
+      - name: Format check
+        run: pnpm exec biome check --formatter-enabled=true --linter-enabled=false --assist-enabled=false .
+
+  build:
+    runs-on: ubuntu-latest
+    env:
+      TZ: Asia/Tokyo
+    steps:
+      - uses: ./.github/actions/ci-setup
       - name: Build
         run: pnpm build
         env:
