@@ -229,9 +229,9 @@ describe("AdminSettingsPage", () => {
     await user.click(screen.getByRole("tab", { name: "営業時間" }));
     await user.click(screen.getByRole("button", { name: "例外日を追加" }));
 
-    const dateInputs = screen.getAllByDisplayValue("", {
-      selector: 'input[type="date"]',
-    });
+    const dateInputs = Array.from(
+      document.querySelectorAll<HTMLInputElement>('input[type="date"]'),
+    );
     fireEvent.change(dateInputs[0], { target: { value: "2026-08-13" } });
 
     const exceptionClosedCheckboxes = screen
@@ -241,9 +241,9 @@ describe("AdminSettingsPage", () => {
       );
     await user.click(exceptionClosedCheckboxes[0]);
 
-    const timeInputs = screen.getAllByDisplayValue("10:00", {
-      selector: 'input[type="time"]',
-    });
+    const timeInputs = Array.from(
+      document.querySelectorAll<HTMLInputElement>('input[type="time"]'),
+    ).filter((input) => input.value === "10:00");
     const lastStart = timeInputs[timeInputs.length - 1];
     fireEvent.change(lastStart, { target: { value: "13:00" } });
 
@@ -277,9 +277,11 @@ describe("AdminSettingsPage", () => {
     await user.click(screen.getByRole("tab", { name: "営業時間" }));
     await user.click(screen.getByRole("button", { name: "例外日を追加" }));
 
-    const dateInput = screen.getByDisplayValue("", {
-      selector: 'input[type="date"]',
-    });
+    const dateInput =
+      document.querySelector<HTMLInputElement>('input[type="date"]');
+    if (!dateInput) {
+      throw new Error("date input not found");
+    }
     fireEvent.change(dateInput, { target: { value: "2026-08-13" } });
 
     const exceptionClosedCheckbox = screen
@@ -292,9 +294,9 @@ describe("AdminSettingsPage", () => {
     }
     await user.click(exceptionClosedCheckbox);
 
-    const startInput = screen.getAllByDisplayValue("10:00", {
-      selector: 'input[type="time"]',
-    });
+    const startInput = Array.from(
+      document.querySelectorAll<HTMLInputElement>('input[type="time"]'),
+    ).filter((input) => input.value === "10:00");
     const lastStart = startInput[startInput.length - 1];
     fireEvent.change(lastStart, { target: { value: "18:00" } });
 
