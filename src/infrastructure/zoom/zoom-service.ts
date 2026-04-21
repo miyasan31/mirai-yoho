@@ -1,4 +1,5 @@
 import type { IZoomService } from "@/application/shared/zoom-service";
+import { envServer } from "@/config/env.server";
 
 interface ZoomTokenResponse {
   access_token: string;
@@ -20,9 +21,9 @@ export class ZoomService implements IZoomService {
       return this.accessToken;
     }
 
-    const accountId = process.env.ZOOM_ACCOUNT_ID as string;
-    const clientId = process.env.ZOOM_CLIENT_ID as string;
-    const clientSecret = process.env.ZOOM_CLIENT_SECRET as string;
+    const accountId = envServer.zoomAccountId;
+    const clientId = envServer.zoomClientId;
+    const clientSecret = envServer.zoomClientSecret;
     const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString(
       "base64",
     );
@@ -53,7 +54,7 @@ export class ZoomService implements IZoomService {
     breakoutRooms: Array<{ name: string; participants: string[] }>;
   }): Promise<{ meetingId: string; joinUrl: string }> {
     const token = await this.getAccessToken();
-    const hostUserId = process.env.ZOOM_HOST_USER_ID as string;
+    const hostUserId = envServer.zoomHostUserId;
 
     const startTime = `${params.sessionDate}T09:00:00`;
 

@@ -1,22 +1,26 @@
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
+import { envServer } from "@/config/env.server";
 
 function initializeFirebaseAdmin() {
   if (getApps().length > 0) {
     return getApps()[0];
   }
 
-  if (process.env.NODE_ENV === "test") {
+  if (
+    envServer.nodeEnv === "test" ||
+    !envServer.hasFirebaseServiceAccountCredentials()
+  ) {
     return initializeApp({
-      projectId: process.env.FIREBASE_PROJECT_ID ?? "test-project",
+      projectId: envServer.firebaseProjectId ?? "test-project",
     });
   }
 
   return initializeApp({
     credential: cert({
-      projectId: process.env.FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-      privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
+      projectId: envServer.firebaseProjectId,
+      clientEmail: envServer.firebaseClientEmail,
+      privateKey: envServer.firebasePrivateKey,
     }),
   });
 }

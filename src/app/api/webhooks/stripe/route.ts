@@ -1,12 +1,20 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
+import { envServer } from "@/config/env.server";
 import { createCompleteSetupUseCase } from "@/infrastructure/container";
 import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore-payment-repository";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
-const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET as string;
+let stripeClient: Stripe | null = null;
+
+function getStripeClient(): Stripe {
+  if (!stripeClient) {
+    stripeClient = new Stripe(envServer.stripeSecretKey);
+  }
+  return stripeClient;
+}
 
 export async function POST(request: Request) {
+  const webhookSecret = envServer.stripeWebhookSecret;
   const body = await request.text();
   const signature = request.headers.get("stripe-signature");
 
@@ -19,7 +27,11 @@ export async function POST(request: Request) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, signature, webhookSecret);
+    event = getStripeClient().webhooks.constructEvent(
+      body,
+      signature,
+      webhookSecret,
+    );
   } catch {
     return NextResponse.json(
       { code: "INVALID_SIGNATURE", message: "Invalid webhook signature" },

@@ -1,13 +1,21 @@
 import Stripe from "stripe";
 import type { IStripeService } from "@/application/shared/stripe-service";
+import { envServer } from "@/config/env.server";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
+let stripeClient: Stripe | null = null;
+
+function getStripeClient(): Stripe {
+  if (!stripeClient) {
+    stripeClient = new Stripe(envServer.stripeSecretKey);
+  }
+  return stripeClient;
+}
 
 export class StripeService implements IStripeService {
   async createSetupIntent(params: {
     metadata: Record<string, string>;
   }): Promise<{ setupIntentId: string; clientSecret: string }> {
-    const setupIntent = await stripe.setupIntents.create({
+    const setupIntent = await getStripeClient().setupIntents.create({
       metadata: params.metadata,
       usage: "off_session",
     });
@@ -22,7 +30,7 @@ export class StripeService implements IStripeService {
     amountJPY: number;
     metadata: Record<string, string>;
   }): Promise<{ paymentIntentId: string; clientSecret: string }> {
-    const paymentIntent = await stripe.paymentIntents.create({
+    const paymentIntent = await getStripeClient().paymentIntents.create({
       amount: params.amountJPY,
       currency: "jpy",
       payment_method_types: ["paypay"],
@@ -40,7 +48,7 @@ export class StripeService implements IStripeService {
     paymentMethodId: string;
     metadata: Record<string, string>;
   }): Promise<{ paymentIntentId: string }> {
-    const paymentIntent = await stripe.paymentIntents.create({
+    const paymentIntent = await getStripeClient().paymentIntents.create({
       amount: params.amountJPY,
       currency: "jpy",
       payment_method: params.paymentMethodId,
@@ -53,10 +61,10 @@ export class StripeService implements IStripeService {
   }
 
   async cancelPaymentIntent(paymentIntentId: string): Promise<void> {
-    await stripe.paymentIntents.cancel(paymentIntentId);
+    await getStripeClient().paymentIntents.cancel(paymentIntentId);
   }
 
   async refundPaymentIntent(paymentIntentId: string): Promise<void> {
-    await stripe.refunds.create({ payment_intent: paymentIntentId });
+    await getStripeClient().refunds.create({ payment_intent: paymentIntentId });
   }
 }

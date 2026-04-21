@@ -1,8 +1,15 @@
 import { Resend } from "resend";
 import type { IEmailService } from "@/application/shared/email-service";
+import { envServer } from "@/config/env.server";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-const fromEmail = process.env.RESEND_FROM_EMAIL as string;
+let resendClient: Resend | null = null;
+
+function getResendClient(): Resend {
+  if (!resendClient) {
+    resendClient = new Resend(envServer.resendApiKey);
+  }
+  return resendClient;
+}
 
 type EmailPayload = {
   to: string;
@@ -25,12 +32,12 @@ async function deliverEmail(
   emailType: string,
   payload: EmailPayload,
 ): Promise<void> {
-  const emailDeliveryMode = process.env.EMAIL_DELIVERY_MODE ?? "resend";
+  const emailDeliveryMode = envServer.emailDeliveryMode;
 
   if (emailDeliveryMode === "log") {
     console.info("[email:log]", {
       emailType,
-      from: fromEmail,
+      from: envServer.resendFromEmail,
       to: payload.to,
       subject: payload.subject,
       html: payload.html,
@@ -38,8 +45,8 @@ async function deliverEmail(
     return;
   }
 
-  await resend.emails.send({
-    from: fromEmail,
+  await getResendClient().emails.send({
+    from: envServer.resendFromEmail,
     to: payload.to,
     subject: payload.subject,
     html: payload.html,

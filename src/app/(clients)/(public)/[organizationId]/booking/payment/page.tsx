@@ -16,15 +16,14 @@ import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
 import { Button } from "@/components/ui/button";
 import { Text } from "@/components/ui/text";
+import { envClient } from "@/config/env.client";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import {
   type CheckoutFormValues,
   checkoutFormSchema,
 } from "./checkout-form-schema";
 
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY as string,
-);
+const stripePromise = loadStripe(envClient.stripePublishableKey);
 
 type PaymentMode = "setup" | "payment";
 type PaymentMethodType = "card" | "paypay";

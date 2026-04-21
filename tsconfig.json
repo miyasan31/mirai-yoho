@@ -23,6 +23,7 @@
     "src",
     "styled-system",
     "next-env.d.ts",
+    "env.d.ts",
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",

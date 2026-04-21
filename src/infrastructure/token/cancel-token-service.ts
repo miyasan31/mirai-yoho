@@ -1,8 +1,8 @@
 import { createHmac } from "node:crypto";
 import type { ICancelTokenService } from "@/application/shared/cancel-token-service";
+import { envServer } from "@/config/env.server";
 
-const SECRET_KEY =
-  process.env.CANCEL_TOKEN_SECRET ?? "default-cancel-token-secret";
+const SECRET_KEY = envServer.cancelTokenSecret;
 
 export class HmacCancelTokenService implements ICancelTokenService {
   generateToken(bookingId: string): string {
