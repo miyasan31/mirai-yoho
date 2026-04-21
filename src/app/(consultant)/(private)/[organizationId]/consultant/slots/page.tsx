@@ -29,6 +29,9 @@ import { useCreateSlot, useDeleteSlot, useGetSlots } from "@/hooks/use-slots";
 const locales = { "ja-JP": ja };
 const SLOT_UNIT_MINUTES = getSlotUnitMinutes();
 const SLOT_UNIT_MS = getSlotUnitMs();
+const BUSINESS_START_HOUR = 10;
+const BUSINESS_END_HOUR = 17;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 const localizer = dateFnsLocalizer({
   format,
@@ -44,6 +47,48 @@ interface CalendarEvent {
   start: Date;
   end: Date;
   type: "available";
+}
+
+function startOfDate(date: Date): Date {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function isPastDay(date: Date, now: Date): boolean {
+  return startOfDate(date) < startOfDate(now);
+}
+
+function isStartOfDay(date: Date): boolean {
+  return (
+    date.getHours() === 0 &&
+    date.getMinutes() === 0 &&
+    date.getSeconds() === 0 &&
+    date.getMilliseconds() === 0
+  );
+}
+
+function isAllDaySelection(start: Date, end: Date): boolean {
+  if (end <= start) return false;
+  if (!isStartOfDay(start) || !isStartOfDay(end)) return false;
+  return (end.getTime() - start.getTime()) % DAY_MS === 0;
+}
+
+function buildBusinessHourRangesFromAllDaySelection(
+  start: Date,
+  end: Date,
+): Array<{ start: Date; end: Date }> {
+  const ranges: Array<{ start: Date; end: Date }> = [];
+  const currentDay = new Date(start);
+
+  while (currentDay < end) {
+    const dayStart = new Date(currentDay);
+    dayStart.setHours(BUSINESS_START_HOUR, 0, 0, 0);
+    const dayEnd = new Date(currentDay);
+    dayEnd.setHours(BUSINESS_END_HOUR, 0, 0, 0);
+    ranges.push(...splitIntoSlotRanges(dayStart, dayEnd));
+    currentDay.setDate(currentDay.getDate() + 1);
+  }
+
+  return ranges;
 }
 
 export default function ConsultantSlotsPage() {
@@ -75,15 +120,34 @@ export default function ConsultantSlotsPage() {
 
   const handleSelectSlot = useCallback(
     async (slotInfo: SlotInfo) => {
+      if (view === "month") {
+        setDate(slotInfo.start);
+        setView("day");
+        return;
+      }
+
       if (!user) return;
 
-      const { start, end } = slotInfo;
-      if (
-        start >= end ||
-        !isAlignedToSlotBoundary(start) ||
-        !isAlignedToSlotBoundary(end) ||
-        (end.getTime() - start.getTime()) % SLOT_UNIT_MS !== 0
-      ) {
+      const start = slotInfo.start;
+      const end =
+        slotInfo.end > slotInfo.start
+          ? slotInfo.end
+          : new Date(slotInfo.start.getTime() + SLOT_UNIT_MS);
+      const ranges = isAllDaySelection(start, end)
+        ? buildBusinessHourRangesFromAllDaySelection(start, end)
+        : (() => {
+            if (
+              start >= end ||
+              !isAlignedToSlotBoundary(start) ||
+              !isAlignedToSlotBoundary(end) ||
+              (end.getTime() - start.getTime()) % SLOT_UNIT_MS !== 0
+            ) {
+              return null;
+            }
+            return splitIntoSlotRanges(start, end);
+          })();
+
+      if (!ranges) {
         toaster.create({
           type: "error",
           title: "30分単位で選択してください",
@@ -91,7 +155,15 @@ export default function ConsultantSlotsPage() {
         return;
       }
 
-      const ranges = splitIntoSlotRanges(start, end);
+      const hasPastRange = ranges.some((range) => range.start < new Date());
+      if (hasPastRange) {
+        toaster.create({
+          type: "error",
+          title: "過去の時間は選択できません",
+        });
+        return;
+      }
+
       const hasOverlap = ranges.some((range) =>
         events.some(
           (event) =>
@@ -130,7 +202,7 @@ export default function ConsultantSlotsPage() {
         // エラーは custom-fetch の toaster で表示される
       }
     },
-    [createSlot, events, organizationId, refetch, user],
+    [createSlot, events, organizationId, refetch, user, view],
   );
 
   const handleSelectEvent = useCallback((event: CalendarEvent) => {
@@ -162,6 +234,37 @@ export default function ConsultantSlotsPage() {
         borderColor: "#1d4ed8",
         color: "#fff",
         opacity: 0.8,
+      },
+    };
+  }, []);
+
+  const dayPropGetter = useCallback((day: Date) => {
+    if (!isPastDay(day, new Date())) {
+      return {};
+    }
+
+    return {
+      style: {
+        backgroundImage:
+          "repeating-linear-gradient(-45deg, rgba(148,163,184,0.22) 0, rgba(148,163,184,0.22) 6px, rgba(148,163,184,0.1) 6px, rgba(148,163,184,0.1) 12px)",
+        backgroundColor: "rgba(248,250,252,0.8)",
+        pointerEvents: "none" as const,
+        cursor: "not-allowed",
+      },
+    };
+  }, []);
+
+  const slotPropGetter = useCallback((slotDate: Date) => {
+    if (slotDate.getTime() >= Date.now()) {
+      return {};
+    }
+
+    return {
+      style: {
+        backgroundImage:
+          "repeating-linear-gradient(-45deg, rgba(148,163,184,0.18) 0, rgba(148,163,184,0.18) 5px, rgba(148,163,184,0.07) 5px, rgba(148,163,184,0.07) 10px)",
+        pointerEvents: "none" as const,
+        cursor: "not-allowed",
       },
     };
   }, []);
@@ -206,6 +309,8 @@ export default function ConsultantSlotsPage() {
           onSelectSlot={handleSelectSlot}
           onSelectEvent={handleSelectEvent}
           eventPropGetter={eventStyleGetter}
+          dayPropGetter={dayPropGetter}
+          slotPropGetter={slotPropGetter}
           step={SLOT_UNIT_MINUTES}
           timeslots={2}
           min={new Date(1970, 0, 1, 10, 0)}
