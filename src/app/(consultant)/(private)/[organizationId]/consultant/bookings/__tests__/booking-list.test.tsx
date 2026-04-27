@@ -13,12 +13,24 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ organizationId: "org-test" }),
   usePathname: () => "/org-test/consultant/bookings",
   useRouter: () => ({ push: vi.fn() }),
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 const mockUseConsultantBookings = vi.fn();
 
 vi.mock("@/hooks/use-consultant-bookings", () => ({
   useConsultantBookings: () => mockUseConsultantBookings(),
+}));
+
+vi.mock("@/hooks/use-list-query-params", () => ({
+  useListQueryParams: () => ({
+    page: 1,
+    pageSize: 20,
+    sortBy: "createdAt",
+    setPage: vi.fn(),
+    setPageSize: vi.fn(),
+    setSortBy: vi.fn(),
+  }),
 }));
 
 vi.mock("@/components/list-controls", () => ({

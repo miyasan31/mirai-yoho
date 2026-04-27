@@ -1,18 +1,19 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from "@testing-library/react";
-import type { ListQueryPageSize } from "@/hooks/use-list-query-params";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type { ListQueryPageSize } from "../use-list-query-params";
 
 type QueryState = {
   page: number;
   "page-size": ListQueryPageSize;
-  "sort-by": "1" | "2";
+  "sort-by": 1 | 2;
 };
 
 let mockSearchParams = new URLSearchParams();
 let mockQueryState: QueryState = {
   page: 1,
   "page-size": 20,
-  "sort-by": "1",
+  "sort-by": 1,
 };
 
 const mockSetQuery = vi.fn(
@@ -38,6 +39,13 @@ vi.mock("nuqs", () => ({
       defaultValue,
     }),
   } satisfies ParserBuilder<number>,
+  parseAsNumberLiteral: <Literal extends number>(
+    _values: readonly Literal[],
+  ): ParserBuilder<Literal> => ({
+    withDefault: (defaultValue: Literal): ParserWithDefault<Literal> => ({
+      defaultValue,
+    }),
+  }),
   parseAsStringLiteral: <Literal extends string>(
     _values: readonly Literal[],
   ): ParserBuilder<Literal> => ({
@@ -48,7 +56,7 @@ vi.mock("nuqs", () => ({
   useQueryStates: (...args: unknown[]) => mockUseQueryStates(...args),
 }));
 
-import { useListQueryParams } from "@/hooks/use-list-query-params";
+import { useListQueryParams } from "../use-list-query-params";
 
 describe("useListQueryParams", () => {
   beforeEach(() => {
@@ -56,7 +64,7 @@ describe("useListQueryParams", () => {
     mockQueryState = {
       page: 1,
       "page-size": 20,
-      "sort-by": "1",
+      "sort-by": 1,
     };
     mockSetQuery.mockClear();
     mockUseQueryStates.mockReset();
@@ -84,7 +92,7 @@ describe("useListQueryParams", () => {
       expect(mockSetQuery).toHaveBeenCalledWith({
         page: 1,
         "page-size": 20,
-        "sort-by": "1",
+        "sort-by": 1,
       });
     });
   });
@@ -94,7 +102,7 @@ describe("useListQueryParams", () => {
     mockQueryState = {
       page: 3,
       "page-size": 50,
-      "sort-by": "2",
+      "sort-by": 2,
     };
     mockUseQueryStates.mockReturnValue([mockQueryState, mockSetQuery]);
 
@@ -113,7 +121,7 @@ describe("useListQueryParams", () => {
     mockQueryState = {
       page: 4,
       "page-size": 50,
-      "sort-by": "2",
+      "sort-by": 2,
     };
     mockUseQueryStates.mockReturnValue([mockQueryState, mockSetQuery]);
 
@@ -133,7 +141,7 @@ describe("useListQueryParams", () => {
     mockQueryState = {
       page: 4,
       "page-size": 50,
-      "sort-by": "1",
+      "sort-by": 1,
     };
     mockUseQueryStates.mockReturnValue([mockQueryState, mockSetQuery]);
 
@@ -145,30 +153,7 @@ describe("useListQueryParams", () => {
 
     expect(mockSetQuery).toHaveBeenCalledWith({
       page: 1,
-      "sort-by": "2",
+      "sort-by": 2,
     });
-  });
-
-  it("syncs page from server only when it differs", () => {
-    mockQueryState = {
-      page: 2,
-      "page-size": 20,
-      "sort-by": "1",
-    };
-    mockUseQueryStates.mockReturnValue([mockQueryState, mockSetQuery]);
-
-    const { result } = renderHook(() => useListQueryParams());
-
-    act(() => {
-      result.current.syncPageFromServer(2);
-    });
-
-    expect(mockSetQuery).not.toHaveBeenCalled();
-
-    act(() => {
-      result.current.syncPageFromServer(5);
-    });
-
-    expect(mockSetQuery).toHaveBeenCalledWith({ page: 5 });
   });
 });

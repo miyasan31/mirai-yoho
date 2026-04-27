@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { render } from "@testing-library/react";
+import type * as React from "react";
 import type { ReactNode } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mockUseAdminClients = vi.fn();
 const mockSetQuery = vi.fn(
@@ -11,14 +13,14 @@ const mockUseQueryStates = vi.fn();
 type QueryState = {
   page: number;
   "page-size": 20 | 50 | 100;
-  "sort-by": "1" | "2";
+  "sort-by": 1 | 2;
 };
 
 let mockSearchParams = new URLSearchParams("page=3&page-size=50&sort-by=2");
 let mockQueryState: QueryState = {
   page: 3,
   "page-size": 50,
-  "sort-by": "2",
+  "sort-by": 2,
 };
 
 vi.mock("@/hooks/use-admin-clients", () => ({
@@ -109,6 +111,13 @@ vi.mock("nuqs", () => ({
       defaultValue,
     }),
   } satisfies ParserBuilder<number>,
+  parseAsNumberLiteral: <Literal extends number>(
+    _values: readonly Literal[],
+  ): ParserBuilder<Literal> => ({
+    withDefault: (defaultValue: Literal): ParserWithDefault<Literal> => ({
+      defaultValue,
+    }),
+  }),
   parseAsStringLiteral: <Literal extends string>(
     _values: readonly Literal[],
   ): ParserBuilder<Literal> => ({
@@ -129,7 +138,7 @@ describe("AdminClientsPage query params", () => {
     mockQueryState = {
       page: 3,
       "page-size": 50,
-      "sort-by": "2",
+      "sort-by": 2,
     };
     mockUseQueryStates.mockReset();
     mockUseQueryStates.mockReturnValue([mockQueryState, mockSetQuery]);

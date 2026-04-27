@@ -47,6 +47,17 @@ const mockUseAdminClients = vi.fn();
 const mockUseAdminConsultants = vi.fn();
 const mockMutateAsync = vi.fn();
 
+vi.mock("@/hooks/use-list-query-params", () => ({
+  useListQueryParams: () => ({
+    page: 1,
+    pageSize: 20,
+    sortBy: "createdAt",
+    setPage: vi.fn(),
+    setPageSize: vi.fn(),
+    setSortBy: vi.fn(),
+  }),
+}));
+
 vi.mock("@/hooks/use-admin-bookings", () => ({
   useAdminBookings: () => mockUseAdminBookings(),
 }));

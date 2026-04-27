@@ -102,10 +102,14 @@ function createWrapper() {
 describe("ConsultantHomePage", () => {
   afterEach(() => {
     cleanup();
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
   it("次予約カードと今日の予約一覧を表示する", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-22T09:00:00+09:00"));
+
     mockUseConsultantBookings.mockReturnValue({
       data: {
         data: {
@@ -159,13 +163,13 @@ describe("ConsultantHomePage", () => {
 
     render(<ConsultantHomePage />, { wrapper: createWrapper() });
 
-    await waitFor(() => {
-      expect(screen.getAllByText(/クライアント: 佐藤 花子/).length).toBe(2);
-      expect(screen.getByText("今日の担当件数: 2件")).toBeInTheDocument();
-      expect(screen.getAllByText("メモ編集").length).toBeGreaterThanOrEqual(2);
-      expect(screen.getByText("予約一覧を開く")).toBeInTheDocument();
-      expect(screen.getByText("プロフィールを更新する")).toBeInTheDocument();
-    });
+    await vi.runAllTimersAsync();
+
+    expect(screen.getAllByText(/クライアント: 佐藤 花子/).length).toBe(2);
+    expect(screen.getByText("今日の担当件数: 2件")).toBeInTheDocument();
+    expect(screen.getAllByText("メモ編集").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getByText("予約一覧を開く")).toBeInTheDocument();
+    expect(screen.getByText("プロフィールを更新する")).toBeInTheDocument();
 
     expect(screen.queryByText("本日のToDo")).not.toBeInTheDocument();
   });
