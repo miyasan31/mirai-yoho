@@ -12,6 +12,16 @@ import { Text } from "@/components/ui/text";
 import { useAdminPayments } from "@/hooks/use-admin-payments";
 import { useListQueryParams } from "@/hooks/use-list-query-params";
 
+const PAYMENT_STRATEGY_LABEL_MAP: Record<string, string> = {
+  deferred: "後払い",
+  immediate: "即時決済",
+};
+
+const CHARGE_METHOD_LABEL_MAP: Record<string, string> = {
+  manual: "手動",
+  batch: "自動",
+};
+
 export default function AdminPaymentsPage() {
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
     useListQueryParams();
@@ -72,8 +82,8 @@ export default function AdminPaymentsPage() {
                 <Table.Header>税額</Table.Header>
                 <Table.Header>合計</Table.Header>
                 <Table.Header>ステータス</Table.Header>
-                <Table.Header>戦略</Table.Header>
-                <Table.Header>方式</Table.Header>
+                <Table.Header>決済タイミング</Table.Header>
+                <Table.Header>課金実行</Table.Header>
               </Table.Row>
             </Table.Head>
             <Table.Body>
@@ -88,8 +98,16 @@ export default function AdminPaymentsPage() {
                   <Table.Cell>
                     <PaymentStatusBadge status={p.status} />
                   </Table.Cell>
-                  <Table.Cell>{p.paymentStrategy}</Table.Cell>
-                  <Table.Cell>{p.chargeMethod ?? "-"}</Table.Cell>
+                  <Table.Cell>
+                    {PAYMENT_STRATEGY_LABEL_MAP[p.paymentStrategy] ??
+                      p.paymentStrategy}
+                  </Table.Cell>
+                  <Table.Cell>
+                    {p.chargeMethod
+                      ? (CHARGE_METHOD_LABEL_MAP[p.chargeMethod] ??
+                        p.chargeMethod)
+                      : "-"}
+                  </Table.Cell>
                 </Table.Row>
               ))}
             </Table.Body>

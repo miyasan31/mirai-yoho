@@ -14,10 +14,15 @@ const PAYMENT_STATUS_MAP: Record<
   string,
   { label: string; colorPalette: string }
 > = {
+  setup_pending: { label: "決済設定待ち", colorPalette: "yellow" },
+  setup_complete: { label: "決済準備完了", colorPalette: "blue" },
+  charged: { label: "決済済", colorPalette: "green" },
+  refunded: { label: "返金済", colorPalette: "gray" },
+  cancelled: { label: "キャンセル", colorPalette: "red" },
+  failed: { label: "失敗", colorPalette: "red" },
+  // Legacy aliases kept for backward compatibility.
   pending: { label: "保留中", colorPalette: "yellow" },
   captured: { label: "決済済", colorPalette: "green" },
-  failed: { label: "失敗", colorPalette: "red" },
-  refunded: { label: "返金済", colorPalette: "gray" },
 };
 
 export function BookingStatusBadge({ status }: { status: string }) {
