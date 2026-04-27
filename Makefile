@@ -1,4 +1,4 @@
-.PHONY: set-claims setup-firestore-collections create-organization seed-slots delete-slots deploy-firestore setup-secrets setup-secret grant-secret-access
+.PHONY: set-claims setup-firestore-collections create-organization seed-slots delete-slots deploy-firestore setup-secrets setup-secret grant-secret-access grant-secrets-access-all list-apphosting-backends describe-secret access-secret check-secret-value check-public-build-secrets
 
 # ============================================================
 # Scripts（引数が必要なコマンド）
@@ -69,6 +69,13 @@ APPHOSTING_SECRET_KEYS = \
 	FIREBASE_PROJECT_ID \
 	INVOICE_REGISTRATION_NUMBER
 
+PUBLIC_BUILD_SECRET_KEYS = \
+	NEXT_PUBLIC_FIREBASE_API_KEY \
+	NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN \
+	NEXT_PUBLIC_FIREBASE_PROJECT_ID \
+	NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY \
+	NEXT_PUBLIC_APP_URL
+
 # Usage: make setup-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
 # Example: make setup-secrets PROJECT=mirai-yoho-dev
 setup-secrets:
@@ -85,9 +92,70 @@ setup-secret:
 	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make setup-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>" && exit 1)
 	firebase apphosting:secrets:set $(KEY) --project $(PROJECT)
 
-# Usage: make grant-secret-access PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<OPENAI_API_KEY>
+# Usage: make grant-secret-access PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<OPENAI_API_KEY> BACKEND=<backendId>
+# Usage: make grant-secret-access PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<OPENAI_API_KEY> EMAILS=<sa1@example.iam.gserviceaccount.com,sa2@example.iam.gserviceaccount.com>
 # Secret Manager コンソールで作成した Secret を App Hosting から読めるようにする
 grant-secret-access:
-	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make grant-secret-access PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>" && exit 1)
-	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make grant-secret-access PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>" && exit 1)
-	firebase apphosting:secrets:grantaccess $(KEY) --project $(PROJECT)
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make grant-secret-access PROJECT=<project> KEY=<SECRET_KEY> BACKEND=<backendId> or EMAILS=<email1,email2>" && exit 1)
+	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make grant-secret-access PROJECT=<project> KEY=<SECRET_KEY> BACKEND=<backendId> or EMAILS=<email1,email2>" && exit 1)
+	@if [ -n "$(BACKEND)" ]; then \
+		firebase apphosting:secrets:grantaccess $(KEY) --backend $(BACKEND) --project $(PROJECT); \
+	elif [ -n "$(EMAILS)" ]; then \
+		firebase apphosting:secrets:grantaccess $(KEY) --emails "$(EMAILS)" --project $(PROJECT); \
+	else \
+		echo "Error: BACKEND or EMAILS is required. Usage: make grant-secret-access PROJECT=<project> KEY=<SECRET_KEY> BACKEND=<backendId> or EMAILS=<email1,email2>"; \
+		exit 1; \
+	fi
+
+# Usage: make grant-secrets-access-all PROJECT=<mirai-yoho-dev|mirai-yoho-prod> BACKEND=<backendId>
+grant-secrets-access-all:
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make grant-secrets-access-all PROJECT=<project> BACKEND=<backendId>" && exit 1)
+	@test -n "$(BACKEND)" || (echo "Error: BACKEND is required. Usage: make grant-secrets-access-all PROJECT=<project> BACKEND=<backendId>" && exit 1)
+	@for secret in $(APPHOSTING_SECRET_KEYS); do \
+		echo "Granting $$secret to backend $(BACKEND)"; \
+		firebase apphosting:secrets:grantaccess $$secret --backend $(BACKEND) --project $(PROJECT); \
+	done
+
+# Usage: make list-apphosting-backends PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
+list-apphosting-backends:
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make list-apphosting-backends PROJECT=<project>" && exit 1)
+	firebase apphosting:backends:list --project $(PROJECT)
+
+# Usage: make describe-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>
+describe-secret:
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make describe-secret PROJECT=<project> KEY=<SECRET_KEY>" && exit 1)
+	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make describe-secret PROJECT=<project> KEY=<SECRET_KEY>" && exit 1)
+	firebase apphosting:secrets:describe $(KEY) --project $(PROJECT)
+
+# Usage: make access-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY[@version]>
+access-secret:
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make access-secret PROJECT=<project> KEY=<SECRET_KEY[@version]>" && exit 1)
+	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make access-secret PROJECT=<project> KEY=<SECRET_KEY[@version]>" && exit 1)
+	firebase apphosting:secrets:access $(KEY) --project $(PROJECT)
+
+# Usage: make check-secret-value PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>
+# 値は表示せず、空かどうかのみ確認する
+check-secret-value:
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make check-secret-value PROJECT=<project> KEY=<SECRET_KEY>" && exit 1)
+	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make check-secret-value PROJECT=<project> KEY=<SECRET_KEY>" && exit 1)
+	@value="$$(firebase apphosting:secrets:access $(KEY) --project $(PROJECT))"; \
+	if [ -z "$$value" ]; then \
+		echo "NG: $(KEY) latest is empty"; \
+		exit 1; \
+	else \
+		echo "OK: $(KEY) latest length=$${#value}"; \
+	fi
+
+# Usage: make check-public-build-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
+# NEXT_PUBLIC_* 系の build 用 secret が空でないかを一括確認
+check-public-build-secrets:
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make check-public-build-secrets PROJECT=<project>" && exit 1)
+	@for secret in $(PUBLIC_BUILD_SECRET_KEYS); do \
+		value="$$(firebase apphosting:secrets:access $$secret --project $(PROJECT))"; \
+		if [ -z "$$value" ]; then \
+			echo "NG: $$secret latest is empty"; \
+			exit 1; \
+		else \
+			echo "OK: $$secret latest length=$${#value}"; \
+		fi; \
+	done
