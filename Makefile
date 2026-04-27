@@ -1,4 +1,4 @@
-.PHONY: set-claims setup-firestore-collections create-organization seed-slots delete-slots deploy-firestore setup-secrets
+.PHONY: set-claims setup-firestore-collections create-organization seed-slots delete-slots deploy-firestore setup-secrets setup-secret grant-secret-access
 
 # ============================================================
 # Scripts（引数が必要なコマンド）
@@ -48,17 +48,46 @@ deploy-firestore:
 # Firebase App Hosting セットアップ
 # ============================================================
 
+# apphosting.yaml と同じキーセット
+APPHOSTING_SECRET_KEYS = \
+	NEXT_PUBLIC_FIREBASE_API_KEY \
+	NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN \
+	NEXT_PUBLIC_FIREBASE_PROJECT_ID \
+	NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY \
+	NEXT_PUBLIC_APP_URL \
+	STRIPE_SECRET_KEY \
+	STRIPE_WEBHOOK_SECRET \
+	ZOOM_ACCOUNT_ID \
+	ZOOM_CLIENT_ID \
+	ZOOM_CLIENT_SECRET \
+	ZOOM_HOST_USER_ID \
+	RESEND_API_KEY \
+	FIREBASE_CLIENT_EMAIL \
+	FIREBASE_PRIVATE_KEY \
+	CANCEL_TOKEN_SECRET \
+	RESEND_FROM_EMAIL \
+	FIREBASE_PROJECT_ID \
+	INVOICE_REGISTRATION_NUMBER
+
 # Usage: make setup-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
 # Example: make setup-secrets PROJECT=mirai-yoho-dev
 setup-secrets:
 	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
-	firebase apphosting:secrets:set STRIPE_SECRET_KEY --project $(PROJECT)
-	firebase apphosting:secrets:set STRIPE_WEBHOOK_SECRET --project $(PROJECT)
-	firebase apphosting:secrets:set ZOOM_ACCOUNT_ID --project $(PROJECT)
-	firebase apphosting:secrets:set ZOOM_CLIENT_ID --project $(PROJECT)
-	firebase apphosting:secrets:set ZOOM_CLIENT_SECRET --project $(PROJECT)
-	firebase apphosting:secrets:set ZOOM_HOST_USER_ID --project $(PROJECT)
-	firebase apphosting:secrets:set RESEND_API_KEY --project $(PROJECT)
-	firebase apphosting:secrets:set FIREBASE_CLIENT_EMAIL --project $(PROJECT)
-	firebase apphosting:secrets:set FIREBASE_PRIVATE_KEY --project $(PROJECT)
-	firebase apphosting:secrets:set CANCEL_TOKEN_SECRET --project $(PROJECT)
+	@for secret in $(APPHOSTING_SECRET_KEYS); do \
+		echo "Setting $$secret"; \
+		firebase apphosting:secrets:set $$secret --project $(PROJECT); \
+	done
+
+# Usage: make setup-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<OPENAI_API_KEY>
+# Example: make setup-secret PROJECT=mirai-yoho-dev KEY=OPENAI_API_KEY
+setup-secret:
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>" && exit 1)
+	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make setup-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>" && exit 1)
+	firebase apphosting:secrets:set $(KEY) --project $(PROJECT)
+
+# Usage: make grant-secret-access PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<OPENAI_API_KEY>
+# Secret Manager コンソールで作成した Secret を App Hosting から読めるようにする
+grant-secret-access:
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make grant-secret-access PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>" && exit 1)
+	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make grant-secret-access PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>" && exit 1)
+	firebase apphosting:secrets:grantaccess $(KEY) --project $(PROJECT)

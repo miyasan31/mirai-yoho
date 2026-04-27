@@ -1,5 +1,10 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Firebase App Hosting の Secret 運用
+
+機密値は Firebase Console の通常環境変数ではなく、Cloud Secret Manager 経由で管理してください。  
+手順は [doc/firebase-app-hosting-secrets.md](doc/firebase-app-hosting-secrets.md) を参照してください。
+
 ## Getting Started
 
 First, run the development server:
