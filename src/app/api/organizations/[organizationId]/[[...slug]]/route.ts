@@ -59,6 +59,10 @@ import { withPublicCacheControl } from "./public-cache-control";
 const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
 const USER_PREFERENCES_COLLECTION = FIRESTORE_COLLECTIONS.userPreferences;
 const FIRESTORE_IN_QUERY_CHUNK_SIZE = 10;
+const BATCH_CHARGE_COOLDOWN_MS = 60 * 1000;
+
+const batchChargeInProgressOrganizations = new Set<string>();
+const batchChargeLastStartedAtByOrganization = new Map<string, number>();
 
 type RouteContext = {
   params: Promise<{
@@ -214,6 +218,51 @@ function isFirestoreFailedPrecondition(error: unknown): boolean {
     message.includes("FAILED_PRECONDITION") ||
     message.includes("requires an index")
   );
+}
+
+function logAuthorizationFailure(params: {
+  method: string;
+  endpoint: string;
+  organizationId?: string;
+  errorCode: string;
+  message: string;
+}) {
+  console.warn("Authorization failed", {
+    category: "security",
+    method: params.method,
+    endpoint: params.endpoint,
+    organizationId: params.organizationId ?? "unknown",
+    errorCode: params.errorCode,
+    message: params.message,
+  });
+}
+
+function getBatchChargeRateLimitState(organizationId: string): {
+  inProgress: boolean;
+  retryAfterSeconds: number;
+} {
+  if (batchChargeInProgressOrganizations.has(organizationId)) {
+    return { inProgress: true, retryAfterSeconds: 1 };
+  }
+
+  const lastStartedAt =
+    batchChargeLastStartedAtByOrganization.get(organizationId);
+  if (!lastStartedAt) {
+    return { inProgress: false, retryAfterSeconds: 0 };
+  }
+
+  const elapsedMs = Date.now() - lastStartedAt;
+  if (elapsedMs >= BATCH_CHARGE_COOLDOWN_MS) {
+    return { inProgress: false, retryAfterSeconds: 0 };
+  }
+
+  return {
+    inProgress: false,
+    retryAfterSeconds: Math.max(
+      1,
+      Math.ceil((BATCH_CHARGE_COOLDOWN_MS - elapsedMs) / 1000),
+    ),
+  };
 }
 
 async function listOrganizationMemberships(organizationId: string) {
@@ -815,6 +864,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
     return jsonError(404, "NOT_FOUND", "Endpoint not found");
   } catch (error) {
     if (error instanceof AuthError) {
+      if (error.statusCode === 403) {
+        logAuthorizationFailure({
+          method: "GET",
+          endpoint:
+            requestErrorContext.endpoint ?? `GET ${request.nextUrl.pathname}`,
+          organizationId: requestErrorContext.organizationId,
+          errorCode: error.code,
+          message: error.message,
+        });
+      }
       return jsonError(error.statusCode, error.code, error.message);
     }
     if (isFirestoreFailedPrecondition(error)) {
@@ -1252,15 +1311,75 @@ export async function POST(request: NextRequest, context: RouteContext) {
       segments[0] === "batch" &&
       segments[1] === "charge"
     ) {
-      const result = await createBatchChargeUseCase().execute(organizationId);
-      return NextResponse.json({
-        chargedCount: result.chargedCount,
-        completedCount: result.completedCount,
-      });
+      const authUser = await verifyAuth(request);
+      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+
+      const rateLimitState = getBatchChargeRateLimitState(organizationId);
+      if (rateLimitState.inProgress) {
+        return jsonError(
+          409,
+          "BATCH_CHARGE_IN_PROGRESS",
+          "Batch charge is already running for this organization",
+        );
+      }
+      if (rateLimitState.retryAfterSeconds > 0) {
+        return jsonError(
+          429,
+          "BATCH_CHARGE_RATE_LIMITED",
+          `Batch charge can be retried after ${rateLimitState.retryAfterSeconds} seconds`,
+        );
+      }
+
+      batchChargeInProgressOrganizations.add(organizationId);
+      batchChargeLastStartedAtByOrganization.set(organizationId, Date.now());
+      const startedAt = new Date();
+
+      try {
+        const result = await createBatchChargeUseCase().execute(organizationId);
+        console.info("Batch charge completed", {
+          category: "security-audit",
+          endpoint: postErrorContext.endpoint,
+          organizationId,
+          actorUid: authUser.uid,
+          startedAt: startedAt.toISOString(),
+          chargedCount: result.chargedCount,
+          completedCount: result.completedCount,
+          errorCount: result.errors.length,
+          errors: result.errors,
+        });
+        return NextResponse.json({
+          chargedCount: result.chargedCount,
+          completedCount: result.completedCount,
+        });
+      } catch (error) {
+        console.error("Batch charge failed", {
+          category: "security-audit",
+          endpoint: postErrorContext.endpoint,
+          organizationId,
+          actorUid: authUser.uid,
+          startedAt: startedAt.toISOString(),
+          error,
+        });
+        throw error;
+      } finally {
+        batchChargeInProgressOrganizations.delete(organizationId);
+      }
     }
 
     return jsonError(404, "NOT_FOUND", "Endpoint not found");
   } catch (error) {
+    if (error instanceof AuthError) {
+      if (error.statusCode === 403) {
+        logAuthorizationFailure({
+          method: "POST",
+          endpoint: postErrorContext.endpoint,
+          organizationId: postErrorContext.organizationId,
+          errorCode: error.code,
+          message: error.message,
+        });
+      }
+      return jsonError(error.statusCode, error.code, error.message);
+    }
     logUnexpectedPostError(error, postErrorContext);
     const mappedError = mapApiError(error);
     return jsonError(mappedError.status, mappedError.code, mappedError.message);
@@ -1268,9 +1387,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
 }
 
 export async function PATCH(request: NextRequest, context: RouteContext) {
+  const patchErrorContext = {
+    endpoint: `PATCH ${request.nextUrl.pathname}`,
+    organizationId: "unknown",
+  };
+
   try {
     const { organizationId, slug } = await context.params;
     const segments = parseSlug(slug);
+    patchErrorContext.organizationId = organizationId;
     const authUser = await verifyAuth(request);
 
     if (
@@ -1538,6 +1663,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     return jsonError(404, "NOT_FOUND", "Endpoint not found");
   } catch (error) {
     if (error instanceof AuthError) {
+      if (error.statusCode === 403) {
+        logAuthorizationFailure({
+          method: "PATCH",
+          endpoint: patchErrorContext.endpoint,
+          organizationId: patchErrorContext.organizationId,
+          errorCode: error.code,
+          message: error.message,
+        });
+      }
       return jsonError(error.statusCode, error.code, error.message);
     }
     if (error instanceof DomainError) {
@@ -1548,9 +1682,15 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 }
 
 export async function DELETE(request: NextRequest, context: RouteContext) {
+  const deleteErrorContext = {
+    endpoint: `DELETE ${request.nextUrl.pathname}`,
+    organizationId: "unknown",
+  };
+
   try {
     const { organizationId, slug } = await context.params;
     const segments = parseSlug(slug);
+    deleteErrorContext.organizationId = organizationId;
     const authUser = await verifyAuth(request);
 
     if (segments.length === 2 && segments[0] === "slots") {
@@ -1660,6 +1800,15 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     return jsonError(404, "NOT_FOUND", "Endpoint not found");
   } catch (error) {
     if (error instanceof AuthError) {
+      if (error.statusCode === 403) {
+        logAuthorizationFailure({
+          method: "DELETE",
+          endpoint: deleteErrorContext.endpoint,
+          organizationId: deleteErrorContext.organizationId,
+          errorCode: error.code,
+          message: error.message,
+        });
+      }
       return jsonError(error.statusCode, error.code, error.message);
     }
     if (error instanceof DomainError) {

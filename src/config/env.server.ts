@@ -1,4 +1,3 @@
-const DEFAULT_CANCEL_TOKEN_SECRET = "default-cancel-token-secret";
 const DEFAULT_EMAIL_DELIVERY_MODE = "resend";
 
 function requireServerEnv(key: keyof NodeJS.ProcessEnv): string {
@@ -41,7 +40,7 @@ export const envServer = {
     return process.env.EMAIL_DELIVERY_MODE ?? DEFAULT_EMAIL_DELIVERY_MODE;
   },
   get cancelTokenSecret(): string {
-    return process.env.CANCEL_TOKEN_SECRET ?? DEFAULT_CANCEL_TOKEN_SECRET;
+    return requireServerEnv("CANCEL_TOKEN_SECRET");
   },
   get firebaseProjectId(): string | undefined {
     return process.env.FIREBASE_PROJECT_ID;

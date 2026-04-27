@@ -12,7 +12,7 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";

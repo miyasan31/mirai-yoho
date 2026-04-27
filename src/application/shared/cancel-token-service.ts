@@ -1,4 +1,4 @@
 export interface ICancelTokenService {
-  generateToken(bookingId: string): string;
-  verifyToken(token: string): { bookingId: string } | null;
+  generateToken(bookingId: string, expiresAt: Date): string;
+  verifyToken(token: string): { bookingId: string; expiresAt: string } | null;
 }

@@ -140,6 +140,7 @@ paths:
                   enum: [client, admin]
                 token:
                   type: string
+                  description: "クライアントキャンセル時に必須。形式: bookingId.expiresAt.signature"
       responses:
         "200":
           description: OK
@@ -211,6 +212,8 @@ paths:
       operationId: batchCharge
       summary: バッチ課金（Cloud Scheduler）
       tags: [batch]
+      security:
+        - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
       responses:

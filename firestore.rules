@@ -50,12 +50,12 @@ service cloud.firestore {
     }
 
     match /organization-settings/{organizationId} {
-      allow read: if true;
+      allow read: if isOrganizationAdmin(organizationId);
       allow write: if isOrganizationAdmin(organizationId);
     }
 
     match /consultants/{consultantId} {
-      allow read: if resource.data.organizationId is string;
+      allow read: if isActiveMember(resource.data.organizationId);
       allow create: if isOrganizationAdmin(request.resource.data.organizationId)
         || (
           hasOrganizationRole(request.resource.data.organizationId, ['consultant'])
@@ -69,7 +69,7 @@ service cloud.firestore {
     }
 
     match /slots/{slotId} {
-      allow read: if resource.data.organizationId is string;
+      allow read: if isActiveMember(resource.data.organizationId);
       allow create: if isOrganizationAdmin(request.resource.data.organizationId)
         || (
           hasOrganizationRole(request.resource.data.organizationId, ['consultant'])
