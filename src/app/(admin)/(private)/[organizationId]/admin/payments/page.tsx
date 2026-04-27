@@ -1,7 +1,6 @@
 "use client";
 
 import { CreditCard } from "lucide-react";
-import { useEffect, useState } from "react";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
 import { ListControls } from "@/components/list-controls";
@@ -11,11 +10,11 @@ import { TruncatedId } from "@/components/truncated-id";
 import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
 import { useAdminPayments } from "@/hooks/use-admin-payments";
+import { useListQueryParams } from "@/hooks/use-list-query-params";
 
 export default function AdminPaymentsPage() {
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<20 | 50 | 100>(20);
-  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt">("createdAt");
+  const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
+    useListQueryParams();
   const { data, isLoading } = useAdminPayments({
     page,
     pageSize,
@@ -30,12 +29,6 @@ export default function AdminPaymentsPage() {
     total: payments.length,
     totalPages: 1,
   };
-
-  useEffect(() => {
-    if (page !== pagination.page) {
-      setPage(pagination.page);
-    }
-  }, [page, pagination.page]);
 
   if (isLoading) {
     return (
@@ -108,14 +101,8 @@ export default function AdminPaymentsPage() {
             total={pagination.total}
             totalPages={pagination.totalPages}
             onPageChange={setPage}
-            onPageSizeChange={(nextPageSize) => {
-              setPageSize(nextPageSize);
-              setPage(1);
-            }}
-            onSortByChange={(nextSortBy) => {
-              setSortBy(nextSortBy);
-              setPage(1);
-            }}
+            onPageSizeChange={setPageSize}
+            onSortByChange={setSortBy}
           />
         </>
       )}

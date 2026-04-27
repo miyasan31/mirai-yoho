@@ -41,6 +41,7 @@ import {
   useUpdateUserRole,
 } from "@/hooks/use-admin-users";
 import { useAuth } from "@/hooks/use-auth";
+import { useListQueryParams } from "@/hooks/use-list-query-params";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import {
   type UserEditDisplayNameFormValues,
@@ -92,9 +93,8 @@ export default function AdminUsersPage() {
   const { organizationId } = useOrganizationRouting();
   const resolvedOrganizationId = organizationId ?? "";
   const { role, user } = useAuth();
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<20 | 50 | 100>(20);
-  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt">("createdAt");
+  const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
+    useListQueryParams();
   const { data, isLoading } = useAdminUsers({
     page,
     pageSize,
@@ -171,12 +171,6 @@ export default function AdminUsersPage() {
     totalPages: 1,
   };
   const currentUid = user?.uid;
-
-  useEffect(() => {
-    if (page !== pagination.page) {
-      setPage(pagination.page);
-    }
-  }, [page, pagination.page]);
 
   if (!organizationId || !canManageAdminUsers(role)) {
     return <Text>権限がありません</Text>;
@@ -568,14 +562,8 @@ export default function AdminUsersPage() {
             total={pagination.total}
             totalPages={pagination.totalPages}
             onPageChange={setPage}
-            onPageSizeChange={(nextPageSize) => {
-              setPageSize(nextPageSize);
-              setPage(1);
-            }}
-            onSortByChange={(nextSortBy) => {
-              setSortBy(nextSortBy);
-              setPage(1);
-            }}
+            onPageSizeChange={setPageSize}
+            onSortByChange={setSortBy}
           />
         </>
       )}

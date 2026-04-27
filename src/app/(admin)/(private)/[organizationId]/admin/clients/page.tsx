@@ -1,7 +1,6 @@
 "use client";
 
 import { Building2 } from "lucide-react";
-import { useEffect, useState } from "react";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
 import { ListControls } from "@/components/list-controls";
@@ -9,11 +8,11 @@ import { TableSkeleton } from "@/components/table-skeleton";
 import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
 import { useAdminClients } from "@/hooks/use-admin-clients";
+import { useListQueryParams } from "@/hooks/use-list-query-params";
 
 export default function AdminClientsPage() {
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<20 | 50 | 100>(20);
-  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt">("createdAt");
+  const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
+    useListQueryParams();
   const { data, isLoading } = useAdminClients({
     page,
     pageSize,
@@ -28,12 +27,6 @@ export default function AdminClientsPage() {
     total: clients.length,
     totalPages: 1,
   };
-
-  useEffect(() => {
-    if (page !== pagination.page) {
-      setPage(pagination.page);
-    }
-  }, [page, pagination.page]);
 
   if (isLoading) {
     return (
@@ -96,14 +89,8 @@ export default function AdminClientsPage() {
             total={pagination.total}
             totalPages={pagination.totalPages}
             onPageChange={setPage}
-            onPageSizeChange={(nextPageSize) => {
-              setPageSize(nextPageSize);
-              setPage(1);
-            }}
-            onSortByChange={(nextSortBy) => {
-              setSortBy(nextSortBy);
-              setPage(1);
-            }}
+            onPageSizeChange={setPageSize}
+            onSortByChange={setSortBy}
           />
         </>
       )}

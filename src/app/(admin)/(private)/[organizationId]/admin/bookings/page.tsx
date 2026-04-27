@@ -1,7 +1,7 @@
 "use client";
 
 import { AlertTriangle, CalendarDays } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
 import { ListControls } from "@/components/list-controls";
@@ -17,6 +17,7 @@ import { useAdminBookings } from "@/hooks/use-admin-bookings";
 import { useAdminClients } from "@/hooks/use-admin-clients";
 import { useAdminConsultants } from "@/hooks/use-admin-consultants";
 import { useChargePayment } from "@/hooks/use-booking";
+import { useListQueryParams } from "@/hooks/use-list-query-params";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 type ClientSummary = {
@@ -139,9 +140,8 @@ function ConsultantCell({
 
 export default function AdminBookingsPage() {
   const { organizationId } = useOrganizationRouting();
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<20 | 50 | 100>(20);
-  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt">("createdAt");
+  const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
+    useListQueryParams();
   const bookingsQuery = useAdminBookings({
     page,
     pageSize,
@@ -167,12 +167,6 @@ export default function AdminBookingsPage() {
   };
   const clients = clientsQuery.data?.data?.clients ?? [];
   const consultants = consultantsQuery.data?.data?.consultants ?? [];
-
-  useEffect(() => {
-    if (page !== pagination.page) {
-      setPage(pagination.page);
-    }
-  }, [page, pagination.page]);
 
   const clientsById = useMemo(
     () => new Map(clients.map((client) => [client.clientId, client])),
@@ -365,14 +359,8 @@ export default function AdminBookingsPage() {
             total={pagination.total}
             totalPages={pagination.totalPages}
             onPageChange={setPage}
-            onPageSizeChange={(nextPageSize) => {
-              setPageSize(nextPageSize);
-              setPage(1);
-            }}
-            onSortByChange={(nextSortBy) => {
-              setSortBy(nextSortBy);
-              setPage(1);
-            }}
+            onPageSizeChange={setPageSize}
+            onSortByChange={setSortBy}
           />
         </>
       )}

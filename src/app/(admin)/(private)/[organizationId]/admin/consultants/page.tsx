@@ -4,7 +4,7 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
@@ -24,6 +24,7 @@ import { getGetAdminConsultantsQueryKey } from "@/generated/api/admin/admin";
 import { useAdminConsultants } from "@/hooks/use-admin-consultants";
 import { useInviteUser } from "@/hooks/use-admin-users";
 import { useAuth } from "@/hooks/use-auth";
+import { useListQueryParams } from "@/hooks/use-list-query-params";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import {
   type ConsultantInviteFormValues,
@@ -33,9 +34,8 @@ import {
 export default function AdminConsultantsPage() {
   const { buildPath, organizationId } = useOrganizationRouting();
   const { role } = useAuth();
-  const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<20 | 50 | 100>(20);
-  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt">("createdAt");
+  const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
+    useListQueryParams();
   const queryClient = useQueryClient();
   const { data, isLoading } = useAdminConsultants({
     page,
@@ -67,12 +67,6 @@ export default function AdminConsultantsPage() {
     totalPages: 1,
   };
   const isAdmin = role === "admin";
-
-  useEffect(() => {
-    if (page !== pagination.page) {
-      setPage(pagination.page);
-    }
-  }, [page, pagination.page]);
 
   const onInviteConsultant = async (values: ConsultantInviteFormValues) => {
     if (!organizationId) {
@@ -259,14 +253,8 @@ export default function AdminConsultantsPage() {
             total={pagination.total}
             totalPages={pagination.totalPages}
             onPageChange={setPage}
-            onPageSizeChange={(nextPageSize) => {
-              setPageSize(nextPageSize);
-              setPage(1);
-            }}
-            onSortByChange={(nextSortBy) => {
-              setSortBy(nextSortBy);
-              setPage(1);
-            }}
+            onPageSizeChange={setPageSize}
+            onSortByChange={setSortBy}
           />
         </>
       )}
