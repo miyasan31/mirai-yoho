@@ -19,7 +19,7 @@ service cloud.firestore {
 
     function isActiveMember(organizationId) {
       return membershipExists(organizationId)
-        && membershipData(organizationId).status in ['active', 'invited'];
+        && membershipData(organizationId).status == 'active';
     }
 
     function hasOrganizationRole(organizationId, roles) {
@@ -29,6 +29,10 @@ service cloud.firestore {
 
     function isOrganizationAdmin(organizationId) {
       return hasOrganizationRole(organizationId, ['admin', 'operator']);
+    }
+
+    function isOrganizationSuperAdmin(organizationId) {
+      return hasOrganizationRole(organizationId, ['admin']);
     }
 
     function isOrganizationConsultant(organizationId) {
@@ -51,7 +55,7 @@ service cloud.firestore {
 
     match /organization-settings/{organizationId} {
       allow read: if isOrganizationAdmin(organizationId);
-      allow write: if isOrganizationAdmin(organizationId);
+      allow write: if isOrganizationSuperAdmin(organizationId);
     }
 
     match /consultants/{consultantId} {

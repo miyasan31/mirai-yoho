@@ -210,8 +210,8 @@ describe("BookingPage", () => {
     mockMutateAsync.mockResolvedValue({
       data: {
         bookingId: "b1",
-        clientSecret: "cs_1",
         zoomUrl: "https://zoom.us/j/1",
+        bookingActionToken: "booking-action-token-1",
       },
     });
 
@@ -241,6 +241,9 @@ describe("BookingPage", () => {
           clientPhone: "090-0000-0000",
         }),
       });
+      expect(mockPush).toHaveBeenCalledWith(
+        "/org-test/booking/payment?bookingId=b1&bookingActionToken=booking-action-token-1",
+      );
     });
   });
 
@@ -274,6 +277,7 @@ describe("BookingPage", () => {
       data: {
         bookingId: "b2",
         zoomUrl: "https://zoom.us/j/2",
+        bookingActionToken: "booking-action-token-2",
       },
     });
     mockSearchParams.delete("slotId");

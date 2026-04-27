@@ -119,9 +119,11 @@ function CheckoutForm({
 function PaymentMethodSelector({
   bookingId,
   organizationId,
+  bookingActionToken,
 }: {
   bookingId: string;
   organizationId: string;
+  bookingActionToken: string;
 }) {
   const [selectedMethod, setSelectedMethod] =
     useState<PaymentMethodType>("card");
@@ -140,7 +142,10 @@ function PaymentMethodSelector({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ paymentMethodType: selectedMethod }),
+          body: JSON.stringify({
+            paymentMethodType: selectedMethod,
+            bookingActionToken,
+          }),
         },
       );
 
@@ -233,8 +238,9 @@ export default function PaymentPage() {
   const searchParams = useSearchParams();
   const { organizationId } = useOrganizationRouting();
   const bookingId = searchParams.get("bookingId");
+  const bookingActionToken = searchParams.get("bookingActionToken");
 
-  if (!bookingId || !organizationId) {
+  if (!bookingId || !organizationId || !bookingActionToken) {
     return (
       <styled.div py="16" px="8">
         <EmptyState
@@ -265,6 +271,7 @@ export default function PaymentPage() {
         <PaymentMethodSelector
           bookingId={bookingId}
           organizationId={organizationId}
+          bookingActionToken={bookingActionToken}
         />
       </styled.div>
     </styled.div>

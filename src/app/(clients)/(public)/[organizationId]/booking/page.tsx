@@ -80,9 +80,14 @@ export default function BookingPage() {
       });
 
       const responseData = result.data;
-      if ("bookingId" in responseData) {
+      if ("bookingId" in responseData && "bookingActionToken" in responseData) {
+        const bookingActionToken = encodeURIComponent(
+          responseData.bookingActionToken,
+        );
         router.push(
-          buildPath(`/booking/payment?bookingId=${responseData.bookingId}`),
+          buildPath(
+            `/booking/payment?bookingId=${responseData.bookingId}&bookingActionToken=${bookingActionToken}`,
+          ),
         );
       }
     } catch {

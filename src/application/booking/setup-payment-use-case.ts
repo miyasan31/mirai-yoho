@@ -1,3 +1,4 @@
+import { AppError } from "@/application/shared/app-error";
 import type { IStripeService } from "@/application/shared/stripe-service";
 import type { IUnitOfWork } from "@/application/shared/unit-of-work";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
@@ -33,7 +34,7 @@ export class SetupPaymentUseCase {
       input.bookingId,
     );
     if (!booking) {
-      throw new Error("Booking not found");
+      throw new AppError(404, "BOOKING_NOT_FOUND", "Booking not found");
     }
 
     const existingPayment = await this.paymentRepository.findByBookingId(
@@ -41,7 +42,11 @@ export class SetupPaymentUseCase {
       input.bookingId,
     );
     if (existingPayment) {
-      throw new Error("Payment already exists for this booking");
+      throw new AppError(
+        409,
+        "PAYMENT_ALREADY_EXISTS",
+        "Payment already exists for this booking",
+      );
     }
 
     const money = Money.create(AMOUNT_JPY, TAX_RATE);

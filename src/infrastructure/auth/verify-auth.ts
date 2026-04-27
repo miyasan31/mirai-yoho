@@ -19,9 +19,7 @@ export async function verifyAuth(request: Request): Promise<AuthUser> {
   } catch {
     throw new AuthError(401, "UNAUTHORIZED", "Invalid or expired token");
   }
-  const authUser = await loadAuthUser(decoded.uid, {
-    activateInvitedMemberships: true,
-  });
+  const authUser = await loadAuthUser(decoded.uid);
 
   if (authUser.memberships.length === 0) {
     throw new AuthError(403, "NO_ROLE", "User has no assigned role");

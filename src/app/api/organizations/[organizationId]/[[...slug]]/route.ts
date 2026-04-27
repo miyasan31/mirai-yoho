@@ -4,6 +4,7 @@ import { type NextRequest, NextResponse } from "next/server";
 import { evaluateChargeEligibility } from "@/application/booking/charge-eligibility";
 import { UpdateMemoUseCase } from "@/application/consultant/update-memo-use-case";
 import { UpdateProfileUseCase } from "@/application/consultant/update-profile-use-case";
+import { AppError } from "@/application/shared/app-error";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import { BusinessHours } from "@/domain/organization-settings/business-hours";
@@ -45,6 +46,7 @@ import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
+import { HmacBookingActionTokenService } from "@/infrastructure/token/booking-action-token-service";
 import { HmacCancelTokenService } from "@/infrastructure/token/cancel-token-service";
 import { chunkArray } from "@/lib/chunk-array";
 import { deleteAdminUserWithAuthCleanup } from "./admin-user-deletion";
@@ -60,6 +62,7 @@ const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
 const USER_PREFERENCES_COLLECTION = FIRESTORE_COLLECTIONS.userPreferences;
 const FIRESTORE_IN_QUERY_CHUNK_SIZE = 10;
 const BATCH_CHARGE_COOLDOWN_MS = 60 * 1000;
+const BOOKING_ACTION_TOKEN_TTL_MS = 30 * 60 * 1000;
 
 const batchChargeInProgressOrganizations = new Set<string>();
 const batchChargeLastStartedAtByOrganization = new Map<string, number>();
@@ -96,6 +99,10 @@ interface ListQueryParams extends PaginationParams {
 
 function jsonError(status: number, code: string, message: string) {
   return NextResponse.json({ code, message }, { status });
+}
+
+function publicForbidden(message = "Invalid booking action request") {
+  return jsonError(403, "FORBIDDEN", message);
 }
 
 function toBookingSettingsResponse(settings: OrganizationSettings) {
@@ -942,7 +949,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
         consultationContent: consultantContent,
       });
 
-      return NextResponse.json(result, { status: 201 });
+      const bookingActionToken =
+        new HmacBookingActionTokenService().generateToken({
+          bookingId: result.bookingId,
+          organizationId,
+          expiresAt: new Date(Date.now() + BOOKING_ACTION_TOKEN_TTL_MS),
+        });
+
+      return NextResponse.json(
+        { ...result, bookingActionToken },
+        { status: 201 },
+      );
     }
 
     if (
@@ -961,14 +978,41 @@ export async function POST(request: NextRequest, context: RouteContext) {
           "paymentMethodType must be 'card' or 'paypay'",
         );
       }
+      if (
+        typeof body.bookingActionToken !== "string" ||
+        body.bookingActionToken.length === 0
+      ) {
+        return publicForbidden();
+      }
 
-      const result = await createSetupPaymentUseCase().execute({
-        organizationId,
-        bookingId: segments[1],
-        paymentMethodType: body.paymentMethodType,
-      });
+      const tokenPayload = new HmacBookingActionTokenService().verifyToken(
+        body.bookingActionToken,
+      );
+      if (
+        !tokenPayload ||
+        tokenPayload.bookingId !== segments[1] ||
+        tokenPayload.organizationId !== organizationId
+      ) {
+        return publicForbidden();
+      }
 
-      return NextResponse.json(result, { status: 201 });
+      try {
+        const result = await createSetupPaymentUseCase().execute({
+          organizationId,
+          bookingId: segments[1],
+          paymentMethodType: body.paymentMethodType,
+        });
+        return NextResponse.json(result, { status: 201 });
+      } catch (error) {
+        if (
+          error instanceof AppError &&
+          (error.code === "BOOKING_NOT_FOUND" ||
+            error.code === "PAYMENT_ALREADY_EXISTS")
+        ) {
+          return publicForbidden();
+        }
+        throw error;
+      }
     }
 
     if (
@@ -989,12 +1033,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
       if (cancelledBy === "client") {
         if (!token) {
-          return jsonError(400, "MISSING_TOKEN", "Cancel token is required");
+          return publicForbidden("Invalid booking cancellation request");
         }
         const tokenService = new HmacCancelTokenService();
         const result = tokenService.verifyToken(token);
         if (!result || result.bookingId !== segments[1]) {
-          return jsonError(400, "INVALID_TOKEN", "Invalid cancel token");
+          return publicForbidden("Invalid booking cancellation request");
         }
       } else {
         const authUser = await verifyAuth(request);
@@ -1149,7 +1193,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
       segments[1] === "users" &&
       segments[2] === "invite"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      const actorMembership = requireOrganizationRole(
+        authUser,
+        organizationId,
+        "admin",
+        "operator",
+      );
       const body = await request.json();
       const { email, role, displayName } = body;
 
@@ -1223,6 +1272,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
         email,
         role,
         passwordResetLink,
+      });
+
+      console.info("Admin user invited", {
+        category: "security-audit",
+        endpoint: postErrorContext.endpoint,
+        organizationId,
+        actorUid: authUser.uid,
+        actorRole: actorMembership.role,
+        targetEmail: email,
+        targetRole: role,
+        invitedAt: new Date().toISOString(),
       });
 
       return NextResponse.json({ uid }, { status: 201 });

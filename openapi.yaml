@@ -1230,21 +1230,25 @@ components:
 
     CreateBookingResponse:
       type: object
-      required: [bookingId, zoomUrl]
+      required: [bookingId, zoomUrl, bookingActionToken]
       properties:
         bookingId:
           type: string
         zoomUrl:
           type: string
           format: uri
+        bookingActionToken:
+          type: string
 
     SetupPaymentRequest:
       type: object
-      required: [paymentMethodType]
+      required: [paymentMethodType, bookingActionToken]
       properties:
         paymentMethodType:
           type: string
           enum: [card, paypay]
+        bookingActionToken:
+          type: string
 
     SetupPaymentResponse:
       type: object
