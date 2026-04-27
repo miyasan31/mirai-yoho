@@ -1209,6 +1209,7 @@ components:
 
     CreateBookingRequest:
       type: object
+      required: [clientName, clientEmail, clientPhone, clientBirthdate]
       properties:
         slotId:
           type: string
@@ -1225,6 +1226,9 @@ components:
           format: email
         clientPhone:
           type: string
+        clientBirthdate:
+          type: string
+          format: date
         consultantContent:
           type: string
 

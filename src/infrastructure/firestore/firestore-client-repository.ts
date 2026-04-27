@@ -15,6 +15,7 @@ interface ClientDoc {
   name: string;
   email: string;
   phone: string;
+  birthdate?: string;
   memo?: string;
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;
@@ -34,6 +35,7 @@ function toDomain(doc: ClientDoc): Client {
     name: doc.name,
     email: doc.email,
     phone: doc.phone,
+    birthdate: doc.birthdate,
     memo: doc.memo,
     createdAt,
     updatedAt: toDate(doc.updatedAt) ?? createdAt,
@@ -48,6 +50,7 @@ function toFirestore(client: Client): ClientDoc {
     name: client.getName(),
     email: client.getEmail(),
     phone: client.getPhone(),
+    ...(client.getBirthdate() ? { birthdate: client.getBirthdate() } : {}),
     ...(memo !== undefined ? { memo } : {}),
     createdAt: client.getCreatedAt(),
     updatedAt: client.getUpdatedAt(),

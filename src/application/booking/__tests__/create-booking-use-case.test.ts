@@ -4,7 +4,7 @@ import type { IUnitOfWork } from "@/application/shared/unit-of-work";
 import type { IZoomService } from "@/application/shared/zoom-service";
 import type { Booking } from "@/domain/booking/booking";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
-import type { Client } from "@/domain/client/client";
+import { Client } from "@/domain/client/client";
 import type { IClientRepository } from "@/domain/client/client-repository";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
@@ -309,6 +309,7 @@ describe("CreateBookingUseCase", () => {
       clientName: "山田太郎",
       clientEmail: "taro@example.com",
       clientPhone: "090-1234-5678",
+      clientBirthdate: "1990-01-01",
     });
 
     expect(bookingRepository.bookings).toHaveLength(1);
@@ -340,6 +341,7 @@ describe("CreateBookingUseCase", () => {
       clientName: "山田太郎",
       clientEmail: "taro@example.com",
       clientPhone: "090-1234-5678",
+      clientBirthdate: "1990-01-01",
     });
 
     expect(bookingRepository.bookings[0]?.getConsultantId()).toBe(
@@ -363,6 +365,7 @@ describe("CreateBookingUseCase", () => {
       clientName: "山田太郎",
       clientEmail: "taro@example.com",
       clientPhone: "090-1234-5678",
+      clientBirthdate: "1990-01-01",
     });
 
     expect(bookingRepository.bookings[0]?.getConsultantId()).toBe(
@@ -381,6 +384,7 @@ describe("CreateBookingUseCase", () => {
         clientName: "山田太郎",
         clientEmail: "taro@example.com",
         clientPhone: "090-1234-5678",
+        clientBirthdate: "1990-01-01",
       }),
     ).rejects.toThrow("Slot is no longer available");
   });
@@ -405,6 +409,7 @@ describe("CreateBookingUseCase", () => {
         clientName: "山田太郎",
         clientEmail: "taro@example.com",
         clientPhone: "090-1234-5678",
+        clientBirthdate: "1990-01-01",
       }),
     ).rejects.toMatchObject({
       code: "CONSULTANT_NOT_FOUND",
@@ -435,6 +440,7 @@ describe("CreateBookingUseCase", () => {
         clientName: "山田太郎",
         clientEmail: "taro@example.com",
         clientPhone: "090-1234-5678",
+        clientBirthdate: "1990-01-01",
       }),
     ).rejects.toMatchObject({
       statusCode: 502,
@@ -474,6 +480,7 @@ describe("CreateBookingUseCase", () => {
         clientName: "山田太郎",
         clientEmail: "taro@example.com",
         clientPhone: "090-1234-5678",
+        clientBirthdate: "1990-01-01",
       }),
     ).rejects.toMatchObject({
       statusCode: 502,
@@ -482,5 +489,39 @@ describe("CreateBookingUseCase", () => {
 
     expect(bookingRepository.bookings).toHaveLength(0);
     expect(clientRepository.clients).toHaveLength(0);
+  });
+
+  it("updates existing client birthdate with latest input", async () => {
+    const { useCase, clientRepository } = createUseCase([
+      createSlot(
+        "slot-1",
+        "consultant-1",
+        "2026-05-01T10:00:00.000Z",
+        "2026-05-01T10:30:00.000Z",
+      ),
+    ]);
+    clientRepository.clients.push(
+      Client.create({
+        organizationId: ORGANIZATION_ID,
+        clientId: "client-1",
+        name: "既存太郎",
+        email: "taro@example.com",
+        phone: "090-1111-2222",
+        birthdate: "1980-01-01",
+      }),
+    );
+
+    await useCase.execute({
+      organizationId: ORGANIZATION_ID,
+      slotId: "slot-1",
+      clientName: "山田太郎",
+      clientEmail: "taro@example.com",
+      clientPhone: "090-1234-5678",
+      clientBirthdate: "1995-12-31",
+    });
+
+    const existingClient = clientRepository.clients[0];
+    expect(existingClient?.getBirthdate()).toBe("1995-12-31");
+    expect(existingClient?.getName()).toBe("山田太郎");
   });
 });

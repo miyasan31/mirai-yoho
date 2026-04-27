@@ -56,6 +56,7 @@ import {
   validateAdminUserDeletionTarget,
 } from "./admin-user-policy";
 import { logUnexpectedPostError, mapApiError } from "./api-error-mapper";
+import { validateClientBirthdate } from "./booking-birthdate-validation";
 import { withPublicCacheControl } from "./public-cache-control";
 
 const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
@@ -922,14 +923,24 @@ export async function POST(request: NextRequest, context: RouteContext) {
         clientName,
         clientEmail,
         clientPhone,
+        clientBirthdate,
         consultantContent,
       } = body;
 
-      if (!clientName || !clientEmail || !clientPhone) {
+      if (!clientName || !clientEmail || !clientPhone || !clientBirthdate) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
-          "clientName, clientEmail, clientPhone are required",
+          "clientName, clientEmail, clientPhone, clientBirthdate are required",
+        );
+      }
+
+      const birthdateValidation = validateClientBirthdate(clientBirthdate);
+      if (!birthdateValidation.valid) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          birthdateValidation.errorMessage ?? "clientBirthdate is invalid",
         );
       }
 
@@ -946,6 +957,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         clientName,
         clientEmail,
         clientPhone,
+        clientBirthdate: clientBirthdate.trim(),
         consultationContent: consultantContent,
       });
 

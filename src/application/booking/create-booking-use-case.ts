@@ -22,6 +22,7 @@ interface CreateBookingInput {
   clientName: string;
   clientEmail: string;
   clientPhone: string;
+  clientBirthdate: string;
   consultationContent?: string;
 }
 
@@ -80,6 +81,7 @@ export class CreateBookingUseCase {
         name: input.clientName,
         email: input.clientEmail,
         phone: input.clientPhone,
+        birthdate: input.clientBirthdate,
       });
 
     if (existingClient) {
@@ -87,6 +89,7 @@ export class CreateBookingUseCase {
         name: input.clientName,
         email: input.clientEmail,
         phone: input.clientPhone,
+        birthdate: input.clientBirthdate,
       });
     }
 

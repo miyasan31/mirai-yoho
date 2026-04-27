@@ -40,6 +40,7 @@ export default function BookingPage() {
       clientName: "",
       clientEmail: "",
       clientPhone: "",
+      clientBirthdate: "",
       consultantContent: "",
     },
   });
@@ -75,6 +76,7 @@ export default function BookingPage() {
           clientName: values.clientName,
           clientEmail: values.clientEmail,
           clientPhone: values.clientPhone,
+          clientBirthdate: values.clientBirthdate,
           consultantContent: values.consultantContent?.trim() || undefined,
         },
       });
@@ -174,6 +176,19 @@ export default function BookingPage() {
             </Field.HelperText>
             {errors.clientPhone && (
               <Field.ErrorText>{errors.clientPhone.message}</Field.ErrorText>
+            )}
+          </Field.Root>
+
+          <Field.Root invalid={!!errors.clientBirthdate}>
+            <Field.Label>
+              生年月日
+              <Field.RequiredIndicator />
+            </Field.Label>
+            <Input {...register("clientBirthdate")} type="date" />
+            {errors.clientBirthdate && (
+              <Field.ErrorText>
+                {errors.clientBirthdate.message}
+              </Field.ErrorText>
             )}
           </Field.Root>
 

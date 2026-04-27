@@ -6,12 +6,17 @@ interface ClientCreateProps {
   name: string;
   email: string;
   phone: string;
+  birthdate: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface ClientProps extends ClientCreateProps {
+interface ClientProps
+  extends Omit<ClientCreateProps, "birthdate" | "createdAt" | "updatedAt"> {
+  birthdate?: string;
   memo?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export class Client extends AggregateRoot {
@@ -21,6 +26,7 @@ export class Client extends AggregateRoot {
     private name: string,
     private email: string,
     private phone: string,
+    private birthdate: string | undefined,
     private memo: string | undefined,
     private readonly createdAt: Date,
     private updatedAt: Date,
@@ -36,6 +42,7 @@ export class Client extends AggregateRoot {
       props.name,
       props.email,
       props.phone,
+      props.birthdate,
       undefined,
       props.createdAt ?? now,
       props.updatedAt ?? now,
@@ -50,16 +57,23 @@ export class Client extends AggregateRoot {
       props.name,
       props.email,
       props.phone,
+      props.birthdate,
       props.memo,
       createdAt,
       props.updatedAt ?? createdAt,
     );
   }
 
-  updateInfo(props: { name: string; email: string; phone: string }): void {
+  updateInfo(props: {
+    name: string;
+    email: string;
+    phone: string;
+    birthdate: string;
+  }): void {
     this.name = props.name;
     this.email = props.email;
     this.phone = props.phone;
+    this.birthdate = props.birthdate;
     this.updatedAt = new Date();
   }
 
@@ -86,6 +100,10 @@ export class Client extends AggregateRoot {
 
   getPhone(): string {
     return this.phone;
+  }
+
+  getBirthdate(): string | undefined {
+    return this.birthdate;
   }
 
   getMemo(): string | undefined {

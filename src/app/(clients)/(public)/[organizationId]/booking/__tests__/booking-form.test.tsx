@@ -153,6 +153,16 @@ vi.mock("@/components/ui/tooltip", () => ({
 
 import BookingPage from "../page";
 
+function getBirthdateInput() {
+  const input = document.querySelector(
+    'input[name="clientBirthdate"]',
+  ) as HTMLInputElement | null;
+  if (!input) {
+    throw new Error("Birthdate input not found");
+  }
+  return input;
+}
+
 describe("BookingPage", () => {
   afterEach(() => {
     cleanup();
@@ -170,6 +180,7 @@ describe("BookingPage", () => {
     expect(screen.getByPlaceholderText("山田 太郎")).toBeDefined();
     expect(screen.getByPlaceholderText("example@email.com")).toBeDefined();
     expect(screen.getByPlaceholderText("090-1234-5678")).toBeDefined();
+    expect(getBirthdateInput()).toBeDefined();
     expect(
       screen.getByPlaceholderText("ご相談内容をお書きください"),
     ).toBeDefined();
@@ -199,9 +210,32 @@ describe("BookingPage", () => {
       screen.getByPlaceholderText("090-1234-5678"),
       "090-0000-0000",
     );
+    await user.type(getBirthdateInput(), "2050-01-01");
     await user.click(screen.getByText("お支払いへ進む"));
 
     await waitFor(() => {
+      expect(mockMutateAsync).not.toHaveBeenCalled();
+    });
+  });
+
+  it("shows birthdate validation error for future date", async () => {
+    const user = userEvent.setup();
+    render(<BookingPage />);
+
+    await user.type(screen.getByPlaceholderText("山田 太郎"), "テスト太郎");
+    await user.type(
+      screen.getByPlaceholderText("example@email.com"),
+      "test@example.com",
+    );
+    await user.type(
+      screen.getByPlaceholderText("090-1234-5678"),
+      "090-0000-0000",
+    );
+    await user.type(getBirthdateInput(), "2050-01-01");
+    await user.click(screen.getByText("お支払いへ進む"));
+
+    await waitFor(() => {
+      expect(screen.getByText("未来の日付は指定できません")).toBeDefined();
       expect(mockMutateAsync).not.toHaveBeenCalled();
     });
   });
@@ -227,6 +261,7 @@ describe("BookingPage", () => {
       screen.getByPlaceholderText("090-1234-5678"),
       "090-0000-0000",
     );
+    await user.type(getBirthdateInput(), "1990-01-01");
     await user.click(screen.getByText("お支払いへ進む"));
 
     await waitFor(() => {
@@ -239,6 +274,7 @@ describe("BookingPage", () => {
           clientName: "テスト太郎",
           clientEmail: "test@example.com",
           clientPhone: "090-0000-0000",
+          clientBirthdate: "1990-01-01",
         }),
       });
       expect(mockPush).toHaveBeenCalledWith(
@@ -264,6 +300,7 @@ describe("BookingPage", () => {
       screen.getByPlaceholderText("090-1234-5678"),
       "090-0000-0000",
     );
+    await user.type(getBirthdateInput(), "1990-01-01");
     await user.click(screen.getByText("お支払いへ進む"));
 
     await waitFor(() => {
@@ -296,6 +333,7 @@ describe("BookingPage", () => {
       screen.getByPlaceholderText("090-1234-5678"),
       "080-0000-0000",
     );
+    await user.type(getBirthdateInput(), "1995-12-31");
     await user.click(screen.getByText("お支払いへ進む"));
 
     await waitFor(() => {
@@ -308,6 +346,7 @@ describe("BookingPage", () => {
           clientName: "自動割当太郎",
           clientEmail: "auto@example.com",
           clientPhone: "080-0000-0000",
+          clientBirthdate: "1995-12-31",
         }),
       });
     });

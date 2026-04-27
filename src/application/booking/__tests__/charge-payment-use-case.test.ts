@@ -136,6 +136,7 @@ function createClient(): Client {
     name: "山田 太郎",
     email: "taro@example.com",
     phone: "09012345678",
+    birthdate: "1990-01-01",
   });
 }
 
