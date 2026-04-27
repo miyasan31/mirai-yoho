@@ -8,14 +8,15 @@ import {
   useUpdateUserDisplayName,
   useUpdateUserRole,
 } from "@/generated/api/admin/admin";
+import type { GetAdminUsersParams } from "@/generated/schemas";
 import { QUERY_STALE_TIME } from "@/hooks/query-cache-policy";
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
-export function useAdminUsers() {
+export function useAdminUsers(params?: GetAdminUsersParams) {
   const { token } = useAuth();
   const { organizationId } = useOrganizationRouting();
-  return useGetAdminUsers(organizationId ?? "", {
+  return useGetAdminUsers(organizationId ?? "", params, {
     query: {
       enabled: !!token && !!organizationId,
       staleTime: QUERY_STALE_TIME.normal,

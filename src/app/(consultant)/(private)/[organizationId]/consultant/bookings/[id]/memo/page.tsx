@@ -27,7 +27,12 @@ export default function ConsultantMemoEditPage() {
   const router = useRouter();
   const { buildPath, organizationId } = useOrganizationRouting();
   const bookingId = params.id as string;
-  const { data, isLoading } = useConsultantBookings();
+  const { data, isLoading } = useConsultantBookings({
+    page: 1,
+    pageSize: 100,
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  });
   const updateMemo = useUpdateConsultantMemo();
   const { register, handleSubmit, reset } = useForm<MemoFormValues>({
     resolver: valibotResolver(memoFormSchema),

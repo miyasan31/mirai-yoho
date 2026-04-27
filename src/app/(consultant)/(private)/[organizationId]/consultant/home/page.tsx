@@ -31,7 +31,12 @@ function formatDatetime(value: string): string {
 
 export default function ConsultantHomePage() {
   const { buildPath } = useOrganizationRouting();
-  const { data, isLoading } = useConsultantBookings();
+  const { data, isLoading } = useConsultantBookings({
+    page: 1,
+    pageSize: 100,
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  });
   const bookings = data?.data?.bookings ?? [];
 
   const viewModel = useMemo(

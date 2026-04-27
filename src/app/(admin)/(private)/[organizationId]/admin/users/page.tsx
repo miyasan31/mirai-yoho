@@ -12,10 +12,11 @@ import {
   UserPlus,
   Users,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
+import { ListControls } from "@/components/list-controls";
 import { UserStatusBadge } from "@/components/status-badge";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { Badge } from "@/components/ui/badge";
@@ -89,8 +90,17 @@ function isAdminPanelUserRole(role: string): role is "admin" | "operator" {
 
 export default function AdminUsersPage() {
   const { organizationId } = useOrganizationRouting();
+  const resolvedOrganizationId = organizationId ?? "";
   const { role, user } = useAuth();
-  const { data, isLoading } = useAdminUsers();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<20 | 50 | 100>(20);
+  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt">("createdAt");
+  const { data, isLoading } = useAdminUsers({
+    page,
+    pageSize,
+    sortBy,
+    sortOrder: "desc",
+  });
   const queryKey = useAdminUsersQueryKey();
   const queryClient = useQueryClient();
 
@@ -151,14 +161,26 @@ export default function AdminUsersPage() {
   const resendUserInvite = useResendUserInvite();
   const resetUserPassword = useResetUserPassword();
 
-  if (!organizationId || !canManageAdminUsers(role)) {
-    return <Text>権限がありません</Text>;
-  }
-
   const users = (data?.data?.users ?? []).filter((user) =>
     isAdminPanelUserRole(user.role),
   );
+  const pagination = data?.data?.pagination ?? {
+    page,
+    pageSize,
+    total: users.length,
+    totalPages: 1,
+  };
   const currentUid = user?.uid;
+
+  useEffect(() => {
+    if (page !== pagination.page) {
+      setPage(pagination.page);
+    }
+  }, [page, pagination.page]);
+
+  if (!organizationId || !canManageAdminUsers(role)) {
+    return <Text>権限がありません</Text>;
+  }
 
   const invalidate = () =>
     queryClient.invalidateQueries({
@@ -168,7 +190,7 @@ export default function AdminUsersPage() {
   const onInvite = async (values: UserInviteFormValues) => {
     try {
       await inviteUser.mutateAsync({
-        organizationId,
+        organizationId: resolvedOrganizationId,
         data: {
           email: values.email,
           displayName: values.displayName,
@@ -190,7 +212,7 @@ export default function AdminUsersPage() {
   const onEditRole = async (values: UserEditRoleFormValues) => {
     try {
       await updateUserRole.mutateAsync({
-        organizationId,
+        organizationId: resolvedOrganizationId,
         uid: editRoleUid,
         data: { role: values.role },
       });
@@ -208,7 +230,7 @@ export default function AdminUsersPage() {
   const onEditDisplayName = async (values: UserEditDisplayNameFormValues) => {
     try {
       await updateUserDisplayName.mutateAsync({
-        organizationId,
+        organizationId: resolvedOrganizationId,
         uid: editDisplayNameUid,
         data: { displayName: values.displayName },
       });
@@ -225,7 +247,10 @@ export default function AdminUsersPage() {
 
   const handleResendInvite = async (uid: string, email: string) => {
     try {
-      await resendUserInvite.mutateAsync({ organizationId, uid });
+      await resendUserInvite.mutateAsync({
+        organizationId: resolvedOrganizationId,
+        uid,
+      });
       toaster.success({
         title: "成功",
         description: `${email} に招待メールを再送しました`,
@@ -237,7 +262,10 @@ export default function AdminUsersPage() {
 
   const handleResetPassword = async (uid: string, email: string) => {
     try {
-      await resetUserPassword.mutateAsync({ organizationId, uid });
+      await resetUserPassword.mutateAsync({
+        organizationId: resolvedOrganizationId,
+        uid,
+      });
       toaster.success({
         title: "成功",
         description: `${email} にパスワードリセットメールを送信しました`,
@@ -249,7 +277,10 @@ export default function AdminUsersPage() {
 
   const handleDelete = async () => {
     try {
-      await deleteAdminUser.mutateAsync({ organizationId, uid: deleteUid });
+      await deleteAdminUser.mutateAsync({
+        organizationId: resolvedOrganizationId,
+        uid: deleteUid,
+      });
       toaster.success({
         title: "成功",
         description: `${deleteEmail} を削除しました`,
@@ -380,146 +411,173 @@ export default function AdminUsersPage() {
           hint="ユーザー招待ボタンから招待できます"
         />
       ) : (
-        <Table.Root>
-          <Table.Head>
-            <Table.Row>
-              <Table.Header>メール</Table.Header>
-              <Table.Header>表示名</Table.Header>
-              <Table.Header>ロール</Table.Header>
-              <Table.Header>ステータス</Table.Header>
-              <Table.Header>操作</Table.Header>
-            </Table.Row>
-          </Table.Head>
-          <Table.Body>
-            {users.map((adminUser) => (
-              <Table.Row
-                key={adminUser.uid}
-                bg={currentUid === adminUser.uid ? "blue.50" : undefined}
-              >
-                <Table.Cell>{adminUser.email}</Table.Cell>
-                <Table.Cell>
-                  <styled.div display="inline-flex" alignItems="center" gap="2">
-                    <Text as="span">
-                      {adminUser.displayName || adminUser.email || "-"}
-                    </Text>
-                    {currentUid === adminUser.uid && (
-                      <styled.div
-                        display="inline-flex"
-                        alignItems="center"
-                        gap="1"
-                      >
-                        <Badge
-                          variant="subtle"
-                          size="sm"
-                          colorPalette="blue"
-                          aria-label="現在ログイン中のユーザー"
-                        >
-                          あなた
-                        </Badge>
-                      </styled.div>
-                    )}
-                  </styled.div>
-                </Table.Cell>
-                <Table.Cell>
-                  {ROLE_LABELS[adminUser.role] ?? adminUser.role}
-                </Table.Cell>
-                <Table.Cell>
-                  <UserStatusBadge status={adminUser.status} />
-                </Table.Cell>
-                <Table.Cell>
-                  <styled.div display="flex" gap="1">
-                    {canEditDisplayName(role, user?.uid, adminUser.uid) && (
-                      <Tooltip content="表示名変更">
-                        <IconButton
-                          variant="subtle"
-                          size="sm"
-                          onClick={() => {
-                            setEditDisplayNameUid(adminUser.uid);
-                            resetEditDisplayNameForm({
-                              displayName:
-                                adminUser.displayName || adminUser.email || "",
-                            });
-                            setEditDisplayNameOpen(true);
-                          }}
-                        >
-                          <Contact size={16} />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    {canEditRole(role, adminUser.status) && (
-                      <Tooltip content="ロール変更">
-                        <IconButton
-                          variant="subtle"
-                          size="sm"
-                          onClick={() => {
-                            setEditRoleUid(adminUser.uid);
-                            setEditRoleValue(
-                              "role",
-                              adminUser.role as UserEditRoleFormValues["role"],
-                            );
-                            setEditRoleOpen(true);
-                          }}
-                        >
-                          <ShieldAlert size={16} />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    {canResendInvite(role, adminUser.status) && (
-                      <Tooltip content="招待メール再送">
-                        <IconButton
-                          variant="subtle"
-                          size="sm"
-                          onClick={() =>
-                            handleResendInvite(adminUser.uid, adminUser.email)
-                          }
-                          loading={
-                            resendUserInvite.isPending &&
-                            resendUserInvite.variables?.uid === adminUser.uid
-                          }
-                        >
-                          <Mail size={16} />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    {canResetPassword(role, adminUser.status) && (
-                      <Tooltip content="パスワードリセット">
-                        <IconButton
-                          variant="subtle"
-                          size="sm"
-                          onClick={() =>
-                            handleResetPassword(adminUser.uid, adminUser.email)
-                          }
-                          loading={
-                            resetUserPassword.isPending &&
-                            resetUserPassword.variables?.uid === adminUser.uid
-                          }
-                        >
-                          <RotateCcwKey size={16} />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    {canDeleteAdminUser(role) && (
-                      <Tooltip content="削除">
-                        <IconButton
-                          variant="subtle"
-                          size="sm"
-                          colorPalette="red"
-                          onClick={() => {
-                            setDeleteUid(adminUser.uid);
-                            setDeleteEmail(adminUser.email);
-                            setDeleteOpen(true);
-                          }}
-                        >
-                          <Trash2 size={16} />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                  </styled.div>
-                </Table.Cell>
+        <>
+          <Table.Root>
+            <Table.Head>
+              <Table.Row>
+                <Table.Header>メール</Table.Header>
+                <Table.Header>表示名</Table.Header>
+                <Table.Header>ロール</Table.Header>
+                <Table.Header>ステータス</Table.Header>
+                <Table.Header>操作</Table.Header>
               </Table.Row>
-            ))}
-          </Table.Body>
-        </Table.Root>
+            </Table.Head>
+            <Table.Body>
+              {users.map((adminUser) => (
+                <Table.Row
+                  key={adminUser.uid}
+                  bg={currentUid === adminUser.uid ? "blue.50" : undefined}
+                >
+                  <Table.Cell>{adminUser.email}</Table.Cell>
+                  <Table.Cell>
+                    <styled.div
+                      display="inline-flex"
+                      alignItems="center"
+                      gap="2"
+                    >
+                      <Text as="span">
+                        {adminUser.displayName || adminUser.email || "-"}
+                      </Text>
+                      {currentUid === adminUser.uid && (
+                        <styled.div
+                          display="inline-flex"
+                          alignItems="center"
+                          gap="1"
+                        >
+                          <Badge
+                            variant="subtle"
+                            size="sm"
+                            colorPalette="blue"
+                            aria-label="現在ログイン中のユーザー"
+                          >
+                            あなた
+                          </Badge>
+                        </styled.div>
+                      )}
+                    </styled.div>
+                  </Table.Cell>
+                  <Table.Cell>
+                    {ROLE_LABELS[adminUser.role] ?? adminUser.role}
+                  </Table.Cell>
+                  <Table.Cell>
+                    <UserStatusBadge status={adminUser.status} />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <styled.div display="flex" gap="1">
+                      {canEditDisplayName(role, user?.uid, adminUser.uid) && (
+                        <Tooltip content="表示名変更">
+                          <IconButton
+                            variant="subtle"
+                            size="sm"
+                            onClick={() => {
+                              setEditDisplayNameUid(adminUser.uid);
+                              resetEditDisplayNameForm({
+                                displayName:
+                                  adminUser.displayName ||
+                                  adminUser.email ||
+                                  "",
+                              });
+                              setEditDisplayNameOpen(true);
+                            }}
+                          >
+                            <Contact size={16} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {canEditRole(role, adminUser.status) && (
+                        <Tooltip content="ロール変更">
+                          <IconButton
+                            variant="subtle"
+                            size="sm"
+                            onClick={() => {
+                              setEditRoleUid(adminUser.uid);
+                              setEditRoleValue(
+                                "role",
+                                adminUser.role as UserEditRoleFormValues["role"],
+                              );
+                              setEditRoleOpen(true);
+                            }}
+                          >
+                            <ShieldAlert size={16} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {canResendInvite(role, adminUser.status) && (
+                        <Tooltip content="招待メール再送">
+                          <IconButton
+                            variant="subtle"
+                            size="sm"
+                            onClick={() =>
+                              handleResendInvite(adminUser.uid, adminUser.email)
+                            }
+                            loading={
+                              resendUserInvite.isPending &&
+                              resendUserInvite.variables?.uid === adminUser.uid
+                            }
+                          >
+                            <Mail size={16} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {canResetPassword(role, adminUser.status) && (
+                        <Tooltip content="パスワードリセット">
+                          <IconButton
+                            variant="subtle"
+                            size="sm"
+                            onClick={() =>
+                              handleResetPassword(
+                                adminUser.uid,
+                                adminUser.email,
+                              )
+                            }
+                            loading={
+                              resetUserPassword.isPending &&
+                              resetUserPassword.variables?.uid === adminUser.uid
+                            }
+                          >
+                            <RotateCcwKey size={16} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                      {canDeleteAdminUser(role) && (
+                        <Tooltip content="削除">
+                          <IconButton
+                            variant="subtle"
+                            size="sm"
+                            colorPalette="red"
+                            onClick={() => {
+                              setDeleteUid(adminUser.uid);
+                              setDeleteEmail(adminUser.email);
+                              setDeleteOpen(true);
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </styled.div>
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table.Root>
+          <ListControls
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            sortBy={sortBy}
+            total={pagination.total}
+            totalPages={pagination.totalPages}
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            }}
+            onSortByChange={(nextSortBy) => {
+              setSortBy(nextSortBy);
+              setPage(1);
+            }}
+          />
+        </>
       )}
 
       {/* ロール編集ダイアログ */}

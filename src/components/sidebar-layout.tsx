@@ -6,7 +6,7 @@ import type { LucideIcon } from "lucide-react";
 import { LogOut, PanelLeft, PanelLeftClose } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import type { ReactNode } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useState } from "react";
 import { css } from "styled-system/css";
 import { styled } from "styled-system/jsx";
@@ -127,6 +127,8 @@ export function SidebarLayout({
 }: SidebarLayoutProps) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
+  const [sidebarSizePercent, setSidebarSizePercent] =
+    useState(SIDEBAR_DEFAULT_SIZE);
   const organizationCollection = createListCollection({
     items: organizationSwitcher?.items ?? [],
   });
@@ -134,6 +136,7 @@ export function SidebarLayout({
   const handleResize = useCallback(({ size }: { size: number[] }) => {
     const sidebarSize = size[0];
     if (sidebarSize == null) return;
+    setSidebarSizePercent(sidebarSize);
     const sidebarPx = (sidebarSize / 100) * window.innerWidth;
     setCollapsed(sidebarPx < COLLAPSE_THRESHOLD_PX);
   }, []);
@@ -153,10 +156,16 @@ export function SidebarLayout({
         { id: "main" },
       ]}
       onCollapse={({ panelId }) => {
-        if (panelId === SIDEBAR_PANEL_ID) setCollapsed(true);
+        if (panelId === SIDEBAR_PANEL_ID) {
+          setCollapsed(true);
+          setSidebarSizePercent(SIDEBAR_COLLAPSED_SIZE);
+        }
       }}
       onExpand={({ panelId }) => {
-        if (panelId === SIDEBAR_PANEL_ID) setCollapsed(false);
+        if (panelId === SIDEBAR_PANEL_ID) {
+          setCollapsed(false);
+          setSidebarSizePercent(SIDEBAR_MIN_SIZE);
+        }
       }}
       onResize={handleResize}
     >
@@ -367,7 +376,16 @@ export function SidebarLayout({
       />
 
       <Splitter.Panel id="main">
-        <styled.main h="full" p="6" overflow="auto">
+        <styled.main
+          h="full"
+          p="6"
+          overflow="auto"
+          style={
+            {
+              "--sidebar-size": `${sidebarSizePercent}%`,
+            } as CSSProperties
+          }
+        >
           {children}
         </styled.main>
       </Splitter.Panel>

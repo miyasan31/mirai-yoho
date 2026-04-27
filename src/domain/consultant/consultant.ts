@@ -7,6 +7,8 @@ interface ConsultantCreateProps {
   consultantId: string;
   profile: ConsultantProfile;
   zoomRoomIds: string[];
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 interface ConsultantProps extends ConsultantCreateProps {
@@ -20,36 +22,46 @@ export class Consultant extends AggregateRoot {
     private profile: ConsultantProfile,
     private zoomRoomIds: string[],
     private isActive: boolean,
+    private readonly createdAt: Date,
+    private updatedAt: Date,
   ) {
     super();
   }
 
   static create(props: ConsultantCreateProps): Consultant {
+    const now = new Date();
     return new Consultant(
       props.organizationId,
       props.consultantId,
       props.profile,
       [...props.zoomRoomIds],
       true,
+      props.createdAt ?? now,
+      props.updatedAt ?? now,
     );
   }
 
   static reconstruct(props: ConsultantProps): Consultant {
+    const createdAt = props.createdAt ?? new Date(0);
     return new Consultant(
       props.organizationId,
       props.consultantId,
       props.profile,
       [...props.zoomRoomIds],
       props.isActive,
+      createdAt,
+      props.updatedAt ?? createdAt,
     );
   }
 
   updateProfile(profile: ConsultantProfile): void {
     this.profile = profile;
+    this.updatedAt = new Date();
   }
 
   assignZoomRooms(roomIds: string[]): void {
     this.zoomRoomIds = [...roomIds];
+    this.updatedAt = new Date();
   }
 
   deactivate(): void {
@@ -60,6 +72,7 @@ export class Consultant extends AggregateRoot {
       );
     }
     this.isActive = false;
+    this.updatedAt = new Date();
   }
 
   getConsultantId(): string {
@@ -80,5 +93,13 @@ export class Consultant extends AggregateRoot {
 
   getIsActive(): boolean {
     return this.isActive;
+  }
+
+  getCreatedAt(): Date {
+    return this.createdAt;
+  }
+
+  getUpdatedAt(): Date {
+    return this.updatedAt;
   }
 }

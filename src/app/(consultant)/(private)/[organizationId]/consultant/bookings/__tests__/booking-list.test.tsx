@@ -21,6 +21,10 @@ vi.mock("@/hooks/use-consultant-bookings", () => ({
   useConsultantBookings: () => mockUseConsultantBookings(),
 }));
 
+vi.mock("@/components/list-controls", () => ({
+  ListControls: () => <div>list-controls</div>,
+}));
+
 vi.mock("next/link", () => ({
   default: ({ href, children }: { href: string; children: ReactNode }) => (
     <a href={href}>{children}</a>

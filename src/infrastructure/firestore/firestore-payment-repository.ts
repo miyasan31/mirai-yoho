@@ -1,3 +1,4 @@
+import type { Timestamp } from "firebase-admin/firestore";
 import { Money } from "@/domain/payment/money";
 import type { ChargeMethod, Payment } from "@/domain/payment/payment";
 import { Payment as PaymentEntity } from "@/domain/payment/payment";
@@ -23,9 +24,12 @@ interface PaymentDoc {
   stripeSetupIntentId?: string;
   stripePaymentMethodId?: string;
   chargeMethod?: ChargeMethod;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 function toDomain(doc: PaymentDoc): Payment {
+  const createdAt = doc.createdAt?.toDate() ?? new Date(0);
   return PaymentEntity.reconstruct({
     organizationId: doc.organizationId,
     paymentId: doc.paymentId,
@@ -38,6 +42,8 @@ function toDomain(doc: PaymentDoc): Payment {
     stripeSetupIntentId: doc.stripeSetupIntentId,
     stripePaymentMethodId: doc.stripePaymentMethodId,
     chargeMethod: doc.chargeMethod,
+    createdAt,
+    updatedAt: doc.updatedAt?.toDate() ?? createdAt,
   });
 }
 
@@ -57,6 +63,8 @@ function toFirestore(payment: Payment): Record<string, unknown> {
     stripeSetupIntentId: payment.getStripeSetupIntentId() ?? null,
     stripePaymentMethodId: payment.getStripePaymentMethodId() ?? null,
     chargeMethod: payment.getChargeMethod() ?? null,
+    createdAt: payment.getCreatedAt(),
+    updatedAt: payment.getUpdatedAt(),
   };
 }
 

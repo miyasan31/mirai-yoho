@@ -16,8 +16,10 @@ vi.mock("@/hooks/use-admin-payments", () => ({
 }));
 
 vi.mock("@/hooks/use-admin-clients", () => ({
-  useAdminClients: (options?: { enabled?: boolean }) =>
-    mockUseAdminClients(options),
+  useAdminClients: (
+    params?: Record<string, unknown>,
+    options?: { enabled?: boolean },
+  ) => mockUseAdminClients(params, options),
 }));
 
 vi.mock("@/hooks/use-auth", () => ({
@@ -213,7 +215,10 @@ describe("AdminHomePage", () => {
       screen.getByRole("link", { name: "設定を編集する" }),
     ).toHaveAttribute("href", "/org-test/admin/settings");
 
-    expect(mockUseAdminClients).toHaveBeenCalledWith({ enabled: true });
+    expect(mockUseAdminClients).toHaveBeenCalledWith(
+      { page: 1, pageSize: 100, sortBy: "createdAt", sortOrder: "desc" },
+      { enabled: true },
+    );
   });
 
   it("operator は設定編集アクションを実行できない", () => {

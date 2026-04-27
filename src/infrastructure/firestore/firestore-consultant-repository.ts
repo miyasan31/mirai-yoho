@@ -1,3 +1,4 @@
+import type { Timestamp } from "firebase-admin/firestore";
 import type { Consultant } from "@/domain/consultant/consultant";
 import { Consultant as ConsultantEntity } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
@@ -15,9 +16,18 @@ interface ConsultantDoc {
   specialties: string[];
   zoomRoomIds: string[];
   isActive: boolean;
+  createdAt?: Timestamp | Date;
+  updatedAt?: Timestamp | Date;
+}
+
+function toDate(value?: Timestamp | Date): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  return value.toDate();
 }
 
 function toDomain(doc: ConsultantDoc): Consultant {
+  const createdAt = toDate(doc.createdAt) ?? new Date(0);
   return ConsultantEntity.reconstruct({
     organizationId: doc.organizationId,
     consultantId: doc.consultantId,
@@ -28,6 +38,8 @@ function toDomain(doc: ConsultantDoc): Consultant {
     ),
     zoomRoomIds: doc.zoomRoomIds,
     isActive: doc.isActive,
+    createdAt,
+    updatedAt: toDate(doc.updatedAt) ?? createdAt,
   });
 }
 
@@ -41,6 +53,8 @@ function toFirestore(consultant: Consultant): ConsultantDoc {
     specialties: [...profile.getSpecialties()],
     zoomRoomIds: consultant.getZoomRoomIds(),
     isActive: consultant.getIsActive(),
+    createdAt: consultant.getCreatedAt(),
+    updatedAt: consultant.getUpdatedAt(),
   };
 }
 

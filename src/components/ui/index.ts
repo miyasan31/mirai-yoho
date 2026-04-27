@@ -17,6 +17,7 @@ export { IconButton, type IconButtonProps } from "./icon-button";
 export { Input, type InputProps } from "./input";
 export { Loader, type LoaderProps } from "./loader";
 export * as Menu from "./menu";
+export * as Pagination from "./pagination";
 export * as RadioGroup from "./radio-group";
 export * as Select from "./select";
 export {

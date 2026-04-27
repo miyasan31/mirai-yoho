@@ -4,10 +4,11 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, UserPlus, Users } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
+import { ListControls } from "@/components/list-controls";
 import { ActiveStatusBadge } from "@/components/status-badge";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { Button } from "@/components/ui/button";
@@ -32,8 +33,16 @@ import {
 export default function AdminConsultantsPage() {
   const { buildPath, organizationId } = useOrganizationRouting();
   const { role } = useAuth();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<20 | 50 | 100>(20);
+  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt">("createdAt");
   const queryClient = useQueryClient();
-  const { data, isLoading } = useAdminConsultants();
+  const { data, isLoading } = useAdminConsultants({
+    page,
+    pageSize,
+    sortBy,
+    sortOrder: "desc",
+  });
   const inviteUser = useInviteUser();
 
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -51,7 +60,19 @@ export default function AdminConsultantsPage() {
   });
 
   const consultants = data?.data?.consultants ?? [];
+  const pagination = data?.data?.pagination ?? {
+    page,
+    pageSize,
+    total: consultants.length,
+    totalPages: 1,
+  };
   const isAdmin = role === "admin";
+
+  useEffect(() => {
+    if (page !== pagination.page) {
+      setPage(pagination.page);
+    }
+  }, [page, pagination.page]);
 
   const onInviteConsultant = async (values: ConsultantInviteFormValues) => {
     if (!organizationId) {
@@ -194,40 +215,60 @@ export default function AdminConsultantsPage() {
           }
         />
       ) : (
-        <Table.Root>
-          <Table.Head>
-            <Table.Row>
-              <Table.Header>名前</Table.Header>
-              <Table.Header>メールアドレス</Table.Header>
-              <Table.Header>専門分野</Table.Header>
-              <Table.Header>ステータス</Table.Header>
-              <Table.Header>操作</Table.Header>
-            </Table.Row>
-          </Table.Head>
-          <Table.Body>
-            {consultants.map((c) => (
-              <Table.Row key={c.consultantId}>
-                <Table.Cell>{c.displayName}</Table.Cell>
-                <Table.Cell>{c.email}</Table.Cell>
-                <Table.Cell>{c.specialties.join(", ")}</Table.Cell>
-                <Table.Cell>
-                  <ActiveStatusBadge isActive={c.isActive} />
-                </Table.Cell>
-                <Table.Cell>
-                  <Tooltip content="編集">
-                    <IconButton variant="subtle" size="sm" asChild>
-                      <Link
-                        href={buildPath(`/admin/consultants/${c.consultantId}`)}
-                      >
-                        <Pencil size={16} />
-                      </Link>
-                    </IconButton>
-                  </Tooltip>
-                </Table.Cell>
+        <>
+          <Table.Root>
+            <Table.Head>
+              <Table.Row>
+                <Table.Header>名前</Table.Header>
+                <Table.Header>メールアドレス</Table.Header>
+                <Table.Header>専門分野</Table.Header>
+                <Table.Header>ステータス</Table.Header>
+                <Table.Header>操作</Table.Header>
               </Table.Row>
-            ))}
-          </Table.Body>
-        </Table.Root>
+            </Table.Head>
+            <Table.Body>
+              {consultants.map((c) => (
+                <Table.Row key={c.consultantId}>
+                  <Table.Cell>{c.displayName}</Table.Cell>
+                  <Table.Cell>{c.email}</Table.Cell>
+                  <Table.Cell>{c.specialties.join(", ")}</Table.Cell>
+                  <Table.Cell>
+                    <ActiveStatusBadge isActive={c.isActive} />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Tooltip content="編集">
+                      <IconButton variant="subtle" size="sm" asChild>
+                        <Link
+                          href={buildPath(
+                            `/admin/consultants/${c.consultantId}`,
+                          )}
+                        >
+                          <Pencil size={16} />
+                        </Link>
+                      </IconButton>
+                    </Tooltip>
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table.Root>
+          <ListControls
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            sortBy={sortBy}
+            total={pagination.total}
+            totalPages={pagination.totalPages}
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            }}
+            onSortByChange={(nextSortBy) => {
+              setSortBy(nextSortBy);
+              setPage(1);
+            }}
+          />
+        </>
       )}
     </styled.div>
   );

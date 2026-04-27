@@ -2,9 +2,10 @@
 
 import { CalendarX, ExternalLink, Pencil } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
+import { ListControls } from "@/components/list-controls";
 import { BookingStatusBadge } from "@/components/status-badge";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { TruncatedId } from "@/components/truncated-id";
@@ -74,8 +75,28 @@ function ClientCell({
 
 export default function ConsultantBookingsPage() {
   const { buildPath } = useOrganizationRouting();
-  const { data, isLoading } = useConsultantBookings();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<20 | 50 | 100>(20);
+  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt">("createdAt");
+  const { data, isLoading } = useConsultantBookings({
+    page,
+    pageSize,
+    sortBy,
+    sortOrder: "desc",
+  });
   const bookings = data?.data?.bookings ?? [];
+  const pagination = data?.data?.pagination ?? {
+    page,
+    pageSize,
+    total: bookings.length,
+    totalPages: 1,
+  };
+
+  useEffect(() => {
+    if (page !== pagination.page) {
+      setPage(pagination.page);
+    }
+  }, [page, pagination.page]);
 
   if (isLoading) {
     return (
@@ -111,72 +132,93 @@ export default function ConsultantBookingsPage() {
           hint="予約が入ると、ここに表示されます"
         />
       ) : (
-        <Table.Root>
-          <Table.Head>
-            <Table.Row>
-              <Table.Header>日時</Table.Header>
-              <Table.Header>ステータス</Table.Header>
-              <Table.Header>クライアント</Table.Header>
-              <Table.Header>Zoom</Table.Header>
-              <Table.Header>メモ</Table.Header>
-              <Table.Header>操作</Table.Header>
-            </Table.Row>
-          </Table.Head>
-          <Table.Body>
-            {bookings.map((b) => (
-              <Table.Row key={b.bookingId}>
-                <Table.Cell>
-                  {new Date(b.startDatetime).toLocaleString("ja-JP")}
-                </Table.Cell>
-                <Table.Cell>
-                  <BookingStatusBadge status={b.status} />
-                </Table.Cell>
-                <Table.Cell>
-                  <ClientCell clientId={b.clientId} client={b.client ?? null} />
-                </Table.Cell>
-                <Table.Cell>
-                  {b.zoomUrl ? (
-                    <Tooltip content="Zoom に参加" showArrow>
+        <>
+          <Table.Root>
+            <Table.Head>
+              <Table.Row>
+                <Table.Header>日時</Table.Header>
+                <Table.Header>ステータス</Table.Header>
+                <Table.Header>クライアント</Table.Header>
+                <Table.Header>Zoom</Table.Header>
+                <Table.Header>メモ</Table.Header>
+                <Table.Header>操作</Table.Header>
+              </Table.Row>
+            </Table.Head>
+            <Table.Body>
+              {bookings.map((b) => (
+                <Table.Row key={b.bookingId}>
+                  <Table.Cell>
+                    {new Date(b.startDatetime).toLocaleString("ja-JP")}
+                  </Table.Cell>
+                  <Table.Cell>
+                    <BookingStatusBadge status={b.status} />
+                  </Table.Cell>
+                  <Table.Cell>
+                    <ClientCell
+                      clientId={b.clientId}
+                      client={b.client ?? null}
+                    />
+                  </Table.Cell>
+                  <Table.Cell>
+                    {b.zoomUrl ? (
+                      <Tooltip content="Zoom に参加" showArrow>
+                        <IconButton variant="subtle" size="sm" asChild>
+                          <a
+                            href={b.zoomUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            <ExternalLink size={16} />
+                          </a>
+                        </IconButton>
+                      </Tooltip>
+                    ) : (
+                      <Text color="fg.subtle">-</Text>
+                    )}
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Text
+                      color={b.consultantMemo ? "fg.default" : "fg.subtle"}
+                      truncate
+                      maxW="200px"
+                    >
+                      {b.consultantMemo || "-"}
+                    </Text>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <Tooltip content="メモ編集" showArrow>
                       <IconButton variant="subtle" size="sm" asChild>
-                        <a
-                          href={b.zoomUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
+                        <Link
+                          href={buildPath(
+                            `/consultant/bookings/${b.bookingId}/memo`,
+                          )}
                         >
-                          <ExternalLink size={16} />
-                        </a>
+                          <Pencil size={16} />
+                        </Link>
                       </IconButton>
                     </Tooltip>
-                  ) : (
-                    <Text color="fg.subtle">-</Text>
-                  )}
-                </Table.Cell>
-                <Table.Cell>
-                  <Text
-                    color={b.consultantMemo ? "fg.default" : "fg.subtle"}
-                    truncate
-                    maxW="200px"
-                  >
-                    {b.consultantMemo || "-"}
-                  </Text>
-                </Table.Cell>
-                <Table.Cell>
-                  <Tooltip content="メモ編集" showArrow>
-                    <IconButton variant="subtle" size="sm" asChild>
-                      <Link
-                        href={buildPath(
-                          `/consultant/bookings/${b.bookingId}/memo`,
-                        )}
-                      >
-                        <Pencil size={16} />
-                      </Link>
-                    </IconButton>
-                  </Tooltip>
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table.Body>
-        </Table.Root>
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table.Root>
+          <ListControls
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            sortBy={sortBy}
+            total={pagination.total}
+            totalPages={pagination.totalPages}
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            }}
+            onSortByChange={(nextSortBy) => {
+              setSortBy(nextSortBy);
+              setPage(1);
+            }}
+          />
+        </>
       )}
     </styled.div>
   );

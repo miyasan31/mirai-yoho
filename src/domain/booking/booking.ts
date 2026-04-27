@@ -18,6 +18,8 @@ interface BookingCreateProps {
   startDatetime: Date;
   consultantMemo: ConsultantMemo;
   consultationContent?: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 interface BookingProps extends BookingCreateProps {
@@ -39,11 +41,14 @@ export class Booking extends AggregateRoot {
     private zoomUrl: ZoomUrl | undefined,
     private consultantMemo: ConsultantMemo,
     private consultationContent: string | undefined,
+    private readonly createdAt: Date,
+    private updatedAt: Date,
   ) {
     super();
   }
 
   static create(props: BookingCreateProps): Booking {
+    const now = new Date();
     return new Booking(
       props.organizationId,
       props.bookingId,
@@ -56,10 +61,13 @@ export class Booking extends AggregateRoot {
       undefined,
       props.consultantMemo,
       props.consultationContent,
+      props.createdAt ?? now,
+      props.updatedAt ?? now,
     );
   }
 
   static reconstruct(props: BookingProps): Booking {
+    const createdAt = props.createdAt ?? new Date(0);
     return new Booking(
       props.organizationId,
       props.bookingId,
@@ -72,6 +80,8 @@ export class Booking extends AggregateRoot {
       props.zoomUrl,
       props.consultantMemo,
       props.consultationContent,
+      createdAt,
+      props.updatedAt ?? createdAt,
     );
   }
 
@@ -84,6 +94,7 @@ export class Booking extends AggregateRoot {
     }
     this.status = BookingStatus.reconstruct("confirmed");
     this.zoomUrl = zoomUrl;
+    this.updatedAt = new Date();
     this.addDomainEvent(
       BookingConfirmedEvent.create({
         bookingId: this.bookingId,
@@ -110,6 +121,7 @@ export class Booking extends AggregateRoot {
       );
     }
     this.status = BookingStatus.reconstruct("cancelled");
+    this.updatedAt = new Date();
     this.addDomainEvent(
       BookingCancelledEvent.create({
         bookingId: this.bookingId,
@@ -128,10 +140,12 @@ export class Booking extends AggregateRoot {
       );
     }
     this.status = BookingStatus.reconstruct("completed");
+    this.updatedAt = new Date();
   }
 
   updateMemo(memo: ConsultantMemo): void {
     this.consultantMemo = memo;
+    this.updatedAt = new Date();
   }
 
   getBookingId(): string {
@@ -176,5 +190,13 @@ export class Booking extends AggregateRoot {
 
   getConsultationContent(): string | undefined {
     return this.consultationContent;
+  }
+
+  getCreatedAt(): Date {
+    return this.createdAt;
+  }
+
+  getUpdatedAt(): Date {
+    return this.updatedAt;
   }
 }

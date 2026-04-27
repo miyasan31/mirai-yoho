@@ -23,9 +23,12 @@ interface BookingDoc {
   zoomUrl?: string;
   consultantMemo: string;
   consultationContent?: string;
+  createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 function toDomain(doc: BookingDoc): Booking {
+  const createdAt = doc.createdAt?.toDate() ?? new Date(0);
   return BookingEntity.reconstruct({
     organizationId: doc.organizationId,
     bookingId: doc.bookingId,
@@ -38,6 +41,8 @@ function toDomain(doc: BookingDoc): Booking {
     zoomUrl: doc.zoomUrl ? ZoomUrl.reconstruct(doc.zoomUrl) : undefined,
     consultantMemo: ConsultantMemo.reconstruct(doc.consultantMemo),
     consultationContent: doc.consultationContent,
+    createdAt,
+    updatedAt: doc.updatedAt?.toDate() ?? createdAt,
   });
 }
 
@@ -54,6 +59,8 @@ function toFirestore(booking: Booking): Record<string, unknown> {
     zoomUrl: booking.getZoomUrl()?.getValue() ?? null,
     consultantMemo: booking.getConsultantMemo().getValue(),
     consultationContent: booking.getConsultationContent() ?? null,
+    createdAt: booking.getCreatedAt(),
+    updatedAt: booking.getUpdatedAt(),
   };
 }
 

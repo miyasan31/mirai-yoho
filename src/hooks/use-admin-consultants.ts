@@ -3,15 +3,19 @@ import {
   useGetAdminConsultants,
   useUpdateAdminConsultant,
 } from "@/generated/api/admin/admin";
+import type { GetAdminConsultantsParams } from "@/generated/schemas";
 import { QUERY_STALE_TIME } from "@/hooks/query-cache-policy";
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
-export function useAdminConsultants(options?: { enabled?: boolean }) {
+export function useAdminConsultants(
+  params?: GetAdminConsultantsParams,
+  options?: { enabled?: boolean },
+) {
   const { token } = useAuth();
   const { organizationId } = useOrganizationRouting();
   const enabled = options?.enabled ?? true;
-  return useGetAdminConsultants(organizationId ?? "", {
+  return useGetAdminConsultants(organizationId ?? "", params, {
     query: {
       enabled: !!token && !!organizationId && enabled,
       staleTime: QUERY_STALE_TIME.normal,

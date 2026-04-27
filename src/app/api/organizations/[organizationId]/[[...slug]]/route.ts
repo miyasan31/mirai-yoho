@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { FieldPath } from "firebase-admin/firestore";
+import { FieldPath, type Timestamp } from "firebase-admin/firestore";
 import { type NextRequest, NextResponse } from "next/server";
 import { evaluateChargeEligibility } from "@/application/booking/charge-eligibility";
 import { UpdateMemoUseCase } from "@/application/consultant/update-memo-use-case";
@@ -73,6 +73,23 @@ interface RequestErrorContext {
   consultantId?: string | null;
 }
 
+type SortBy = "createdAt" | "updatedAt";
+
+interface PaginationParams {
+  page: number;
+  pageSize: 20 | 50 | 100;
+}
+
+interface PaginationMeta extends PaginationParams {
+  total: number;
+  totalPages: number;
+}
+
+interface ListQueryParams extends PaginationParams {
+  sortBy: SortBy;
+  sortOrder: "desc";
+}
+
 function jsonError(status: number, code: string, message: string) {
   return NextResponse.json({ code, message }, { status });
 }
@@ -86,6 +103,91 @@ function toBookingSettingsResponse(settings: OrganizationSettings) {
 
 function parseSlug(slug?: string[]) {
   return slug ?? [];
+}
+
+function parsePaginationParams(
+  searchParams: URLSearchParams,
+): PaginationParams | null {
+  const pageRaw = searchParams.get("page");
+  const page = pageRaw ? Number(pageRaw) : 1;
+  if (!Number.isInteger(page) || page < 1) {
+    return null;
+  }
+
+  const pageSizeRaw = searchParams.get("pageSize");
+  const pageSize = pageSizeRaw ? Number(pageSizeRaw) : 20;
+  if (pageSize !== 20 && pageSize !== 50 && pageSize !== 100) {
+    return null;
+  }
+
+  return {
+    page,
+    pageSize,
+  };
+}
+
+function parseSortParams(searchParams: URLSearchParams): SortBy | null {
+  const sortByRaw = searchParams.get("sortBy");
+  if (!sortByRaw) return "createdAt";
+  if (sortByRaw !== "createdAt" && sortByRaw !== "updatedAt") {
+    return null;
+  }
+  return sortByRaw;
+}
+
+function parseListQueryParams(
+  searchParams: URLSearchParams,
+): ListQueryParams | null {
+  const pagination = parsePaginationParams(searchParams);
+  const sortBy = parseSortParams(searchParams);
+  const sortOrderRaw = searchParams.get("sortOrder");
+  if (!pagination || !sortBy) return null;
+  if (sortOrderRaw && sortOrderRaw !== "desc") return null;
+  return {
+    ...pagination,
+    sortBy,
+    sortOrder: "desc",
+  };
+}
+
+function paginateArray<T>(
+  items: T[],
+  params: PaginationParams,
+): { items: T[]; pagination: PaginationMeta } {
+  const total = items.length;
+  const totalPages = Math.max(1, Math.ceil(total / params.pageSize));
+  const currentPage = Math.min(params.page, totalPages);
+  const start = (currentPage - 1) * params.pageSize;
+  const end = start + params.pageSize;
+
+  return {
+    items: items.slice(start, end),
+    pagination: {
+      page: currentPage,
+      pageSize: params.pageSize,
+      total,
+      totalPages,
+    },
+  };
+}
+
+function resolveTimestampForSort(value: Date | string | undefined): number {
+  if (!value) return 0;
+  const date = value instanceof Date ? value : new Date(value);
+  const time = date.getTime();
+  return Number.isNaN(time) ? 0 : time;
+}
+
+function sortByTimestampDesc<
+  T extends { createdAt?: Date | string; updatedAt?: Date | string },
+>(items: T[], sortBy: SortBy): T[] {
+  const sorted = [...items];
+  sorted.sort((left, right) => {
+    const leftValue = resolveTimestampForSort(left[sortBy]);
+    const rightValue = resolveTimestampForSort(right[sortBy]);
+    return rightValue - leftValue;
+  });
+  return sorted;
 }
 
 function isUserRole(role: unknown): role is UserRole {
@@ -127,7 +229,8 @@ async function listOrganizationMemberships(organizationId: string) {
       organizationId: string;
       role: UserRole;
       status: string;
-      createdAt?: Date;
+      createdAt?: Timestamp;
+      updatedAt?: Timestamp;
     }),
   }));
 }
@@ -341,6 +444,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[1] === "bookings"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      const listQueryParams = parseListQueryParams(
+        request.nextUrl.searchParams,
+      );
+      if (!listQueryParams) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "page must be >= 1, pageSize must be one of 20/50/100, and sortBy must be createdAt or updatedAt",
+        );
+      }
       const bookingRepo = createBookingRepository();
       const paymentRepo = createPaymentRepository();
       const status = request.nextUrl.searchParams.get("status");
@@ -352,8 +465,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
         payments.map((payment) => [payment.getBookingId(), payment]),
       );
 
-      return NextResponse.json({
-        bookings: bookings.map((b) => {
+      const bookingItems = sortByTimestampDesc(
+        bookings.map((b) => {
           const eligibility = evaluateChargeEligibility({
             booking: b,
             payment: paymentByBookingId.get(b.getBookingId()) ?? null,
@@ -370,8 +483,20 @@ export async function GET(request: NextRequest, context: RouteContext) {
             consultationContent: b.getConsultationContent() ?? null,
             chargeable: eligibility.chargeable,
             chargeDisabledReason: eligibility.reason,
+            createdAt: b.getCreatedAt().toISOString(),
+            updatedAt: b.getUpdatedAt().toISOString(),
           };
         }),
+        listQueryParams.sortBy,
+      );
+      const { items, pagination } = paginateArray(
+        bookingItems,
+        listQueryParams,
+      );
+
+      return NextResponse.json({
+        bookings: items,
+        pagination,
       });
     }
 
@@ -381,6 +506,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[1] === "consultants"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      const listQueryParams = parseListQueryParams(
+        request.nextUrl.searchParams,
+      );
+      if (!listQueryParams) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "page must be >= 1, pageSize must be one of 20/50/100, and sortBy must be createdAt or updatedAt",
+        );
+      }
       const repo = createConsultantRepository();
       const consultants = await repo.findAllActive(organizationId);
       const userByUid = await getUsersByUids(
@@ -397,10 +532,20 @@ export async function GET(request: NextRequest, context: RouteContext) {
           specialties: [...c.getProfile().getSpecialties()],
           zoomRoomIds: c.getZoomRoomIds(),
           isActive: c.getIsActive(),
+          createdAt: c.getCreatedAt().toISOString(),
+          updatedAt: c.getUpdatedAt().toISOString(),
         };
       });
+      const sortedConsultants = sortByTimestampDesc(
+        consultantsWithEmail,
+        listQueryParams.sortBy,
+      );
+      const { items, pagination } = paginateArray(
+        sortedConsultants,
+        listQueryParams,
+      );
 
-      return NextResponse.json({ consultants: consultantsWithEmail });
+      return NextResponse.json({ consultants: items, pagination });
     }
 
     if (
@@ -409,15 +554,36 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[1] === "clients"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      const listQueryParams = parseListQueryParams(
+        request.nextUrl.searchParams,
+      );
+      if (!listQueryParams) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "page must be >= 1, pageSize must be one of 20/50/100, and sortBy must be createdAt or updatedAt",
+        );
+      }
       const clients = await createClientRepository().findAll(organizationId);
-      return NextResponse.json({
-        clients: clients.map((c) => ({
+      const sortedClients = sortByTimestampDesc(
+        clients.map((c) => ({
           clientId: c.getClientId(),
           name: c.getName(),
           email: c.getEmail(),
           phone: c.getPhone(),
           memo: c.getMemo() ?? null,
+          createdAt: c.getCreatedAt().toISOString(),
+          updatedAt: c.getUpdatedAt().toISOString(),
         })),
+        listQueryParams.sortBy,
+      );
+      const { items, pagination } = paginateArray(
+        sortedClients,
+        listQueryParams,
+      );
+      return NextResponse.json({
+        clients: items,
+        pagination,
       });
     }
 
@@ -427,9 +593,19 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[1] === "payments"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      const listQueryParams = parseListQueryParams(
+        request.nextUrl.searchParams,
+      );
+      if (!listQueryParams) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "page must be >= 1, pageSize must be one of 20/50/100, and sortBy must be createdAt or updatedAt",
+        );
+      }
       const payments = await createPaymentRepository().findAll(organizationId);
-      return NextResponse.json({
-        payments: payments.map((p) => ({
+      const sortedPayments = sortByTimestampDesc(
+        payments.map((p) => ({
           paymentId: p.getPaymentId(),
           bookingId: p.getBookingId(),
           clientId: p.getClientId(),
@@ -442,7 +618,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
           totalJPY: p.getMoney().getTotalJPY(),
           status: p.getStatus().getValue(),
           chargeMethod: p.getChargeMethod() ?? null,
+          createdAt: p.getCreatedAt().toISOString(),
+          updatedAt: p.getUpdatedAt().toISOString(),
         })),
+        listQueryParams.sortBy,
+      );
+      const { items, pagination } = paginateArray(
+        sortedPayments,
+        listQueryParams,
+      );
+      return NextResponse.json({
+        payments: items,
+        pagination,
       });
     }
 
@@ -468,6 +655,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[1] === "users"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      const listQueryParams = parseListQueryParams(
+        request.nextUrl.searchParams,
+      );
+      if (!listQueryParams) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "page must be >= 1, pageSize must be one of 20/50/100, and sortBy must be createdAt or updatedAt",
+        );
+      }
       const memberships = (
         await listOrganizationMemberships(organizationId)
       ).filter((membership) => isAdminPanelUserRole(membership.role));
@@ -480,6 +677,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const users = memberships.map((membership) => {
         const userRecord = userByUid.get(membership.uid) ?? null;
         const displayName = displayNameByUid.get(membership.uid) ?? "";
+        const createdAtDate = membership.createdAt?.toDate() ?? new Date(0);
+        const updatedAtDate = membership.updatedAt?.toDate() ?? createdAtDate;
 
         return {
           uid: membership.uid,
@@ -487,10 +686,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
           displayName: displayName || userRecord?.email || "",
           role: membership.role,
           status: membership.status === "active" ? "registered" : "pending",
+          createdAt: createdAtDate.toISOString(),
+          updatedAt: updatedAtDate.toISOString(),
         };
       });
+      const sortedUsers = sortByTimestampDesc(users, listQueryParams.sortBy);
+      const { items, pagination } = paginateArray(sortedUsers, listQueryParams);
 
-      return NextResponse.json({ users });
+      return NextResponse.json({ users: items, pagination });
     }
 
     if (
@@ -499,6 +702,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[1] === "bookings"
     ) {
       requireOrganizationRole(authUser, organizationId, "consultant");
+      const listQueryParams = parseListQueryParams(
+        request.nextUrl.searchParams,
+      );
+      if (!listQueryParams) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "page must be >= 1, pageSize must be one of 20/50/100, and sortBy must be createdAt or updatedAt",
+        );
+      }
       const bookingRepository = createBookingRepository();
       const paymentRepository = createPaymentRepository();
       const clientRepository = createClientRepository();
@@ -520,8 +733,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
         clients.map((client) => [client.getClientId(), client] as const),
       );
 
-      return NextResponse.json({
-        bookings: bookings.map((b) => {
+      const bookingItems = sortByTimestampDesc(
+        bookings.map((b) => {
           const eligibility = evaluateChargeEligibility({
             booking: b,
             payment: paymentByBookingId.get(b.getBookingId()) ?? null,
@@ -549,8 +762,20 @@ export async function GET(request: NextRequest, context: RouteContext) {
                   memo: client.getMemo() ?? null,
                 }
               : null,
+            createdAt: b.getCreatedAt().toISOString(),
+            updatedAt: b.getUpdatedAt().toISOString(),
           };
         }),
+        listQueryParams.sortBy,
+      );
+      const { items, pagination } = paginateArray(
+        bookingItems,
+        listQueryParams,
+      );
+
+      return NextResponse.json({
+        bookings: items,
+        pagination,
       });
     }
 

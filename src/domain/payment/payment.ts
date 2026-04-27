@@ -14,6 +14,8 @@ interface PaymentDeferredCreateProps {
   clientId: string;
   stripeSetupIntentId: string;
   money: Money;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 interface PaymentImmediateCreateProps {
@@ -23,6 +25,8 @@ interface PaymentImmediateCreateProps {
   clientId: string;
   stripePaymentIntentId: string;
   money: Money;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 interface PaymentProps {
@@ -37,6 +41,8 @@ interface PaymentProps {
   stripeSetupIntentId?: string;
   stripePaymentMethodId?: string;
   chargeMethod?: ChargeMethod;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export class Payment extends AggregateRoot {
@@ -52,11 +58,14 @@ export class Payment extends AggregateRoot {
     private stripeSetupIntentId: string | undefined,
     private stripePaymentMethodId: string | undefined,
     private chargeMethod: ChargeMethod | undefined,
+    private readonly createdAt: Date,
+    private updatedAt: Date,
   ) {
     super();
   }
 
   static createDeferred(props: PaymentDeferredCreateProps): Payment {
+    const now = new Date();
     return new Payment(
       props.organizationId,
       props.paymentId,
@@ -69,10 +78,13 @@ export class Payment extends AggregateRoot {
       props.stripeSetupIntentId,
       undefined,
       undefined,
+      props.createdAt ?? now,
+      props.updatedAt ?? now,
     );
   }
 
   static createImmediate(props: PaymentImmediateCreateProps): Payment {
+    const now = new Date();
     return new Payment(
       props.organizationId,
       props.paymentId,
@@ -85,10 +97,13 @@ export class Payment extends AggregateRoot {
       undefined,
       undefined,
       undefined,
+      props.createdAt ?? now,
+      props.updatedAt ?? now,
     );
   }
 
   static reconstruct(props: PaymentProps): Payment {
+    const createdAt = props.createdAt ?? new Date(0);
     return new Payment(
       props.organizationId,
       props.paymentId,
@@ -101,6 +116,8 @@ export class Payment extends AggregateRoot {
       props.stripeSetupIntentId,
       props.stripePaymentMethodId,
       props.chargeMethod,
+      createdAt,
+      props.updatedAt ?? createdAt,
     );
   }
 
@@ -113,6 +130,7 @@ export class Payment extends AggregateRoot {
     }
     this.status = PaymentStatus.reconstruct("setup_complete");
     this.stripePaymentMethodId = paymentMethodId;
+    this.updatedAt = new Date();
   }
 
   charge(paymentIntentId: string, method: ChargeMethod): void {
@@ -125,6 +143,7 @@ export class Payment extends AggregateRoot {
     this.status = PaymentStatus.reconstruct("charged");
     this.stripePaymentIntentId = paymentIntentId;
     this.chargeMethod = method;
+    this.updatedAt = new Date();
     this.addDomainEvent(
       PaymentChargedEvent.create({
         paymentId: this.paymentId,
@@ -150,6 +169,7 @@ export class Payment extends AggregateRoot {
       );
     }
     this.status = PaymentStatus.reconstruct("refunded");
+    this.updatedAt = new Date();
   }
 
   cancel(): void {
@@ -164,6 +184,7 @@ export class Payment extends AggregateRoot {
       );
     }
     this.status = PaymentStatus.reconstruct("cancelled");
+    this.updatedAt = new Date();
   }
 
   failCharge(): void {
@@ -174,6 +195,7 @@ export class Payment extends AggregateRoot {
       );
     }
     this.status = PaymentStatus.reconstruct("failed");
+    this.updatedAt = new Date();
   }
 
   getPaymentId(): string {
@@ -218,5 +240,13 @@ export class Payment extends AggregateRoot {
 
   getChargeMethod(): ChargeMethod | undefined {
     return this.chargeMethod;
+  }
+
+  getCreatedAt(): Date {
+    return this.createdAt;
+  }
+
+  getUpdatedAt(): Date {
+    return this.updatedAt;
   }
 }

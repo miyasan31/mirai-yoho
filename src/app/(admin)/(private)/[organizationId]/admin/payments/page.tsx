@@ -1,8 +1,10 @@
 "use client";
 
 import { CreditCard } from "lucide-react";
+import { useEffect, useState } from "react";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
+import { ListControls } from "@/components/list-controls";
 import { PaymentStatusBadge } from "@/components/status-badge";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { TruncatedId } from "@/components/truncated-id";
@@ -11,9 +13,29 @@ import { Text } from "@/components/ui/text";
 import { useAdminPayments } from "@/hooks/use-admin-payments";
 
 export default function AdminPaymentsPage() {
-  const { data, isLoading } = useAdminPayments();
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<20 | 50 | 100>(20);
+  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt">("createdAt");
+  const { data, isLoading } = useAdminPayments({
+    page,
+    pageSize,
+    sortBy,
+    sortOrder: "desc",
+  });
 
   const payments = data?.data?.payments ?? [];
+  const pagination = data?.data?.pagination ?? {
+    page,
+    pageSize,
+    total: payments.length,
+    totalPages: 1,
+  };
+
+  useEffect(() => {
+    if (page !== pagination.page) {
+      setPage(pagination.page);
+    }
+  }, [page, pagination.page]);
 
   if (isLoading) {
     return (
@@ -48,36 +70,54 @@ export default function AdminPaymentsPage() {
           hint="決済が発生するとここに表示されます"
         />
       ) : (
-        <Table.Root>
-          <Table.Head>
-            <Table.Row>
-              <Table.Header>予約ID</Table.Header>
-              <Table.Header>金額</Table.Header>
-              <Table.Header>税額</Table.Header>
-              <Table.Header>合計</Table.Header>
-              <Table.Header>ステータス</Table.Header>
-              <Table.Header>戦略</Table.Header>
-              <Table.Header>方式</Table.Header>
-            </Table.Row>
-          </Table.Head>
-          <Table.Body>
-            {payments.map((p) => (
-              <Table.Row key={p.paymentId}>
-                <Table.Cell>
-                  <TruncatedId id={p.bookingId} />
-                </Table.Cell>
-                <Table.Cell>{p.amountJPY.toLocaleString()}円</Table.Cell>
-                <Table.Cell>{p.taxAmountJPY.toLocaleString()}円</Table.Cell>
-                <Table.Cell>{p.totalJPY.toLocaleString()}円</Table.Cell>
-                <Table.Cell>
-                  <PaymentStatusBadge status={p.status} />
-                </Table.Cell>
-                <Table.Cell>{p.paymentStrategy}</Table.Cell>
-                <Table.Cell>{p.chargeMethod ?? "-"}</Table.Cell>
+        <>
+          <Table.Root>
+            <Table.Head>
+              <Table.Row>
+                <Table.Header>予約ID</Table.Header>
+                <Table.Header>金額</Table.Header>
+                <Table.Header>税額</Table.Header>
+                <Table.Header>合計</Table.Header>
+                <Table.Header>ステータス</Table.Header>
+                <Table.Header>戦略</Table.Header>
+                <Table.Header>方式</Table.Header>
               </Table.Row>
-            ))}
-          </Table.Body>
-        </Table.Root>
+            </Table.Head>
+            <Table.Body>
+              {payments.map((p) => (
+                <Table.Row key={p.paymentId}>
+                  <Table.Cell>
+                    <TruncatedId id={p.bookingId} />
+                  </Table.Cell>
+                  <Table.Cell>{p.amountJPY.toLocaleString()}円</Table.Cell>
+                  <Table.Cell>{p.taxAmountJPY.toLocaleString()}円</Table.Cell>
+                  <Table.Cell>{p.totalJPY.toLocaleString()}円</Table.Cell>
+                  <Table.Cell>
+                    <PaymentStatusBadge status={p.status} />
+                  </Table.Cell>
+                  <Table.Cell>{p.paymentStrategy}</Table.Cell>
+                  <Table.Cell>{p.chargeMethod ?? "-"}</Table.Cell>
+                </Table.Row>
+              ))}
+            </Table.Body>
+          </Table.Root>
+          <ListControls
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            sortBy={sortBy}
+            total={pagination.total}
+            totalPages={pagination.totalPages}
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            }}
+            onSortByChange={(nextSortBy) => {
+              setSortBy(nextSortBy);
+              setPage(1);
+            }}
+          />
+        </>
       )}
     </styled.div>
   );

@@ -1,4 +1,4 @@
-import { FieldPath } from "firebase-admin/firestore";
+import { FieldPath, type Timestamp } from "firebase-admin/firestore";
 import type { Client } from "@/domain/client/client";
 import { Client as ClientEntity } from "@/domain/client/client";
 import type { IClientRepository } from "@/domain/client/client-repository";
@@ -16,9 +16,18 @@ interface ClientDoc {
   email: string;
   phone: string;
   memo?: string;
+  createdAt?: Timestamp | Date;
+  updatedAt?: Timestamp | Date;
+}
+
+function toDate(value?: Timestamp | Date): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) return value;
+  return value.toDate();
 }
 
 function toDomain(doc: ClientDoc): Client {
+  const createdAt = toDate(doc.createdAt) ?? new Date(0);
   return ClientEntity.reconstruct({
     organizationId: doc.organizationId,
     clientId: doc.clientId,
@@ -26,6 +35,8 @@ function toDomain(doc: ClientDoc): Client {
     email: doc.email,
     phone: doc.phone,
     memo: doc.memo,
+    createdAt,
+    updatedAt: toDate(doc.updatedAt) ?? createdAt,
   });
 }
 
@@ -38,6 +49,8 @@ function toFirestore(client: Client): ClientDoc {
     email: client.getEmail(),
     phone: client.getPhone(),
     ...(memo !== undefined ? { memo } : {}),
+    createdAt: client.getCreatedAt(),
+    updatedAt: client.getUpdatedAt(),
   };
 }
 

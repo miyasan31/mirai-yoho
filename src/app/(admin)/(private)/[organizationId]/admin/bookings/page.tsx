@@ -1,9 +1,10 @@
 "use client";
 
 import { AlertTriangle, CalendarDays } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
+import { ListControls } from "@/components/list-controls";
 import { BookingStatusBadge } from "@/components/status-badge";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { TruncatedId } from "@/components/truncated-id";
@@ -138,14 +139,40 @@ function ConsultantCell({
 
 export default function AdminBookingsPage() {
   const { organizationId } = useOrganizationRouting();
-  const bookingsQuery = useAdminBookings();
-  const clientsQuery = useAdminClients({ enabled: true });
-  const consultantsQuery = useAdminConsultants({ enabled: true });
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<20 | 50 | 100>(20);
+  const [sortBy, setSortBy] = useState<"createdAt" | "updatedAt">("createdAt");
+  const bookingsQuery = useAdminBookings({
+    page,
+    pageSize,
+    sortBy,
+    sortOrder: "desc",
+  });
+  const clientsQuery = useAdminClients(
+    { page: 1, pageSize: 100, sortBy: "createdAt", sortOrder: "desc" },
+    { enabled: true },
+  );
+  const consultantsQuery = useAdminConsultants(
+    { page: 1, pageSize: 100, sortBy: "createdAt", sortOrder: "desc" },
+    { enabled: true },
+  );
   const chargePayment = useChargePayment();
 
   const bookings = bookingsQuery.data?.data?.bookings ?? [];
+  const pagination = bookingsQuery.data?.data?.pagination ?? {
+    page,
+    pageSize,
+    total: bookings.length,
+    totalPages: 1,
+  };
   const clients = clientsQuery.data?.data?.clients ?? [];
   const consultants = consultantsQuery.data?.data?.consultants ?? [];
+
+  useEffect(() => {
+    if (page !== pagination.page) {
+      setPage(pagination.page);
+    }
+  }, [page, pagination.page]);
 
   const clientsById = useMemo(
     () => new Map(clients.map((client) => [client.clientId, client])),
@@ -251,84 +278,103 @@ export default function AdminBookingsPage() {
           hint="予約が作成されるとここに表示されます"
         />
       ) : (
-        <Table.Root>
-          <Table.Head>
-            <Table.Row>
-              <Table.Header>日時</Table.Header>
-              <Table.Header>ステータス</Table.Header>
-              <Table.Header>クライアント</Table.Header>
-              <Table.Header>相談員</Table.Header>
-              <Table.Header>操作</Table.Header>
-            </Table.Row>
-          </Table.Head>
-          <Table.Body>
-            {bookings.map((b) => {
-              const chargeable =
-                "chargeable" in b
-                  ? Boolean(
-                      (b as typeof b & { chargeable?: boolean }).chargeable,
-                    )
-                  : false;
-              const chargeDisabledReason =
-                "chargeDisabledReason" in b
-                  ? (
-                      b as typeof b & {
-                        chargeDisabledReason?: string | null;
-                      }
-                    ).chargeDisabledReason
-                  : null;
+        <>
+          <Table.Root>
+            <Table.Head>
+              <Table.Row>
+                <Table.Header>日時</Table.Header>
+                <Table.Header>ステータス</Table.Header>
+                <Table.Header>クライアント</Table.Header>
+                <Table.Header>相談員</Table.Header>
+                <Table.Header>操作</Table.Header>
+              </Table.Row>
+            </Table.Head>
+            <Table.Body>
+              {bookings.map((b) => {
+                const chargeable =
+                  "chargeable" in b
+                    ? Boolean(
+                        (b as typeof b & { chargeable?: boolean }).chargeable,
+                      )
+                    : false;
+                const chargeDisabledReason =
+                  "chargeDisabledReason" in b
+                    ? (
+                        b as typeof b & {
+                          chargeDisabledReason?: string | null;
+                        }
+                      ).chargeDisabledReason
+                    : null;
 
-              const client = clientsById.get(b.clientId) ?? null;
-              const consultant = consultantsById.get(b.consultantId) ?? null;
+                const client = clientsById.get(b.clientId) ?? null;
+                const consultant = consultantsById.get(b.consultantId) ?? null;
 
-              return (
-                <Table.Row key={b.bookingId}>
-                  <Table.Cell>
-                    {formatBookingDatetime(b.startDatetime)}
-                  </Table.Cell>
-                  <Table.Cell>
-                    <BookingStatusBadge status={b.status} />
-                  </Table.Cell>
-                  <Table.Cell>
-                    <ClientCell clientId={b.clientId} client={client} />
-                  </Table.Cell>
-                  <Table.Cell>
-                    <ConsultantCell
-                      consultantId={b.consultantId}
-                      consultant={consultant}
-                    />
-                  </Table.Cell>
-                  <Table.Cell>
-                    {b.status === "confirmed" && (
-                      <Tooltip
-                        content={chargeDisabledReason ?? ""}
-                        disabled={chargeable || !chargeDisabledReason}
-                        positioning={{ placement: "top-start" }}
-                        showArrow
-                      >
-                        <styled.span display="inline-flex">
-                          <Button
-                            size="sm"
-                            disabled={!chargeable}
-                            onClick={() => handleCharge(b.bookingId)}
-                            loading={
-                              chargePayment.isPending &&
-                              chargePayment.variables?.bookingId === b.bookingId
-                            }
-                            loadingText="処理中..."
-                            w="fit-content"
-                          >
-                            課金
-                          </Button>
-                        </styled.span>
-                      </Tooltip>
-                    )}
-                  </Table.Cell>
-                </Table.Row>
-              );
-            })}
-          </Table.Body>
-        </Table.Root>
+                return (
+                  <Table.Row key={b.bookingId}>
+                    <Table.Cell>
+                      {formatBookingDatetime(b.startDatetime)}
+                    </Table.Cell>
+                    <Table.Cell>
+                      <BookingStatusBadge status={b.status} />
+                    </Table.Cell>
+                    <Table.Cell>
+                      <ClientCell clientId={b.clientId} client={client} />
+                    </Table.Cell>
+                    <Table.Cell>
+                      <ConsultantCell
+                        consultantId={b.consultantId}
+                        consultant={consultant}
+                      />
+                    </Table.Cell>
+                    <Table.Cell>
+                      {b.status === "confirmed" && (
+                        <Tooltip
+                          content={chargeDisabledReason ?? ""}
+                          disabled={chargeable || !chargeDisabledReason}
+                          positioning={{ placement: "top-start" }}
+                          showArrow
+                        >
+                          <styled.span display="inline-flex">
+                            <Button
+                              size="sm"
+                              disabled={!chargeable}
+                              onClick={() => handleCharge(b.bookingId)}
+                              loading={
+                                chargePayment.isPending &&
+                                chargePayment.variables?.bookingId ===
+                                  b.bookingId
+                              }
+                              loadingText="処理中..."
+                              w="fit-content"
+                            >
+                              課金
+                            </Button>
+                          </styled.span>
+                        </Tooltip>
+                      )}
+                    </Table.Cell>
+                  </Table.Row>
+                );
+              })}
+            </Table.Body>
+          </Table.Root>
+          <ListControls
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            sortBy={sortBy}
+            total={pagination.total}
+            totalPages={pagination.totalPages}
+            onPageChange={setPage}
+            onPageSizeChange={(nextPageSize) => {
+              setPageSize(nextPageSize);
+              setPage(1);
+            }}
+            onSortByChange={(nextSortBy) => {
+              setSortBy(nextSortBy);
+              setPage(1);
+            }}
+          />
+        </>
       )}
     </styled.div>
   );

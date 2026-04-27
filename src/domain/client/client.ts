@@ -6,6 +6,8 @@ interface ClientCreateProps {
   name: string;
   email: string;
   phone: string;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 interface ClientProps extends ClientCreateProps {
@@ -20,11 +22,14 @@ export class Client extends AggregateRoot {
     private email: string,
     private phone: string,
     private memo: string | undefined,
+    private readonly createdAt: Date,
+    private updatedAt: Date,
   ) {
     super();
   }
 
   static create(props: ClientCreateProps): Client {
+    const now = new Date();
     return new Client(
       props.organizationId,
       props.clientId,
@@ -32,10 +37,13 @@ export class Client extends AggregateRoot {
       props.email,
       props.phone,
       undefined,
+      props.createdAt ?? now,
+      props.updatedAt ?? now,
     );
   }
 
   static reconstruct(props: ClientProps): Client {
+    const createdAt = props.createdAt ?? new Date(0);
     return new Client(
       props.organizationId,
       props.clientId,
@@ -43,6 +51,8 @@ export class Client extends AggregateRoot {
       props.email,
       props.phone,
       props.memo,
+      createdAt,
+      props.updatedAt ?? createdAt,
     );
   }
 
@@ -50,10 +60,12 @@ export class Client extends AggregateRoot {
     this.name = props.name;
     this.email = props.email;
     this.phone = props.phone;
+    this.updatedAt = new Date();
   }
 
   updateMemo(memo: string): void {
     this.memo = memo;
+    this.updatedAt = new Date();
   }
 
   getClientId(): string {
@@ -78,5 +90,13 @@ export class Client extends AggregateRoot {
 
   getMemo(): string | undefined {
     return this.memo;
+  }
+
+  getCreatedAt(): Date {
+    return this.createdAt;
+  }
+
+  getUpdatedAt(): Date {
+    return this.updatedAt;
   }
 }

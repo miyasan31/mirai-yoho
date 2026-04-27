@@ -32,9 +32,27 @@ function formatDatetime(value: string): string {
 export default function AdminHomePage() {
   const { buildPath } = useOrganizationRouting();
   const { role } = useAuth();
-  const bookingsQuery = useAdminBookings();
-  const paymentsQuery = useAdminPayments();
-  const clientsQuery = useAdminClients({ enabled: true });
+  const bookingsQuery = useAdminBookings({
+    page: 1,
+    pageSize: 100,
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  });
+  const paymentsQuery = useAdminPayments({
+    page: 1,
+    pageSize: 100,
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  });
+  const clientsQuery = useAdminClients(
+    {
+      page: 1,
+      pageSize: 100,
+      sortBy: "createdAt",
+      sortOrder: "desc",
+    },
+    { enabled: true },
+  );
 
   const isLoading =
     bookingsQuery.isLoading ||

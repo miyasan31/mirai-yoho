@@ -45,7 +45,12 @@ export default function AdminConsultantDetailPage() {
     },
   });
 
-  const { data, isLoading } = useAdminConsultants();
+  const { data, isLoading } = useAdminConsultants({
+    page: 1,
+    pageSize: 100,
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  });
   const updateConsultant = useUpdateAdminConsultant();
   const deleteConsultant = useDeleteAdminConsultant();
   const consultants = data?.data?.consultants ?? [];

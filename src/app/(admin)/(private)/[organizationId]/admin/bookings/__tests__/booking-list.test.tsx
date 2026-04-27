@@ -52,13 +52,21 @@ vi.mock("@/hooks/use-admin-bookings", () => ({
 }));
 
 vi.mock("@/hooks/use-admin-clients", () => ({
-  useAdminClients: (options?: { enabled?: boolean }) =>
-    mockUseAdminClients(options),
+  useAdminClients: (
+    params?: Record<string, unknown>,
+    options?: { enabled?: boolean },
+  ) => mockUseAdminClients(params, options),
 }));
 
 vi.mock("@/hooks/use-admin-consultants", () => ({
-  useAdminConsultants: (options?: { enabled?: boolean }) =>
-    mockUseAdminConsultants(options),
+  useAdminConsultants: (
+    params?: Record<string, unknown>,
+    options?: { enabled?: boolean },
+  ) => mockUseAdminConsultants(params, options),
+}));
+
+vi.mock("@/components/list-controls", () => ({
+  ListControls: () => <div>list-controls</div>,
 }));
 
 vi.mock("@/hooks/use-booking", () => ({
@@ -264,8 +272,14 @@ describe("AdminBookingsPage", () => {
     expect(screen.getByText("相談員")).toBeInTheDocument();
     expect(screen.getByText("山田 太郎")).toBeInTheDocument();
     expect(screen.getByText("佐藤 花子")).toBeInTheDocument();
-    expect(mockUseAdminClients).toHaveBeenCalledWith({ enabled: true });
-    expect(mockUseAdminConsultants).toHaveBeenCalledWith({ enabled: true });
+    expect(mockUseAdminClients).toHaveBeenCalledWith(
+      { page: 1, pageSize: 100, sortBy: "createdAt", sortOrder: "desc" },
+      { enabled: true },
+    );
+    expect(mockUseAdminConsultants).toHaveBeenCalledWith(
+      { page: 1, pageSize: 100, sortBy: "createdAt", sortOrder: "desc" },
+      { enabled: true },
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "課金" }));
 

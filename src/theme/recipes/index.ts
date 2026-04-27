@@ -8,6 +8,7 @@ import { group } from "./group";
 import { icon } from "./icon";
 import { input } from "./input";
 import { menu } from "./menu";
+import { pagination } from "./pagination";
 import { radioGroup } from "./radio-group";
 import { select } from "./select";
 import { skeleton } from "./skeleton";
@@ -31,6 +32,7 @@ export const recipes = {
   text,
   tabs,
   checkbox,
+  pagination,
 };
 export const slotRecipes = {
   toast,
