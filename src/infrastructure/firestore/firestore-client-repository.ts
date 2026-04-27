@@ -1,10 +1,13 @@
+import { FieldPath } from "firebase-admin/firestore";
 import type { Client } from "@/domain/client/client";
 import { Client as ClientEntity } from "@/domain/client/client";
 import type { IClientRepository } from "@/domain/client/client-repository";
 import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
+import { chunkArray } from "@/lib/chunk-array";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.clients;
+const FIRESTORE_IN_QUERY_CHUNK_SIZE = 10;
 
 interface ClientDoc {
   organizationId: string;
@@ -76,5 +79,35 @@ export class FirestoreClientRepository implements IClientRepository {
       .collection(COLLECTION)
       .doc(client.getClientId())
       .set(toFirestore(client));
+  }
+
+  async findByIds(
+    organizationId: string,
+    clientIds: string[],
+  ): Promise<Client[]> {
+    const uniqueClientIds = [...new Set(clientIds)];
+    if (uniqueClientIds.length === 0) return [];
+
+    const snapshots = await Promise.all(
+      chunkArray(uniqueClientIds, FIRESTORE_IN_QUERY_CHUNK_SIZE).map((ids) =>
+        db
+          .collection(COLLECTION)
+          .where(FieldPath.documentId(), "in", ids)
+          .get(),
+      ),
+    );
+
+    const clientById = new Map<string, Client>();
+    for (const snapshot of snapshots) {
+      for (const doc of snapshot.docs) {
+        const client = toDomain(doc.data() as ClientDoc);
+        if (client.getOrganizationId() !== organizationId) continue;
+        clientById.set(client.getClientId(), client);
+      }
+    }
+
+    return uniqueClientIds
+      .map((clientId) => clientById.get(clientId))
+      .filter((client): client is Client => client !== undefined);
   }
 }

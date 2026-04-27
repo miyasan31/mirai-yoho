@@ -30,8 +30,20 @@ export function Providers({ children }: ProvidersProps) {
       new QueryClient({
         defaultOptions: {
           queries: {
-            staleTime: 60 * 1000,
+            staleTime: 5 * 60 * 1000,
+            gcTime: 30 * 60 * 1000,
             refetchOnWindowFocus: false,
+            refetchOnReconnect: false,
+            retry: (failureCount, error) => {
+              const status =
+                typeof error === "object" &&
+                error !== null &&
+                "status" in error &&
+                typeof error.status === "number"
+                  ? error.status
+                  : 0;
+              return failureCount < 1 && status >= 500;
+            },
           },
         },
       }),

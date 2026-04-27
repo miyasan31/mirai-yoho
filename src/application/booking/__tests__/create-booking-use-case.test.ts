@@ -131,6 +131,14 @@ class InMemoryClientRepository implements IClientRepository {
     return this.clients;
   }
 
+  async findByIds(
+    _organizationId: string,
+    clientIds: string[],
+  ): Promise<Client[]> {
+    const ids = new Set(clientIds);
+    return this.clients.filter((client) => ids.has(client.getClientId()));
+  }
+
   async save(client: Client): Promise<void> {
     this.clients.push(client);
   }

@@ -67,18 +67,29 @@ function ConsultantCardSkeleton() {
 
 export default function ConsultantsPage() {
   const { buildPath } = useOrganizationRouting();
-  const { data: settingsData, isLoading: isLoadingSettings } =
-    usePublicBookingSettings();
+  const {
+    data: settingsData,
+    isLoading: isLoadingSettings,
+    error: settingsError,
+  } = usePublicBookingSettings();
   const consultantSelectionEnabled =
-    settingsData?.data?.consultantSelectionEnabled ?? true;
+    settingsData?.data?.consultantSelectionEnabled;
+  const isSettingsResolved = !isLoadingSettings && !!settingsData?.data;
   const { data, isLoading, error } = useGetConsultants(
-    consultantSelectionEnabled,
+    isSettingsResolved && consultantSelectionEnabled === true,
   );
   const {
     data: aggregatedData,
     isLoading: isLoadingAggregatedSlots,
     error: aggregatedError,
-  } = useGetSlots({}, { query: { enabled: !consultantSelectionEnabled } });
+  } = useGetSlots(
+    {},
+    {
+      query: {
+        enabled: isSettingsResolved && consultantSelectionEnabled === false,
+      },
+    },
+  );
 
   const aggregatedSlots = aggregatedData?.data?.aggregatedSlots ?? [];
   const groupedAggregatedSlots = useMemo(() => {
@@ -95,14 +106,15 @@ export default function ConsultantsPage() {
 
   if (
     isLoadingSettings ||
-    (consultantSelectionEnabled && isLoading) ||
-    (!consultantSelectionEnabled && isLoadingAggregatedSlots)
+    (!settingsError && !isSettingsResolved) ||
+    (consultantSelectionEnabled === true && isLoading) ||
+    (consultantSelectionEnabled === false && isLoadingAggregatedSlots)
   ) {
     return (
       <styled.div maxW="4xl" mx="auto" p="8">
         <Skeleton height="8" width="40%" mb="2" />
         <Skeleton height="4" width="60%" mb="8" />
-        {consultantSelectionEnabled ? (
+        {consultantSelectionEnabled === true ? (
           <styled.div
             display="grid"
             gridTemplateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }}
@@ -121,14 +133,15 @@ export default function ConsultantsPage() {
   }
 
   if (
-    (consultantSelectionEnabled && error) ||
-    (!consultantSelectionEnabled && aggregatedError)
+    settingsError ||
+    (consultantSelectionEnabled === true && error) ||
+    (consultantSelectionEnabled === false && aggregatedError)
   ) {
     return (
       <EmptyState
         icon={CircleX}
         message={
-          consultantSelectionEnabled
+          consultantSelectionEnabled === true
             ? "相談員情報の取得に失敗しました"
             : "空き枠情報の取得に失敗しました"
         }
@@ -146,13 +159,13 @@ export default function ConsultantsPage() {
           {consultantSelectionEnabled ? "相談員一覧" : "予約可能な日時"}
         </Text>
         <Text textStyle="sm" color="fg.muted">
-          {consultantSelectionEnabled
+          {consultantSelectionEnabled === true
             ? "未来予報の相談員を選んで予約できます"
             : "日時を選ぶと、空き状況に応じて相談員を自動でご案内します"}
         </Text>
       </styled.div>
 
-      {consultantSelectionEnabled ? (
+      {consultantSelectionEnabled === true ? (
         consultants.length === 0 ? (
           <EmptyState
             icon={Users}

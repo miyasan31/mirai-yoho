@@ -1,4 +1,5 @@
 import crypto from "node:crypto";
+import { FieldPath } from "firebase-admin/firestore";
 import { type NextRequest, NextResponse } from "next/server";
 import { evaluateChargeEligibility } from "@/application/booking/charge-eligibility";
 import { UpdateMemoUseCase } from "@/application/consultant/update-memo-use-case";
@@ -37,6 +38,7 @@ import {
   generatePasswordResetLink,
   getUser,
   getUserByEmail,
+  getUsersByUids,
 } from "@/infrastructure/firebase/firebase-auth-admin";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
 import { db } from "@/infrastructure/firestore/firestore-client";
@@ -44,6 +46,7 @@ import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-coll
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
 import { HmacCancelTokenService } from "@/infrastructure/token/cancel-token-service";
+import { chunkArray } from "@/lib/chunk-array";
 import { deleteAdminUserWithAuthCleanup } from "./admin-user-deletion";
 import {
   canUpdateDisplayNameTarget,
@@ -51,9 +54,11 @@ import {
   validateAdminUserDeletionTarget,
 } from "./admin-user-policy";
 import { logUnexpectedPostError, mapApiError } from "./api-error-mapper";
+import { withPublicCacheControl } from "./public-cache-control";
 
 const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
 const USER_PREFERENCES_COLLECTION = FIRESTORE_COLLECTIONS.userPreferences;
+const FIRESTORE_IN_QUERY_CHUNK_SIZE = 10;
 
 type RouteContext = {
   params: Promise<{
@@ -147,31 +152,49 @@ async function getOrganizationMembership(
   };
 }
 
-async function getAdminOrOperatorDisplayName(uid: string): Promise<string> {
-  const userPreferencesDoc = await db
-    .collection(USER_PREFERENCES_COLLECTION)
-    .doc(uid)
-    .get();
-  if (!userPreferencesDoc.exists) return "";
-  const data = userPreferencesDoc.data() as {
-    displayName?: string;
-  };
-  return data.displayName ?? "";
+async function getAdminOrOperatorDisplayNameMap(
+  uids: string[],
+): Promise<Map<string, string>> {
+  const uniqueUids = [...new Set(uids)];
+  const displayNameByUid = new Map<string, string>();
+  if (uniqueUids.length === 0) return displayNameByUid;
+
+  const snapshots = await Promise.all(
+    chunkArray(uniqueUids, FIRESTORE_IN_QUERY_CHUNK_SIZE).map((uidChunk) =>
+      db
+        .collection(USER_PREFERENCES_COLLECTION)
+        .where(FieldPath.documentId(), "in", uidChunk)
+        .get(),
+    ),
+  );
+
+  for (const snapshot of snapshots) {
+    for (const doc of snapshot.docs) {
+      const data = doc.data() as { displayName?: string };
+      if (!data.displayName) continue;
+      displayNameByUid.set(doc.id, data.displayName);
+    }
+  }
+
+  return displayNameByUid;
 }
 
 async function handleGetPublicConsultants(organizationId: string) {
   const repo = createConsultantRepository();
   const consultants = await repo.findAllActive(organizationId);
 
-  return NextResponse.json({
-    consultants: consultants.map((c) => ({
-      consultantId: c.getConsultantId(),
-      name: c.getProfile().getDisplayName(),
-      specialties: [...c.getProfile().getSpecialties()],
-      bio: c.getProfile().getBio(),
-      isActive: c.getIsActive(),
-    })),
-  });
+  return withPublicCacheControl(
+    NextResponse.json({
+      consultants: consultants.map((c) => ({
+        consultantId: c.getConsultantId(),
+        name: c.getProfile().getDisplayName(),
+        specialties: [...c.getProfile().getSpecialties()],
+        bio: c.getProfile().getBio(),
+        isActive: c.getIsActive(),
+      })),
+    }),
+    "consultants",
+  );
 }
 
 export async function GET(request: NextRequest, context: RouteContext) {
@@ -208,15 +231,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
           ),
         );
 
-        return NextResponse.json({
-          slots: filteredSlots.map((s) => ({
-            slotId: s.getSlotId(),
-            consultantId: s.getConsultantId(),
-            startDatetime: s.getTimeRange().getStartAt().toISOString(),
-            endDatetime: s.getTimeRange().getEndAt().toISOString(),
-            isAvailable: !s.getIsReserved(),
-          })),
-        });
+        return withPublicCacheControl(
+          NextResponse.json({
+            slots: filteredSlots.map((s) => ({
+              slotId: s.getSlotId(),
+              consultantId: s.getConsultantId(),
+              startDatetime: s.getTimeRange().getStartAt().toISOString(),
+              endDatetime: s.getTimeRange().getEndAt().toISOString(),
+              isAvailable: !s.getIsReserved(),
+            })),
+          }),
+          "slots",
+        );
       }
 
       const aggregatedSlots = await repository.findAllAvailable(organizationId);
@@ -242,9 +268,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
         }
       }
 
-      return NextResponse.json({
-        aggregatedSlots: [...groupedSlots.values()],
-      });
+      return withPublicCacheControl(
+        NextResponse.json({
+          aggregatedSlots: [...groupedSlots.values()],
+        }),
+        "slots",
+      );
     }
 
     if (
@@ -257,7 +286,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
         (await repository.findByOrganizationId(organizationId)) ??
         OrganizationSettings.createDefault(organizationId);
 
-      return NextResponse.json(toBookingSettingsResponse(settings));
+      return withPublicCacheControl(
+        NextResponse.json(toBookingSettingsResponse(settings)),
+        "settings-public",
+      );
     }
 
     const authUser = await verifyAuth(request);
@@ -351,23 +383,22 @@ export async function GET(request: NextRequest, context: RouteContext) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
       const repo = createConsultantRepository();
       const consultants = await repo.findAllActive(organizationId);
-
-      const consultantsWithEmail = await Promise.all(
-        consultants.map(async (c) => {
-          const userRecord = await getUser(c.getConsultantId()).catch(
-            () => null,
-          );
-          return {
-            consultantId: c.getConsultantId(),
-            email: userRecord?.email ?? "",
-            displayName: c.getProfile().getDisplayName(),
-            bio: c.getProfile().getBio(),
-            specialties: [...c.getProfile().getSpecialties()],
-            zoomRoomIds: c.getZoomRoomIds(),
-            isActive: c.getIsActive(),
-          };
-        }),
+      const userByUid = await getUsersByUids(
+        consultants.map((consultant) => consultant.getConsultantId()),
       );
+
+      const consultantsWithEmail = consultants.map((c) => {
+        const userRecord = userByUid.get(c.getConsultantId()) ?? null;
+        return {
+          consultantId: c.getConsultantId(),
+          email: userRecord?.email ?? "",
+          displayName: c.getProfile().getDisplayName(),
+          bio: c.getProfile().getBio(),
+          specialties: [...c.getProfile().getSpecialties()],
+          zoomRoomIds: c.getZoomRoomIds(),
+          isActive: c.getIsActive(),
+        };
+      });
 
       return NextResponse.json({ consultants: consultantsWithEmail });
     }
@@ -440,23 +471,24 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const memberships = (
         await listOrganizationMemberships(organizationId)
       ).filter((membership) => isAdminPanelUserRole(membership.role));
+      const memberUids = memberships.map((membership) => membership.uid);
+      const [userByUid, displayNameByUid] = await Promise.all([
+        getUsersByUids(memberUids),
+        getAdminOrOperatorDisplayNameMap(memberUids),
+      ]);
 
-      const users = await Promise.all(
-        memberships.map(async (membership) => {
-          const userRecord = await getUser(membership.uid).catch(() => null);
-          const displayName = await getAdminOrOperatorDisplayName(
-            membership.uid,
-          );
+      const users = memberships.map((membership) => {
+        const userRecord = userByUid.get(membership.uid) ?? null;
+        const displayName = displayNameByUid.get(membership.uid) ?? "";
 
-          return {
-            uid: membership.uid,
-            email: userRecord?.email ?? "",
-            displayName: displayName || userRecord?.email || "",
-            role: membership.role,
-            status: membership.status === "active" ? "registered" : "pending",
-          };
-        }),
-      );
+        return {
+          uid: membership.uid,
+          email: userRecord?.email ?? "",
+          displayName: displayName || userRecord?.email || "",
+          role: membership.role,
+          status: membership.status === "active" ? "registered" : "pending",
+        };
+      });
 
       return NextResponse.json({ users });
     }
@@ -480,23 +512,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const uniqueClientIds = [
         ...new Set(bookings.map((b) => b.getClientId())),
       ];
-      const clients = await Promise.all(
-        uniqueClientIds.map(
-          async (
-            clientId,
-          ): Promise<
-            readonly [
-              string,
-              Awaited<ReturnType<typeof clientRepository.findById>>,
-            ]
-          > =>
-            [
-              clientId,
-              await clientRepository.findById(organizationId, clientId),
-            ] as const,
-        ),
+      const clients = await clientRepository.findByIds(
+        organizationId,
+        uniqueClientIds,
       );
-      const clientById = new Map(clients);
+      const clientById = new Map(
+        clients.map((client) => [client.getClientId(), client] as const),
+      );
 
       return NextResponse.json({
         bookings: bookings.map((b) => {

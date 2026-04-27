@@ -85,7 +85,7 @@ vi.mock("@/components/ui/text", () => ({
 
 const mockUseGetConsultants = vi.fn();
 vi.mock("@/hooks/use-consultants", () => ({
-  useGetConsultants: () => mockUseGetConsultants(),
+  useGetConsultants: (...args: unknown[]) => mockUseGetConsultants(...args),
 }));
 
 const mockUsePublicBookingSettings = vi.fn();
@@ -124,6 +124,32 @@ describe("ConsultantsPage", () => {
 
     render(<ConsultantsPage />);
     expect(screen.getAllByTestId("skeleton").length).toBeGreaterThan(0);
+  });
+
+  it("does not enable data queries before settings are resolved", () => {
+    mockUsePublicBookingSettings.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    });
+    mockUseGetSlots.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    });
+    mockUseGetConsultants.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ConsultantsPage />);
+
+    expect(mockUseGetConsultants).toHaveBeenCalledWith(false);
+    expect(mockUseGetSlots).toHaveBeenCalledWith(
+      {},
+      { query: { enabled: false } },
+    );
   });
 
   it("shows error message on failure", () => {
