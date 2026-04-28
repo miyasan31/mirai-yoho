@@ -1,5 +1,8 @@
 import type { AuthUser } from "@/infrastructure/auth/auth-types";
-import { loadAuthUser } from "@/infrastructure/auth/load-auth-context";
+import {
+  activateInvitedMemberships,
+  loadAuthUser,
+} from "@/infrastructure/auth/load-auth-context";
 import { verifyIdToken } from "@/infrastructure/firebase/firebase-auth-admin";
 
 export async function verifyAuth(request: Request): Promise<AuthUser> {
@@ -19,6 +22,7 @@ export async function verifyAuth(request: Request): Promise<AuthUser> {
   } catch {
     throw new AuthError(401, "UNAUTHORIZED", "Invalid or expired token");
   }
+  await activateInvitedMemberships(decoded.uid);
   const authUser = await loadAuthUser(decoded.uid);
 
   if (authUser.memberships.length === 0) {

@@ -46,6 +46,28 @@ export function getOrganizationMembershipDocId(
   return `${organizationId}_${uid}`;
 }
 
+export async function activateInvitedMemberships(uid: string): Promise<void> {
+  const invitedSnapshot = await db
+    .collection(MEMBERSHIP_COLLECTION)
+    .where("uid", "==", uid)
+    .where("status", "==", "invited")
+    .get();
+
+  if (invitedSnapshot.empty) {
+    return;
+  }
+
+  const batch = db.batch();
+  for (const invitedDoc of invitedSnapshot.docs) {
+    batch.update(invitedDoc.ref, {
+      status: "active",
+      updatedAt: new Date(),
+    });
+  }
+
+  await batch.commit();
+}
+
 export async function loadAuthUser(uid: string): Promise<AuthUser> {
   const [membershipSnapshot, userPreferencesDoc] = await Promise.all([
     db
