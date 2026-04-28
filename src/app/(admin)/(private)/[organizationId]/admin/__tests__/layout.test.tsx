@@ -70,7 +70,7 @@ describe("AdminLayout", () => {
     });
 
     render(
-      <AdminLayout>
+      <AdminLayout modal={null}>
         <div>content</div>
       </AdminLayout>,
     );

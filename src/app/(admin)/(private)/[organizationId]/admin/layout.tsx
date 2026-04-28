@@ -36,7 +36,13 @@ const NAV_ITEMS: Array<Omit<NavItem, "href"> & { path: string }> = [
   { path: "/admin/settings", label: "設定", icon: Settings },
 ];
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+export default function AdminLayout({
+  children,
+  modal,
+}: {
+  children: ReactNode;
+  modal: ReactNode;
+}) {
   const {
     user,
     role,
@@ -112,6 +118,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       onSignOut={signOut}
     >
       {children}
+      {modal}
     </SidebarLayout>
   );
 }
