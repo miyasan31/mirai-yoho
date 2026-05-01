@@ -68,6 +68,17 @@ export default function ConsultantLayout({
     }
   }, [currentOrganizationId, isLoading, organizationId, role, router, user]);
 
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      router.replace("/consultant/login");
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    return () => {
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    };
+  }, [router]);
+
   if (isLoading) {
     return <SidebarLayoutSkeleton navItemCount={NAV_ITEMS.length} />;
   }

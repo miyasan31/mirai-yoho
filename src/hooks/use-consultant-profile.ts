@@ -7,11 +7,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export function useConsultantProfile() {
-  const { token } = useAuth();
+  const { token, isLoading, role } = useAuth();
   const { organizationId } = useOrganizationRouting();
   return useGetConsultantProfile(organizationId ?? "", {
     query: {
-      enabled: !!token && !!organizationId,
+      enabled:
+        !isLoading && role === "consultant" && !!token && !!organizationId,
       staleTime: QUERY_STALE_TIME.normal,
     },
   });

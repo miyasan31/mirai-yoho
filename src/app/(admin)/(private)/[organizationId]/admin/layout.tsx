@@ -81,6 +81,17 @@ export default function AdminLayout({
     }
   }, [currentOrganizationId, isLoading, organizationId, role, router, user]);
 
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      router.replace("/admin/login");
+    };
+
+    window.addEventListener("auth:unauthorized", handleUnauthorized);
+    return () => {
+      window.removeEventListener("auth:unauthorized", handleUnauthorized);
+    };
+  }, [router]);
+
   const visibleItems = useMemo(
     () =>
       NAV_ITEMS.map((item) => ({

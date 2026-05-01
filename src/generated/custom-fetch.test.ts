@@ -1,9 +1,16 @@
 // @vitest-environment jsdom
-const { toasterError, toasterSuccess, getAuthToken } = vi.hoisted(() => ({
-  toasterError: vi.fn(),
-  toasterSuccess: vi.fn(),
-  getAuthToken: vi.fn(() => null),
-}));
+const { toasterError, toasterSuccess, mockGetIdToken, mockAuth } = vi.hoisted(
+  () => ({
+    toasterError: vi.fn(),
+    toasterSuccess: vi.fn(),
+    mockGetIdToken: vi.fn(async () => "token-123"),
+    mockAuth: {
+      currentUser: {
+        getIdToken: vi.fn(async () => "token-123"),
+      },
+    },
+  }),
+);
 
 vi.mock("@/components/ui/toast", () => ({
   toaster: {
@@ -12,8 +19,8 @@ vi.mock("@/components/ui/toast", () => ({
   },
 }));
 
-vi.mock("@/lib/auth-token", () => ({
-  getAuthToken,
+vi.mock("@/lib/firebase", () => ({
+  auth: mockAuth,
 }));
 
 import { type ApiResponseError, customFetch } from "./custom-fetch";
@@ -21,10 +28,14 @@ import { type ApiResponseError, customFetch } from "./custom-fetch";
 describe("customFetch", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    getAuthToken.mockReturnValue(null);
+    mockAuth.currentUser = {
+      getIdToken: mockGetIdToken,
+    };
+    mockGetIdToken.mockResolvedValue("token-123");
   });
 
-  it("redirects to / when response status is 401", async () => {
+  it("dispatches unauthorized event when response status is 401", async () => {
+    const dispatchEventSpy = vi.spyOn(window, "dispatchEvent");
     vi.stubGlobal(
       "fetch",
       vi.fn(
@@ -48,9 +59,13 @@ describe("customFetch", () => {
     );
 
     expect(toasterError).not.toHaveBeenCalled();
+    expect(dispatchEventSpy).toHaveBeenCalledWith(expect.any(Event));
     expect(fetch).toHaveBeenCalledWith("/api/test", {
       method: "GET",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: "Bearer token-123",
+      },
     });
   });
 
@@ -142,6 +157,32 @@ describe("customFetch", () => {
     });
 
     expect(toasterSuccess).not.toHaveBeenCalled();
+  });
+
+  it("falls back to no Authorization header when no current user", async () => {
+    mockAuth.currentUser = null;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(JSON.stringify({ ok: true }), {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }),
+      ),
+    );
+
+    await expect(
+      customFetch("/test", { method: "GET" }),
+    ).resolves.toMatchObject({
+      data: { ok: true },
+      status: 200,
+    });
+
+    expect(fetch).toHaveBeenCalledWith("/api/test", {
+      method: "GET",
+      headers: { "Content-Type": "application/json" },
+    });
   });
 
   it("handles non-JSON error responses safely", async () => {

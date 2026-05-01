@@ -1,8 +1,7 @@
 import { toaster } from "@/components/ui/toast";
-import { getAuthToken } from "@/lib/auth-token";
+import { auth } from "@/lib/firebase";
 
 const REDIRECT_BY_STATUS: Record<number, string> = {
-  401: "/",
   403: "/404",
   404: "/404",
 };
@@ -24,6 +23,8 @@ export class ApiResponseError extends Error {
     this.code = code;
   }
 }
+
+const UNAUTHORIZED_EVENT_NAME = "auth:unauthorized";
 
 function normalizeErrorPayload(
   status: number,
@@ -88,11 +89,24 @@ function redirectByStatus(status: number): void {
   }
 }
 
+async function getRequestAuthToken(): Promise<string | null> {
+  const currentUser = auth.currentUser;
+  if (!currentUser) {
+    return null;
+  }
+
+  try {
+    return await currentUser.getIdToken();
+  } catch {
+    return null;
+  }
+}
+
 export const customFetch = async <T>(
   url: string,
   options: RequestInit,
 ): Promise<T> => {
-  const token = getAuthToken();
+  const token = await getRequestAuthToken();
   const response = await fetch(`/api${url}`, {
     ...options,
     headers: {
@@ -110,7 +124,9 @@ export const customFetch = async <T>(
       "予期しないエラーが発生しました",
     );
 
-    if (response.status in REDIRECT_BY_STATUS) {
+    if (response.status === 401 && typeof window !== "undefined") {
+      window.dispatchEvent(new Event(UNAUTHORIZED_EVENT_NAME));
+    } else if (response.status in REDIRECT_BY_STATUS) {
       redirectByStatus(response.status);
     } else {
       toaster.error({
