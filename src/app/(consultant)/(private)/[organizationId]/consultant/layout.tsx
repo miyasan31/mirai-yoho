@@ -10,6 +10,7 @@ import {
   SidebarLayoutSkeleton,
 } from "@/components/sidebar-layout";
 import { useAuth } from "@/hooks/use-auth";
+import { useConsultantProfile } from "@/hooks/use-consultant-profile";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 const NAV_ITEMS: Array<Omit<NavItem, "href"> & { path: string }> = [
@@ -34,9 +35,14 @@ export default function ConsultantLayout({
     signOut,
     setCurrentOrganizationId,
   } = useAuth();
+  const { data: consultantProfileData } = useConsultantProfile();
   const router = useRouter();
   const { organizationId, buildPath, replaceOrganization } =
     useOrganizationRouting();
+  const consultantProfileDisplayName =
+    consultantProfileData?.data.displayName?.trim() ?? "";
+  const sidebarDisplayName =
+    consultantProfileDisplayName || currentDisplayName || user?.email || "-";
 
   useEffect(() => {
     if (isLoading) {
@@ -89,7 +95,7 @@ export default function ConsultantLayout({
           replaceOrganization(nextOrganizationId);
         },
       }}
-      currentDisplayName={currentDisplayName ?? user.email ?? "-"}
+      currentDisplayName={sidebarDisplayName}
       onSignOut={signOut}
     >
       {children}
