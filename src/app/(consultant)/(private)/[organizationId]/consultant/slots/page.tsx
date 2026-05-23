@@ -26,6 +26,7 @@ import {
 import { useGetAdminSlots } from "@/hooks/use-admin-slots";
 import { useAuth } from "@/hooks/use-auth";
 import { usePublicBookingSettings } from "@/hooks/use-booking-settings";
+import { useConsultantCalendarQueryParams } from "@/hooks/use-consultant-calendar-query-params";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import { useCreateSlot, useDeleteSlot } from "@/hooks/use-slots";
 
@@ -102,8 +103,8 @@ function buildBusinessHourRangesFromAllDaySelection(
 export default function ConsultantSlotsPage() {
   const { user } = useAuth();
   const { organizationId } = useOrganizationRouting();
-  const [view, setView] = useState<View>("week");
-  const [date, setDate] = useState(new Date());
+  const { view, date, setView, setDate, setViewAndDate } =
+    useConsultantCalendarQueryParams();
   const [deleteTarget, setDeleteTarget] = useState<CalendarEvent | null>(null);
 
   const { data, isLoading, refetch } = useGetAdminSlots(
@@ -152,8 +153,7 @@ export default function ConsultantSlotsPage() {
           });
           return;
         }
-        setDate(slotInfo.start);
-        setView("day");
+        setViewAndDate("day", slotInfo.start);
         return;
       }
 
@@ -249,7 +249,16 @@ export default function ConsultantSlotsPage() {
         // エラーは custom-fetch の toaster で表示される
       }
     },
-    [businessHours, createSlot, events, organizationId, refetch, user, view],
+    [
+      businessHours,
+      createSlot,
+      events,
+      organizationId,
+      refetch,
+      setViewAndDate,
+      user,
+      view,
+    ],
   );
 
   const handleSelectEvent = useCallback((event: CalendarEvent) => {

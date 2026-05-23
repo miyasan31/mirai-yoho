@@ -6,6 +6,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
+import { addDays } from "date-fns";
 import type { ReactNode } from "react";
 
 const mockCreateSlotMutateAsync = vi.fn();
@@ -26,20 +27,28 @@ let allDayMultiEnd = new Date();
 vi.mock("react-big-calendar", () => ({
   Calendar: ({
     view,
+    date,
     onSelectSlot,
+    onNavigate,
     onView,
   }: {
     view: string;
+    date: Date;
     onSelectSlot?: (slot: { start: Date; end: Date }) => void;
+    onNavigate?: (nextDate: Date) => void;
     onView?: (nextView: "month" | "week" | "day") => void;
   }) => (
     <div>
       <div data-testid="calendar-view">{view}</div>
+      <div data-testid="calendar-date">{date.toDateString()}</div>
       <button type="button" onClick={() => onView?.("month")}>
         change-to-month
       </button>
       <button type="button" onClick={() => onView?.("week")}>
         change-to-week
+      </button>
+      <button type="button" onClick={() => onNavigate?.(addDays(date, 1))}>
+        navigate-next-day
       </button>
       <button
         type="button"
@@ -185,18 +194,47 @@ vi.mock("@/hooks/use-booking-settings", () => ({
   usePublicBookingSettings: () => mockUsePublicBookingSettings(),
 }));
 
-vi.mock("@/hooks/use-slots", () => ({
-  useGetSlots: () => ({
+vi.mock("@/hooks/use-admin-slots", () => ({
+  useGetAdminSlots: () => ({
     data: { data: { slots: [] } },
     isLoading: false,
     refetch: mockRefetch,
   }),
+}));
+
+vi.mock("@/hooks/use-slots", () => ({
   useCreateSlot: () => ({ mutateAsync: mockCreateSlotMutateAsync }),
   useDeleteSlot: () => ({
     mutateAsync: mockDeleteSlotMutateAsync,
     isPending: false,
   }),
 }));
+
+vi.mock("@/hooks/use-consultant-calendar-query-params", async () => {
+  const React = await import("react");
+  return {
+    useConsultantCalendarQueryParams: () => {
+      const [view, setViewState] = React.useState<
+        "month" | "week" | "day" | "agenda"
+      >("week");
+      const [date, setDateState] = React.useState(new Date("2026-05-23"));
+      return {
+        view,
+        date,
+        setView: (nextView: "month" | "week" | "day" | "agenda") =>
+          setViewState(nextView),
+        setDate: (nextDate: Date) => setDateState(nextDate),
+        setViewAndDate: (
+          nextView: "month" | "week" | "day" | "agenda",
+          nextDate: Date,
+        ) => {
+          setViewState(nextView);
+          setDateState(nextDate);
+        },
+      };
+    },
+  };
+});
 
 import ConsultantSlotsPage from "../page";
 
@@ -280,6 +318,17 @@ describe("ConsultantSlotsPage", () => {
 
     await waitFor(() => {
       expect(mockCreateSlotMutateAsync).toHaveBeenCalled();
+    });
+  });
+
+  it("updates calendar date when navigating", async () => {
+    render(<ConsultantSlotsPage />);
+    const before = screen.getByTestId("calendar-date").textContent;
+
+    fireEvent.click(screen.getByText("navigate-next-day"));
+
+    await waitFor(() => {
+      expect(screen.getByTestId("calendar-date").textContent).not.toBe(before);
     });
   });
 
