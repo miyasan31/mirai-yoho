@@ -344,6 +344,28 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardData"
 
+  /organizations/{organizationId}/admin/slots:
+    get:
+      operationId: getAdminSlots
+      summary: 空き枠一覧取得（管理画面）
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: consultantId
+          in: query
+          required: false
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/GetSlots200"
+
   /organizations/{organizationId}/admin/consultants:
     get:
       operationId: getAdminConsultants

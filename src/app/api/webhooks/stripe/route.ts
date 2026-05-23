@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { envServer } from "@/config/env.server";
 import { createCompleteSetupUseCase } from "@/infrastructure/container";
 import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore-payment-repository";
+import { withNoStore } from "../../cache-control";
 
 let stripeClient: Stripe | null = null;
 
@@ -19,9 +20,14 @@ export async function POST(request: Request) {
   const signature = request.headers.get("stripe-signature");
 
   if (!signature) {
-    return NextResponse.json(
-      { code: "MISSING_SIGNATURE", message: "Missing stripe-signature header" },
-      { status: 400 },
+    return withNoStore(
+      NextResponse.json(
+        {
+          code: "MISSING_SIGNATURE",
+          message: "Missing stripe-signature header",
+        },
+        { status: 400 },
+      ),
     );
   }
 
@@ -33,9 +39,11 @@ export async function POST(request: Request) {
       webhookSecret,
     );
   } catch {
-    return NextResponse.json(
-      { code: "INVALID_SIGNATURE", message: "Invalid webhook signature" },
-      { status: 400 },
+    return withNoStore(
+      NextResponse.json(
+        { code: "INVALID_SIGNATURE", message: "Invalid webhook signature" },
+        { status: 400 },
+      ),
     );
   }
 
@@ -83,5 +91,5 @@ export async function POST(request: Request) {
     }
   }
 
-  return NextResponse.json({ received: true });
+  return withNoStore(NextResponse.json({ received: true }));
 }

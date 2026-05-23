@@ -23,10 +23,11 @@ import {
   isAlignedToSlotBoundary,
   splitIntoSlotRanges,
 } from "@/domain/slot/slot-availability";
+import { useGetAdminSlots } from "@/hooks/use-admin-slots";
 import { useAuth } from "@/hooks/use-auth";
 import { usePublicBookingSettings } from "@/hooks/use-booking-settings";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
-import { useCreateSlot, useDeleteSlot, useGetSlots } from "@/hooks/use-slots";
+import { useCreateSlot, useDeleteSlot } from "@/hooks/use-slots";
 
 const locales = { "ja-JP": ja };
 const SLOT_UNIT_MINUTES = getSlotUnitMinutes();
@@ -105,7 +106,7 @@ export default function ConsultantSlotsPage() {
   const [date, setDate] = useState(new Date());
   const [deleteTarget, setDeleteTarget] = useState<CalendarEvent | null>(null);
 
-  const { data, isLoading, refetch } = useGetSlots(
+  const { data, isLoading, refetch } = useGetAdminSlots(
     { consultantId: user?.uid ?? "" },
     {
       query: { enabled: !!user?.uid },

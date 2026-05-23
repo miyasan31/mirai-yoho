@@ -49,6 +49,7 @@ import { ResendEmailService } from "@/infrastructure/resend/resend-email-service
 import { HmacBookingActionTokenService } from "@/infrastructure/token/booking-action-token-service";
 import { HmacCancelTokenService } from "@/infrastructure/token/cancel-token-service";
 import { chunkArray } from "@/lib/chunk-array";
+import { withNoStore, withPublicShortCache } from "../../../cache-control";
 import { deleteAdminUserWithAuthCleanup } from "./admin-user-deletion";
 import {
   canUpdateDisplayNameTarget,
@@ -57,7 +58,6 @@ import {
 } from "./admin-user-policy";
 import { logUnexpectedPostError, mapApiError } from "./api-error-mapper";
 import { validateClientBirthdate } from "./booking-birthdate-validation";
-import { withPublicCacheControl } from "./public-cache-control";
 
 const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
 const USER_PREFERENCES_COLLECTION = FIRESTORE_COLLECTIONS.userPreferences;
@@ -343,7 +343,7 @@ async function handleGetPublicConsultants(organizationId: string) {
   const repo = createConsultantRepository();
   const consultants = await repo.findAllActive(organizationId);
 
-  return withPublicCacheControl(
+  return withPublicShortCache(
     NextResponse.json({
       consultants: consultants.map((c) => ({
         consultantId: c.getConsultantId(),
@@ -366,6 +366,86 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     if (segments.length === 1 && segments[0] === "consultants") {
       return handleGetPublicConsultants(organizationId);
+    }
+
+    if (
+      segments.length === 2 &&
+      segments[0] === "admin" &&
+      segments[1] === "slots"
+    ) {
+      const authUser = await verifyAuth(request);
+      const membership = requireOrganizationRole(
+        authUser,
+        organizationId,
+        "admin",
+        "operator",
+        "consultant",
+      );
+
+      const requestedConsultantId =
+        request.nextUrl.searchParams.get("consultantId");
+      const consultantId =
+        membership.role === "consultant" ? authUser.uid : requestedConsultantId;
+      const repository = createSlotRepository();
+      const settings =
+        (await createOrganizationSettingsRepository().findByOrganizationId(
+          organizationId,
+        )) ?? OrganizationSettings.createDefault(organizationId);
+      const businessHours = settings.getBusinessHours();
+
+      if (consultantId) {
+        const availableSlots = await repository.findAvailableByConsultantId(
+          organizationId,
+          consultantId,
+        );
+        const filteredSlots = availableSlots.filter((slot) =>
+          businessHours.containsRange(
+            slot.getTimeRange().getStartAt(),
+            slot.getTimeRange().getEndAt(),
+          ),
+        );
+
+        return withNoStore(
+          NextResponse.json({
+            slots: filteredSlots.map((s) => ({
+              slotId: s.getSlotId(),
+              consultantId: s.getConsultantId(),
+              startDatetime: s.getTimeRange().getStartAt().toISOString(),
+              endDatetime: s.getTimeRange().getEndAt().toISOString(),
+              isAvailable: !s.getIsReserved(),
+            })),
+          }),
+        );
+      }
+
+      const aggregatedSlots = await repository.findAllAvailable(organizationId);
+      const groupedSlots = new Map<
+        string,
+        { startDatetime: string; endDatetime: string }
+      >();
+
+      for (const slot of aggregatedSlots) {
+        if (
+          !businessHours.containsRange(
+            slot.getTimeRange().getStartAt(),
+            slot.getTimeRange().getEndAt(),
+          )
+        ) {
+          continue;
+        }
+        const startDatetime = slot.getTimeRange().getStartAt().toISOString();
+        const endDatetime = slot.getTimeRange().getEndAt().toISOString();
+        const key = `${startDatetime}_${endDatetime}`;
+        if (!groupedSlots.has(key)) {
+          groupedSlots.set(key, { startDatetime, endDatetime });
+        }
+      }
+
+      return withNoStore(
+        NextResponse.json({
+          aggregatedSlots: [...groupedSlots.values()],
+        }),
+      );
     }
 
     if (segments.length === 1 && segments[0] === "slots") {
@@ -391,7 +471,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           ),
         );
 
-        return withPublicCacheControl(
+        return withPublicShortCache(
           NextResponse.json({
             slots: filteredSlots.map((s) => ({
               slotId: s.getSlotId(),
@@ -428,7 +508,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         }
       }
 
-      return withPublicCacheControl(
+      return withPublicShortCache(
         NextResponse.json({
           aggregatedSlots: [...groupedSlots.values()],
         }),
@@ -446,13 +526,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
         (await repository.findByOrganizationId(organizationId)) ??
         OrganizationSettings.createDefault(organizationId);
 
-      return withPublicCacheControl(
+      return withPublicShortCache(
         NextResponse.json(toBookingSettingsResponse(settings)),
         "settings-public",
       );
     }
 
     const authUser = await verifyAuth(request);
+    const noStoreJson = <T>(payload: T, init?: ResponseInit): NextResponse<T> =>
+      withNoStore(NextResponse.json(payload, init));
+    const noStoreError = (status: number, code: string, message: string) =>
+      withNoStore(jsonError(status, code, message));
 
     if (
       segments.length === 2 &&
@@ -471,7 +555,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         .filter((p) => p.getStatus().getValue() === "charged")
         .reduce((sum, p) => sum + p.getMoney().getTotalJPY(), 0);
 
-      return NextResponse.json({
+      return noStoreJson({
         organizationId,
         totalBookings: bookings.length,
         totalPayments: payments.length,
@@ -551,7 +635,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         listQueryParams,
       );
 
-      return NextResponse.json({
+      return noStoreJson({
         bookings: items,
         pagination,
       });
@@ -602,7 +686,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         listQueryParams,
       );
 
-      return NextResponse.json({ consultants: items, pagination });
+      return noStoreJson({ consultants: items, pagination });
     }
 
     if (
@@ -638,7 +722,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         sortedClients,
         listQueryParams,
       );
-      return NextResponse.json({
+      return noStoreJson({
         clients: items,
         pagination,
       });
@@ -684,7 +768,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         sortedPayments,
         listQueryParams,
       );
-      return NextResponse.json({
+      return noStoreJson({
         payments: items,
         pagination,
       });
@@ -703,7 +787,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         );
       const resolvedSettings =
         settings ?? OrganizationSettings.createDefault(organizationId);
-      return NextResponse.json(toBookingSettingsResponse(resolvedSettings));
+      return noStoreJson(toBookingSettingsResponse(resolvedSettings));
     }
 
     if (
@@ -750,7 +834,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const sortedUsers = sortByTimestampDesc(users, listQueryParams.sortBy);
       const { items, pagination } = paginateArray(sortedUsers, listQueryParams);
 
-      return NextResponse.json({ users: items, pagination });
+      return noStoreJson({ users: items, pagination });
     }
 
     if (
@@ -830,7 +914,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         listQueryParams,
       );
 
-      return NextResponse.json({
+      return noStoreJson({
         bookings: items,
         pagination,
       });
@@ -848,7 +932,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       );
 
       if (!consultant) {
-        return NextResponse.json({
+        return noStoreJson({
           consultantId: authUser.uid,
           displayName: "",
           bio: "",
@@ -859,7 +943,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       }
 
       const profile = consultant.getProfile();
-      return NextResponse.json({
+      return noStoreJson({
         consultantId: consultant.getConsultantId(),
         displayName: profile.getDisplayName(),
         bio: profile.getBio(),
@@ -869,7 +953,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       });
     }
 
-    return jsonError(404, "NOT_FOUND", "Endpoint not found");
+    return noStoreError(404, "NOT_FOUND", "Endpoint not found");
   } catch (error) {
     if (error instanceof AuthError) {
       if (error.statusCode === 403) {
@@ -882,7 +966,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
           message: error.message,
         });
       }
-      return jsonError(error.statusCode, error.code, error.message);
+      return withNoStore(
+        jsonError(error.statusCode, error.code, error.message),
+      );
     }
     if (isFirestoreFailedPrecondition(error)) {
       console.error("Firestore failed precondition on slots query", {
@@ -891,13 +977,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
         consultantId: requestErrorContext.consultantId,
         error,
       });
-      return jsonError(
-        500,
-        "FIRESTORE_INDEX_MISSING",
-        "Required Firestore index is missing. Please deploy Firestore indexes.",
+      return withNoStore(
+        jsonError(
+          500,
+          "FIRESTORE_INDEX_MISSING",
+          "Required Firestore index is missing. Please deploy Firestore indexes.",
+        ),
       );
     }
-    return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+    return withNoStore(
+      jsonError(500, "INTERNAL_ERROR", "Internal server error"),
+    );
   }
 }
 
