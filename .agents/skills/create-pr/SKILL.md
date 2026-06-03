@@ -35,8 +35,23 @@ description: ローカルの変更内容を確認し、Conventional Commits 形�
    - 該当しない項目は削除せず、理由が必要なら短く補足する
 7. PR を作成する:
    - 既存 PR がないか `gh pr view` で確認する
+   - PR タイトルは `type(scope): 日本語の要約` 形式にする
    - 新規作成はテンプレートから作った本文を使って `gh pr create --draft --title "<title>" --body-file <body-file>`
    - ユーザーが draft 以外を明示した場合だけ ready PR にする
+
+## PR タイトル
+
+PR タイトルは Conventional Commits に合わせた `type(scope): 日本語の要約` 形式にしてください。
+
+- `type`: `feat`、`fix`、`refactor`、`docs`、`test`、`chore` など
+- `scope`: 変更対象の機能領域を英小文字の kebab-case または既存の短い領域名で書く
+- 要約: 日本語で、ユーザーに見える変更または技術的な変更内容を簡潔に書く
+
+例:
+
+- `feat(admin): 管理画面に〇〇機能を追加`
+- `fix(consultant): 相談員のアバター登録機能を修正`
+- `refactor(search): 検索機能をリファクタリング`
 
 ## PR 本文
 
