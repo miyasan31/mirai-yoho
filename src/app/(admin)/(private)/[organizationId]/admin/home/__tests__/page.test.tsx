@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import { cleanup, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 
 const mockUseAdminBookings = vi.fn();
@@ -106,9 +106,14 @@ vi.mock("@/components/empty-state", () => ({
 import AdminHomePage from "../page";
 
 describe("AdminHomePage", () => {
+  beforeEach(() => {
+    vi.setSystemTime(new Date("2026-06-03T09:00:00.000+09:00"));
+  });
+
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
+    vi.useRealTimers();
   });
 
   it("ToDo件数と一覧を表示する", () => {
@@ -207,7 +212,21 @@ describe("AdminHomePage", () => {
     expect(screen.getByText("未対応予約")).toBeInTheDocument();
     expect(screen.getByText("本決済待ち")).toBeInTheDocument();
     expect(screen.getByText("メモ未入力")).toBeInTheDocument();
-    expect(screen.getAllByText("1").length).toBeGreaterThanOrEqual(3);
+    expect(
+      within(
+        screen.getByText("未対応予約").closest("div") ?? document.body,
+      ).getByText("1"),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByText("本決済待ち").closest("div") ?? document.body,
+      ).getByText("1"),
+    ).toBeInTheDocument();
+    expect(
+      within(
+        screen.getByText("メモ未入力").closest("div") ?? document.body,
+      ).getByText("1"),
+    ).toBeInTheDocument();
     expect(screen.getByText("直近開始予約")).toBeInTheDocument();
     expect(screen.getByText("要対応決済")).toBeInTheDocument();
     expect(screen.getAllByText(/クライアント: 山田 太郎/).length).toBe(2);

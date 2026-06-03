@@ -8,6 +8,7 @@ interface UpdateProfileInput {
   displayName: string;
   bio: string;
   specialties: string[];
+  imageUrl?: string;
 }
 
 export class UpdateProfileUseCase {
@@ -18,6 +19,7 @@ export class UpdateProfileUseCase {
       input.displayName,
       input.bio,
       input.specialties,
+      input.imageUrl,
     );
 
     let consultant = await this.consultantRepository.findById(

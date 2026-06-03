@@ -319,6 +319,8 @@ paths:
                   type: string
                 bio:
                   type: string
+                imageUrl:
+                  type: string
                 specialties:
                   type: array
                   items:
@@ -326,6 +328,62 @@ paths:
       responses:
         "200":
           description: OK
+
+  /organizations/{organizationId}/consultant/profile/avatar-upload-url:
+    post:
+      operationId: createConsultantAvatarUploadUrl
+      summary: 相談員アバターアップロードURL発行
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [contentType, fileSize]
+              properties:
+                contentType:
+                  type: string
+                fileSize:
+                  type: number
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvatarUploadUrlResponse"
+
+  /organizations/{organizationId}/consultant/profile/avatar-publish:
+    post:
+      operationId: publishConsultantAvatar
+      summary: 相談員アバター公開
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [objectPath]
+              properties:
+                objectPath:
+                  type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AvatarPublishResponse"
 
   /organizations/{organizationId}/admin/dashboard:
     get:
@@ -883,6 +941,8 @@ components:
           type: string
         bio:
           type: string
+        imageUrl:
+          type: string
         specialties:
           type: array
           items:
@@ -910,6 +970,8 @@ components:
           type: string
         bio:
           type: string
+        imageUrl:
+          type: string
         specialties:
           type: array
           items:
@@ -920,6 +982,27 @@ components:
             type: string
         isActive:
           type: boolean
+
+    AvatarUploadUrlResponse:
+      type: object
+      required: [uploadUrl, objectPath, contentType, expiresAt]
+      properties:
+        uploadUrl:
+          type: string
+        objectPath:
+          type: string
+        contentType:
+          type: string
+        expiresAt:
+          type: string
+          format: date-time
+
+    AvatarPublishResponse:
+      type: object
+      required: [imageUrl]
+      properties:
+        imageUrl:
+          type: string
 
     Slot:
       type: object

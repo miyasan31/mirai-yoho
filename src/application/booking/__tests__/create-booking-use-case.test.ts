@@ -1,3 +1,4 @@
+import { afterEach, beforeEach, vi } from "vitest";
 import { CreateBookingUseCase } from "@/application/booking/create-booking-use-case";
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IUnitOfWork } from "@/application/shared/unit-of-work";
@@ -280,6 +281,14 @@ function createUseCase(
 }
 
 describe("CreateBookingUseCase", () => {
+  beforeEach(() => {
+    vi.setSystemTime(new Date("2026-04-01T00:00:00.000Z"));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it("auto-assigns the consultant with fewer remaining slots on the same day", async () => {
     const { useCase, bookingRepository } = createUseCase([
       createSlot(

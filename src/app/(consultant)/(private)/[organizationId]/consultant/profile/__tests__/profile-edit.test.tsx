@@ -12,10 +12,20 @@ vi.mock("next/navigation", () => ({
 
 const mockUseConsultantProfile = vi.fn();
 const mockMutateAsync = vi.fn();
+const mockCreateUploadUrlMutateAsync = vi.fn();
+const mockPublishAvatarMutateAsync = vi.fn();
 const mockToasterCreate = vi.fn();
 
 vi.mock("@/hooks/use-consultant-profile", () => ({
   useConsultantProfile: () => mockUseConsultantProfile(),
+  useCreateConsultantAvatarUploadUrl: () => ({
+    mutateAsync: mockCreateUploadUrlMutateAsync,
+    isPending: false,
+  }),
+  usePublishConsultantAvatar: () => ({
+    mutateAsync: mockPublishAvatarMutateAsync,
+    isPending: false,
+  }),
   useUpdateConsultantProfile: () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
@@ -118,6 +128,7 @@ function createWrapper() {
 describe("ConsultantProfilePage", () => {
   afterEach(() => {
     cleanup();
+    vi.clearAllMocks();
     vi.restoreAllMocks();
   });
 
@@ -188,6 +199,96 @@ describe("ConsultantProfilePage", () => {
         data: {
           displayName: "田中太郎",
           bio: "",
+          imageUrl: undefined,
+          specialties: [],
+        },
+      });
+    });
+  });
+
+  it("submits the published avatar URL after uploading an image", async () => {
+    const imageUrl =
+      "https://storage.googleapis.com/test-bucket/organizations/org-test/consultants/c1/avatar.jpg";
+
+    mockUseConsultantProfile.mockReturnValue({
+      data: {
+        data: {
+          consultantId: "c1",
+          displayName: "田中太郎",
+          bio: "",
+          specialties: [],
+          isActive: true,
+        },
+      },
+      isLoading: false,
+      error: null,
+    });
+    mockCreateUploadUrlMutateAsync.mockResolvedValue({
+      data: {
+        uploadUrl: "https://storage.example/upload",
+        objectPath: "organizations/org-test/consultants/c1/avatar.jpg",
+      },
+    });
+    mockPublishAvatarMutateAsync.mockResolvedValue({
+      data: {
+        imageUrl,
+      },
+    });
+    mockMutateAsync.mockResolvedValue({});
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+    } as Response);
+    vi.spyOn(URL, "createObjectURL").mockReturnValue("blob:avatar-preview");
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+
+    class MockImage {
+      width = 96;
+      height = 96;
+      onload: (() => void) | null = null;
+
+      set src(_value: string) {
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+    vi.stubGlobal("Image", MockImage);
+
+    const user = userEvent.setup();
+    const { container } = render(<ConsultantProfilePage />, {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => {
+      expect(
+        (container.querySelector("#displayName") as HTMLInputElement).value,
+      ).toBe("田中太郎");
+    });
+
+    const fileInput = container.querySelector(
+      'input[type="file"]',
+    ) as HTMLInputElement;
+    await user.upload(
+      fileInput,
+      new File(["avatar"], "avatar.jpg", { type: "image/jpeg" }),
+    );
+
+    await waitFor(() => {
+      expect(mockPublishAvatarMutateAsync).toHaveBeenCalledWith({
+        organizationId: "org-test",
+        data: {
+          objectPath: "organizations/org-test/consultants/c1/avatar.jpg",
+        },
+      });
+    });
+
+    await user.click(screen.getByText("保存"));
+
+    await waitFor(() => {
+      expect(mockMutateAsync).toHaveBeenCalledWith({
+        organizationId: "org-test",
+        data: {
+          displayName: "田中太郎",
+          bio: "",
+          imageUrl,
           specialties: [],
         },
       });

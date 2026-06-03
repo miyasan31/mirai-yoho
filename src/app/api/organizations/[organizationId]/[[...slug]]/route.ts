@@ -1,10 +1,12 @@
 import crypto from "node:crypto";
 import { FieldPath, type Timestamp } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { type NextRequest, NextResponse } from "next/server";
 import { evaluateChargeEligibility } from "@/application/booking/charge-eligibility";
 import { UpdateMemoUseCase } from "@/application/consultant/update-memo-use-case";
 import { UpdateProfileUseCase } from "@/application/consultant/update-profile-use-case";
 import { AppError } from "@/application/shared/app-error";
+import { envServer } from "@/config/env.server";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import { BusinessHours } from "@/domain/organization-settings/business-hours";
@@ -42,7 +44,7 @@ import {
   getUsersByUids,
 } from "@/infrastructure/firebase/firebase-auth-admin";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
-import { db } from "@/infrastructure/firestore/firestore-client";
+import { app, db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
@@ -64,6 +66,19 @@ const USER_PREFERENCES_COLLECTION = FIRESTORE_COLLECTIONS.userPreferences;
 const FIRESTORE_IN_QUERY_CHUNK_SIZE = 10;
 const BATCH_CHARGE_COOLDOWN_MS = 60 * 1000;
 const BOOKING_ACTION_TOKEN_TTL_MS = 30 * 60 * 1000;
+const AVATAR_MAX_FILE_SIZE = 5 * 1024 * 1024;
+const AVATAR_UPLOAD_URL_TTL_MS = 10 * 60 * 1000;
+const ALLOWED_AVATAR_CONTENT_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
+const AVATAR_EXTENSION_BY_CONTENT_TYPE: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
 
 const batchChargeInProgressOrganizations = new Set<string>();
 const batchChargeLastStartedAtByOrganization = new Map<string, number>();
@@ -104,6 +119,26 @@ function jsonError(status: number, code: string, message: string) {
 
 function publicForbidden(message = "Invalid booking action request") {
   return jsonError(403, "FORBIDDEN", message);
+}
+
+function getAvatarObjectPath(params: {
+  organizationId: string;
+  consultantId: string;
+  contentType: string;
+}): string {
+  const extension = AVATAR_EXTENSION_BY_CONTENT_TYPE[params.contentType];
+  return `organizations/${params.organizationId}/consultants/${params.consultantId}/avatar.${extension}`;
+}
+
+function isAllowedAvatarObjectPath(params: {
+  objectPath: string;
+  organizationId: string;
+  consultantId: string;
+}): boolean {
+  const prefix = `organizations/${params.organizationId}/consultants/${params.consultantId}/avatar.`;
+  if (!params.objectPath.startsWith(prefix)) return false;
+  const extension = params.objectPath.slice(prefix.length);
+  return extension === "jpg" || extension === "png" || extension === "webp";
 }
 
 function toBookingSettingsResponse(settings: OrganizationSettings) {
@@ -343,17 +378,17 @@ async function handleGetPublicConsultants(organizationId: string) {
   const repo = createConsultantRepository();
   const consultants = await repo.findAllActive(organizationId);
 
-  return withPublicShortCache(
+  return withNoStore(
     NextResponse.json({
       consultants: consultants.map((c) => ({
         consultantId: c.getConsultantId(),
         name: c.getProfile().getDisplayName(),
         specialties: [...c.getProfile().getSpecialties()],
         bio: c.getProfile().getBio(),
+        imageUrl: c.getProfile().getImageUrl(),
         isActive: c.getIsActive(),
       })),
     }),
-    "consultants",
   );
 }
 
@@ -534,7 +569,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
     const authUser = await verifyAuth(request);
     const noStoreJson = <T>(payload: T, init?: ResponseInit): NextResponse<T> =>
-      withNoStore(NextResponse.json(payload, init));
+      withNoStore(NextResponse.json(payload, init)) as NextResponse<T>;
     const noStoreError = (status: number, code: string, message: string) =>
       withNoStore(jsonError(status, code, message));
 
@@ -670,6 +705,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           email: userRecord?.email ?? "",
           displayName: c.getProfile().getDisplayName(),
           bio: c.getProfile().getBio(),
+          imageUrl: c.getProfile().getImageUrl(),
           specialties: [...c.getProfile().getSpecialties()],
           zoomRoomIds: c.getZoomRoomIds(),
           isActive: c.getIsActive(),
@@ -947,6 +983,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         consultantId: consultant.getConsultantId(),
         displayName: profile.getDisplayName(),
         bio: profile.getBio(),
+        imageUrl: profile.getImageUrl(),
         specialties: [...profile.getSpecialties()],
         zoomRoomIds: consultant.getZoomRoomIds(),
         isActive: consultant.getIsActive(),
@@ -1469,6 +1506,97 @@ export async function POST(request: NextRequest, context: RouteContext) {
     }
 
     if (
+      segments.length === 3 &&
+      segments[0] === "consultant" &&
+      segments[1] === "profile" &&
+      segments[2] === "avatar-upload-url"
+    ) {
+      const authUser = await verifyAuth(request);
+      requireOrganizationRole(authUser, organizationId, "consultant");
+      const body = await request.json();
+      const contentType = body.contentType;
+      const fileSize = body.fileSize;
+
+      if (typeof contentType !== "string" || !contentType) {
+        return jsonError(400, "VALIDATION_ERROR", "contentType is required");
+      }
+      if (!ALLOWED_AVATAR_CONTENT_TYPES.has(contentType)) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "contentType must be one of image/jpeg, image/png, image/webp",
+        );
+      }
+      if (typeof fileSize !== "number" || fileSize <= 0) {
+        return jsonError(400, "VALIDATION_ERROR", "fileSize is required");
+      }
+      if (fileSize > AVATAR_MAX_FILE_SIZE) {
+        return jsonError(400, "VALIDATION_ERROR", "fileSize exceeds 5MB limit");
+      }
+
+      const objectPath = getAvatarObjectPath({
+        organizationId,
+        consultantId: authUser.uid,
+        contentType,
+      });
+      const bucketName = envServer.firebaseStorageBucket;
+      const expiresAt = Date.now() + AVATAR_UPLOAD_URL_TTL_MS;
+      const file = getStorage(app).bucket(bucketName).file(objectPath);
+      const [uploadUrl] = await file.getSignedUrl({
+        version: "v4",
+        action: "write",
+        expires: expiresAt,
+        contentType,
+      });
+
+      return NextResponse.json({
+        uploadUrl,
+        objectPath,
+        contentType,
+        expiresAt: new Date(expiresAt).toISOString(),
+      });
+    }
+
+    if (
+      segments.length === 3 &&
+      segments[0] === "consultant" &&
+      segments[1] === "profile" &&
+      segments[2] === "avatar-publish"
+    ) {
+      const authUser = await verifyAuth(request);
+      requireOrganizationRole(authUser, organizationId, "consultant");
+      const body = await request.json();
+      const objectPath = body.objectPath;
+
+      if (typeof objectPath !== "string" || !objectPath) {
+        return jsonError(400, "VALIDATION_ERROR", "objectPath is required");
+      }
+
+      if (
+        !isAllowedAvatarObjectPath({
+          objectPath,
+          organizationId,
+          consultantId: authUser.uid,
+        })
+      ) {
+        return jsonError(400, "VALIDATION_ERROR", "invalid objectPath");
+      }
+
+      const bucketName = envServer.firebaseStorageBucket;
+      const file = getStorage(app).bucket(bucketName).file(objectPath);
+      const [exists] = await file.exists();
+      if (!exists) {
+        return jsonError(404, "NOT_FOUND", "avatar file not found");
+      }
+
+      await file.makePublic();
+
+      return NextResponse.json({
+        imageUrl: `https://storage.googleapis.com/${bucketName}/${objectPath}?v=${Date.now()}`,
+      });
+    }
+
+    if (
       segments.length === 2 &&
       segments[0] === "batch" &&
       segments[1] === "charge"
@@ -1817,6 +1945,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         displayName: body.displayName,
         bio: body.bio ?? "",
         specialties: body.specialties,
+        imageUrl: body.imageUrl,
       });
 
       return NextResponse.json({ success: true });

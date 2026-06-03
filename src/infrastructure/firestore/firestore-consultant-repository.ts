@@ -14,6 +14,7 @@ interface ConsultantDoc {
   displayName: string;
   bio: string;
   specialties: string[];
+  imageUrl?: string;
   zoomRoomIds: string[];
   isActive: boolean;
   createdAt?: Timestamp | Date;
@@ -35,6 +36,7 @@ function toDomain(doc: ConsultantDoc): Consultant {
       doc.displayName,
       doc.bio,
       doc.specialties,
+      doc.imageUrl,
     ),
     zoomRoomIds: doc.zoomRoomIds,
     isActive: doc.isActive,
@@ -51,6 +53,7 @@ function toFirestore(consultant: Consultant): ConsultantDoc {
     displayName: profile.getDisplayName(),
     bio: profile.getBio(),
     specialties: [...profile.getSpecialties()],
+    imageUrl: profile.getImageUrl(),
     zoomRoomIds: consultant.getZoomRoomIds(),
     isActive: consultant.getIsActive(),
     createdAt: consultant.getCreatedAt(),

@@ -8,9 +8,6 @@ import {
 
 describe("cache-control", () => {
   it("returns cache control for each public endpoint", () => {
-    expect(getPublicShortCacheControl("consultants")).toBe(
-      "public, max-age=60, s-maxage=300, stale-while-revalidate=600",
-    );
     expect(getPublicShortCacheControl("slots")).toBe(
       "public, max-age=30, s-maxage=120, stale-while-revalidate=300",
     );
@@ -22,11 +19,11 @@ describe("cache-control", () => {
   it("sets Cache-Control header on response", () => {
     const response = withPublicShortCache(
       NextResponse.json({ ok: true }),
-      "consultants",
+      "slots",
     );
 
     expect(response.headers.get("Cache-Control")).toBe(
-      "public, max-age=60, s-maxage=300, stale-while-revalidate=600",
+      "public, max-age=30, s-maxage=120, stale-while-revalidate=300",
     );
   });
 

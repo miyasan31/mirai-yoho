@@ -3,6 +3,7 @@
 import { format, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
 import { CircleX, Users } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import { styled } from "styled-system/jsx";
@@ -196,6 +197,39 @@ export default function ConsultantsPage() {
                 <Text as="h2" textStyle="lg" fontWeight="semibold">
                   {consultant.name}
                 </Text>
+                {consultant.imageUrl ? (
+                  <styled.div
+                    width="16"
+                    height="16"
+                    position="relative"
+                    overflow="hidden"
+                    rounded="full"
+                  >
+                    <Image
+                      src={consultant.imageUrl}
+                      alt={`${consultant.name} のアバター画像`}
+                      fill
+                      sizes="64px"
+                      style={{ objectFit: "cover" }}
+                    />
+                  </styled.div>
+                ) : (
+                  <styled.div
+                    width="16"
+                    height="16"
+                    position="relative"
+                    overflow="hidden"
+                    rounded="full"
+                  >
+                    <Image
+                      src="/default-avatar.png"
+                      alt="デフォルトアバター画像"
+                      fill
+                      sizes="64px"
+                      style={{ objectFit: "cover" }}
+                    />
+                  </styled.div>
+                )}
 
                 {consultant.bio && (
                   <Text textStyle="sm" color="fg.muted">

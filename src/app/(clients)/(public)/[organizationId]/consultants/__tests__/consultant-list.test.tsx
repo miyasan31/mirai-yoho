@@ -9,6 +9,13 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn() }),
 }));
 
+vi.mock("next/image", () => ({
+  default: ({ alt, ...props }: React.ComponentProps<"img">) => (
+    // biome-ignore lint/performance/noImgElement: next/image is mocked as a plain image in tests.
+    <img alt={alt ?? ""} {...props} />
+  ),
+}));
+
 vi.mock("styled-system/css", () => ({
   css: () => "",
   cva: () => () => "",
@@ -225,6 +232,41 @@ describe("ConsultantsPage", () => {
     expect(screen.getByText("キャリア相談")).toBeDefined();
     expect(screen.getByText("転職支援")).toBeDefined();
     expect(screen.getByText("テスト自己紹介")).toBeDefined();
+  });
+
+  it("renders consultant avatar image when imageUrl exists", () => {
+    mockUsePublicBookingSettings.mockReturnValue({
+      data: { data: { consultantSelectionEnabled: true } },
+      isLoading: false,
+    });
+    mockUseGetSlots.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      error: null,
+    });
+    mockUseGetConsultants.mockReturnValue({
+      data: {
+        data: {
+          consultants: [
+            {
+              consultantId: "c1",
+              name: "田中太郎",
+              bio: "",
+              specialties: [],
+              imageUrl: "https://storage.googleapis.com/example/avatar.jpg",
+              isActive: true,
+            },
+          ],
+        },
+      },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ConsultantsPage />);
+    expect(
+      screen.getByRole("img", { name: "田中太郎 のアバター画像" }),
+    ).toBeDefined();
   });
 
   it("renders aggregated slots when consultant selection is disabled", () => {

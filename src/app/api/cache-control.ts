@@ -1,9 +1,8 @@
 import type { NextResponse } from "next/server";
 
-export type PublicCacheKey = "consultants" | "slots" | "settings-public";
+export type PublicCacheKey = "slots" | "settings-public";
 
 const PUBLIC_SHORT_CACHE_CONTROL_BY_KEY: Record<PublicCacheKey, string> = {
-  consultants: "public, max-age=60, s-maxage=300, stale-while-revalidate=600",
   slots: "public, max-age=30, s-maxage=120, stale-while-revalidate=300",
   "settings-public":
     "public, max-age=300, s-maxage=900, stale-while-revalidate=1800",

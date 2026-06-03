@@ -1,5 +1,7 @@
 import {
+  useCreateConsultantAvatarUploadUrl,
   useGetConsultantProfile,
+  usePublishConsultantAvatar,
   useUpdateConsultantProfile,
 } from "@/generated/api/consultant/consultant";
 import { QUERY_STALE_TIME } from "@/hooks/query-cache-policy";
@@ -18,4 +20,8 @@ export function useConsultantProfile() {
   });
 }
 
-export { useUpdateConsultantProfile };
+export {
+  useCreateConsultantAvatarUploadUrl,
+  usePublishConsultantAvatar,
+  useUpdateConsultantProfile,
+};

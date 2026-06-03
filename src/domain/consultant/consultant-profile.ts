@@ -5,12 +5,14 @@ export class ConsultantProfile {
     private readonly displayName: string,
     private readonly bio: string,
     private readonly specialties: readonly string[],
+    private readonly imageUrl?: string,
   ) {}
 
   static create(
     displayName: string,
     bio: string,
     specialties: string[],
+    imageUrl?: string,
   ): ConsultantProfile {
     if (!displayName || displayName.trim().length === 0) {
       throw new DomainError(
@@ -18,15 +20,16 @@ export class ConsultantProfile {
         "Display name must not be empty",
       );
     }
-    return new ConsultantProfile(displayName, bio, [...specialties]);
+    return new ConsultantProfile(displayName, bio, [...specialties], imageUrl);
   }
 
   static reconstruct(
     displayName: string,
     bio: string,
     specialties: string[],
+    imageUrl?: string,
   ): ConsultantProfile {
-    return new ConsultantProfile(displayName, bio, [...specialties]);
+    return new ConsultantProfile(displayName, bio, [...specialties], imageUrl);
   }
 
   getDisplayName(): string {
@@ -41,10 +44,15 @@ export class ConsultantProfile {
     return this.specialties;
   }
 
+  getImageUrl(): string | undefined {
+    return this.imageUrl;
+  }
+
   equals(other: ConsultantProfile): boolean {
     return (
       this.displayName === other.displayName &&
       this.bio === other.bio &&
+      this.imageUrl === other.imageUrl &&
       this.specialties.length === other.specialties.length &&
       this.specialties.every((s, i) => s === other.specialties[i])
     );

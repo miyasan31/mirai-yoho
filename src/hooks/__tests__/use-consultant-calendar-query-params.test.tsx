@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { act, renderHook, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 type QueryState = {
   view: "month" | "week" | "day" | "agenda";
@@ -51,6 +51,7 @@ function expectDateYmd(date: Date, year: number, month: number, day: number) {
 
 describe("useConsultantCalendarQueryParams", () => {
   beforeEach(() => {
+    vi.setSystemTime(new Date("2026-05-23T09:00:00.000Z"));
     mockQueryState = {
       view: "week",
       date: "2026-05-23",
@@ -58,6 +59,10 @@ describe("useConsultantCalendarQueryParams", () => {
     mockSetQuery.mockClear();
     mockUseQueryStates.mockReset();
     mockUseQueryStates.mockReturnValue([mockQueryState, mockSetQuery]);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("uses defaults without normalization when query is empty", async () => {

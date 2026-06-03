@@ -3,12 +3,7 @@
 import { format, getDay, parse, startOfWeek } from "date-fns";
 import { ja } from "date-fns/locale";
 import { useCallback, useMemo, useState } from "react";
-import {
-  Calendar,
-  dateFnsLocalizer,
-  type SlotInfo,
-  type View,
-} from "react-big-calendar";
+import { Calendar, dateFnsLocalizer, type SlotInfo } from "react-big-calendar";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { styled } from "styled-system/jsx";
 import { Button } from "@/components/ui/button";

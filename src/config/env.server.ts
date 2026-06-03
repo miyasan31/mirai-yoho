@@ -51,6 +51,9 @@ export const envServer = {
   get firebasePrivateKey(): string | undefined {
     return process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, "\n");
   },
+  get firebaseStorageBucket(): string {
+    return requireServerEnv("FIREBASE_STORAGE_BUCKET");
+  },
   hasFirebaseServiceAccountCredentials(): boolean {
     return Boolean(
       process.env.FIREBASE_PROJECT_ID &&
