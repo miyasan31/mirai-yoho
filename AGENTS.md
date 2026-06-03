@@ -34,6 +34,13 @@
 - commitlint + husky で自動検証される
 - pre-commit フックで lint-staged（Biome）が実行される
 
+## Worktree Rule
+- プランモードで実装作業を始める場合は、必ず `main` ブランチを基点に `git worktree` を作成してから作業する
+- 作業先は `.worktrees/<branch-name>` を標準とする
+- 対象の worktree が既に存在する場合は再利用する
+- 現在チェックアウト中の作業ブランチ上で直接実装を始めない
+- 新しい作業ブランチは `main` から作成し、worktree 作成後はそのディレクトリを作業 `cwd` とする
+
 ## やってはいけないこと
 - domain 層に firebase-admin や stripe を import しない
 - 集約の外から集約メンバーを直接変更しない
