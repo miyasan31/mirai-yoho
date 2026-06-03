@@ -60,3 +60,4 @@ jobs:
           NEXT_PUBLIC_FIREBASE_PROJECT_ID: ci-placeholder
           NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: pk_test_ci_placeholder
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+          CANCEL_TOKEN_SECRET: ci-placeholder-cancel-token-secret
