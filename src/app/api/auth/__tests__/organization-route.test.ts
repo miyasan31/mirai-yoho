@@ -37,8 +37,9 @@ describe("PATCH /api/auth/organization", () => {
     vi.mocked(getOrganizationMembership).mockReturnValueOnce({
       role: "admin",
       organizationId: "org-1",
-      uid: "uid-1",
+      organizationName: "テスト組織",
       status: "active",
+      createdAt: "2026-04-01T00:00:00+09:00",
     });
 
     const response = await PATCH(

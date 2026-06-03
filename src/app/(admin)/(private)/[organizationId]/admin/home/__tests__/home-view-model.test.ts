@@ -18,6 +18,8 @@ function createBooking(overrides: Partial<BookingDetail> = {}): BookingDetail {
     consultationContent: overrides.consultationContent ?? null,
     chargeable: overrides.chargeable ?? false,
     chargeDisabledReason: overrides.chargeDisabledReason ?? null,
+    createdAt: overrides.createdAt ?? "2026-04-01T00:00:00+09:00",
+    updatedAt: overrides.updatedAt ?? "2026-04-01T00:00:00+09:00",
   };
 }
 
@@ -35,6 +37,8 @@ function createPayment(overrides: Partial<PaymentDetail> = {}): PaymentDetail {
     totalJPY: overrides.totalJPY ?? 5500,
     status: overrides.status ?? "setup_complete",
     chargeMethod: overrides.chargeMethod ?? null,
+    createdAt: overrides.createdAt ?? "2026-04-01T00:00:00+09:00",
+    updatedAt: overrides.updatedAt ?? "2026-04-01T00:00:00+09:00",
   };
 }
 
@@ -45,6 +49,8 @@ function createClient(overrides: Partial<ClientDetail> = {}): ClientDetail {
     email: overrides.email ?? "taro@example.com",
     phone: overrides.phone ?? "090-0000-0000",
     memo: overrides.memo ?? null,
+    createdAt: overrides.createdAt ?? "2026-04-01T00:00:00+09:00",
+    updatedAt: overrides.updatedAt ?? "2026-04-01T00:00:00+09:00",
   };
 }
 

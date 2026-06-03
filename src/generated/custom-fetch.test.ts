@@ -1,15 +1,19 @@
 // @vitest-environment jsdom
 const { toasterError, toasterSuccess, mockGetIdToken, mockAuth } = vi.hoisted(
-  () => ({
-    toasterError: vi.fn(),
-    toasterSuccess: vi.fn(),
-    mockGetIdToken: vi.fn(async () => "token-123"),
-    mockAuth: {
-      currentUser: {
-        getIdToken: vi.fn(async () => "token-123"),
+  () => {
+    const getIdToken = vi.fn(async () => "token-123");
+
+    return {
+      toasterError: vi.fn(),
+      toasterSuccess: vi.fn(),
+      mockGetIdToken: getIdToken,
+      mockAuth: {
+        currentUser: {
+          getIdToken,
+        } as { getIdToken: typeof getIdToken } | null,
       },
-    },
-  }),
+    };
+  },
 );
 
 vi.mock("@/components/ui/toast", () => ({

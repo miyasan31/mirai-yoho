@@ -16,15 +16,17 @@ function createBooking(
     consultationContent: overrides.consultationContent ?? null,
     chargeable: overrides.chargeable ?? false,
     chargeDisabledReason: overrides.chargeDisabledReason ?? null,
-    client:
-      overrides.client ??
-      ({
-        clientId: overrides.clientId ?? "client-1",
-        name: "山田 太郎",
-        email: "taro@example.com",
-        phone: "090-0000-0000",
-        memo: null,
-      } as const),
+    createdAt: overrides.createdAt ?? "2026-04-01T00:00:00+09:00",
+    updatedAt: overrides.updatedAt ?? "2026-04-01T00:00:00+09:00",
+    client: overrides.client ?? {
+      clientId: overrides.clientId ?? "client-1",
+      name: "山田 太郎",
+      email: "taro@example.com",
+      phone: "090-0000-0000",
+      memo: null,
+      createdAt: "2026-04-01T00:00:00+09:00",
+      updatedAt: "2026-04-01T00:00:00+09:00",
+    },
   };
 }
 
