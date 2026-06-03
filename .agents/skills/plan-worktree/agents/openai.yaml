@@ -1,0 +1,3 @@
+display_name: Plan Worktree
+short_description: main 起点で worktree を作ってから実装を始める
+default_prompt: プランモードの実装を main 起点の git worktree で開始して
