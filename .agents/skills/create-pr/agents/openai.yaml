@@ -1,0 +1,4 @@
+interface:
+  display_name: "Create PR"
+  short_description: "ローカル変更からGitHub PRを安全に作成"
+  default_prompt: "Use $create-pr to commit the current changes and open a GitHub pull request."
