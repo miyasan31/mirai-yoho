@@ -67,6 +67,20 @@ describe("Slot", () => {
       expect(() => slot.reserve("booking-1")).toThrow(DomainError);
       expect(() => slot.reserve("booking-1")).toThrow("past");
     });
+
+    it("開始15分前ちょうど以降は BOOKING_CUTOFF_EXCEEDED エラー", () => {
+      vi.useFakeTimers();
+      vi.setSystemTime(new Date("2026-05-01T09:45:00Z"));
+
+      const slot = createSlot();
+
+      expect(() => slot.reserve("booking-1")).toThrow(DomainError);
+      expect(() => slot.reserve("booking-1")).toThrow(
+        "at least 15 minutes before",
+      );
+
+      vi.useRealTimers();
+    });
   });
 
   describe("release", () => {

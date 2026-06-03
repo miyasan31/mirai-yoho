@@ -1,6 +1,7 @@
 import type { Timestamp } from "firebase-admin/firestore";
 import type { Slot } from "@/domain/slot/slot";
 import { Slot as SlotEntity } from "@/domain/slot/slot";
+import { isBeforeBookingDeadline } from "@/domain/slot/slot-availability";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import { TimeRange } from "@/domain/slot/time-range";
 import { db } from "@/infrastructure/firestore/firestore-client";
@@ -101,7 +102,9 @@ export class FirestoreSlotRepository implements ISlotRepository {
         .get();
       return snapshot.docs
         .map((doc) => toDomain(doc.data() as SlotDoc))
-        .filter((slot) => slot.getTimeRange().getStartAt() > new Date())
+        .filter((slot) =>
+          isBeforeBookingDeadline(slot.getTimeRange().getStartAt()),
+        )
         .sort(
           (a, b) =>
             a.getTimeRange().getStartAt().getTime() -
@@ -121,7 +124,7 @@ export class FirestoreSlotRepository implements ISlotRepository {
         .filter(
           (slot) =>
             !slot.getIsReserved() &&
-            slot.getTimeRange().getStartAt() > new Date(),
+            isBeforeBookingDeadline(slot.getTimeRange().getStartAt()),
         )
         .sort(
           (a, b) =>
@@ -163,7 +166,11 @@ export class FirestoreSlotRepository implements ISlotRepository {
         .where("startAt", ">", new Date())
         .orderBy("startAt", "asc")
         .get();
-      return snapshot.docs.map((doc) => toDomain(doc.data() as SlotDoc));
+      return snapshot.docs
+        .map((doc) => toDomain(doc.data() as SlotDoc))
+        .filter((slot) =>
+          isBeforeBookingDeadline(slot.getTimeRange().getStartAt()),
+        );
     } catch (error) {
       if (!isFirestoreFailedPrecondition(error)) {
         throw error;
@@ -179,7 +186,7 @@ export class FirestoreSlotRepository implements ISlotRepository {
         .filter(
           (slot) =>
             !slot.getIsReserved() &&
-            slot.getTimeRange().getStartAt() > new Date(),
+            isBeforeBookingDeadline(slot.getTimeRange().getStartAt()),
         )
         .sort(
           (a, b) =>
@@ -204,6 +211,7 @@ export class FirestoreSlotRepository implements ISlotRepository {
       .filter(
         (slot) =>
           !slot.getIsReserved() &&
+          isBeforeBookingDeadline(slot.getTimeRange().getStartAt()) &&
           slot.getTimeRange().getEndAt().getTime() === endAt.getTime(),
       )
       .sort((a, b) => a.getConsultantId().localeCompare(b.getConsultantId()));
@@ -224,7 +232,11 @@ export class FirestoreSlotRepository implements ISlotRepository {
         .get();
       return snapshot.docs
         .map((doc) => toDomain(doc.data() as SlotDoc))
-        .filter((slot) => !slot.getIsReserved());
+        .filter(
+          (slot) =>
+            !slot.getIsReserved() &&
+            isBeforeBookingDeadline(slot.getTimeRange().getStartAt()),
+        );
     } catch (error) {
       if (!isFirestoreFailedPrecondition(error)) {
         throw error;
@@ -239,7 +251,11 @@ export class FirestoreSlotRepository implements ISlotRepository {
         .filter((slot) => {
           if (slot.getIsReserved()) return false;
           const startAt = slot.getTimeRange().getStartAt().getTime();
-          return startAt >= start.getTime() && startAt < end.getTime();
+          return (
+            startAt >= start.getTime() &&
+            startAt < end.getTime() &&
+            isBeforeBookingDeadline(slot.getTimeRange().getStartAt())
+          );
         })
         .sort(
           (a, b) =>

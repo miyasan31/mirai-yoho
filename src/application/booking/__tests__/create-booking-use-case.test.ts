@@ -10,6 +10,7 @@ import type { IClientRepository } from "@/domain/client/client-repository";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
+import type { DomainError } from "@/domain/shared/domain-error";
 import { Slot } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import { TimeRange } from "@/domain/slot/time-range";
@@ -282,6 +283,7 @@ function createUseCase(
 
 describe("CreateBookingUseCase", () => {
   beforeEach(() => {
+    vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-01T00:00:00.000Z"));
   });
 
@@ -422,6 +424,57 @@ describe("CreateBookingUseCase", () => {
       }),
     ).rejects.toMatchObject({
       code: "CONSULTANT_NOT_FOUND",
+    });
+  });
+
+  it("rejects slotId bookings after the 15-minute cutoff", async () => {
+    vi.setSystemTime(new Date("2026-05-01T09:45:00.000Z"));
+    const { useCase } = createUseCase([
+      createSlot(
+        "slot-1",
+        "consultant-1",
+        "2026-05-01T10:00:00.000Z",
+        "2026-05-01T10:30:00.000Z",
+      ),
+    ]);
+
+    await expect(
+      useCase.execute({
+        organizationId: ORGANIZATION_ID,
+        slotId: "slot-1",
+        clientName: "山田太郎",
+        clientEmail: "taro@example.com",
+        clientPhone: "090-1234-5678",
+        clientBirthdate: "1990-01-01",
+      }),
+    ).rejects.toMatchObject<DomainError>({
+      code: "BOOKING_CUTOFF_EXCEEDED",
+    });
+  });
+
+  it("rejects auto-assigned bookings after the 15-minute cutoff", async () => {
+    vi.setSystemTime(new Date("2026-05-01T09:45:00.000Z"));
+    const { useCase } = createUseCase([
+      createSlot(
+        "slot-1",
+        "consultant-1",
+        "2026-05-01T10:00:00.000Z",
+        "2026-05-01T10:30:00.000Z",
+      ),
+    ]);
+
+    await expect(
+      useCase.execute({
+        organizationId: ORGANIZATION_ID,
+        startDatetime: new Date("2026-05-01T10:00:00.000Z"),
+        endDatetime: new Date("2026-05-01T10:30:00.000Z"),
+        clientName: "山田太郎",
+        clientEmail: "taro@example.com",
+        clientPhone: "090-1234-5678",
+        clientBirthdate: "1990-01-01",
+      }),
+    ).rejects.toMatchObject<DomainError>({
+      code: "BOOKING_CUTOFF_EXCEEDED",
     });
   });
 

@@ -14,6 +14,10 @@ import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip } from "@/components/ui/tooltip";
+import {
+  getBookingCutoffMinutes,
+  isBeforeBookingDeadline,
+} from "@/domain/slot/slot-availability";
 import { useCreateBooking } from "@/hooks/use-booking";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import {
@@ -29,6 +33,12 @@ export default function BookingPage() {
   const startDatetime = searchParams.get("startDatetime");
   const endDatetime = searchParams.get("endDatetime");
   const hasDateRange = Boolean(startDatetime && endDatetime);
+  const selectedStartAt =
+    typeof startDatetime === "string" ? new Date(startDatetime) : null;
+  const hasValidSelectedStartAt =
+    selectedStartAt !== null && !Number.isNaN(selectedStartAt.getTime());
+  const bookingCutoffExceeded =
+    hasValidSelectedStartAt && !isBeforeBookingDeadline(selectedStartAt);
 
   const {
     register,
@@ -54,6 +64,23 @@ export default function BookingPage() {
           icon={CalendarX}
           message="予約する枠が選択されていません"
           hint="予約可能な日時から希望の枠を選択してください"
+        />
+        <styled.div display="flex" justifyContent="center" mt="4">
+          <Button asChild variant="outline">
+            <Link href={buildPath("/consultants")}>予約可能日時へ</Link>
+          </Button>
+        </styled.div>
+      </styled.div>
+    );
+  }
+
+  if (bookingCutoffExceeded) {
+    return (
+      <styled.div py="16" px="8">
+        <EmptyState
+          icon={CalendarX}
+          message="この予約枠の受付は終了しました"
+          hint={`予約は開始時刻の${getBookingCutoffMinutes()}分前まで受け付けています`}
         />
         <styled.div display="flex" justifyContent="center" mt="4">
           <Button asChild variant="outline">

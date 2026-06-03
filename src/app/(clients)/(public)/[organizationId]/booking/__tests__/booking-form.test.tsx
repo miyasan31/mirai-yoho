@@ -351,4 +351,18 @@ describe("BookingPage", () => {
       });
     });
   });
+
+  it("hides the form when the selected slot is past the 15-minute cutoff", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-05-01T09:45:00.000Z"));
+    mockSearchParams.set("startDatetime", "2026-05-01T10:00:00.000Z");
+    mockSearchParams.set("endDatetime", "2026-05-01T10:30:00.000Z");
+
+    render(<BookingPage />);
+
+    expect(screen.getByText("この予約枠の受付は終了しました")).toBeDefined();
+    expect(screen.queryByPlaceholderText("山田 太郎")).toBeNull();
+
+    vi.useRealTimers();
+  });
 });

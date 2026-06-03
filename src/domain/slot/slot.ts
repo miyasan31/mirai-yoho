@@ -1,5 +1,6 @@
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 import { DomainError } from "@/domain/shared/domain-error";
+import { isBeforeBookingDeadline } from "@/domain/slot/slot-availability";
 import type { TimeRange } from "@/domain/slot/time-range";
 
 interface SlotCreateProps {
@@ -59,6 +60,12 @@ export class Slot extends AggregateRoot {
       throw new DomainError(
         "SLOT_IN_PAST",
         "Cannot reserve a slot in the past",
+      );
+    }
+    if (!isBeforeBookingDeadline(this.timeRange.getStartAt())) {
+      throw new DomainError(
+        "BOOKING_CUTOFF_EXCEEDED",
+        "Reservations must be made at least 15 minutes before the start time",
       );
     }
     this.bookingId = bookingId;

@@ -1,5 +1,7 @@
 const SLOT_UNIT_MINUTES = 30;
 const SLOT_UNIT_MS = SLOT_UNIT_MINUTES * 60 * 1000;
+const BOOKING_CUTOFF_MINUTES = 15;
+const BOOKING_CUTOFF_MS = BOOKING_CUTOFF_MINUTES * 60 * 1000;
 
 export function getSlotUnitMinutes(): number {
   return SLOT_UNIT_MINUTES;
@@ -7,6 +9,25 @@ export function getSlotUnitMinutes(): number {
 
 export function getSlotUnitMs(): number {
   return SLOT_UNIT_MS;
+}
+
+export function getBookingCutoffMinutes(): number {
+  return BOOKING_CUTOFF_MINUTES;
+}
+
+export function getBookingCutoffMs(): number {
+  return BOOKING_CUTOFF_MS;
+}
+
+export function getBookingDeadline(startAt: Date): Date {
+  return new Date(startAt.getTime() - BOOKING_CUTOFF_MS);
+}
+
+export function isBeforeBookingDeadline(
+  startAt: Date,
+  now: Date = new Date(),
+): boolean {
+  return now.getTime() < getBookingDeadline(startAt).getTime();
 }
 
 export function isAlignedToSlotBoundary(date: Date): boolean {
