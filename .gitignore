@@ -48,3 +48,6 @@ styled-system-studio
 ## Orval generated
 src/generated/api
 src/generated/schemas
+
+## Local git worktrees
+.worktrees/
