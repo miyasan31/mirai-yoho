@@ -17,6 +17,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { useConsultantBookings } from "@/hooks/use-consultant-bookings";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
+import { ConsultantJoinControl } from "../bookings/consultant-join-control";
 import { buildConsultantHomeViewModel } from "./home-view-model";
 
 function formatDatetime(value: string): string {
@@ -31,7 +32,7 @@ function formatDatetime(value: string): string {
 
 export default function ConsultantHomePage() {
   const { buildPath } = useOrganizationRouting();
-  const { data, isLoading } = useConsultantBookings({
+  const { data, isLoading, refetch } = useConsultantBookings({
     page: 1,
     pageSize: 100,
     sortBy: "createdAt",
@@ -109,6 +110,17 @@ export default function ConsultantHomePage() {
               <Text textStyle="sm" mb="4">
                 クライアント: {nextBooking.clientName}
               </Text>
+              <styled.div mb="4">
+                <ConsultantJoinControl
+                  bookingId={nextBooking.bookingId}
+                  startDatetime={nextBooking.startDatetime}
+                  status={nextBooking.status}
+                  consultantJoinedAt={nextBooking.consultantJoinedAt}
+                  onJoined={() => {
+                    void refetch();
+                  }}
+                />
+              </styled.div>
               <styled.div display="flex" gap="2" flexWrap="wrap">
                 {nextBooking.zoomUrl && (
                   <Button asChild size="sm">
@@ -223,6 +235,17 @@ export default function ConsultantHomePage() {
                     <Text textStyle="sm" color="fg.muted">
                       クライアント: {booking.clientName}
                     </Text>
+                  </styled.div>
+                  <styled.div mt="2">
+                    <ConsultantJoinControl
+                      bookingId={booking.bookingId}
+                      startDatetime={booking.startDatetime}
+                      status={booking.status}
+                      consultantJoinedAt={booking.consultantJoinedAt}
+                      onJoined={() => {
+                        void refetch();
+                      }}
+                    />
                   </styled.div>
                 </styled.div>
                 <styled.div

@@ -138,6 +138,16 @@ function ConsultantCell({
   );
 }
 
+function formatJoinedAt(value: string): string {
+  return new Date(value).toLocaleString("ja-JP", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
 export default function AdminBookingsPage() {
   const { organizationId } = useOrganizationRouting();
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
@@ -280,6 +290,7 @@ export default function AdminBookingsPage() {
                 <Table.Header>ステータス</Table.Header>
                 <Table.Header>クライアント</Table.Header>
                 <Table.Header>相談員</Table.Header>
+                <Table.Header>入室確認</Table.Header>
                 <Table.Header>操作</Table.Header>
               </Table.Row>
             </Table.Head>
@@ -319,6 +330,17 @@ export default function AdminBookingsPage() {
                         consultantId={b.consultantId}
                         consultant={consultant}
                       />
+                    </Table.Cell>
+                    <Table.Cell>
+                      {b.consultantJoinedAt ? (
+                        <Text textStyle="sm">
+                          {formatJoinedAt(b.consultantJoinedAt)}
+                        </Text>
+                      ) : (
+                        <Text textStyle="sm" color="fg.muted">
+                          未確認
+                        </Text>
+                      )}
                     </Table.Cell>
                     <Table.Cell>
                       {b.status === "confirmed" && (

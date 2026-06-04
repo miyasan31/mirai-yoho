@@ -26,6 +26,7 @@ interface BookingProps extends BookingCreateProps {
   status: BookingStatus;
   cancelDeadline: CancelDeadline;
   zoomUrl?: ZoomUrl;
+  consultantJoinedAt?: Date;
 }
 
 export class Booking extends AggregateRoot {
@@ -39,6 +40,7 @@ export class Booking extends AggregateRoot {
     private status: BookingStatus,
     private readonly cancelDeadline: CancelDeadline,
     private zoomUrl: ZoomUrl | undefined,
+    private consultantJoinedAt: Date | undefined,
     private consultantMemo: ConsultantMemo,
     private consultationContent: string | undefined,
     private readonly createdAt: Date,
@@ -59,6 +61,7 @@ export class Booking extends AggregateRoot {
       BookingStatus.create("pending"),
       CancelDeadline.create(props.startDatetime),
       undefined,
+      undefined,
       props.consultantMemo,
       props.consultationContent,
       props.createdAt ?? now,
@@ -78,6 +81,7 @@ export class Booking extends AggregateRoot {
       props.status,
       props.cancelDeadline,
       props.zoomUrl,
+      props.consultantJoinedAt,
       props.consultantMemo,
       props.consultationContent,
       createdAt,
@@ -143,6 +147,36 @@ export class Booking extends AggregateRoot {
     this.updatedAt = new Date();
   }
 
+  markConsultantJoined(now: Date): void {
+    const currentStatus = this.status.getValue();
+    if (currentStatus !== "pending" && currentStatus !== "confirmed") {
+      throw new DomainError(
+        "INVALID_STATUS_TRANSITION",
+        "Only pending or confirmed bookings can be marked as joined",
+      );
+    }
+
+    if (this.consultantJoinedAt) {
+      throw new DomainError(
+        "CONSULTANT_ALREADY_JOINED",
+        "Consultant join has already been recorded",
+      );
+    }
+
+    const joinAvailableAt = new Date(
+      this.startDatetime.getTime() - 15 * 60 * 1000,
+    );
+    if (now.getTime() < joinAvailableAt.getTime()) {
+      throw new DomainError(
+        "CONSULTANT_JOIN_TOO_EARLY",
+        "Consultant join can only be recorded from 15 minutes before the booking start time",
+      );
+    }
+
+    this.consultantJoinedAt = now;
+    this.updatedAt = now;
+  }
+
   updateMemo(memo: ConsultantMemo): void {
     this.consultantMemo = memo;
     this.updatedAt = new Date();
@@ -182,6 +216,10 @@ export class Booking extends AggregateRoot {
 
   getZoomUrl(): ZoomUrl | undefined {
     return this.zoomUrl;
+  }
+
+  getConsultantJoinedAt(): Date | undefined {
+    return this.consultantJoinedAt;
   }
 
   getConsultantMemo(): ConsultantMemo {

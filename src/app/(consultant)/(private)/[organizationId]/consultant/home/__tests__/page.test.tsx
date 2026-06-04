@@ -10,9 +10,11 @@ vi.mock("next/navigation", () => ({
 }));
 
 const mockUseConsultantBookings = vi.fn();
+const mockUseJoinConsultantBooking = vi.fn();
 
 vi.mock("@/hooks/use-consultant-bookings", () => ({
   useConsultantBookings: () => mockUseConsultantBookings(),
+  useJoinConsultantBooking: () => mockUseJoinConsultantBooking(),
 }));
 
 vi.mock("next/link", () => ({
@@ -108,7 +110,12 @@ describe("ConsultantHomePage", () => {
 
   it("次予約カードと今日の予約一覧を表示する", async () => {
     vi.useFakeTimers();
-    vi.setSystemTime(new Date("2026-04-22T09:00:00+09:00"));
+    vi.setSystemTime(new Date("2026-04-22T09:50:00+09:00"));
+    mockUseJoinConsultantBooking.mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+      variables: null,
+    });
 
     mockUseConsultantBookings.mockReturnValue({
       data: {
@@ -122,6 +129,7 @@ describe("ConsultantHomePage", () => {
               startDatetime: "2026-04-22T14:00:00+09:00",
               status: "confirmed",
               zoomUrl: "https://zoom.us/j/123",
+              consultantJoinedAt: null,
               consultantMemo: "",
               consultationContent: null,
               chargeable: false,
@@ -142,6 +150,7 @@ describe("ConsultantHomePage", () => {
               startDatetime: "2026-04-22T10:00:00+09:00",
               status: "pending",
               zoomUrl: null,
+              consultantJoinedAt: null,
               consultantMemo: "",
               consultationContent: null,
               chargeable: false,
@@ -168,6 +177,7 @@ describe("ConsultantHomePage", () => {
     expect(screen.getAllByText(/クライアント: 佐藤 花子/).length).toBe(2);
     expect(screen.getByText("今日の担当件数: 2件")).toBeInTheDocument();
     expect(screen.getAllByText("メモ編集").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("入室確認").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("予約一覧を開く")).toBeInTheDocument();
     expect(screen.getByText("プロフィールを更新する")).toBeInTheDocument();
 
@@ -175,6 +185,11 @@ describe("ConsultantHomePage", () => {
   });
 
   it("予約がない場合は空状態を表示する", async () => {
+    mockUseJoinConsultantBooking.mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+      variables: null,
+    });
     mockUseConsultantBookings.mockReturnValue({
       data: { data: { bookings: [] } },
       isLoading: false,
@@ -189,6 +204,55 @@ describe("ConsultantHomePage", () => {
       ).toBeInTheDocument();
       expect(screen.getByText("今日の予約はありません")).toBeInTheDocument();
       expect(screen.getByText("今日の担当件数: 0件")).toBeInTheDocument();
+    });
+  });
+
+  it("入室確認済みの予約は日時を表示する", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-04-22T09:50:00+09:00"));
+    mockUseJoinConsultantBooking.mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+      variables: null,
+    });
+    mockUseConsultantBookings.mockReturnValue({
+      data: {
+        data: {
+          bookings: [
+            {
+              bookingId: "b-joined",
+              clientId: "c-1",
+              consultantId: "cons-1",
+              slotId: "s-1",
+              startDatetime: "2026-04-22T10:00:00+09:00",
+              status: "confirmed",
+              zoomUrl: "https://zoom.us/j/123",
+              consultantJoinedAt: "2026-04-22T09:48:00+09:00",
+              consultantMemo: "",
+              consultationContent: null,
+              chargeable: false,
+              chargeDisabledReason: null,
+              client: {
+                clientId: "c-1",
+                name: "山田 太郎",
+                email: "taro@example.com",
+                phone: "090-0000-0000",
+                memo: null,
+              },
+            },
+          ],
+        },
+      },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ConsultantHomePage />, { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(
+        screen.getAllByText(/入室確認済み:/).length,
+      ).toBeGreaterThanOrEqual(2);
     });
   });
 });

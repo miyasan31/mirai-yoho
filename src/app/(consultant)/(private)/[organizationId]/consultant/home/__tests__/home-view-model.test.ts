@@ -87,4 +87,25 @@ describe("buildConsultantHomeViewModel", () => {
       todayMemoMissing: 1,
     });
   });
+
+  it("開始後でも当日の未対応予約は次予約に残す", () => {
+    const now = new Date("2026-04-22T10:05:00+09:00");
+    const viewModel = buildConsultantHomeViewModel(
+      [
+        createBooking({
+          bookingId: "started",
+          status: "confirmed",
+          startDatetime: "2026-04-22T10:00:00+09:00",
+        }),
+        createBooking({
+          bookingId: "later",
+          status: "confirmed",
+          startDatetime: "2026-04-22T14:00:00+09:00",
+        }),
+      ],
+      now,
+    );
+
+    expect(viewModel.nextBooking?.bookingId).toBe("started");
+  });
 });

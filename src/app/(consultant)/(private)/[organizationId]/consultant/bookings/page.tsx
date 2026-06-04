@@ -17,6 +17,7 @@ import { Tooltip } from "@/components/ui/tooltip";
 import { useConsultantBookings } from "@/hooks/use-consultant-bookings";
 import { useListQueryParams } from "@/hooks/use-list-query-params";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
+import { ConsultantJoinControl } from "./consultant-join-control";
 
 type ClientSummary = {
   clientId: string;
@@ -78,7 +79,7 @@ export default function ConsultantBookingsPage() {
   const { buildPath } = useOrganizationRouting();
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
     useListQueryParams();
-  const { data, isLoading } = useConsultantBookings({
+  const { data, isLoading, refetch } = useConsultantBookings({
     page,
     pageSize,
     sortBy,
@@ -135,6 +136,7 @@ export default function ConsultantBookingsPage() {
                 <Table.Header>クライアント</Table.Header>
                 <Table.Header>Zoom</Table.Header>
                 <Table.Header>メモ</Table.Header>
+                <Table.Header>入室確認</Table.Header>
                 <Table.Header>操作</Table.Header>
               </Table.Row>
             </Table.Head>
@@ -178,6 +180,17 @@ export default function ConsultantBookingsPage() {
                     >
                       {b.consultantMemo || "-"}
                     </Text>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <ConsultantJoinControl
+                      bookingId={b.bookingId}
+                      startDatetime={b.startDatetime}
+                      status={b.status}
+                      consultantJoinedAt={b.consultantJoinedAt ?? null}
+                      onJoined={() => {
+                        void refetch();
+                      }}
+                    />
                   </Table.Cell>
                   <Table.Cell>
                     <Tooltip content="メモ編集" showArrow>
