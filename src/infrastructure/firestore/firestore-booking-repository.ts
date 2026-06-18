@@ -22,6 +22,7 @@ interface BookingDoc {
   cancelDeadline: Timestamp;
   zoomUrl?: string;
   consultantJoinedAt?: Timestamp;
+  consultationReminderEmailSentAt?: Timestamp;
   consultantMemo: string;
   consultationContent?: string;
   createdAt?: Timestamp;
@@ -41,6 +42,8 @@ function toDomain(doc: BookingDoc): Booking {
     cancelDeadline: CancelDeadline.reconstruct(doc.cancelDeadline.toDate()),
     zoomUrl: doc.zoomUrl ? ZoomUrl.reconstruct(doc.zoomUrl) : undefined,
     consultantJoinedAt: doc.consultantJoinedAt?.toDate(),
+    consultationReminderEmailSentAt:
+      doc.consultationReminderEmailSentAt?.toDate(),
     consultantMemo: ConsultantMemo.reconstruct(doc.consultantMemo),
     consultationContent: doc.consultationContent,
     createdAt,
@@ -60,6 +63,8 @@ function toFirestore(booking: Booking): Record<string, unknown> {
     cancelDeadline: booking.getCancelDeadline().getValue(),
     zoomUrl: booking.getZoomUrl()?.getValue() ?? null,
     consultantJoinedAt: booking.getConsultantJoinedAt() ?? null,
+    consultationReminderEmailSentAt:
+      booking.getConsultationReminderEmailSentAt() ?? null,
     consultantMemo: booking.getConsultantMemo().getValue(),
     consultationContent: booking.getConsultationContent() ?? null,
     createdAt: booking.getCreatedAt(),
@@ -100,6 +105,24 @@ export class FirestoreBookingRepository implements IBookingRepository {
       .where("status", "==", status)
       .get();
     return snapshot.docs.map((doc) => toDomain(doc.data() as BookingDoc));
+  }
+
+  async findConsultationReminderTargets(
+    organizationId: string,
+    now: Date,
+    windowEnd: Date,
+  ): Promise<Booking[]> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("organizationId", "==", organizationId)
+      .where("status", "==", "confirmed")
+      .where("startDatetime", ">", now)
+      .where("startDatetime", "<=", windowEnd)
+      .get();
+
+    return snapshot.docs
+      .map((doc) => toDomain(doc.data() as BookingDoc))
+      .filter((booking) => !booking.getConsultationReminderEmailSentAt());
   }
 
   async findAll(organizationId: string): Promise<Booking[]> {

@@ -27,6 +27,7 @@ interface BookingProps extends BookingCreateProps {
   cancelDeadline: CancelDeadline;
   zoomUrl?: ZoomUrl;
   consultantJoinedAt?: Date;
+  consultationReminderEmailSentAt?: Date;
 }
 
 export class Booking extends AggregateRoot {
@@ -41,6 +42,7 @@ export class Booking extends AggregateRoot {
     private readonly cancelDeadline: CancelDeadline,
     private zoomUrl: ZoomUrl | undefined,
     private consultantJoinedAt: Date | undefined,
+    private consultationReminderEmailSentAt: Date | undefined,
     private consultantMemo: ConsultantMemo,
     private consultationContent: string | undefined,
     private readonly createdAt: Date,
@@ -60,6 +62,7 @@ export class Booking extends AggregateRoot {
       props.startDatetime,
       BookingStatus.create("pending"),
       CancelDeadline.create(props.startDatetime),
+      undefined,
       undefined,
       undefined,
       props.consultantMemo,
@@ -82,6 +85,7 @@ export class Booking extends AggregateRoot {
       props.cancelDeadline,
       props.zoomUrl,
       props.consultantJoinedAt,
+      props.consultationReminderEmailSentAt,
       props.consultantMemo,
       props.consultationContent,
       createdAt,
@@ -177,6 +181,18 @@ export class Booking extends AggregateRoot {
     this.updatedAt = now;
   }
 
+  markConsultationReminderEmailSent(now: Date): void {
+    if (this.consultationReminderEmailSentAt) {
+      throw new DomainError(
+        "CONSULTATION_REMINDER_ALREADY_SENT",
+        "Consultation reminder email has already been sent",
+      );
+    }
+
+    this.consultationReminderEmailSentAt = now;
+    this.updatedAt = now;
+  }
+
   updateMemo(memo: ConsultantMemo): void {
     this.consultantMemo = memo;
     this.updatedAt = new Date();
@@ -220,6 +236,10 @@ export class Booking extends AggregateRoot {
 
   getConsultantJoinedAt(): Date | undefined {
     return this.consultantJoinedAt;
+  }
+
+  getConsultationReminderEmailSentAt(): Date | undefined {
+    return this.consultationReminderEmailSentAt;
   }
 
   getConsultantMemo(): ConsultantMemo {

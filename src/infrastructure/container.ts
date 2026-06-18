@@ -3,6 +3,7 @@ import { CancelBookingUseCase } from "@/application/booking/cancel-booking-use-c
 import { ChargePaymentUseCase } from "@/application/booking/charge-payment-use-case";
 import { CompleteSetupUseCase } from "@/application/booking/complete-setup-use-case";
 import { CreateBookingUseCase } from "@/application/booking/create-booking-use-case";
+import { SendConsultationReminderUseCase } from "@/application/booking/send-consultation-reminder-use-case";
 import { SetupPaymentUseCase } from "@/application/booking/setup-payment-use-case";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
 import { FirestoreClientRepository } from "@/infrastructure/firestore/firestore-client-repository";
@@ -95,6 +96,15 @@ export function createBatchChargeUseCase() {
     new FirestorePaymentRepository(),
     new FirestoreClientRepository(),
     new StripeService(),
+    new ResendEmailService(),
+  );
+}
+
+export function createSendConsultationReminderUseCase() {
+  return new SendConsultationReminderUseCase(
+    new FirestoreBookingRepository(),
+    new FirestoreClientRepository(),
+    new FirestoreConsultantRepository(),
     new ResendEmailService(),
   );
 }

@@ -133,6 +133,35 @@ export class ResendEmailService implements IEmailService {
     });
   }
 
+  async sendConsultationReminder(params: {
+    clientEmail: string;
+    clientName: string;
+    consultantName: string;
+    zoomUrl: string;
+    startDatetime: Date;
+    bookingId: string;
+  }): Promise<void> {
+    const subject = "【未来予報】相談開始15分前のお知らせ";
+    const html = `
+				<h2>相談開始15分前のお知らせ</h2>
+				<p>${params.clientName} 様</p>
+				<p>ご予約の相談開始時刻が近づいています。</p>
+				<ul>
+					<li><strong>相談員:</strong> ${params.consultantName}</li>
+					<li><strong>日時:</strong> ${formatDatetime(params.startDatetime)}</li>
+					<li><strong>予約ID:</strong> ${params.bookingId}</li>
+				</ul>
+				<p><strong>Zoom URL:</strong> <a href="${params.zoomUrl}">${params.zoomUrl}</a></p>
+				<p>お時間になりましたら、上記のZoom URLからご参加ください。</p>
+			`;
+
+    await deliverEmail("consultation-reminder", {
+      to: params.clientEmail,
+      subject,
+      html,
+    });
+  }
+
   async sendInvitation(params: {
     email: string;
     role: string;

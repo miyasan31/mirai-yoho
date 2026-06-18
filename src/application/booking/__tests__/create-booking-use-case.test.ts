@@ -177,6 +177,14 @@ class InMemoryBookingRepository implements IBookingRepository {
     );
   }
 
+  async findConsultationReminderTargets(): Promise<Booking[]> {
+    return this.bookings.filter(
+      (booking) =>
+        booking.getStatus().getValue() === "confirmed" &&
+        !booking.getConsultationReminderEmailSentAt(),
+    );
+  }
+
   async findAll(_organizationId: string): Promise<Booking[]> {
     return this.bookings;
   }
@@ -261,6 +269,7 @@ function createUseCase(
     sendBookingConfirmation: vi.fn().mockResolvedValue(undefined),
     sendBookingCancellation: vi.fn().mockResolvedValue(undefined),
     sendPaymentReceipt: vi.fn().mockResolvedValue(undefined),
+    sendConsultationReminder: vi.fn().mockResolvedValue(undefined),
     sendInvitation: vi.fn().mockResolvedValue(undefined),
     sendPasswordReset: vi.fn().mockResolvedValue(undefined),
   };
@@ -520,6 +529,7 @@ describe("CreateBookingUseCase", () => {
         .mockRejectedValue(new Error("email delivery failed")),
       sendBookingCancellation: vi.fn().mockResolvedValue(undefined),
       sendPaymentReceipt: vi.fn().mockResolvedValue(undefined),
+      sendConsultationReminder: vi.fn().mockResolvedValue(undefined),
       sendInvitation: vi.fn().mockResolvedValue(undefined),
       sendPasswordReset: vi.fn().mockResolvedValue(undefined),
     };

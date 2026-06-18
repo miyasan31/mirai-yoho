@@ -33,6 +33,7 @@ import {
   createCreateBookingUseCase,
   createOrganizationSettingsRepository,
   createPaymentRepository,
+  createSendConsultationReminderUseCase,
   createSetupPaymentUseCase,
   createSlotRepository,
 } from "@/infrastructure/container";
@@ -66,6 +67,7 @@ const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
 const USER_PREFERENCES_COLLECTION = FIRESTORE_COLLECTIONS.userPreferences;
 const FIRESTORE_IN_QUERY_CHUNK_SIZE = 10;
 const BATCH_CHARGE_COOLDOWN_MS = 60 * 1000;
+const BATCH_CONSULTATION_REMINDER_COOLDOWN_MS = 60 * 1000;
 const BOOKING_ACTION_TOKEN_TTL_MS = 30 * 60 * 1000;
 const AVATAR_MAX_FILE_SIZE = 5 * 1024 * 1024;
 const AVATAR_UPLOAD_URL_TTL_MS = 10 * 60 * 1000;
@@ -83,6 +85,11 @@ const AVATAR_EXTENSION_BY_CONTENT_TYPE: Record<string, string> = {
 
 const batchChargeInProgressOrganizations = new Set<string>();
 const batchChargeLastStartedAtByOrganization = new Map<string, number>();
+const batchConsultationReminderInProgressOrganizations = new Set<string>();
+const batchConsultationReminderLastStartedAtByOrganization = new Map<
+  string,
+  number
+>();
 
 type RouteContext = {
   params: Promise<{
@@ -305,6 +312,34 @@ function getBatchChargeRateLimitState(organizationId: string): {
     retryAfterSeconds: Math.max(
       1,
       Math.ceil((BATCH_CHARGE_COOLDOWN_MS - elapsedMs) / 1000),
+    ),
+  };
+}
+
+function getBatchConsultationReminderRateLimitState(organizationId: string): {
+  inProgress: boolean;
+  retryAfterSeconds: number;
+} {
+  if (batchConsultationReminderInProgressOrganizations.has(organizationId)) {
+    return { inProgress: true, retryAfterSeconds: 1 };
+  }
+
+  const lastStartedAt =
+    batchConsultationReminderLastStartedAtByOrganization.get(organizationId);
+  if (!lastStartedAt) {
+    return { inProgress: false, retryAfterSeconds: 0 };
+  }
+
+  const elapsedMs = Date.now() - lastStartedAt;
+  if (elapsedMs >= BATCH_CONSULTATION_REMINDER_COOLDOWN_MS) {
+    return { inProgress: false, retryAfterSeconds: 0 };
+  }
+
+  return {
+    inProgress: false,
+    retryAfterSeconds: Math.max(
+      1,
+      Math.ceil((BATCH_CONSULTATION_REMINDER_COOLDOWN_MS - elapsedMs) / 1000),
     ),
   };
 }
@@ -1679,6 +1714,71 @@ export async function POST(request: NextRequest, context: RouteContext) {
         throw error;
       } finally {
         batchChargeInProgressOrganizations.delete(organizationId);
+      }
+    }
+
+    if (
+      segments.length === 2 &&
+      segments[0] === "batch" &&
+      segments[1] === "consultation-reminders"
+    ) {
+      const authUser = await verifyAuth(request);
+      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+
+      const rateLimitState =
+        getBatchConsultationReminderRateLimitState(organizationId);
+      if (rateLimitState.inProgress) {
+        return jsonError(
+          409,
+          "BATCH_CONSULTATION_REMINDER_IN_PROGRESS",
+          "Batch consultation reminder is already running for this organization",
+        );
+      }
+      if (rateLimitState.retryAfterSeconds > 0) {
+        return jsonError(
+          429,
+          "BATCH_CONSULTATION_REMINDER_RATE_LIMITED",
+          `Batch consultation reminder can be retried after ${rateLimitState.retryAfterSeconds} seconds`,
+        );
+      }
+
+      batchConsultationReminderInProgressOrganizations.add(organizationId);
+      batchConsultationReminderLastStartedAtByOrganization.set(
+        organizationId,
+        Date.now(),
+      );
+      const startedAt = new Date();
+
+      try {
+        const result =
+          await createSendConsultationReminderUseCase().execute(organizationId);
+        console.info("Batch consultation reminder completed", {
+          category: "security-audit",
+          endpoint: postErrorContext.endpoint,
+          organizationId,
+          actorUid: authUser.uid,
+          startedAt: startedAt.toISOString(),
+          sentCount: result.sentCount,
+          skippedCount: result.skippedCount,
+          errorCount: result.errors.length,
+          errors: result.errors,
+        });
+        return NextResponse.json({
+          sentCount: result.sentCount,
+          skippedCount: result.skippedCount,
+        });
+      } catch (error) {
+        console.error("Batch consultation reminder failed", {
+          category: "security-audit",
+          endpoint: postErrorContext.endpoint,
+          organizationId,
+          actorUid: authUser.uid,
+          startedAt: startedAt.toISOString(),
+          error,
+        });
+        throw error;
+      } finally {
+        batchConsultationReminderInProgressOrganizations.delete(organizationId);
       }
     }
 
