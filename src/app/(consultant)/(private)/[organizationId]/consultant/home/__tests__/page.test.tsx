@@ -48,11 +48,22 @@ vi.mock("styled-system/jsx", () => {
   return {
     styled: styledProxy,
     createStyleContext: () => ({
+      withProvider: (c: unknown) => c,
       withRootProvider: (c: unknown) => c,
       withContext: (c: unknown) => c,
     }),
   };
 });
+
+vi.mock("styled-system/recipes", () => ({
+  icon: () => ({}),
+  spinner: () => ({}),
+  toast: () => ({}),
+}));
+
+vi.mock("@/components/ui/toast", () => ({
+  toaster: { create: vi.fn() },
+}));
 
 vi.mock("@/components/ui/button", () => ({
   Button: ({
@@ -249,10 +260,10 @@ describe("ConsultantHomePage", () => {
 
     render(<ConsultantHomePage />, { wrapper: createWrapper() });
 
-    await waitFor(() => {
-      expect(
-        screen.getAllByText(/入室確認済み:/).length,
-      ).toBeGreaterThanOrEqual(2);
-    });
+    await vi.runAllTimersAsync();
+
+    expect(screen.getAllByText(/入室確認済み:/).length).toBeGreaterThanOrEqual(
+      2,
+    );
   });
 });

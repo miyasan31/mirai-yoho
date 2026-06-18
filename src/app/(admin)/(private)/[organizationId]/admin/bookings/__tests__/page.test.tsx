@@ -258,7 +258,7 @@ describe("AdminBookingsPage", () => {
 
     render(<AdminBookingsPage />);
 
-    expect(screen.getByText(/2026\/04\/19/)).toBeInTheDocument();
+    expect(screen.getByText("2026/04/19 10:30")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "課金" }));
 
     expect(mockMutateAsync).toHaveBeenCalledWith({

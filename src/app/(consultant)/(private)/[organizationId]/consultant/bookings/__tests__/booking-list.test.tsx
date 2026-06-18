@@ -69,6 +69,7 @@ vi.mock("styled-system/jsx", () => {
   return {
     styled: styledProxy,
     createStyleContext: () => ({
+      withProvider: (c: unknown) => c,
       withRootProvider: (c: unknown) => c,
       withContext: (c: unknown) => c,
     }),
@@ -76,7 +77,17 @@ vi.mock("styled-system/jsx", () => {
 });
 
 vi.mock("styled-system/recipes", () => ({
+  absoluteCenter: () => ({}),
+  button: Object.assign(() => ({}), {
+    splitVariantProps: (props: Record<string, unknown>) => [{}, props],
+  }),
+  group: () => ({}),
+  spinner: () => ({}),
   tooltip: () => ({}),
+}));
+
+vi.mock("@/components/ui/toast", () => ({
+  toaster: { create: vi.fn() },
 }));
 
 vi.mock("@/components/ui/skeleton", () => ({
@@ -245,7 +256,7 @@ describe("ConsultantBookingsPage", () => {
       expect(screen.getByText("テストメモ")).toBeDefined();
       expect(screen.getByText("山田 太郎")).toBeDefined();
       expect(screen.getByText("クライアント")).toBeDefined();
-      expect(screen.getByText("入室確認")).toBeDefined();
+      expect(screen.getAllByText("入室確認").length).toBeGreaterThanOrEqual(1);
     });
   });
 

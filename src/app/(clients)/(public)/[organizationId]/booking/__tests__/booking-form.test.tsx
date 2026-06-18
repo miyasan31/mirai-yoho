@@ -83,7 +83,14 @@ vi.mock("@/components/empty-state", () => ({
 }));
 
 vi.mock("@/components/ui/button", () => ({
-  Button: (props: React.ComponentProps<"button">) => (
+  Button: ({
+    asChild,
+    variant,
+    ...props
+  }: React.ComponentProps<"button"> & {
+    asChild?: boolean;
+    variant?: string;
+  }) => (
     <button type={props.type} {...props}>
       {props.children}
     </button>
@@ -172,6 +179,7 @@ describe("BookingPage", () => {
       mockSearchParams.delete(key);
     }
     mockSearchParams.set("slotId", "slot-1");
+    vi.useRealTimers();
   });
 
   it("displays the booking form with required fields", () => {
@@ -318,8 +326,8 @@ describe("BookingPage", () => {
       },
     });
     mockSearchParams.delete("slotId");
-    mockSearchParams.set("startDatetime", "2026-05-01T10:00:00.000Z");
-    mockSearchParams.set("endDatetime", "2026-05-01T10:30:00.000Z");
+    mockSearchParams.set("startDatetime", "2026-07-01T10:00:00.000Z");
+    mockSearchParams.set("endDatetime", "2026-07-01T10:30:00.000Z");
 
     const user = userEvent.setup();
     render(<BookingPage />);
@@ -341,8 +349,8 @@ describe("BookingPage", () => {
         organizationId: "org-test",
         data: expect.objectContaining({
           slotId: undefined,
-          startDatetime: "2026-05-01T10:00:00.000Z",
-          endDatetime: "2026-05-01T10:30:00.000Z",
+          startDatetime: "2026-07-01T10:00:00.000Z",
+          endDatetime: "2026-07-01T10:30:00.000Z",
           clientName: "自動割当太郎",
           clientEmail: "auto@example.com",
           clientPhone: "080-0000-0000",
