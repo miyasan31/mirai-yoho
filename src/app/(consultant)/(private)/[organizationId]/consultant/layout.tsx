@@ -1,6 +1,12 @@
 "use client";
 
-import { CalendarDays, Clock, House, UserCircle } from "lucide-react";
+import {
+  CalendarDays,
+  Clock,
+  House,
+  ReceiptText,
+  UserCircle,
+} from "lucide-react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { useEffect } from "react";
@@ -17,6 +23,7 @@ const NAV_ITEMS: Array<Omit<NavItem, "href"> & { path: string }> = [
   { path: "/consultant/home", label: "ホーム", icon: House },
   { path: "/consultant/bookings", label: "予約一覧", icon: CalendarDays },
   { path: "/consultant/slots", label: "スケジュール管理", icon: Clock },
+  { path: "/consultant/price-plans", label: "料金プラン", icon: ReceiptText },
   { path: "/consultant/profile", label: "プロフィール", icon: UserCircle },
 ];
 

@@ -113,6 +113,9 @@ function createConfirmedBooking(startDatetime: string): Booking {
     slotId: "slot-1",
     startDatetime: new Date(startDatetime),
     consultantMemo: ConsultantMemo.create("memo"),
+    pricePlanId: "plan-1",
+    pricePlanName: "通常鑑定",
+    pricePlanTotalJPY: 5500,
   });
   booking.confirm(ZoomUrl.create("https://zoom.us/j/test"));
   return booking;

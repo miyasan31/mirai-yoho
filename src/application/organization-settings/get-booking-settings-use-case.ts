@@ -1,6 +1,8 @@
 import type { BusinessHoursProps } from "@/domain/organization-settings/business-hours";
 import { BusinessHours } from "@/domain/organization-settings/business-hours";
 import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
+import type { PricePlanRangeProps } from "@/domain/organization-settings/price-plan-range";
+import { PricePlanRange } from "@/domain/organization-settings/price-plan-range";
 
 interface GetBookingSettingsInput {
   organizationId: string;
@@ -10,6 +12,7 @@ interface GetBookingSettingsOutput {
   organizationId: string;
   consultantSelectionEnabled: boolean;
   businessHours: BusinessHoursProps;
+  pricePlanRange: PricePlanRangeProps;
 }
 
 export class GetBookingSettingsUseCase {
@@ -31,6 +34,7 @@ export class GetBookingSettingsUseCase {
         organizationId,
         consultantSelectionEnabled: true,
         businessHours: BusinessHours.createDefault().toJSON(),
+        pricePlanRange: PricePlanRange.createDefault().toJSON(),
       };
     }
 
@@ -38,6 +42,7 @@ export class GetBookingSettingsUseCase {
       organizationId: settings.getOrganizationId(),
       consultantSelectionEnabled: settings.getConsultantSelectionEnabled(),
       businessHours: settings.getBusinessHours().toJSON(),
+      pricePlanRange: settings.getPricePlanRange().toJSON(),
     };
   }
 }

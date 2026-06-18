@@ -4,8 +4,11 @@ import { ChargePaymentUseCase } from "@/application/booking/charge-payment-use-c
 import { CompleteSetupUseCase } from "@/application/booking/complete-setup-use-case";
 import { CreateBookingUseCase } from "@/application/booking/create-booking-use-case";
 import { SetupPaymentUseCase } from "@/application/booking/setup-payment-use-case";
+import { CreateConsultantPricePlanUseCase } from "@/application/consultant-price-plan/create-consultant-price-plan-use-case";
+import { UpdateConsultantPricePlanUseCase } from "@/application/consultant-price-plan/update-consultant-price-plan-use-case";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
 import { FirestoreClientRepository } from "@/infrastructure/firestore/firestore-client-repository";
+import { FirestoreConsultantPricePlanRepository } from "@/infrastructure/firestore/firestore-consultant-price-plan-repository";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
 import { FirestoreOrganizationSettingsRepository } from "@/infrastructure/firestore/firestore-organization-settings-repository";
 import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore-payment-repository";
@@ -18,6 +21,10 @@ import { ZoomService } from "@/infrastructure/zoom/zoom-service";
 
 export function createConsultantRepository() {
   return new FirestoreConsultantRepository();
+}
+
+export function createConsultantPricePlanRepository() {
+  return new FirestoreConsultantPricePlanRepository();
 }
 
 export function createSlotRepository() {
@@ -42,6 +49,8 @@ export function createCreateBookingUseCase() {
     new ResendEmailService(),
     new FirestoreZoomDailySessionRepository(),
     new FirestoreConsultantRepository(),
+    new FirestoreConsultantPricePlanRepository(),
+    new FirestoreOrganizationSettingsRepository(),
   );
 }
 
@@ -51,6 +60,19 @@ export function createSetupPaymentUseCase() {
     new FirestorePaymentRepository(),
     new StripeService(),
     new FirestoreUnitOfWork(),
+  );
+}
+
+export function createCreateConsultantPricePlanUseCase() {
+  return new CreateConsultantPricePlanUseCase(
+    new FirestoreConsultantPricePlanRepository(),
+    new FirestoreOrganizationSettingsRepository(),
+  );
+}
+
+export function createUpdateConsultantPricePlanUseCase() {
+  return new UpdateConsultantPricePlanUseCase(
+    new FirestoreConsultantPricePlanRepository(),
   );
 }
 

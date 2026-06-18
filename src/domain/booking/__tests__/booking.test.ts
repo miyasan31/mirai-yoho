@@ -17,6 +17,9 @@ function createPendingBooking() {
     slotId: "slot-1",
     startDatetime: futureDate,
     consultantMemo: ConsultantMemo.create(""),
+    pricePlanId: "plan-1",
+    pricePlanName: "通常鑑定",
+    pricePlanTotalJPY: 5500,
   });
 }
 

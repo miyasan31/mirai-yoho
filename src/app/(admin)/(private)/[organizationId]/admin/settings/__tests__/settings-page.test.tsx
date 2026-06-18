@@ -195,6 +195,10 @@ describe("AdminSettingsPage", () => {
       data: {
         consultantSelectionEnabled: false,
         businessHours: defaultBusinessHours,
+        pricePlanRange: {
+          minTotalJPY: 0,
+          maxTotalJPY: 100000,
+        },
       },
     });
 
@@ -210,6 +214,10 @@ describe("AdminSettingsPage", () => {
       data: {
         consultantSelectionEnabled: false,
         businessHours: defaultBusinessHours,
+        pricePlanRange: {
+          minTotalJPY: 0,
+          maxTotalJPY: 100000,
+        },
       },
     });
   });
@@ -259,6 +267,10 @@ describe("AdminSettingsPage", () => {
               timeWindows: [{ startTime: "13:00", endTime: "17:00" }],
             },
           ],
+        },
+        pricePlanRange: {
+          minTotalJPY: 0,
+          maxTotalJPY: 100000,
         },
       },
     });

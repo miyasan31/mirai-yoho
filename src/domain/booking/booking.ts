@@ -18,15 +18,25 @@ interface BookingCreateProps {
   startDatetime: Date;
   consultantMemo: ConsultantMemo;
   consultationContent?: string;
+  pricePlanId: string;
+  pricePlanName: string;
+  pricePlanTotalJPY: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface BookingProps extends BookingCreateProps {
+interface BookingProps
+  extends Omit<
+    BookingCreateProps,
+    "pricePlanId" | "pricePlanName" | "pricePlanTotalJPY"
+  > {
   status: BookingStatus;
   cancelDeadline: CancelDeadline;
   zoomUrl?: ZoomUrl;
   consultantJoinedAt?: Date;
+  pricePlanId?: string;
+  pricePlanName?: string;
+  pricePlanTotalJPY?: number;
 }
 
 export class Booking extends AggregateRoot {
@@ -43,6 +53,9 @@ export class Booking extends AggregateRoot {
     private consultantJoinedAt: Date | undefined,
     private consultantMemo: ConsultantMemo,
     private consultationContent: string | undefined,
+    private readonly pricePlanId: string | undefined,
+    private readonly pricePlanName: string | undefined,
+    private readonly pricePlanTotalJPY: number | undefined,
     private readonly createdAt: Date,
     private updatedAt: Date,
   ) {
@@ -64,6 +77,9 @@ export class Booking extends AggregateRoot {
       undefined,
       props.consultantMemo,
       props.consultationContent,
+      props.pricePlanId,
+      props.pricePlanName,
+      props.pricePlanTotalJPY,
       props.createdAt ?? now,
       props.updatedAt ?? now,
     );
@@ -84,6 +100,9 @@ export class Booking extends AggregateRoot {
       props.consultantJoinedAt,
       props.consultantMemo,
       props.consultationContent,
+      props.pricePlanId,
+      props.pricePlanName,
+      props.pricePlanTotalJPY,
       createdAt,
       props.updatedAt ?? createdAt,
     );
@@ -228,6 +247,18 @@ export class Booking extends AggregateRoot {
 
   getConsultationContent(): string | undefined {
     return this.consultationContent;
+  }
+
+  getPricePlanId(): string | undefined {
+    return this.pricePlanId;
+  }
+
+  getPricePlanName(): string | undefined {
+    return this.pricePlanName;
+  }
+
+  getPricePlanTotalJPY(): number | undefined {
+    return this.pricePlanTotalJPY;
   }
 
   getCreatedAt(): Date {
