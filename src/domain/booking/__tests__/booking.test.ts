@@ -164,4 +164,60 @@ describe("Booking", () => {
       expect(booking.getConsultantMemo().getValue()).toBe("updated memo");
     });
   });
+
+  describe("markConsultantJoined", () => {
+    it("開始15分前ちょうどから記録できる", () => {
+      const booking = createPendingBooking();
+      const joinedAt = new Date("2026-05-01T09:45:00Z");
+
+      booking.markConsultantJoined(joinedAt);
+
+      expect(booking.getConsultantJoinedAt()).toEqual(joinedAt);
+      expect(booking.getUpdatedAt()).toEqual(joinedAt);
+    });
+
+    it("15分より前は記録できない", () => {
+      const booking = createPendingBooking();
+
+      expect(() =>
+        booking.markConsultantJoined(new Date("2026-05-01T09:44:59Z")),
+      ).toThrow(DomainError);
+    });
+
+    it("開始後も記録できる", () => {
+      const booking = createPendingBooking();
+      const joinedAt = new Date("2026-05-01T10:05:00Z");
+
+      booking.markConsultantJoined(joinedAt);
+
+      expect(booking.getConsultantJoinedAt()).toEqual(joinedAt);
+    });
+
+    it("completed は記録できない", () => {
+      const booking = createConfirmedBooking();
+      booking.complete();
+
+      expect(() =>
+        booking.markConsultantJoined(new Date("2026-05-01T10:05:00Z")),
+      ).toThrow(DomainError);
+    });
+
+    it("cancelled は記録できない", () => {
+      const booking = createConfirmedBooking();
+      booking.cancel("admin");
+
+      expect(() =>
+        booking.markConsultantJoined(new Date("2026-05-01T10:05:00Z")),
+      ).toThrow(DomainError);
+    });
+
+    it("二重に記録できない", () => {
+      const booking = createPendingBooking();
+      booking.markConsultantJoined(new Date("2026-05-01T09:45:00Z"));
+
+      expect(() =>
+        booking.markConsultantJoined(new Date("2026-05-01T09:46:00Z")),
+      ).toThrow(DomainError);
+    });
+  });
 });

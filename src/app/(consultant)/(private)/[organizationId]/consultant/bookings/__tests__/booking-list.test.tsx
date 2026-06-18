@@ -17,9 +17,11 @@ vi.mock("next/navigation", () => ({
 }));
 
 const mockUseConsultantBookings = vi.fn();
+const mockUseJoinConsultantBooking = vi.fn();
 
 vi.mock("@/hooks/use-consultant-bookings", () => ({
   useConsultantBookings: () => mockUseConsultantBookings(),
+  useJoinConsultantBooking: () => mockUseJoinConsultantBooking(),
 }));
 
 vi.mock("@/hooks/use-list-query-params", () => ({
@@ -188,6 +190,11 @@ describe("ConsultantBookingsPage", () => {
   });
 
   it("shows loading state initially", () => {
+    mockUseJoinConsultantBooking.mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+      variables: null,
+    });
     mockUseConsultantBookings.mockReturnValue({
       data: undefined,
       isLoading: true,
@@ -198,6 +205,11 @@ describe("ConsultantBookingsPage", () => {
   });
 
   it("renders booking list from API response", async () => {
+    mockUseJoinConsultantBooking.mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+      variables: null,
+    });
     mockUseConsultantBookings.mockReturnValue({
       data: {
         data: {
@@ -208,6 +220,7 @@ describe("ConsultantBookingsPage", () => {
               startDatetime: "2026-04-01T10:00:00Z",
               status: "confirmed",
               zoomUrl: "https://zoom.us/j/123",
+              consultantJoinedAt: null,
               consultantMemo: "テストメモ",
               consultationContent: null,
               client: {
@@ -232,10 +245,16 @@ describe("ConsultantBookingsPage", () => {
       expect(screen.getByText("テストメモ")).toBeDefined();
       expect(screen.getByText("山田 太郎")).toBeDefined();
       expect(screen.getByText("クライアント")).toBeDefined();
+      expect(screen.getByText("入室確認")).toBeDefined();
     });
   });
 
   it("shows client hover card details", async () => {
+    mockUseJoinConsultantBooking.mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+      variables: null,
+    });
     mockUseConsultantBookings.mockReturnValue({
       data: {
         data: {
@@ -246,6 +265,7 @@ describe("ConsultantBookingsPage", () => {
               startDatetime: "2026-04-01T10:00:00Z",
               status: "confirmed",
               zoomUrl: "https://zoom.us/j/123",
+              consultantJoinedAt: null,
               consultantMemo: "テストメモ",
               consultationContent: null,
               client: {
@@ -274,6 +294,11 @@ describe("ConsultantBookingsPage", () => {
   });
 
   it("falls back to truncated id and missing message when client is null", async () => {
+    mockUseJoinConsultantBooking.mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+      variables: null,
+    });
     mockUseConsultantBookings.mockReturnValue({
       data: {
         data: {
@@ -284,6 +309,7 @@ describe("ConsultantBookingsPage", () => {
               startDatetime: "2026-04-01T10:00:00Z",
               status: "pending",
               zoomUrl: null,
+              consultantJoinedAt: null,
               consultantMemo: "",
               consultationContent: null,
               client: null,
@@ -306,6 +332,11 @@ describe("ConsultantBookingsPage", () => {
   });
 
   it("shows empty message when no bookings", async () => {
+    mockUseJoinConsultantBooking.mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+      variables: null,
+    });
     mockUseConsultantBookings.mockReturnValue({
       data: { data: { bookings: [] } },
       isLoading: false,
@@ -316,6 +347,41 @@ describe("ConsultantBookingsPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText("予約はありません")).toBeDefined();
+    });
+  });
+
+  it("shows joined timestamp when consultant already checked in", async () => {
+    mockUseJoinConsultantBooking.mockReturnValue({
+      mutateAsync: vi.fn(),
+      isPending: false,
+      variables: null,
+    });
+    mockUseConsultantBookings.mockReturnValue({
+      data: {
+        data: {
+          bookings: [
+            {
+              bookingId: "b1",
+              clientId: "c1",
+              startDatetime: "2026-04-01T10:00:00Z",
+              status: "confirmed",
+              zoomUrl: "https://zoom.us/j/123",
+              consultantJoinedAt: "2026-04-01T09:55:00Z",
+              consultantMemo: "",
+              consultationContent: null,
+              client: null,
+            },
+          ],
+        },
+      },
+      isLoading: false,
+      error: null,
+    });
+
+    render(<ConsultantBookingsPage />, { wrapper: createWrapper() });
+
+    await waitFor(() => {
+      expect(screen.getByText(/入室確認済み:/)).toBeDefined();
     });
   });
 });

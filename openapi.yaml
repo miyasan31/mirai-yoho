@@ -283,6 +283,20 @@ paths:
         "200":
           description: OK
 
+  /organizations/{organizationId}/consultant/bookings/{id}/join:
+    post:
+      operationId: joinConsultantBooking
+      summary: 相談員入室確認
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: OK
+
   /organizations/{organizationId}/consultant/profile:
     get:
       operationId: getConsultantProfile
@@ -1077,6 +1091,10 @@ components:
         zoomUrl:
           type: string
           format: uri
+          nullable: true
+        consultantJoinedAt:
+          type: string
+          format: date-time
           nullable: true
         consultantMemo:
           type: string

@@ -8,6 +8,7 @@ export interface HomeBookingItem {
   startDatetime: string;
   startAt: Date;
   zoomUrl: string | null;
+  consultantJoinedAt: string | null;
   consultantMemo: string;
 }
 
@@ -33,6 +34,7 @@ function toHomeBookingItem(booking: ConsultantBookingDetail): HomeBookingItem {
     startDatetime: booking.startDatetime,
     startAt: new Date(booking.startDatetime),
     zoomUrl: booking.zoomUrl ?? null,
+    consultantJoinedAt: booking.consultantJoinedAt ?? null,
     consultantMemo: booking.consultantMemo ?? "",
   };
 }
@@ -53,6 +55,13 @@ function isRemainingStatus(status: string): boolean {
   return status === "pending" || status === "confirmed";
 }
 
+function isTodayOrFuture(booking: HomeBookingItem, now: Date): boolean {
+  return (
+    isSameLocalDate(booking.startAt, now) ||
+    booking.startAt.getTime() >= now.getTime()
+  );
+}
+
 export function buildConsultantHomeViewModel(
   sourceBookings: ConsultantBookingDetail[],
   now = new Date(),
@@ -64,8 +73,7 @@ export function buildConsultantHomeViewModel(
   const nextBooking =
     bookings.find(
       (booking) =>
-        booking.startAt.getTime() >= now.getTime() &&
-        isRemainingStatus(booking.status),
+        isRemainingStatus(booking.status) && isTodayOrFuture(booking, now),
     ) ?? null;
 
   const todayBookings = bookings.filter((booking) =>

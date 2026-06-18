@@ -179,6 +179,7 @@ describe("AdminBookingsPage", () => {
               startDatetime: "2026-04-21T01:30:00.000Z",
               status: "confirmed",
               zoomUrl: null,
+              consultantJoinedAt: null,
               consultantMemo: "",
               consultationContent: null,
               chargeable: false,
@@ -211,6 +212,7 @@ describe("AdminBookingsPage", () => {
       (screen.getByRole("button", { name: "課金" }) as HTMLButtonElement)
         .disabled,
     ).toBe(true);
+    expect(screen.getByText("未確認")).toBeInTheDocument();
     expect(screen.getByText("予約開始前のため課金できません")).toBeDefined();
   });
 
@@ -227,6 +229,7 @@ describe("AdminBookingsPage", () => {
               startDatetime: "2026-04-19T01:30:00.000Z",
               status: "confirmed",
               zoomUrl: null,
+              consultantJoinedAt: "2026-04-19T01:20:00.000Z",
               consultantMemo: "",
               consultationContent: null,
               chargeable: true,
@@ -255,6 +258,7 @@ describe("AdminBookingsPage", () => {
 
     render(<AdminBookingsPage />);
 
+    expect(screen.getByText(/2026\/04\/19/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "課金" }));
 
     expect(mockMutateAsync).toHaveBeenCalledWith({

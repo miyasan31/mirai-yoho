@@ -1,5 +1,6 @@
 import {
   useGetConsultantBookings,
+  useJoinConsultantBooking,
   useUpdateConsultantMemo,
 } from "@/generated/api/consultant/consultant";
 import type { GetConsultantBookingsParams } from "@/generated/schemas";
@@ -18,4 +19,4 @@ export function useConsultantBookings(params?: GetConsultantBookingsParams) {
   });
 }
 
-export { useUpdateConsultantMemo };
+export { useJoinConsultantBooking, useUpdateConsultantMemo };

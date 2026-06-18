@@ -196,6 +196,7 @@ function createBooking() {
     consultantId: "consultant-001-abcdef",
     startDatetime: "2026-04-01T10:00:00.000Z",
     status: "confirmed",
+    consultantJoinedAt: null,
     chargeable: true,
     chargeDisabledReason: null,
   };
@@ -281,6 +282,8 @@ describe("AdminBookingsPage", () => {
 
     expect(screen.getByText("クライアント")).toBeInTheDocument();
     expect(screen.getByText("相談員")).toBeInTheDocument();
+    expect(screen.getByText("入室確認")).toBeInTheDocument();
+    expect(screen.getByText("未確認")).toBeInTheDocument();
     expect(screen.getByText("山田 太郎")).toBeInTheDocument();
     expect(screen.getByText("佐藤 花子")).toBeInTheDocument();
     expect(mockUseAdminClients).toHaveBeenCalledWith(

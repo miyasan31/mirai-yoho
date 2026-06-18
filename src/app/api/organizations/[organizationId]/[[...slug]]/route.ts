@@ -3,6 +3,7 @@ import { FieldPath, type Timestamp } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { type NextRequest, NextResponse } from "next/server";
 import { evaluateChargeEligibility } from "@/application/booking/charge-eligibility";
+import { MarkConsultantJoinedUseCase } from "@/application/consultant/mark-consultant-joined-use-case";
 import { UpdateMemoUseCase } from "@/application/consultant/update-memo-use-case";
 import { UpdateProfileUseCase } from "@/application/consultant/update-profile-use-case";
 import { AppError } from "@/application/shared/app-error";
@@ -655,6 +656,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
             startDatetime: b.getStartDatetime().toISOString(),
             status: b.getStatus().getValue(),
             zoomUrl: b.getZoomUrl()?.getValue() ?? null,
+            consultantJoinedAt:
+              b.getConsultantJoinedAt()?.toISOString() ?? null,
             consultantMemo: b.getConsultantMemo().getValue(),
             consultationContent: b.getConsultationContent() ?? null,
             chargeable: eligibility.chargeable,
@@ -926,6 +929,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
             startDatetime: b.getStartDatetime().toISOString(),
             status: b.getStatus().getValue(),
             zoomUrl: b.getZoomUrl()?.getValue() ?? null,
+            consultantJoinedAt:
+              b.getConsultantJoinedAt()?.toISOString() ?? null,
             consultantMemo: b.getConsultantMemo().getValue(),
             consultationContent: b.getConsultationContent() ?? null,
             chargeable: eligibility.chargeable,
@@ -1210,6 +1215,27 @@ export async function POST(request: NextRequest, context: RouteContext) {
         organizationId,
         bookingId: segments[1],
         method: "manual",
+      });
+
+      return NextResponse.json({ success: true });
+    }
+
+    if (
+      segments.length === 4 &&
+      segments[0] === "consultant" &&
+      segments[1] === "bookings" &&
+      segments[3] === "join"
+    ) {
+      const authUser = await verifyAuth(request);
+      requireOrganizationRole(authUser, organizationId, "consultant");
+
+      await new MarkConsultantJoinedUseCase(
+        new FirestoreBookingRepository(),
+      ).execute({
+        organizationId,
+        bookingId: segments[2],
+        consultantId: authUser.uid,
+        joinedAt: new Date(),
       });
 
       return NextResponse.json({ success: true });
