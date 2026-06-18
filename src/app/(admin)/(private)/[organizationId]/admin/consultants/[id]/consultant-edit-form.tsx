@@ -48,6 +48,7 @@ export function ConsultantEditForm({
     defaultValues: {
       displayName: "",
       bio: "",
+      phone: "",
       specialties: "",
     },
   });
@@ -70,6 +71,7 @@ export function ConsultantEditForm({
       reset({
         displayName: consultant.displayName ?? "",
         bio: consultant.bio ?? "",
+        phone: consultant.phone ?? "",
         specialties: (consultant.specialties ?? []).join(", "),
       });
     }
@@ -99,6 +101,7 @@ export function ConsultantEditForm({
         data: {
           displayName: values.displayName,
           bio: values.bio?.trim() ?? "",
+          phone: values.phone?.trim() ?? "",
           specialties: (values.specialties ?? "")
             .split(",")
             .map((s) => s.trim())
@@ -165,6 +168,13 @@ export function ConsultantEditForm({
       <Field.Root>
         <Field.Label>自己紹介</Field.Label>
         <Textarea id="bio" {...register("bio")} rows={4} />
+      </Field.Root>
+      <Field.Root invalid={!!errors.phone}>
+        <Field.Label>電話番号</Field.Label>
+        <Input id="phone" type="tel" {...register("phone")} />
+        {errors.phone && (
+          <Field.ErrorText>{errors.phone.message}</Field.ErrorText>
+        )}
       </Field.Root>
       <Field.Root>
         <Field.Label>専門分野（カンマ区切り）</Field.Label>

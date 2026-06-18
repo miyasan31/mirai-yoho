@@ -220,4 +220,25 @@ describe("Booking", () => {
       ).toThrow(DomainError);
     });
   });
+
+  describe("markLateArrivalAlertSent", () => {
+    it("遅刻アラート通知済み時刻を記録する", () => {
+      const booking = createConfirmedBooking();
+      const sentAt = new Date("2026-05-01T10:30:00Z");
+
+      booking.markLateArrivalAlertSent(sentAt);
+
+      expect(booking.getLateArrivalAlertSentAt()).toEqual(sentAt);
+      expect(booking.getUpdatedAt()).toEqual(sentAt);
+    });
+
+    it("遅刻アラート通知済みの予約を再度記録するとエラー", () => {
+      const booking = createConfirmedBooking();
+      booking.markLateArrivalAlertSent(new Date("2026-05-01T10:30:00Z"));
+
+      expect(() =>
+        booking.markLateArrivalAlertSent(new Date("2026-05-01T11:00:00Z")),
+      ).toThrow(DomainError);
+    });
+  });
 });

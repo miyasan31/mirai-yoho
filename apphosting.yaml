@@ -54,6 +54,10 @@ env:
     secret: FIREBASE_PRIVATE_KEY
   - variable: CANCEL_TOKEN_SECRET
     secret: CANCEL_TOKEN_SECRET
+  - variable: LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL
+    secret: LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL
+  - variable: LATE_ARRIVAL_ALERT_CRON_SECRET
+    secret: LATE_ARRIVAL_ALERT_CRON_SECRET
 
   # Runtime secrets（運用値も Secret Manager で管理）
   - variable: RESEND_FROM_EMAIL
