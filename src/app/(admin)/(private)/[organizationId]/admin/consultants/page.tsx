@@ -113,7 +113,7 @@ export default function AdminConsultantsPage() {
             </Text>
           </styled.div>
         </styled.div>
-        <TableSkeleton columns={5} rows={5} />
+        <TableSkeleton columns={6} rows={5} />
       </styled.div>
     );
   }
@@ -216,6 +216,7 @@ export default function AdminConsultantsPage() {
                 <Table.Header>名前</Table.Header>
                 <Table.Header>メールアドレス</Table.Header>
                 <Table.Header>専門分野</Table.Header>
+                <Table.Header>ランク</Table.Header>
                 <Table.Header>ステータス</Table.Header>
                 <Table.Header>操作</Table.Header>
               </Table.Row>
@@ -226,6 +227,7 @@ export default function AdminConsultantsPage() {
                   <Table.Cell>{c.displayName}</Table.Cell>
                   <Table.Cell>{c.email}</Table.Cell>
                   <Table.Cell>{c.specialties.join(", ")}</Table.Cell>
+                  <Table.Cell>{c.rank.name}</Table.Cell>
                   <Table.Cell>
                     <ActiveStatusBadge isActive={c.isActive} />
                   </Table.Cell>

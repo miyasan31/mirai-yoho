@@ -11,6 +11,7 @@ import { envServer } from "@/config/env.server";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import { BusinessHours } from "@/domain/organization-settings/business-hours";
+import type { ConsultantRankProps } from "@/domain/organization-settings/consultant-rank";
 import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
 import { DomainError } from "@/domain/shared/domain-error";
 import { Slot } from "@/domain/slot/slot";
@@ -146,6 +147,61 @@ function toBookingSettingsResponse(settings: OrganizationSettings) {
   return {
     consultantSelectionEnabled: settings.getConsultantSelectionEnabled(),
     businessHours: settings.getBusinessHours().toJSON(),
+  };
+}
+
+function toConsultantRanksResponse(settings: OrganizationSettings) {
+  return {
+    consultantRanks: settings.getConsultantRanks(),
+    defaultConsultantRankId: settings.getDefaultConsultantRankId(),
+  };
+}
+
+function resolveConsultantRank(
+  settings: OrganizationSettings,
+  rankId: string,
+): ConsultantRankProps {
+  return (
+    settings.findConsultantRank(rankId) ??
+    settings.findConsultantRank(settings.getDefaultConsultantRankId()) ??
+    settings.getConsultantRanks()[0]
+  );
+}
+
+function toConsultantRankResponse(rank: ConsultantRankProps) {
+  return {
+    rankId: rank.rankId,
+    name: rank.name,
+  };
+}
+
+function parseConsultantRanksBody(
+  body: unknown,
+): { ranks: ConsultantRankProps[]; defaultRankId: string } | null {
+  if (!body || typeof body !== "object") return null;
+  const payload = body as {
+    consultantRanks?: unknown;
+    defaultConsultantRankId?: unknown;
+  };
+  if (
+    !Array.isArray(payload.consultantRanks) ||
+    typeof payload.defaultConsultantRankId !== "string"
+  ) {
+    return null;
+  }
+  const ranks = payload.consultantRanks.map((rank) => {
+    if (!rank || typeof rank !== "object") {
+      return { rankId: "", name: "" };
+    }
+    const source = rank as { rankId?: unknown; name?: unknown };
+    return {
+      rankId: typeof source.rankId === "string" ? source.rankId : "",
+      name: typeof source.name === "string" ? source.name : "",
+    };
+  });
+  return {
+    ranks,
+    defaultRankId: payload.defaultConsultantRankId,
   };
 }
 
@@ -377,18 +433,27 @@ async function getAdminOrOperatorDisplayNameMap(
 
 async function handleGetPublicConsultants(organizationId: string) {
   const repo = createConsultantRepository();
-  const consultants = await repo.findAllActive(organizationId);
+  const [consultants, settings] = await Promise.all([
+    repo.findAllActive(organizationId),
+    createOrganizationSettingsRepository().findByOrganizationId(organizationId),
+  ]);
+  const resolvedSettings =
+    settings ?? OrganizationSettings.createDefault(organizationId);
 
   return withNoStore(
     NextResponse.json({
-      consultants: consultants.map((c) => ({
-        consultantId: c.getConsultantId(),
-        name: c.getProfile().getDisplayName(),
-        specialties: [...c.getProfile().getSpecialties()],
-        bio: c.getProfile().getBio(),
-        imageUrl: c.getProfile().getImageUrl(),
-        isActive: c.getIsActive(),
-      })),
+      consultants: consultants.map((c) => {
+        const rank = resolveConsultantRank(resolvedSettings, c.getRankId());
+        return {
+          consultantId: c.getConsultantId(),
+          name: c.getProfile().getDisplayName(),
+          specialties: [...c.getProfile().getSpecialties()],
+          bio: c.getProfile().getBio(),
+          imageUrl: c.getProfile().getImageUrl(),
+          rank: toConsultantRankResponse(rank),
+          isActive: c.getIsActive(),
+        };
+      }),
     }),
   );
 }
@@ -696,7 +761,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
         );
       }
       const repo = createConsultantRepository();
-      const consultants = await repo.findAllActive(organizationId);
+      const [consultants, settings] = await Promise.all([
+        repo.findAllActive(organizationId),
+        createOrganizationSettingsRepository().findByOrganizationId(
+          organizationId,
+        ),
+      ]);
+      const resolvedSettings =
+        settings ?? OrganizationSettings.createDefault(organizationId);
       const userByUid = await getUsersByUids(
         consultants.map((consultant) => consultant.getConsultantId()),
       );
@@ -711,6 +783,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
           imageUrl: c.getProfile().getImageUrl(),
           specialties: [...c.getProfile().getSpecialties()],
           zoomRoomIds: c.getZoomRoomIds(),
+          rank: toConsultantRankResponse(
+            resolveConsultantRank(resolvedSettings, c.getRankId()),
+          ),
           isActive: c.getIsActive(),
           createdAt: c.getCreatedAt().toISOString(),
           updatedAt: c.getUpdatedAt().toISOString(),
@@ -827,6 +902,22 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const resolvedSettings =
         settings ?? OrganizationSettings.createDefault(organizationId);
       return noStoreJson(toBookingSettingsResponse(resolvedSettings));
+    }
+
+    if (
+      segments.length === 3 &&
+      segments[0] === "admin" &&
+      segments[1] === "settings" &&
+      segments[2] === "consultant-ranks"
+    ) {
+      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      const settings =
+        await createOrganizationSettingsRepository().findByOrganizationId(
+          organizationId,
+        );
+      const resolvedSettings =
+        settings ?? OrganizationSettings.createDefault(organizationId);
+      return noStoreJson(toConsultantRanksResponse(resolvedSettings));
     }
 
     if (
@@ -973,17 +1064,31 @@ export async function GET(request: NextRequest, context: RouteContext) {
       );
 
       if (!consultant) {
+        const settings =
+          (await createOrganizationSettingsRepository().findByOrganizationId(
+            organizationId,
+          )) ?? OrganizationSettings.createDefault(organizationId);
+        const rank = resolveConsultantRank(
+          settings,
+          settings.getDefaultConsultantRankId(),
+        );
         return noStoreJson({
           consultantId: authUser.uid,
           displayName: "",
           bio: "",
           specialties: [],
           zoomRoomIds: [],
+          rank: toConsultantRankResponse(rank),
           isActive: true,
         });
       }
 
+      const settings =
+        (await createOrganizationSettingsRepository().findByOrganizationId(
+          organizationId,
+        )) ?? OrganizationSettings.createDefault(organizationId);
       const profile = consultant.getProfile();
+      const rank = resolveConsultantRank(settings, consultant.getRankId());
       return noStoreJson({
         consultantId: consultant.getConsultantId(),
         displayName: profile.getDisplayName(),
@@ -991,6 +1096,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         imageUrl: profile.getImageUrl(),
         specialties: [...profile.getSpecialties()],
         zoomRoomIds: consultant.getZoomRoomIds(),
+        rank: toConsultantRankResponse(rank),
         isActive: consultant.getIsActive(),
       });
     }
@@ -1336,6 +1442,18 @@ export async function POST(request: NextRequest, context: RouteContext) {
           "consultantId and displayName are required",
         );
       }
+      if (body.rankId !== undefined) {
+        requireOrganizationRole(authUser, organizationId, "admin");
+      }
+
+      const settings =
+        (await createOrganizationSettingsRepository().findByOrganizationId(
+          organizationId,
+        )) ?? OrganizationSettings.createDefault(organizationId);
+      const rankId = body.rankId ?? settings.getDefaultConsultantRankId();
+      if (typeof rankId !== "string" || !settings.findConsultantRank(rankId)) {
+        return jsonError(400, "VALIDATION_ERROR", "rankId is invalid");
+      }
 
       const consultant = Consultant.create({
         organizationId,
@@ -1346,6 +1464,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           specialties ?? [],
         ),
         zoomRoomIds: zoomRoomIds ?? [],
+        rankId,
       });
 
       await createConsultantRepository().save(consultant);
@@ -1419,12 +1538,17 @@ export async function POST(request: NextRequest, context: RouteContext) {
         const repo = createConsultantRepository();
         const existing = await repo.findById(organizationId, uid);
         if (!existing) {
+          const settings =
+            (await createOrganizationSettingsRepository().findByOrganizationId(
+              organizationId,
+            )) ?? OrganizationSettings.createDefault(organizationId);
           await repo.save(
             Consultant.create({
               organizationId,
               consultantId: uid,
               profile: ConsultantProfile.create(normalizedDisplayName, "", []),
               zoomRoomIds: [],
+              rankId: settings.getDefaultConsultantRankId(),
             }),
           );
         }
@@ -1718,6 +1842,47 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       segments.length === 3 &&
       segments[0] === "admin" &&
       segments[1] === "settings" &&
+      segments[2] === "consultant-ranks"
+    ) {
+      requireOrganizationRole(authUser, organizationId, "admin");
+      const body = await request.json();
+      const parsed = parseConsultantRanksBody(body);
+      if (!parsed) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "consultantRanks and defaultConsultantRankId are required",
+        );
+      }
+
+      const settingsRepository = createOrganizationSettingsRepository();
+      const settings =
+        (await settingsRepository.findByOrganizationId(organizationId)) ??
+        OrganizationSettings.createDefault(organizationId);
+      settings.updateConsultantRanks(parsed.ranks, parsed.defaultRankId);
+      await settingsRepository.save(settings);
+
+      const rankIds = new Set(
+        settings.getConsultantRanks().map((rank) => rank.rankId),
+      );
+      const consultantRepository = createConsultantRepository();
+      const consultants = await consultantRepository.findAll(organizationId);
+      await Promise.all(
+        consultants
+          .filter((consultant) => !rankIds.has(consultant.getRankId()))
+          .map((consultant) => {
+            consultant.changeRank(settings.getDefaultConsultantRankId());
+            return consultantRepository.save(consultant);
+          }),
+      );
+
+      return NextResponse.json(toConsultantRanksResponse(settings));
+    }
+
+    if (
+      segments.length === 3 &&
+      segments[0] === "admin" &&
+      segments[1] === "settings" &&
       segments[2] === "booking"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin");
@@ -1795,6 +1960,21 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
       if (body.zoomRoomIds) {
         consultant.assignZoomRooms(body.zoomRoomIds);
+      }
+
+      if (body.rankId !== undefined) {
+        requireOrganizationRole(authUser, organizationId, "admin");
+        const settings =
+          (await createOrganizationSettingsRepository().findByOrganizationId(
+            organizationId,
+          )) ?? OrganizationSettings.createDefault(organizationId);
+        if (
+          typeof body.rankId !== "string" ||
+          !settings.findConsultantRank(body.rankId)
+        ) {
+          return jsonError(400, "VALIDATION_ERROR", "rankId is invalid");
+        }
+        consultant.changeRank(body.rankId);
       }
 
       await repo.save(consultant);

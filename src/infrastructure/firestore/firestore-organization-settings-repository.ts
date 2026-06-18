@@ -1,4 +1,5 @@
 import { BusinessHours } from "@/domain/organization-settings/business-hours";
+import type { ConsultantRankProps } from "@/domain/organization-settings/consultant-rank";
 import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
 import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
 import { db } from "@/infrastructure/firestore/firestore-client";
@@ -10,6 +11,8 @@ interface OrganizationSettingsDoc {
   organizationId: string;
   consultantSelectionEnabled: boolean;
   businessHours?: ReturnType<BusinessHours["toJSON"]>;
+  consultantRanks?: ConsultantRankProps[];
+  defaultConsultantRankId?: string;
 }
 
 function toDomain(doc: OrganizationSettingsDoc): OrganizationSettings {
@@ -17,6 +20,8 @@ function toDomain(doc: OrganizationSettingsDoc): OrganizationSettings {
     organizationId: doc.organizationId,
     consultantSelectionEnabled: doc.consultantSelectionEnabled,
     businessHours: doc.businessHours ?? BusinessHours.createDefault().toJSON(),
+    consultantRanks: doc.consultantRanks,
+    defaultConsultantRankId: doc.defaultConsultantRankId,
   });
 }
 
@@ -25,6 +30,8 @@ function toFirestore(settings: OrganizationSettings): OrganizationSettingsDoc {
     organizationId: settings.getOrganizationId(),
     consultantSelectionEnabled: settings.getConsultantSelectionEnabled(),
     businessHours: settings.getBusinessHours().toJSON(),
+    consultantRanks: settings.getConsultantRanks(),
+    defaultConsultantRankId: settings.getDefaultConsultantRankId(),
   };
 }
 

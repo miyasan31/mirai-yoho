@@ -1,5 +1,11 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const mockMutateAsync = vi.fn();
@@ -105,7 +111,23 @@ vi.mock("@/hooks/use-booking-settings", () => ({
     },
     isLoading: false,
   }),
+  useAdminConsultantRanks: () => ({
+    data: {
+      data: {
+        consultantRanks: [
+          { rankId: "premium", name: "プレミアム" },
+          { rankId: "standard", name: "標準" },
+        ],
+        defaultConsultantRankId: "standard",
+      },
+    },
+    isLoading: false,
+  }),
   useUpdateAdminBookingSettings: () => ({
+    mutateAsync: mockMutateAsync,
+    isPending: false,
+  }),
+  useUpdateAdminConsultantRanks: () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
   }),
@@ -172,6 +194,21 @@ describe("AdminSettingsPage", () => {
 
     expect(mockReplace).toHaveBeenCalled();
     expect(currentTabParam).toBe("business-hours");
+  });
+
+  it("shows consultant rank settings", async () => {
+    const user = userEvent.setup();
+    render(<AdminSettingsPage />);
+
+    await user.click(screen.getByRole("tab", { name: "相談員ランク" }));
+    const panel = screen.getByRole("tabpanel", { name: "相談員ランク" });
+
+    expect(within(panel).getByDisplayValue("プレミアム")).toBeInTheDocument();
+    expect(within(panel).getByDisplayValue("標準")).toBeInTheDocument();
+
+    expect(
+      within(panel).getByRole("button", { name: "ランクを追加" }),
+    ).toBeInTheDocument();
   });
 
   it("keeps unsaved booking form state across tab switches", async () => {
