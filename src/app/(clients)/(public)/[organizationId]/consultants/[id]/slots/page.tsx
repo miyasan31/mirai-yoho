@@ -133,7 +133,7 @@ export default function SlotsPage({
                   <styled.a
                     key={slot.slotId}
                     href={buildPath(
-                      `/booking?slotId=${slot.slotId}&consultantId=${consultantId}`,
+                      `/booking?slotId=${slot.slotId}&consultantId=${consultantId}&startDatetime=${encodeURIComponent(slot.startDatetime)}&endDatetime=${encodeURIComponent(slot.endDatetime)}`,
                     )}
                     shadow="xs"
                     border="1px solid"
