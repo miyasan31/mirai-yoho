@@ -230,6 +230,42 @@ paths:
                   completedCount:
                     type: integer
 
+  /organizations/{organizationId}/batch/late-arrival-alerts:
+    post:
+      operationId: notifyLateArrivalAlerts
+      summary: 相談員遅刻予防アラート送信（Cloud Scheduler）
+      tags: [batch]
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: x-cron-secret
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [targetCount, notifiedCount, errors]
+                properties:
+                  targetCount:
+                    type: integer
+                  notifiedCount:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      required: [bookingId, error]
+                      properties:
+                        bookingId:
+                          type: string
+                        error:
+                          type: string
+
   /organizations/{organizationId}/consultant/bookings:
     get:
       operationId: getConsultantBookings
@@ -332,6 +368,8 @@ paths:
                 displayName:
                   type: string
                 bio:
+                  type: string
+                phone:
                   type: string
                 imageUrl:
                   type: string
@@ -488,6 +526,8 @@ paths:
                   type: string
                 bio:
                   type: string
+                phone:
+                  type: string
                 specialties:
                   type: array
                   items:
@@ -520,6 +560,8 @@ paths:
                 displayName:
                   type: string
                 bio:
+                  type: string
+                phone:
                   type: string
                 specialties:
                   type: array
@@ -721,6 +763,8 @@ paths:
                   type: string
                   format: email
                 displayName:
+                  type: string
+                phone:
                   type: string
                 role:
                   type: string
@@ -955,6 +999,8 @@ components:
           type: string
         bio:
           type: string
+        phone:
+          type: string
         imageUrl:
           type: string
         specialties:
@@ -983,6 +1029,8 @@ components:
         displayName:
           type: string
         bio:
+          type: string
+        phone:
           type: string
         imageUrl:
           type: string
@@ -1093,6 +1141,10 @@ components:
           format: uri
           nullable: true
         consultantJoinedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lateArrivalAlertSentAt:
           type: string
           format: date-time
           nullable: true

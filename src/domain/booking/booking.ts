@@ -27,6 +27,7 @@ interface BookingProps extends BookingCreateProps {
   cancelDeadline: CancelDeadline;
   zoomUrl?: ZoomUrl;
   consultantJoinedAt?: Date;
+  lateArrivalAlertSentAt?: Date;
 }
 
 export class Booking extends AggregateRoot {
@@ -41,6 +42,7 @@ export class Booking extends AggregateRoot {
     private readonly cancelDeadline: CancelDeadline,
     private zoomUrl: ZoomUrl | undefined,
     private consultantJoinedAt: Date | undefined,
+    private lateArrivalAlertSentAt: Date | undefined,
     private consultantMemo: ConsultantMemo,
     private consultationContent: string | undefined,
     private readonly createdAt: Date,
@@ -60,6 +62,7 @@ export class Booking extends AggregateRoot {
       props.startDatetime,
       BookingStatus.create("pending"),
       CancelDeadline.create(props.startDatetime),
+      undefined,
       undefined,
       undefined,
       props.consultantMemo,
@@ -82,6 +85,7 @@ export class Booking extends AggregateRoot {
       props.cancelDeadline,
       props.zoomUrl,
       props.consultantJoinedAt,
+      props.lateArrivalAlertSentAt,
       props.consultantMemo,
       props.consultationContent,
       createdAt,
@@ -177,6 +181,18 @@ export class Booking extends AggregateRoot {
     this.updatedAt = now;
   }
 
+  markLateArrivalAlertSent(sentAt: Date): void {
+    if (this.lateArrivalAlertSentAt) {
+      throw new DomainError(
+        "LATE_ARRIVAL_ALERT_ALREADY_SENT",
+        "Late arrival alert has already been sent",
+      );
+    }
+
+    this.lateArrivalAlertSentAt = sentAt;
+    this.updatedAt = sentAt;
+  }
+
   updateMemo(memo: ConsultantMemo): void {
     this.consultantMemo = memo;
     this.updatedAt = new Date();
@@ -220,6 +236,10 @@ export class Booking extends AggregateRoot {
 
   getConsultantJoinedAt(): Date | undefined {
     return this.consultantJoinedAt;
+  }
+
+  getLateArrivalAlertSentAt(): Date | undefined {
+    return this.lateArrivalAlertSentAt;
   }
 
   getConsultantMemo(): ConsultantMemo {

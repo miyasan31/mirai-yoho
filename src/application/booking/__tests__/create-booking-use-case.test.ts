@@ -10,7 +10,6 @@ import type { IClientRepository } from "@/domain/client/client-repository";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
-import type { DomainError } from "@/domain/shared/domain-error";
 import { Slot } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import { TimeRange } from "@/domain/slot/time-range";
@@ -447,7 +446,7 @@ describe("CreateBookingUseCase", () => {
         clientPhone: "090-1234-5678",
         clientBirthdate: "1990-01-01",
       }),
-    ).rejects.toMatchObject<DomainError>({
+    ).rejects.toMatchObject({
       code: "BOOKING_CUTOFF_EXCEEDED",
     });
   });
@@ -473,7 +472,7 @@ describe("CreateBookingUseCase", () => {
         clientPhone: "090-1234-5678",
         clientBirthdate: "1990-01-01",
       }),
-    ).rejects.toMatchObject<DomainError>({
+    ).rejects.toMatchObject({
       code: "BOOKING_CUTOFF_EXCEEDED",
     });
   });
