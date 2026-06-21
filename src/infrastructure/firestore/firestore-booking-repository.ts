@@ -25,6 +25,9 @@ interface BookingDoc {
   lateArrivalAlertSentAt?: Timestamp;
   consultantMemo: string;
   consultationContent?: string;
+  pricePlanId?: string;
+  pricePlanName?: string;
+  pricePlanTotalJPY?: number;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
@@ -45,6 +48,9 @@ function toDomain(doc: BookingDoc): Booking {
     lateArrivalAlertSentAt: doc.lateArrivalAlertSentAt?.toDate(),
     consultantMemo: ConsultantMemo.reconstruct(doc.consultantMemo),
     consultationContent: doc.consultationContent,
+    pricePlanId: doc.pricePlanId,
+    pricePlanName: doc.pricePlanName,
+    pricePlanTotalJPY: doc.pricePlanTotalJPY,
     createdAt,
     updatedAt: doc.updatedAt?.toDate() ?? createdAt,
   });
@@ -65,6 +71,9 @@ function toFirestore(booking: Booking): Record<string, unknown> {
     lateArrivalAlertSentAt: booking.getLateArrivalAlertSentAt() ?? null,
     consultantMemo: booking.getConsultantMemo().getValue(),
     consultationContent: booking.getConsultationContent() ?? null,
+    pricePlanId: booking.getPricePlanId() ?? null,
+    pricePlanName: booking.getPricePlanName() ?? null,
+    pricePlanTotalJPY: booking.getPricePlanTotalJPY() ?? null,
     createdAt: booking.getCreatedAt(),
     updatedAt: booking.getUpdatedAt(),
   };

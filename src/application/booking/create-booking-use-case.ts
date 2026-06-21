@@ -9,7 +9,15 @@ import { ZoomUrl } from "@/domain/booking/zoom-url";
 import { Client } from "@/domain/client/client";
 import type { IClientRepository } from "@/domain/client/client-repository";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
+import {
+  type ConsultantPricePlan,
+  parsePricePlanSelectionId,
+} from "@/domain/consultant-price-plan/consultant-price-plan";
+import type { IConsultantPricePlanRepository } from "@/domain/consultant-price-plan/consultant-price-plan-repository";
+import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
+import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
 import { DomainError } from "@/domain/shared/domain-error";
+import type { Slot } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import { ZoomDailySession } from "@/domain/zoom-session/zoom-daily-session";
 import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
@@ -24,6 +32,7 @@ interface CreateBookingInput {
   clientPhone: string;
   clientBirthdate: string;
   consultationContent?: string;
+  pricePlanSelectionId: string;
 }
 
 interface CreateBookingOutput {
@@ -61,10 +70,12 @@ export class CreateBookingUseCase {
     private readonly emailService: IEmailService,
     private readonly zoomDailySessionRepository: IZoomDailySessionRepository,
     private readonly consultantRepository: IConsultantRepository,
+    private readonly consultantPricePlanRepository: IConsultantPricePlanRepository,
+    private readonly organizationSettingsRepository: IOrganizationSettingsRepository,
   ) {}
 
   async execute(input: CreateBookingInput): Promise<CreateBookingOutput> {
-    const slot = await this.resolveSlot(input);
+    const { slot, pricePlan } = await this.resolveSlotAndPricePlan(input);
 
     const bookingId = crypto.randomUUID();
     slot.reserve(bookingId);
@@ -102,6 +113,9 @@ export class CreateBookingUseCase {
       startDatetime: slot.getTimeRange().getStartAt(),
       consultantMemo: ConsultantMemo.create(""),
       consultationContent: input.consultationContent,
+      pricePlanId: pricePlan.getPricePlanId(),
+      pricePlanName: pricePlan.getName(),
+      pricePlanTotalJPY: pricePlan.getTotalJPY(),
     });
 
     const consultant = await this.consultantRepository.findById(
@@ -190,7 +204,23 @@ export class CreateBookingUseCase {
     return { bookingId, zoomUrl: session.getJoinUrl() };
   }
 
-  private async resolveSlot(input: CreateBookingInput) {
+  private async resolveSlotAndPricePlan(
+    input: CreateBookingInput,
+  ): Promise<{ slot: Slot; pricePlan: ConsultantPricePlan }> {
+    const selection = parsePricePlanSelectionId(input.pricePlanSelectionId);
+    if (!selection) {
+      throw new AppError(
+        400,
+        "INVALID_PRICE_PLAN_SELECTION",
+        "Price plan selection is invalid",
+      );
+    }
+    const settings =
+      (await this.organizationSettingsRepository.findByOrganizationId(
+        input.organizationId,
+      )) ?? OrganizationSettings.createDefault(input.organizationId);
+    const pricePlanRange = settings.getPricePlanRange();
+
     if (input.slotId) {
       const slot = await this.slotRepository.findById(
         input.organizationId,
@@ -199,7 +229,20 @@ export class CreateBookingUseCase {
       if (!slot) {
         throw new Error("Slot not found");
       }
-      return slot;
+      const pricePlan = await this.findSelectablePricePlanForConsultant({
+        organizationId: input.organizationId,
+        consultantId: slot.getConsultantId(),
+        normalizedName: selection.normalizedName,
+        totalJPY: selection.totalJPY,
+      });
+      if (!pricePlan || !pricePlanRange.contains(pricePlan.getTotalJPY())) {
+        throw new AppError(
+          400,
+          "PRICE_PLAN_NOT_SELECTABLE",
+          "Selected price plan is not selectable",
+        );
+      }
+      return { slot, pricePlan };
     }
 
     if (!input.startDatetime || !input.endDatetime) {
@@ -212,7 +255,28 @@ export class CreateBookingUseCase {
       input.endDatetime,
     );
 
-    if (candidateSlots.length === 0) {
+    const candidateSlotsWithPricePlans = await Promise.all(
+      candidateSlots.map(async (slot) => {
+        const pricePlan = await this.findSelectablePricePlanForConsultant({
+          organizationId: input.organizationId,
+          consultantId: slot.getConsultantId(),
+          normalizedName: selection.normalizedName,
+          totalJPY: selection.totalJPY,
+        });
+        if (!pricePlan || !pricePlanRange.contains(pricePlan.getTotalJPY())) {
+          return null;
+        }
+        return { slot, pricePlan };
+      }),
+    );
+    const selectableCandidates = candidateSlotsWithPricePlans.filter(
+      (
+        candidate,
+      ): candidate is { slot: Slot; pricePlan: ConsultantPricePlan } =>
+        candidate !== null,
+    );
+
+    if (selectableCandidates.length === 0) {
       throw new Error("Slot is no longer available");
     }
 
@@ -230,19 +294,35 @@ export class CreateBookingUseCase {
       );
     }
 
-    return [...candidateSlots].sort((left, right) => {
+    return [...selectableCandidates].sort((left, right) => {
       const leftCount =
-        availableCountByConsultant.get(left.getConsultantId()) ??
+        availableCountByConsultant.get(left.slot.getConsultantId()) ??
         Number.MAX_SAFE_INTEGER;
       const rightCount =
-        availableCountByConsultant.get(right.getConsultantId()) ??
+        availableCountByConsultant.get(right.slot.getConsultantId()) ??
         Number.MAX_SAFE_INTEGER;
 
       if (leftCount !== rightCount) {
         return leftCount - rightCount;
       }
 
-      return left.getConsultantId().localeCompare(right.getConsultantId());
+      return left.slot
+        .getConsultantId()
+        .localeCompare(right.slot.getConsultantId());
     })[0];
+  }
+
+  private async findSelectablePricePlanForConsultant(params: {
+    organizationId: string;
+    consultantId: string;
+    normalizedName: string;
+    totalJPY: number;
+  }): Promise<ConsultantPricePlan | null> {
+    const pricePlan =
+      await this.consultantPricePlanRepository.findBySignature(params);
+    if (!pricePlan || !pricePlan.isActive()) {
+      return null;
+    }
+    return pricePlan;
   }
 }

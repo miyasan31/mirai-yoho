@@ -1,6 +1,7 @@
 export const FIRESTORE_COLLECTIONS = {
   bookings: "bookings",
   clients: "clients",
+  consultantPricePlans: "consultant-price-plans",
   consultants: "consultants",
   organizationMemberships: "organization-memberships",
   organizationSettings: "organization-settings",
