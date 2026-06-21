@@ -1,6 +1,8 @@
 import {
   useGetAdminBookingSettings,
+  useGetAdminConsultantRanks,
   useUpdateAdminBookingSettings,
+  useUpdateAdminConsultantRanks,
 } from "@/generated/api/admin/admin";
 import { useGetPublicSettings } from "@/generated/api/settings/settings";
 import { QUERY_STALE_TIME } from "@/hooks/query-cache-policy";
@@ -28,4 +30,15 @@ export function useAdminBookingSettings() {
   });
 }
 
-export { useUpdateAdminBookingSettings };
+export function useAdminConsultantRanks() {
+  const { token } = useAuth();
+  const { organizationId } = useOrganizationRouting();
+  return useGetAdminConsultantRanks(organizationId ?? "", {
+    query: {
+      enabled: !!token && !!organizationId,
+      staleTime: QUERY_STALE_TIME.normal,
+    },
+  });
+}
+
+export { useUpdateAdminBookingSettings, useUpdateAdminConsultantRanks };

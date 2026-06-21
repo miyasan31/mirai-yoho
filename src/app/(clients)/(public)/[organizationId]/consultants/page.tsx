@@ -197,6 +197,11 @@ export default function ConsultantsPage() {
                 <Text as="h2" textStyle="lg" fontWeight="semibold">
                   {consultant.name}
                 </Text>
+                <styled.div>
+                  <Badge variant="subtle" size="sm">
+                    {consultant.rank?.name ?? ""}
+                  </Badge>
+                </styled.div>
                 {consultant.imageUrl ? (
                   <styled.div
                     width="16"

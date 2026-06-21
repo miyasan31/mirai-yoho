@@ -3,6 +3,7 @@ import type { Consultant } from "@/domain/consultant/consultant";
 import { Consultant as ConsultantEntity } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
+import { DEFAULT_CONSULTANT_RANK_ID } from "@/domain/organization-settings/consultant-rank";
 import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 
@@ -17,6 +18,7 @@ interface ConsultantDoc {
   phone?: string;
   imageUrl?: string;
   zoomRoomIds: string[];
+  rankId?: string;
   isActive: boolean;
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;
@@ -41,6 +43,7 @@ function toDomain(doc: ConsultantDoc): Consultant {
       doc.imageUrl,
     ),
     zoomRoomIds: doc.zoomRoomIds,
+    rankId: doc.rankId ?? DEFAULT_CONSULTANT_RANK_ID,
     isActive: doc.isActive,
     createdAt,
     updatedAt: toDate(doc.updatedAt) ?? createdAt,
@@ -58,6 +61,7 @@ function toFirestore(consultant: Consultant): ConsultantDoc {
     phone: profile.getPhone(),
     imageUrl: profile.getImageUrl(),
     zoomRoomIds: consultant.getZoomRoomIds(),
+    rankId: consultant.getRankId(),
     isActive: consultant.getIsActive(),
     createdAt: consultant.getCreatedAt(),
     updatedAt: consultant.getUpdatedAt(),
@@ -82,6 +86,14 @@ export class FirestoreConsultantRepository implements IConsultantRepository {
       .collection(COLLECTION)
       .where("organizationId", "==", organizationId)
       .where("isActive", "==", true)
+      .get();
+    return snapshot.docs.map((doc) => toDomain(doc.data() as ConsultantDoc));
+  }
+
+  async findAll(organizationId: string): Promise<Consultant[]> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("organizationId", "==", organizationId)
       .get();
     return snapshot.docs.map((doc) => toDomain(doc.data() as ConsultantDoc));
   }

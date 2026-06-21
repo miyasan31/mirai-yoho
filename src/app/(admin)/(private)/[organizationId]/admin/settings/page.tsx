@@ -1,6 +1,7 @@
 "use client";
 
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
@@ -14,7 +15,9 @@ import { BusinessHours } from "@/domain/organization-settings/business-hours";
 import { useAuth } from "@/hooks/use-auth";
 import {
   useAdminBookingSettings,
+  useAdminConsultantRanks,
   useUpdateAdminBookingSettings,
+  useUpdateAdminConsultantRanks,
 } from "@/hooks/use-booking-settings";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import {
@@ -27,17 +30,26 @@ import {
 } from "./business-hours-form-schema";
 
 const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"] as const;
-type SettingsTab = "booking" | "business-hours" | "price";
+type SettingsTab = "booking" | "business-hours" | "consultant-ranks" | "price";
 
 type WeeklyRowForm = BusinessHoursFormValues["weekly"][number];
 type ExceptionDayForm = BusinessHoursFormValues["exceptions"][number];
+type ConsultantRankFormValues = {
+  consultantRanks: Array<{ rankId: string; name: string }>;
+  defaultConsultantRankId: string;
+};
 interface PricePlanRangeFormValues {
   minTotalJPY: number;
   maxTotalJPY: number;
 }
 
 function isSettingsTab(value: string | null): value is SettingsTab {
-  return value === "booking" || value === "business-hours" || value === "price";
+  return (
+    value === "booking" ||
+    value === "business-hours" ||
+    value === "consultant-ranks" ||
+    value === "price"
+  );
 }
 
 function isValidHalfHourTime(value: string): boolean {
@@ -103,9 +115,13 @@ export default function AdminSettingsPage() {
   const searchParams = useSearchParams();
   const { role } = useAuth();
   const { data, isLoading } = useAdminBookingSettings();
+  const { data: rankData, isLoading: isLoadingRanks } =
+    useAdminConsultantRanks();
   const updateBookingSettings = useUpdateAdminBookingSettings();
+  const updateConsultantRanks = useUpdateAdminConsultantRanks();
   const isReadOnly = role === "operator";
   const [initialized, setInitialized] = useState(false);
+  const [initializedRanks, setInitializedRanks] = useState(false);
   const [persistedBusinessHours, setPersistedBusinessHours] = useState(
     BusinessHours.createDefault().toJSON(),
   );
@@ -143,6 +159,20 @@ export default function AdminSettingsPage() {
   });
 
   const {
+    control: rankControl,
+    register: rankRegister,
+    handleSubmit: handleRankSubmit,
+    reset: resetRankForm,
+    watch: watchRankForm,
+    setValue: setRankValue,
+  } = useForm<ConsultantRankFormValues>({
+    defaultValues: {
+      consultantRanks: [{ rankId: "standard", name: "標準" }],
+      defaultConsultantRankId: "standard",
+    },
+  });
+
+  const {
     register: priceRangeRegister,
     handleSubmit: handlePriceRangeSubmit,
     reset: resetPriceRangeForm,
@@ -162,11 +192,23 @@ export default function AdminSettingsPage() {
     name: "exceptions",
   });
 
+  const {
+    fields: rankFields,
+    append: appendRank,
+    remove: removeRank,
+    move: moveRank,
+  } = useFieldArray({
+    control: rankControl,
+    name: "consultantRanks",
+  });
+
   const consultantSelectionEnabled = watchBookingForm(
     "consultantSelectionEnabled",
   );
   const weeklyRows = watchBusinessForm("weekly");
   const exceptions = watchBusinessForm("exceptions");
+  const rankRows = watchRankForm("consultantRanks");
+  const defaultConsultantRankId = watchRankForm("defaultConsultantRankId");
 
   useEffect(() => {
     if (initialized || !data?.data) return;
@@ -199,6 +241,15 @@ export default function AdminSettingsPage() {
     resetBusinessForm,
     resetPriceRangeForm,
   ]);
+
+  useEffect(() => {
+    if (initializedRanks || !rankData?.data) return;
+    resetRankForm({
+      consultantRanks: rankData.data.consultantRanks,
+      defaultConsultantRankId: rankData.data.defaultConsultantRankId,
+    });
+    setInitializedRanks(true);
+  }, [initializedRanks, rankData, resetRankForm]);
 
   useEffect(() => {
     const tabParam = searchParams.get("tab");
@@ -296,6 +347,57 @@ export default function AdminSettingsPage() {
     setPersistedBusinessHours(validatedBusinessHours);
   };
 
+  const saveConsultantRankSettings = async (
+    values: ConsultantRankFormValues,
+  ) => {
+    if (!organizationId || !initializedRanks || isReadOnly) {
+      return;
+    }
+
+    const consultantRanks = values.consultantRanks.map((rank) => ({
+      rankId: rank.rankId,
+      name: rank.name.trim(),
+    }));
+    const hasBlankName = consultantRanks.some((rank) => !rank.name);
+    if (hasBlankName) {
+      toaster.create({
+        type: "error",
+        title: "ランク名を入力してください",
+      });
+      return;
+    }
+    const rankIds = new Set(consultantRanks.map((rank) => rank.rankId));
+    if (!rankIds.has(values.defaultConsultantRankId)) {
+      toaster.create({
+        type: "error",
+        title: "デフォルトランクを選択してください",
+      });
+      return;
+    }
+
+    await updateConsultantRanks.mutateAsync({
+      organizationId,
+      data: {
+        consultantRanks,
+        defaultConsultantRankId: values.defaultConsultantRankId,
+      },
+    });
+  };
+
+  const removeConsultantRank = (index: number) => {
+    const nextRanks = rankRows.filter((_, rankIndex) => rankIndex !== index);
+    const removingRank = rankRows[index];
+    removeRank(index);
+    if (
+      removingRank?.rankId === defaultConsultantRankId &&
+      nextRanks[0]?.rankId
+    ) {
+      setRankValue("defaultConsultantRankId", nextRanks[0].rankId, {
+        shouldDirty: true,
+      });
+    }
+  };
+
   const savePriceRangeSettings = async (values: PricePlanRangeFormValues) => {
     if (!organizationId || !initialized || isReadOnly) {
       return;
@@ -354,6 +456,9 @@ export default function AdminSettingsPage() {
           </Tabs.Trigger>
           <Tabs.Trigger value="business-hours" disabled={isLoading}>
             営業時間
+          </Tabs.Trigger>
+          <Tabs.Trigger value="consultant-ranks" disabled={isLoadingRanks}>
+            相談員ランク
           </Tabs.Trigger>
           <Tabs.Trigger value="price" disabled={isLoading}>
             料金
@@ -653,6 +758,156 @@ export default function AdminSettingsPage() {
                 loading={updateBookingSettings.isPending}
                 loadingText="保存中..."
                 disabled={isLoading || !initialized || isReadOnly}
+              >
+                保存
+              </Button>
+            </styled.div>
+          </styled.form>
+        </Tabs.Content>
+
+        <Tabs.Content value="consultant-ranks">
+          <styled.form
+            onSubmit={handleRankSubmit(saveConsultantRankSettings)}
+            display="flex"
+            flexDirection="column"
+            gap="4"
+          >
+            <styled.div>
+              <Text as="h2" textStyle="lg" fontWeight="semibold" mb="1">
+                相談員ランク設定
+              </Text>
+              <Text color="fg.muted" textStyle="sm">
+                上にあるランクほど重要度が高く表示されます。
+              </Text>
+            </styled.div>
+
+            <styled.div display="grid" gap="2">
+              {rankFields.map((field, index) => {
+                const rank = rankRows[index] ?? field;
+                const canRemove = rankFields.length > 1;
+
+                return (
+                  <styled.div
+                    key={field.id}
+                    display="grid"
+                    gridTemplateColumns={{
+                      base: "1fr",
+                      md: "40px 1fr 112px 112px",
+                    }}
+                    gap="2"
+                    alignItems="center"
+                  >
+                    <input
+                      type="hidden"
+                      {...rankRegister(`consultantRanks.${index}.rankId`)}
+                    />
+                    <styled.label
+                      display="flex"
+                      alignItems="center"
+                      justifyContent="center"
+                      minH="10"
+                    >
+                      <input
+                        type="radio"
+                        value={rank.rankId}
+                        checked={defaultConsultantRankId === rank.rankId}
+                        disabled={
+                          isLoadingRanks ||
+                          updateConsultantRanks.isPending ||
+                          isReadOnly
+                        }
+                        onChange={() =>
+                          setRankValue("defaultConsultantRankId", rank.rankId, {
+                            shouldDirty: true,
+                          })
+                        }
+                        aria-label={`${rank.name || "未入力"}をデフォルトランクにする`}
+                      />
+                    </styled.label>
+                    <Input
+                      {...rankRegister(`consultantRanks.${index}.name`)}
+                      aria-label={`ランク名 ${index + 1}`}
+                      disabled={
+                        isLoadingRanks ||
+                        updateConsultantRanks.isPending ||
+                        isReadOnly
+                      }
+                    />
+                    <styled.div display="flex" gap="1">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={
+                          index === 0 ||
+                          isLoadingRanks ||
+                          updateConsultantRanks.isPending ||
+                          isReadOnly
+                        }
+                        onClick={() => moveRank(index, index - 1)}
+                      >
+                        <ArrowUp size={16} />
+                        上へ
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={
+                          index === rankFields.length - 1 ||
+                          isLoadingRanks ||
+                          updateConsultantRanks.isPending ||
+                          isReadOnly
+                        }
+                        onClick={() => moveRank(index, index + 1)}
+                      >
+                        <ArrowDown size={16} />
+                        下へ
+                      </Button>
+                    </styled.div>
+                    <Button
+                      type="button"
+                      variant="plain"
+                      size="sm"
+                      colorPalette="red"
+                      disabled={
+                        !canRemove ||
+                        isLoadingRanks ||
+                        updateConsultantRanks.isPending ||
+                        isReadOnly
+                      }
+                      onClick={() => removeConsultantRank(index)}
+                    >
+                      <Trash2 size={16} />
+                      削除
+                    </Button>
+                  </styled.div>
+                );
+              })}
+            </styled.div>
+
+            <styled.div display="flex" gap="2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={
+                  rankFields.length >= 5 ||
+                  isLoadingRanks ||
+                  updateConsultantRanks.isPending ||
+                  isReadOnly
+                }
+                onClick={() => {
+                  const rankId = crypto.randomUUID();
+                  appendRank({ rankId, name: "" });
+                }}
+              >
+                ランクを追加
+              </Button>
+              <Button
+                type="submit"
+                loading={updateConsultantRanks.isPending}
+                loadingText="保存中..."
+                disabled={isLoadingRanks || !initializedRanks || isReadOnly}
               >
                 保存
               </Button>

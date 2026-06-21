@@ -5,6 +5,7 @@ export interface IConsultantRepository {
     organizationId: string,
     consultantId: string,
   ): Promise<Consultant | null>;
+  findAll(organizationId: string): Promise<Consultant[]>;
   findAllActive(organizationId: string): Promise<Consultant[]>;
   save(consultant: Consultant): Promise<void>;
   delete(organizationId: string, consultantId: string): Promise<void>;

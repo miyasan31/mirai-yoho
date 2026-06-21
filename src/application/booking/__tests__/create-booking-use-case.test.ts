@@ -37,6 +37,7 @@ function createConsultant(consultantId: string, displayName: string) {
     consultantId,
     profile: ConsultantProfile.create(displayName, "", []),
     zoomRoomIds: [],
+    rankId: "standard",
   });
 }
 
@@ -239,6 +240,10 @@ class InMemoryConsultantRepository implements IConsultantRepository {
 
   async findAllActive(_organizationId: string): Promise<Consultant[]> {
     return this.consultants.filter((consultant) => consultant.getIsActive());
+  }
+
+  async findAll(_organizationId: string): Promise<Consultant[]> {
+    return this.consultants;
   }
 
   async save(_consultant: Consultant): Promise<void> {}

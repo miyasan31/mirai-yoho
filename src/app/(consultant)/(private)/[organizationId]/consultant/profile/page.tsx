@@ -249,6 +249,14 @@ export default function ConsultantProfilePage() {
           flexDir="column"
           gap="4"
         >
+          <Field.Root>
+            <Field.Label>ランク</Field.Label>
+            <Input
+              value={data?.data.rank?.name ?? ""}
+              readOnly
+              aria-label="現在のランク"
+            />
+          </Field.Root>
           <Field.Root required invalid={!!errors.displayName}>
             <Field.Label>
               表示名
