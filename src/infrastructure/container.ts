@@ -3,9 +3,12 @@ import { CancelBookingUseCase } from "@/application/booking/cancel-booking-use-c
 import { ChargePaymentUseCase } from "@/application/booking/charge-payment-use-case";
 import { CompleteSetupUseCase } from "@/application/booking/complete-setup-use-case";
 import { CreateBookingUseCase } from "@/application/booking/create-booking-use-case";
+import { NotifyLateConsultantArrivalUseCase } from "@/application/booking/notify-late-consultant-arrival-use-case";
 import { SetupPaymentUseCase } from "@/application/booking/setup-payment-use-case";
 import { CreateConsultantPricePlanUseCase } from "@/application/consultant-price-plan/create-consultant-price-plan-use-case";
 import { UpdateConsultantPricePlanUseCase } from "@/application/consultant-price-plan/update-consultant-price-plan-use-case";
+import { envServer } from "@/config/env.server";
+import { FirebaseUserContactService } from "@/infrastructure/firebase/firebase-user-contact-service";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
 import { FirestoreClientRepository } from "@/infrastructure/firestore/firestore-client-repository";
 import { FirestoreConsultantPricePlanRepository } from "@/infrastructure/firestore/firestore-consultant-price-plan-repository";
@@ -15,6 +18,7 @@ import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore
 import { FirestoreSlotRepository } from "@/infrastructure/firestore/firestore-slot-repository";
 import { FirestoreUnitOfWork } from "@/infrastructure/firestore/firestore-unit-of-work";
 import { FirestoreZoomDailySessionRepository } from "@/infrastructure/firestore/firestore-zoom-daily-session-repository";
+import { LineWorksLateArrivalAlertService } from "@/infrastructure/line-works/line-works-late-arrival-alert-service";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
 import { StripeService } from "@/infrastructure/stripe/stripe-service";
 import { ZoomService } from "@/infrastructure/zoom/zoom-service";
@@ -118,5 +122,16 @@ export function createBatchChargeUseCase() {
     new FirestoreClientRepository(),
     new StripeService(),
     new ResendEmailService(),
+  );
+}
+
+export function createNotifyLateConsultantArrivalUseCase() {
+  return new NotifyLateConsultantArrivalUseCase(
+    new FirestoreBookingRepository(),
+    new FirestoreConsultantRepository(),
+    new FirestoreClientRepository(),
+    new FirebaseUserContactService(),
+    new LineWorksLateArrivalAlertService(),
+    envServer.appUrl,
   );
 }

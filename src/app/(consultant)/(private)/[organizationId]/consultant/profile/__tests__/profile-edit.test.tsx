@@ -199,6 +199,7 @@ describe("ConsultantProfilePage", () => {
         data: {
           displayName: "田中太郎",
           bio: "",
+          phone: "",
           imageUrl: undefined,
           specialties: [],
         },
@@ -288,6 +289,7 @@ describe("ConsultantProfilePage", () => {
         data: {
           displayName: "田中太郎",
           bio: "",
+          phone: "",
           imageUrl,
           specialties: [],
         },

@@ -12,6 +12,7 @@ export const consultantInviteFormSchema = v.object({
     v.minLength(1, "メールアドレスを入力してください"),
     v.email("メールアドレスの形式が正しくありません"),
   ),
+  phone: v.optional(v.pipe(v.string(), v.trim())),
 });
 
 export type ConsultantInviteFormValues = v.InferOutput<

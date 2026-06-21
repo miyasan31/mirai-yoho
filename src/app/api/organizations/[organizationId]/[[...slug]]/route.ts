@@ -35,6 +35,7 @@ import {
   createConsultantRepository,
   createCreateBookingUseCase,
   createCreateConsultantPricePlanUseCase,
+  createNotifyLateConsultantArrivalUseCase,
   createOrganizationSettingsRepository,
   createPaymentRepository,
   createSetupPaymentUseCase,
@@ -121,6 +122,11 @@ interface ListQueryParams extends PaginationParams {
 
 function jsonError(status: number, code: string, message: string) {
   return NextResponse.json({ code, message }, { status });
+}
+
+function verifyCronSecret(request: NextRequest): boolean {
+  const expectedSecret = envServer.lateArrivalAlertCronSecret;
+  return request.headers.get("x-cron-secret") === expectedSecret;
 }
 
 function publicForbidden(message = "Invalid booking action request") {
@@ -763,6 +769,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
             zoomUrl: b.getZoomUrl()?.getValue() ?? null,
             consultantJoinedAt:
               b.getConsultantJoinedAt()?.toISOString() ?? null,
+            lateArrivalAlertSentAt:
+              b.getLateArrivalAlertSentAt()?.toISOString() ?? null,
             consultantMemo: b.getConsultantMemo().getValue(),
             consultationContent: b.getConsultationContent() ?? null,
             chargeable: eligibility.chargeable,
@@ -813,6 +821,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           email: userRecord?.email ?? "",
           displayName: c.getProfile().getDisplayName(),
           bio: c.getProfile().getBio(),
+          phone: c.getProfile().getPhone(),
           imageUrl: c.getProfile().getImageUrl(),
           specialties: [...c.getProfile().getSpecialties()],
           zoomRoomIds: c.getZoomRoomIds(),
@@ -1036,6 +1045,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
             zoomUrl: b.getZoomUrl()?.getValue() ?? null,
             consultantJoinedAt:
               b.getConsultantJoinedAt()?.toISOString() ?? null,
+            lateArrivalAlertSentAt:
+              b.getLateArrivalAlertSentAt()?.toISOString() ?? null,
             consultantMemo: b.getConsultantMemo().getValue(),
             consultationContent: b.getConsultationContent() ?? null,
             chargeable: eligibility.chargeable,
@@ -1112,6 +1123,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           consultantId: authUser.uid,
           displayName: "",
           bio: "",
+          phone: "",
           specialties: [],
           zoomRoomIds: [],
           isActive: true,
@@ -1123,6 +1135,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         consultantId: consultant.getConsultantId(),
         displayName: profile.getDisplayName(),
         bio: profile.getBio(),
+        phone: profile.getPhone(),
         imageUrl: profile.getImageUrl(),
         specialties: [...profile.getSpecialties()],
         zoomRoomIds: consultant.getZoomRoomIds(),
@@ -1463,6 +1476,34 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ slotId }, { status: 201 });
     }
 
+    if (
+      segments.length === 2 &&
+      segments[0] === "batch" &&
+      segments[1] === "late-arrival-alerts"
+    ) {
+      if (!verifyCronSecret(request)) {
+        return jsonError(401, "UNAUTHORIZED", "Invalid cron secret");
+      }
+
+      const startedAt = new Date();
+      const result = await createNotifyLateConsultantArrivalUseCase().execute({
+        organizationId,
+        now: startedAt,
+      });
+      console.info("Late arrival alert batch completed", {
+        category: "security-audit",
+        endpoint: postErrorContext.endpoint,
+        organizationId,
+        startedAt: startedAt.toISOString(),
+        targetCount: result.targetCount,
+        notifiedCount: result.notifiedCount,
+        errorCount: result.errors.length,
+        errors: result.errors,
+      });
+
+      return NextResponse.json(result);
+    }
+
     const authUser = await verifyAuth(request);
 
     if (
@@ -1500,7 +1541,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
     ) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
       const body = await request.json();
-      const { consultantId, displayName, bio, specialties, zoomRoomIds } = body;
+      const {
+        consultantId,
+        displayName,
+        bio,
+        specialties,
+        phone,
+        zoomRoomIds,
+      } = body;
       if (!consultantId || !displayName) {
         return jsonError(
           400,
@@ -1516,6 +1564,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           displayName,
           bio ?? "",
           specialties ?? [],
+          phone ?? "",
         ),
         zoomRoomIds: zoomRoomIds ?? [],
       });
@@ -1537,7 +1586,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         "operator",
       );
       const body = await request.json();
-      const { email, role, displayName } = body;
+      const { email, role, displayName, phone } = body;
 
       if (!email || typeof email !== "string") {
         return jsonError(400, "VALIDATION_ERROR", "email is required");
@@ -1595,7 +1644,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
             Consultant.create({
               organizationId,
               consultantId: uid,
-              profile: ConsultantProfile.create(normalizedDisplayName, "", []),
+              profile: ConsultantProfile.create(
+                normalizedDisplayName,
+                "",
+                [],
+                typeof phone === "string" ? phone.trim() : "",
+              ),
               zoomRoomIds: [],
             }),
           );
@@ -1964,6 +2018,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
             body.displayName,
             body.bio ?? consultant.getProfile().getBio(),
             body.specialties ?? [...consultant.getProfile().getSpecialties()],
+            body.phone ?? consultant.getProfile().getPhone(),
+            consultant.getProfile().getImageUrl(),
           ),
         );
       }
@@ -2174,6 +2230,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         displayName: body.displayName,
         bio: body.bio ?? "",
         specialties: body.specialties,
+        phone: body.phone ?? "",
         imageUrl: body.imageUrl,
       });
 
