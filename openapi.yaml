@@ -192,6 +192,44 @@ paths:
         "200":
           description: OK
 
+  /organizations/{organizationId}/booking/price-plans:
+    get:
+      operationId: getBookingPricePlans
+      summary: 予約用料金プラン一覧取得
+      tags: [booking]
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: slotId
+          in: query
+          required: false
+          schema:
+            type: string
+        - name: startDatetime
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+        - name: endDatetime
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date-time
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [pricePlans]
+                properties:
+                  pricePlans:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PublicPricePlan"
+
   /organizations/{organizationId}/settings/public:
     get:
       operationId: getPublicSettings
@@ -252,6 +290,42 @@ paths:
                     type: integer
                   skippedCount:
                     type: integer
+
+  /organizations/{organizationId}/batch/late-arrival-alerts:
+    post:
+      operationId: notifyLateArrivalAlerts
+      summary: 相談員遅刻予防アラート送信（Cloud Scheduler）
+      tags: [batch]
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: x-cron-secret
+          in: header
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [targetCount, notifiedCount, errors]
+                properties:
+                  targetCount:
+                    type: integer
+                  notifiedCount:
+                    type: integer
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      required: [bookingId, error]
+                      properties:
+                        bookingId:
+                          type: string
+                        error:
+                          type: string
 
   /organizations/{organizationId}/consultant/bookings:
     get:
@@ -320,6 +394,92 @@ paths:
         "200":
           description: OK
 
+  /organizations/{organizationId}/consultant/price-plans:
+    get:
+      operationId: listConsultantPricePlans
+      summary: 相談員料金プラン一覧取得
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [pricePlans, pricePlanRange]
+                properties:
+                  pricePlans:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ConsultantPricePlan"
+                  pricePlanRange:
+                    $ref: "#/components/schemas/PricePlanRange"
+    post:
+      operationId: createConsultantPricePlan
+      summary: 相談員料金プラン作成
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateConsultantPricePlanRequest"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsultantPricePlan"
+
+  /organizations/{organizationId}/consultant/price-plans/{pricePlanId}:
+    patch:
+      operationId: updateConsultantPricePlan
+      summary: 相談員料金プラン更新
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: pricePlanId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateConsultantPricePlanRequest"
+      responses:
+        "200":
+          description: OK
+    delete:
+      operationId: deleteConsultantPricePlan
+      summary: 相談員料金プラン削除
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: pricePlanId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+
   /organizations/{organizationId}/consultant/profile:
     get:
       operationId: getConsultantProfile
@@ -355,6 +515,8 @@ paths:
                 displayName:
                   type: string
                 bio:
+                  type: string
+                phone:
                   type: string
                 imageUrl:
                   type: string
@@ -511,6 +673,8 @@ paths:
                   type: string
                 bio:
                   type: string
+                phone:
+                  type: string
                 specialties:
                   type: array
                   items:
@@ -543,6 +707,8 @@ paths:
                 displayName:
                   type: string
                 bio:
+                  type: string
+                phone:
                   type: string
                 specialties:
                   type: array
@@ -744,6 +910,8 @@ paths:
                   type: string
                   format: email
                 displayName:
+                  type: string
+                phone:
                   type: string
                 role:
                   type: string
@@ -978,6 +1146,8 @@ components:
           type: string
         bio:
           type: string
+        phone:
+          type: string
         imageUrl:
           type: string
         specialties:
@@ -1006,6 +1176,8 @@ components:
         displayName:
           type: string
         bio:
+          type: string
+        phone:
           type: string
         imageUrl:
           type: string
@@ -1116,6 +1288,10 @@ components:
           format: uri
           nullable: true
         consultantJoinedAt:
+          type: string
+          format: date-time
+          nullable: true
+        lateArrivalAlertSentAt:
           type: string
           format: date-time
           nullable: true
@@ -1270,30 +1446,49 @@ components:
 
     BookingSettings:
       type: object
-      required: [consultantSelectionEnabled, businessHours]
+      required: [consultantSelectionEnabled, businessHours, pricePlanRange]
       properties:
         consultantSelectionEnabled:
           type: boolean
         businessHours:
           $ref: "#/components/schemas/BusinessHours"
+        pricePlanRange:
+          $ref: "#/components/schemas/PricePlanRange"
 
     PublicSettings:
       type: object
-      required: [consultantSelectionEnabled, businessHours]
+      required: [consultantSelectionEnabled, businessHours, pricePlanRange]
       properties:
         consultantSelectionEnabled:
           type: boolean
         businessHours:
           $ref: "#/components/schemas/BusinessHours"
+        pricePlanRange:
+          $ref: "#/components/schemas/PricePlanRange"
 
     UpdateBookingSettingsBody:
       type: object
-      required: [consultantSelectionEnabled, businessHours]
+      required: [consultantSelectionEnabled, businessHours, pricePlanRange]
       properties:
         consultantSelectionEnabled:
           type: boolean
         businessHours:
           $ref: "#/components/schemas/BusinessHours"
+        pricePlanRange:
+          $ref: "#/components/schemas/PricePlanRange"
+
+    PricePlanRange:
+      type: object
+      required: [minTotalJPY, maxTotalJPY]
+      properties:
+        minTotalJPY:
+          type: integer
+          minimum: 0
+          maximum: 100000
+        maxTotalJPY:
+          type: integer
+          minimum: 0
+          maximum: 100000
 
     BusinessHours:
       type: object
@@ -1355,7 +1550,14 @@ components:
 
     CreateBookingRequest:
       type: object
-      required: [clientName, clientEmail, clientPhone, clientBirthdate]
+      required:
+        [
+          clientName,
+          clientEmail,
+          clientPhone,
+          clientBirthdate,
+          pricePlanSelectionId,
+        ]
       properties:
         slotId:
           type: string
@@ -1377,6 +1579,79 @@ components:
           format: date
         consultantContent:
           type: string
+        pricePlanSelectionId:
+          type: string
+
+    PublicPricePlan:
+      type: object
+      required: [pricePlanSelectionId, name, totalJPY]
+      properties:
+        pricePlanSelectionId:
+          type: string
+        name:
+          type: string
+        totalJPY:
+          type: integer
+          minimum: 0
+
+    ConsultantPricePlan:
+      type: object
+      required:
+        [
+          pricePlanId,
+          name,
+          totalJPY,
+          status,
+          selectionId,
+          isWithinCurrentRange,
+          createdAt,
+          updatedAt,
+          deletedAt,
+        ]
+      properties:
+        pricePlanId:
+          type: string
+        name:
+          type: string
+        totalJPY:
+          type: integer
+          minimum: 0
+        status:
+          type: string
+          enum: [active, deleted]
+        selectionId:
+          type: string
+        isWithinCurrentRange:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        deletedAt:
+          type:
+            - string
+            - "null"
+          format: date-time
+
+    CreateConsultantPricePlanRequest:
+      type: object
+      required: [name, totalJPY]
+      properties:
+        name:
+          type: string
+        totalJPY:
+          type: integer
+          minimum: 0
+
+    UpdateConsultantPricePlanRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        restore:
+          type: boolean
 
     CreateBookingResponse:
       type: object

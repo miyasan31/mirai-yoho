@@ -22,6 +22,23 @@ vi.mock("@/hooks/use-booking", () => ({
   }),
 }));
 
+vi.mock("@/hooks/use-price-plans", () => ({
+  useBookingPricePlans: () => ({
+    data: {
+      data: {
+        pricePlans: [
+          {
+            pricePlanSelectionId: "signature:%E9%80%9A%E5%B8%B8:5000",
+            name: "通常",
+            totalJPY: 5000,
+          },
+        ],
+      },
+    },
+    isLoading: false,
+  }),
+}));
+
 vi.mock("styled-system/css", () => ({
   css: () => "",
   cva: () => () => "",
@@ -126,6 +143,12 @@ vi.mock("@/components/ui/text", () => ({
   },
 }));
 
+vi.mock("@/components/ui/toast", () => ({
+  toaster: {
+    create: vi.fn(),
+  },
+}));
+
 vi.mock("@/components/ui/textarea", () => ({
   Textarea: (props: React.ComponentProps<"textarea">) => (
     <textarea {...props} />
@@ -141,6 +164,34 @@ vi.mock("@/components/ui/icon-button", () => ({
     string,
     unknown
   >) => <button {...props}>{children}</button>,
+}));
+
+vi.mock("@/components/ui/radio-group", () => ({
+  Root: ({
+    children,
+    value,
+    name,
+  }: {
+    children: React.ReactNode;
+    value?: string;
+    name?: string;
+  }) => (
+    <div data-radio-name={name} data-radio-value={value}>
+      {children}
+    </div>
+  ),
+  Item: ({ children, value }: { children: React.ReactNode; value: string }) => (
+    <div data-radio-item={value}>{children}</div>
+  ),
+  ItemHiddenInput: () => <input type="radio" readOnly />,
+  ItemControl: (props: React.ComponentProps<"span">) => <span {...props} />,
+  Indicator: () => <span />,
+  ItemText: ({
+    children,
+  }: {
+    asChild?: boolean;
+    children: React.ReactNode;
+  }) => <span>{children}</span>,
 }));
 
 vi.mock("@/components/ui/tooltip", () => ({

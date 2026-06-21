@@ -27,13 +27,17 @@ import {
 } from "./business-hours-form-schema";
 
 const DAY_LABELS = ["日", "月", "火", "水", "木", "金", "土"] as const;
-type SettingsTab = "booking" | "business-hours";
+type SettingsTab = "booking" | "business-hours" | "price";
 
 type WeeklyRowForm = BusinessHoursFormValues["weekly"][number];
 type ExceptionDayForm = BusinessHoursFormValues["exceptions"][number];
+interface PricePlanRangeFormValues {
+  minTotalJPY: number;
+  maxTotalJPY: number;
+}
 
 function isSettingsTab(value: string | null): value is SettingsTab {
-  return value === "booking" || value === "business-hours";
+  return value === "booking" || value === "business-hours" || value === "price";
 }
 
 function isValidHalfHourTime(value: string): boolean {
@@ -105,6 +109,10 @@ export default function AdminSettingsPage() {
   const [persistedBusinessHours, setPersistedBusinessHours] = useState(
     BusinessHours.createDefault().toJSON(),
   );
+  const [persistedPricePlanRange, setPersistedPricePlanRange] = useState({
+    minTotalJPY: 0,
+    maxTotalJPY: 100000,
+  });
   const [currentTab, setCurrentTab] = useState<SettingsTab>("booking");
 
   const {
@@ -131,6 +139,17 @@ export default function AdminSettingsPage() {
       includePublicHolidays: true,
       weekly: getDefaultWeeklyRows(),
       exceptions: [],
+    },
+  });
+
+  const {
+    register: priceRangeRegister,
+    handleSubmit: handlePriceRangeSubmit,
+    reset: resetPriceRangeForm,
+  } = useForm<PricePlanRangeFormValues>({
+    defaultValues: {
+      minTotalJPY: 0,
+      maxTotalJPY: 100000,
     },
   });
 
@@ -164,10 +183,22 @@ export default function AdminSettingsPage() {
       weekly: toWeeklyRows(normalizedBusinessHours),
       exceptions: toExceptions(normalizedBusinessHours),
     });
+    const nextPricePlanRange = data.data.pricePlanRange ?? {
+      minTotalJPY: 0,
+      maxTotalJPY: 100000,
+    };
+    resetPriceRangeForm(nextPricePlanRange);
 
     setPersistedBusinessHours(normalizedBusinessHours);
+    setPersistedPricePlanRange(nextPricePlanRange);
     setInitialized(true);
-  }, [data, initialized, resetBookingForm, resetBusinessForm]);
+  }, [
+    data,
+    initialized,
+    resetBookingForm,
+    resetBusinessForm,
+    resetPriceRangeForm,
+  ]);
 
   useEffect(() => {
     const tabParam = searchParams.get("tab");
@@ -215,6 +246,7 @@ export default function AdminSettingsPage() {
       data: {
         consultantSelectionEnabled: values.consultantSelectionEnabled,
         businessHours: persistedBusinessHours,
+        pricePlanRange: persistedPricePlanRange,
       },
     });
   };
@@ -258,9 +290,30 @@ export default function AdminSettingsPage() {
       data: {
         consultantSelectionEnabled,
         businessHours: validatedBusinessHours,
+        pricePlanRange: persistedPricePlanRange,
       },
     });
     setPersistedBusinessHours(validatedBusinessHours);
+  };
+
+  const savePriceRangeSettings = async (values: PricePlanRangeFormValues) => {
+    if (!organizationId || !initialized || isReadOnly) {
+      return;
+    }
+    const nextPricePlanRange = {
+      minTotalJPY: Number(values.minTotalJPY),
+      maxTotalJPY: Number(values.maxTotalJPY),
+    };
+
+    await updateBookingSettings.mutateAsync({
+      organizationId,
+      data: {
+        consultantSelectionEnabled,
+        businessHours: persistedBusinessHours,
+        pricePlanRange: nextPricePlanRange,
+      },
+    });
+    setPersistedPricePlanRange(nextPricePlanRange);
   };
 
   const changeTab = (nextTab: SettingsTab) => {
@@ -301,6 +354,9 @@ export default function AdminSettingsPage() {
           </Tabs.Trigger>
           <Tabs.Trigger value="business-hours" disabled={isLoading}>
             営業時間
+          </Tabs.Trigger>
+          <Tabs.Trigger value="price" disabled={isLoading}>
+            料金
           </Tabs.Trigger>
           <Tabs.Indicator />
         </Tabs.List>
@@ -592,6 +648,71 @@ export default function AdminSettingsPage() {
               })}
             </styled.div>
             <styled.div display="flex" mt="4">
+              <Button
+                type="submit"
+                loading={updateBookingSettings.isPending}
+                loadingText="保存中..."
+                disabled={isLoading || !initialized || isReadOnly}
+              >
+                保存
+              </Button>
+            </styled.div>
+          </styled.form>
+        </Tabs.Content>
+
+        <Tabs.Content value="price">
+          <styled.form
+            onSubmit={handlePriceRangeSubmit(savePriceRangeSettings)}
+            display="flex"
+            flexDirection="column"
+            gap="4"
+            maxW="480px"
+          >
+            <styled.div>
+              <Text as="h2" textStyle="lg" fontWeight="semibold" mb="1">
+                料金設定
+              </Text>
+              <Text color="fg.muted" textStyle="sm">
+                相談員が作成でき、利用者が選択できる料金プランの税込金額範囲を設定します。
+              </Text>
+            </styled.div>
+
+            <styled.div display="grid" gridTemplateColumns="1fr 1fr" gap="3">
+              <styled.div>
+                <Text textStyle="sm" mb="1">
+                  下限
+                </Text>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100000}
+                  {...priceRangeRegister("minTotalJPY", {
+                    valueAsNumber: true,
+                  })}
+                  disabled={
+                    isLoading || updateBookingSettings.isPending || isReadOnly
+                  }
+                />
+              </styled.div>
+              <styled.div>
+                <Text textStyle="sm" mb="1">
+                  上限
+                </Text>
+                <Input
+                  type="number"
+                  min={0}
+                  max={100000}
+                  {...priceRangeRegister("maxTotalJPY", {
+                    valueAsNumber: true,
+                  })}
+                  disabled={
+                    isLoading || updateBookingSettings.isPending || isReadOnly
+                  }
+                />
+              </styled.div>
+            </styled.div>
+
+            <styled.div display="flex">
               <Button
                 type="submit"
                 loading={updateBookingSettings.isPending}

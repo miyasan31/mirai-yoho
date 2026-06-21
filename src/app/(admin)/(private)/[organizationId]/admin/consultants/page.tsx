@@ -56,6 +56,7 @@ export default function AdminConsultantsPage() {
     defaultValues: {
       displayName: "",
       email: "",
+      phone: "",
     },
   });
 
@@ -78,6 +79,7 @@ export default function AdminConsultantsPage() {
         data: {
           email: values.email,
           displayName: values.displayName,
+          phone: values.phone,
           role: "consultant",
         },
       });
@@ -179,6 +181,15 @@ export default function AdminConsultantsPage() {
                         </Field.ErrorText>
                       )}
                     </Field.Root>
+                    <Field.Root invalid={!!errors.phone}>
+                      <Field.Label>電話番号</Field.Label>
+                      <Input type="tel" {...register("phone")} />
+                      {errors.phone && (
+                        <Field.ErrorText>
+                          {errors.phone.message}
+                        </Field.ErrorText>
+                      )}
+                    </Field.Root>
                   </Dialog.Body>
                   <Dialog.Footer>
                     <Dialog.CloseTrigger asChild>
@@ -215,6 +226,7 @@ export default function AdminConsultantsPage() {
               <Table.Row>
                 <Table.Header>名前</Table.Header>
                 <Table.Header>メールアドレス</Table.Header>
+                <Table.Header>電話番号</Table.Header>
                 <Table.Header>専門分野</Table.Header>
                 <Table.Header>ステータス</Table.Header>
                 <Table.Header>操作</Table.Header>
@@ -225,6 +237,7 @@ export default function AdminConsultantsPage() {
                 <Table.Row key={c.consultantId}>
                   <Table.Cell>{c.displayName}</Table.Cell>
                   <Table.Cell>{c.email}</Table.Cell>
+                  <Table.Cell>{c.phone || "-"}</Table.Cell>
                   <Table.Cell>{c.specialties.join(", ")}</Table.Cell>
                   <Table.Cell>
                     <ActiveStatusBadge isActive={c.isActive} />

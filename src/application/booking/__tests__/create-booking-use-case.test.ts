@@ -10,7 +10,13 @@ import type { IClientRepository } from "@/domain/client/client-repository";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
-import type { DomainError } from "@/domain/shared/domain-error";
+import {
+  ConsultantPricePlan,
+  createPricePlanSelectionId,
+} from "@/domain/consultant-price-plan/consultant-price-plan";
+import type { IConsultantPricePlanRepository } from "@/domain/consultant-price-plan/consultant-price-plan-repository";
+import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
+import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
 import { Slot } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import { TimeRange } from "@/domain/slot/time-range";
@@ -18,6 +24,12 @@ import type { ZoomDailySession } from "@/domain/zoom-session/zoom-daily-session"
 import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
 
 const ORGANIZATION_ID = "org-1";
+const DEFAULT_PRICE_PLAN_NAME = "通常鑑定";
+const DEFAULT_PRICE_PLAN_TOTAL_JPY = 5000;
+const DEFAULT_PRICE_PLAN_SELECTION_ID = createPricePlanSelectionId({
+  name: DEFAULT_PRICE_PLAN_NAME,
+  totalJPY: DEFAULT_PRICE_PLAN_TOTAL_JPY,
+});
 
 function createConsultant(consultantId: string, displayName: string) {
   return Consultant.create({
@@ -234,12 +246,91 @@ class InMemoryConsultantRepository implements IConsultantRepository {
   async delete(_organizationId: string, _consultantId: string): Promise<void> {}
 }
 
+class InMemoryConsultantPricePlanRepository
+  implements IConsultantPricePlanRepository
+{
+  constructor(private readonly pricePlans: ConsultantPricePlan[]) {}
+
+  async findById(
+    _organizationId: string,
+    pricePlanId: string,
+  ): Promise<ConsultantPricePlan | null> {
+    return (
+      this.pricePlans.find(
+        (pricePlan) => pricePlan.getPricePlanId() === pricePlanId,
+      ) ?? null
+    );
+  }
+
+  async findByConsultantId(
+    _organizationId: string,
+    consultantId: string,
+  ): Promise<ConsultantPricePlan[]> {
+    return this.pricePlans.filter(
+      (pricePlan) => pricePlan.getConsultantId() === consultantId,
+    );
+  }
+
+  async findActiveByConsultantId(
+    organizationId: string,
+    consultantId: string,
+  ): Promise<ConsultantPricePlan[]> {
+    return (await this.findByConsultantId(organizationId, consultantId)).filter(
+      (pricePlan) => pricePlan.isActive(),
+    );
+  }
+
+  async findBySignature(params: {
+    organizationId: string;
+    consultantId: string;
+    normalizedName: string;
+    totalJPY: number;
+  }): Promise<ConsultantPricePlan | null> {
+    return (
+      this.pricePlans.find(
+        (pricePlan) =>
+          pricePlan.getOrganizationId() === params.organizationId &&
+          pricePlan.getConsultantId() === params.consultantId &&
+          pricePlan.getNormalizedName() === params.normalizedName &&
+          pricePlan.getTotalJPY() === params.totalJPY,
+      ) ?? null
+    );
+  }
+
+  async save(pricePlan: ConsultantPricePlan): Promise<void> {
+    this.pricePlans.push(pricePlan);
+  }
+}
+
+class InMemoryOrganizationSettingsRepository
+  implements IOrganizationSettingsRepository
+{
+  async findByOrganizationId(
+    organizationId: string,
+  ): Promise<OrganizationSettings | null> {
+    return OrganizationSettings.createDefault(organizationId);
+  }
+
+  async save(_settings: OrganizationSettings): Promise<void> {}
+}
+
+function createPricePlan(consultantId: string) {
+  return ConsultantPricePlan.create({
+    organizationId: ORGANIZATION_ID,
+    consultantId,
+    pricePlanId: `plan-${consultantId}`,
+    name: DEFAULT_PRICE_PLAN_NAME,
+    totalJPY: DEFAULT_PRICE_PLAN_TOTAL_JPY,
+  });
+}
+
 function createUseCase(
   slots: Slot[],
   options?: {
     consultants?: Consultant[];
     zoomService?: IZoomService;
     emailService?: IEmailService;
+    pricePlans?: ConsultantPricePlan[];
   },
 ) {
   const slotRepository = new InMemorySlotRepository(slots);
@@ -252,6 +343,13 @@ function createUseCase(
       createConsultant("consultant-2", "佐藤"),
     ]),
   ]);
+  const consultantPricePlanRepository =
+    new InMemoryConsultantPricePlanRepository(
+      options?.pricePlans ??
+        [...new Set(slots.map((slot) => slot.getConsultantId()))].map(
+          createPricePlan,
+        ),
+    );
 
   const defaultZoomService: IZoomService = {
     createDailyMeeting: vi.fn().mockResolvedValue({
@@ -284,6 +382,8 @@ function createUseCase(
       options?.emailService ?? defaultEmailService,
       zoomDailySessionRepository,
       consultantRepository,
+      consultantPricePlanRepository,
+      new InMemoryOrganizationSettingsRepository(),
     ),
     bookingRepository,
     clientRepository,
@@ -330,6 +430,7 @@ describe("CreateBookingUseCase", () => {
       clientEmail: "taro@example.com",
       clientPhone: "090-1234-5678",
       clientBirthdate: "1990-01-01",
+      pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
     });
 
     expect(bookingRepository.bookings).toHaveLength(1);
@@ -362,6 +463,7 @@ describe("CreateBookingUseCase", () => {
       clientEmail: "taro@example.com",
       clientPhone: "090-1234-5678",
       clientBirthdate: "1990-01-01",
+      pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
     });
 
     expect(bookingRepository.bookings[0]?.getConsultantId()).toBe(
@@ -386,6 +488,7 @@ describe("CreateBookingUseCase", () => {
       clientEmail: "taro@example.com",
       clientPhone: "090-1234-5678",
       clientBirthdate: "1990-01-01",
+      pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
     });
 
     expect(bookingRepository.bookings[0]?.getConsultantId()).toBe(
@@ -405,6 +508,7 @@ describe("CreateBookingUseCase", () => {
         clientEmail: "taro@example.com",
         clientPhone: "090-1234-5678",
         clientBirthdate: "1990-01-01",
+        pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
       }),
     ).rejects.toThrow("Slot is no longer available");
   });
@@ -430,6 +534,7 @@ describe("CreateBookingUseCase", () => {
         clientEmail: "taro@example.com",
         clientPhone: "090-1234-5678",
         clientBirthdate: "1990-01-01",
+        pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
       }),
     ).rejects.toMatchObject({
       code: "CONSULTANT_NOT_FOUND",
@@ -455,8 +560,9 @@ describe("CreateBookingUseCase", () => {
         clientEmail: "taro@example.com",
         clientPhone: "090-1234-5678",
         clientBirthdate: "1990-01-01",
+        pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
       }),
-    ).rejects.toMatchObject<DomainError>({
+    ).rejects.toMatchObject({
       code: "BOOKING_CUTOFF_EXCEEDED",
     });
   });
@@ -481,8 +587,9 @@ describe("CreateBookingUseCase", () => {
         clientEmail: "taro@example.com",
         clientPhone: "090-1234-5678",
         clientBirthdate: "1990-01-01",
+        pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
       }),
-    ).rejects.toMatchObject<DomainError>({
+    ).rejects.toMatchObject({
       code: "BOOKING_CUTOFF_EXCEEDED",
     });
   });
@@ -512,6 +619,7 @@ describe("CreateBookingUseCase", () => {
         clientEmail: "taro@example.com",
         clientPhone: "090-1234-5678",
         clientBirthdate: "1990-01-01",
+        pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
       }),
     ).rejects.toMatchObject({
       statusCode: 502,
@@ -553,6 +661,7 @@ describe("CreateBookingUseCase", () => {
         clientEmail: "taro@example.com",
         clientPhone: "090-1234-5678",
         clientBirthdate: "1990-01-01",
+        pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
       }),
     ).rejects.toMatchObject({
       statusCode: 502,
@@ -590,6 +699,7 @@ describe("CreateBookingUseCase", () => {
       clientEmail: "taro@example.com",
       clientPhone: "090-1234-5678",
       clientBirthdate: "1995-12-31",
+      pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
     });
 
     const existingClient = clientRepository.clients[0];
