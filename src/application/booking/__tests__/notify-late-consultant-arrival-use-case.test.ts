@@ -97,6 +97,10 @@ class InMemoryBookingRepository implements IBookingRepository {
     );
   }
 
+  async findConsultationReminderTargets(): Promise<Booking[]> {
+    return [];
+  }
+
   async findAll(): Promise<Booking[]> {
     return this.bookings;
   }

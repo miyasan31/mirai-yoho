@@ -34,6 +34,7 @@ interface BookingProps
   cancelDeadline: CancelDeadline;
   zoomUrl?: ZoomUrl;
   consultantJoinedAt?: Date;
+  consultationReminderEmailSentAt?: Date;
   pricePlanId?: string;
   pricePlanName?: string;
   pricePlanTotalJPY?: number;
@@ -52,6 +53,7 @@ export class Booking extends AggregateRoot {
     private readonly cancelDeadline: CancelDeadline,
     private zoomUrl: ZoomUrl | undefined,
     private consultantJoinedAt: Date | undefined,
+    private consultationReminderEmailSentAt: Date | undefined,
     private lateArrivalAlertSentAt: Date | undefined,
     private consultantMemo: ConsultantMemo,
     private consultationContent: string | undefined,
@@ -78,6 +80,7 @@ export class Booking extends AggregateRoot {
       undefined,
       undefined,
       undefined,
+      undefined,
       props.consultantMemo,
       props.consultationContent,
       props.pricePlanId,
@@ -101,6 +104,7 @@ export class Booking extends AggregateRoot {
       props.cancelDeadline,
       props.zoomUrl,
       props.consultantJoinedAt,
+      props.consultationReminderEmailSentAt,
       props.lateArrivalAlertSentAt,
       props.consultantMemo,
       props.consultationContent,
@@ -200,6 +204,18 @@ export class Booking extends AggregateRoot {
     this.updatedAt = now;
   }
 
+  markConsultationReminderEmailSent(now: Date): void {
+    if (this.consultationReminderEmailSentAt) {
+      throw new DomainError(
+        "CONSULTATION_REMINDER_ALREADY_SENT",
+        "Consultation reminder email has already been sent",
+      );
+    }
+
+    this.consultationReminderEmailSentAt = now;
+    this.updatedAt = now;
+  }
+
   markLateArrivalAlertSent(sentAt: Date): void {
     if (this.lateArrivalAlertSentAt) {
       throw new DomainError(
@@ -255,6 +271,10 @@ export class Booking extends AggregateRoot {
 
   getConsultantJoinedAt(): Date | undefined {
     return this.consultantJoinedAt;
+  }
+
+  getConsultationReminderEmailSentAt(): Date | undefined {
+    return this.consultationReminderEmailSentAt;
   }
 
   getLateArrivalAlertSentAt(): Date | undefined {

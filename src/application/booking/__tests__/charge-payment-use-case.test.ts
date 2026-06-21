@@ -39,6 +39,10 @@ class InMemoryBookingRepository implements IBookingRepository {
     return this.booking ? [this.booking] : [];
   }
 
+  async findConsultationReminderTargets(): Promise<Booking[]> {
+    return this.booking ? [this.booking] : [];
+  }
+
   async findAll(_organizationId: string): Promise<Booking[]> {
     return this.booking ? [this.booking] : [];
   }
@@ -166,6 +170,7 @@ function createUseCase(input: {
       sendBookingConfirmation: vi.fn(),
       sendBookingCancellation: vi.fn(),
       sendPaymentReceipt: vi.fn().mockResolvedValue(undefined),
+      sendConsultationReminder: vi.fn(),
       sendInvitation: vi.fn(),
       sendPasswordReset: vi.fn(),
     } satisfies IEmailService);
