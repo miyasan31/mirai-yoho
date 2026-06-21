@@ -31,6 +31,9 @@ function createBooking(params: {
     slotId: `slot-${params.bookingId}`,
     startDatetime: new Date(params.startDatetime),
     consultantMemo: ConsultantMemo.create(""),
+    pricePlanId: "plan-1",
+    pricePlanName: "通常鑑定",
+    pricePlanTotalJPY: 5500,
   });
 
   if (params.status && params.status !== "pending") {
