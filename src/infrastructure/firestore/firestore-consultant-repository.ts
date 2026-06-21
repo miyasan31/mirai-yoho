@@ -15,6 +15,7 @@ interface ConsultantDoc {
   displayName: string;
   bio: string;
   specialties: string[];
+  phone?: string;
   imageUrl?: string;
   zoomRoomIds: string[];
   rankId?: string;
@@ -38,6 +39,7 @@ function toDomain(doc: ConsultantDoc): Consultant {
       doc.displayName,
       doc.bio,
       doc.specialties,
+      doc.phone ?? "",
       doc.imageUrl,
     ),
     zoomRoomIds: doc.zoomRoomIds,
@@ -56,6 +58,7 @@ function toFirestore(consultant: Consultant): ConsultantDoc {
     displayName: profile.getDisplayName(),
     bio: profile.getBio(),
     specialties: [...profile.getSpecialties()],
+    phone: profile.getPhone(),
     imageUrl: profile.getImageUrl(),
     zoomRoomIds: consultant.getZoomRoomIds(),
     rankId: consultant.getRankId(),

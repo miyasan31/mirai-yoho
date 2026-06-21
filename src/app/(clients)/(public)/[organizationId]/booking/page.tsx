@@ -4,6 +4,7 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { ArrowLeft, CalendarX } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
@@ -11,8 +12,10 @@ import { Button } from "@/components/ui/button";
 import * as Field from "@/components/ui/field";
 import { IconButton } from "@/components/ui/icon-button";
 import { Input } from "@/components/ui/input";
+import * as RadioGroup from "@/components/ui/radio-group";
 import { Text } from "@/components/ui/text";
 import { Textarea } from "@/components/ui/textarea";
+import { toaster } from "@/components/ui/toast";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
   getBookingCutoffMinutes,
@@ -20,6 +23,7 @@ import {
 } from "@/domain/slot/slot-availability";
 import { useCreateBooking } from "@/hooks/use-booking";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
+import { useBookingPricePlans } from "@/hooks/use-price-plans";
 import {
   type BookingFormValues,
   bookingFormSchema,
@@ -39,6 +43,16 @@ export default function BookingPage() {
     selectedStartAt !== null && !Number.isNaN(selectedStartAt.getTime());
   const bookingCutoffExceeded =
     hasValidSelectedStartAt && !isBeforeBookingDeadline(selectedStartAt);
+  const [pricePlanSelectionId, setPricePlanSelectionId] = useState("");
+  const pricePlansQuery = useBookingPricePlans(
+    {
+      slotId: slotId ?? undefined,
+      startDatetime: slotId ? undefined : (startDatetime ?? undefined),
+      endDatetime: slotId ? undefined : (endDatetime ?? undefined),
+    },
+    Boolean(slotId || hasDateRange),
+  );
+  const pricePlans = pricePlansQuery.data?.data?.pricePlans ?? [];
 
   const {
     register,
@@ -56,6 +70,14 @@ export default function BookingPage() {
   });
 
   const createBooking = useCreateBooking();
+
+  useEffect(() => {
+    if (pricePlanSelectionId) return;
+    const firstPricePlan = pricePlans[0];
+    if (firstPricePlan) {
+      setPricePlanSelectionId(firstPricePlan.pricePlanSelectionId);
+    }
+  }, [pricePlanSelectionId, pricePlans]);
 
   if (!slotId && !hasDateRange) {
     return (
@@ -93,6 +115,13 @@ export default function BookingPage() {
 
   const onSubmit = async (values: BookingFormValues) => {
     if (!organizationId) return;
+    if (!pricePlanSelectionId) {
+      toaster.create({
+        type: "error",
+        title: "料金プランを選択してください",
+      });
+      return;
+    }
     try {
       const result = await createBooking.mutateAsync({
         organizationId,
@@ -105,6 +134,7 @@ export default function BookingPage() {
           clientPhone: values.clientPhone,
           clientBirthdate: values.clientBirthdate,
           consultantContent: values.consultantContent?.trim() || undefined,
+          pricePlanSelectionId,
         },
       });
 
@@ -231,8 +261,49 @@ export default function BookingPage() {
             </Field.HelperText>
           </Field.Root>
 
+          <Field.Root>
+            <Field.Label>
+              料金プラン
+              <Field.RequiredIndicator />
+            </Field.Label>
+            {pricePlans.length === 0 ? (
+              <Text textStyle="sm" color="fg.muted">
+                現在選択できる料金プランがありません
+              </Text>
+            ) : (
+              <RadioGroup.Root
+                name="pricePlanSelectionId"
+                value={pricePlanSelectionId}
+                onValueChange={(details) =>
+                  setPricePlanSelectionId(details.value ?? "")
+                }
+              >
+                {pricePlans.map((pricePlan) => (
+                  <RadioGroup.Item
+                    key={pricePlan.pricePlanSelectionId}
+                    value={pricePlan.pricePlanSelectionId}
+                  >
+                    <RadioGroup.ItemHiddenInput />
+                    <RadioGroup.ItemControl>
+                      <RadioGroup.Indicator />
+                    </RadioGroup.ItemControl>
+                    <RadioGroup.ItemText asChild>
+                      <styled.div>
+                        <Text fontWeight="medium">{pricePlan.name}</Text>
+                        <Text textStyle="sm" color="fg.muted" mt="1">
+                          ¥{pricePlan.totalJPY.toLocaleString()}
+                        </Text>
+                      </styled.div>
+                    </RadioGroup.ItemText>
+                  </RadioGroup.Item>
+                ))}
+              </RadioGroup.Root>
+            )}
+          </Field.Root>
+
           <Button
             type="submit"
+            disabled={pricePlansQuery.isLoading || pricePlans.length === 0}
             loading={createBooking.isPending}
             loadingText="予約を作成中..."
           >

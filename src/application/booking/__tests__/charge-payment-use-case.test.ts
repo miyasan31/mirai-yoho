@@ -39,6 +39,10 @@ class InMemoryBookingRepository implements IBookingRepository {
     return this.booking ? [this.booking] : [];
   }
 
+  async findConsultationReminderTargets(): Promise<Booking[]> {
+    return this.booking ? [this.booking] : [];
+  }
+
   async findAll(_organizationId: string): Promise<Booking[]> {
     return this.booking ? [this.booking] : [];
   }
@@ -113,6 +117,9 @@ function createConfirmedBooking(startDatetime: string): Booking {
     slotId: "slot-1",
     startDatetime: new Date(startDatetime),
     consultantMemo: ConsultantMemo.create("memo"),
+    pricePlanId: "plan-1",
+    pricePlanName: "通常鑑定",
+    pricePlanTotalJPY: 5500,
   });
   booking.confirm(ZoomUrl.create("https://zoom.us/j/test"));
   return booking;
@@ -163,6 +170,7 @@ function createUseCase(input: {
       sendBookingConfirmation: vi.fn(),
       sendBookingCancellation: vi.fn(),
       sendPaymentReceipt: vi.fn().mockResolvedValue(undefined),
+      sendConsultationReminder: vi.fn(),
       sendInvitation: vi.fn(),
       sendPasswordReset: vi.fn(),
     } satisfies IEmailService);

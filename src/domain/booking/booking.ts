@@ -18,15 +18,27 @@ interface BookingCreateProps {
   startDatetime: Date;
   consultantMemo: ConsultantMemo;
   consultationContent?: string;
+  pricePlanId: string;
+  pricePlanName: string;
+  pricePlanTotalJPY: number;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface BookingProps extends BookingCreateProps {
+interface BookingProps
+  extends Omit<
+    BookingCreateProps,
+    "pricePlanId" | "pricePlanName" | "pricePlanTotalJPY"
+  > {
   status: BookingStatus;
   cancelDeadline: CancelDeadline;
   zoomUrl?: ZoomUrl;
   consultantJoinedAt?: Date;
+  consultationReminderEmailSentAt?: Date;
+  pricePlanId?: string;
+  pricePlanName?: string;
+  pricePlanTotalJPY?: number;
+  lateArrivalAlertSentAt?: Date;
 }
 
 export class Booking extends AggregateRoot {
@@ -41,8 +53,13 @@ export class Booking extends AggregateRoot {
     private readonly cancelDeadline: CancelDeadline,
     private zoomUrl: ZoomUrl | undefined,
     private consultantJoinedAt: Date | undefined,
+    private consultationReminderEmailSentAt: Date | undefined,
+    private lateArrivalAlertSentAt: Date | undefined,
     private consultantMemo: ConsultantMemo,
     private consultationContent: string | undefined,
+    private readonly pricePlanId: string | undefined,
+    private readonly pricePlanName: string | undefined,
+    private readonly pricePlanTotalJPY: number | undefined,
     private readonly createdAt: Date,
     private updatedAt: Date,
   ) {
@@ -62,8 +79,13 @@ export class Booking extends AggregateRoot {
       CancelDeadline.create(props.startDatetime),
       undefined,
       undefined,
+      undefined,
+      undefined,
       props.consultantMemo,
       props.consultationContent,
+      props.pricePlanId,
+      props.pricePlanName,
+      props.pricePlanTotalJPY,
       props.createdAt ?? now,
       props.updatedAt ?? now,
     );
@@ -82,8 +104,13 @@ export class Booking extends AggregateRoot {
       props.cancelDeadline,
       props.zoomUrl,
       props.consultantJoinedAt,
+      props.consultationReminderEmailSentAt,
+      props.lateArrivalAlertSentAt,
       props.consultantMemo,
       props.consultationContent,
+      props.pricePlanId,
+      props.pricePlanName,
+      props.pricePlanTotalJPY,
       createdAt,
       props.updatedAt ?? createdAt,
     );
@@ -177,6 +204,30 @@ export class Booking extends AggregateRoot {
     this.updatedAt = now;
   }
 
+  markConsultationReminderEmailSent(now: Date): void {
+    if (this.consultationReminderEmailSentAt) {
+      throw new DomainError(
+        "CONSULTATION_REMINDER_ALREADY_SENT",
+        "Consultation reminder email has already been sent",
+      );
+    }
+
+    this.consultationReminderEmailSentAt = now;
+    this.updatedAt = now;
+  }
+
+  markLateArrivalAlertSent(sentAt: Date): void {
+    if (this.lateArrivalAlertSentAt) {
+      throw new DomainError(
+        "LATE_ARRIVAL_ALERT_ALREADY_SENT",
+        "Late arrival alert has already been sent",
+      );
+    }
+
+    this.lateArrivalAlertSentAt = sentAt;
+    this.updatedAt = sentAt;
+  }
+
   updateMemo(memo: ConsultantMemo): void {
     this.consultantMemo = memo;
     this.updatedAt = new Date();
@@ -222,12 +273,32 @@ export class Booking extends AggregateRoot {
     return this.consultantJoinedAt;
   }
 
+  getConsultationReminderEmailSentAt(): Date | undefined {
+    return this.consultationReminderEmailSentAt;
+  }
+
+  getLateArrivalAlertSentAt(): Date | undefined {
+    return this.lateArrivalAlertSentAt;
+  }
+
   getConsultantMemo(): ConsultantMemo {
     return this.consultantMemo;
   }
 
   getConsultationContent(): string | undefined {
     return this.consultationContent;
+  }
+
+  getPricePlanId(): string | undefined {
+    return this.pricePlanId;
+  }
+
+  getPricePlanName(): string | undefined {
+    return this.pricePlanName;
+  }
+
+  getPricePlanTotalJPY(): number | undefined {
+    return this.pricePlanTotalJPY;
   }
 
   getCreatedAt(): Date {

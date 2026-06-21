@@ -1,0 +1,207 @@
+import { AggregateRoot } from "@/domain/shared/aggregate-root";
+import { DomainError } from "@/domain/shared/domain-error";
+
+export type ConsultantPricePlanStatus = "active" | "deleted";
+
+export interface ConsultantPricePlanProps {
+  organizationId: string;
+  consultantId: string;
+  pricePlanId: string;
+  name: string;
+  totalJPY: number;
+  status: ConsultantPricePlanStatus;
+  createdAt?: Date;
+  updatedAt?: Date;
+  deletedAt?: Date;
+}
+
+interface ConsultantPricePlanCreateProps {
+  organizationId: string;
+  consultantId: string;
+  pricePlanId: string;
+  name: string;
+  totalJPY: number;
+}
+
+function normalizePlanName(name: string): string {
+  return name.trim().replace(/\s+/g, " ").toLowerCase();
+}
+
+function validateName(name: string): string {
+  const normalizedName = name.trim().replace(/\s+/g, " ");
+  if (!normalizedName) {
+    throw new DomainError("INVALID_PRICE_PLAN_NAME", "Plan name is required");
+  }
+  if (normalizedName.length > 80) {
+    throw new DomainError(
+      "INVALID_PRICE_PLAN_NAME",
+      "Plan name must be 80 characters or less",
+    );
+  }
+  return normalizedName;
+}
+
+function validateTotalJPY(totalJPY: number): void {
+  if (!Number.isInteger(totalJPY) || totalJPY < 0) {
+    throw new DomainError(
+      "INVALID_PRICE_PLAN_AMOUNT",
+      "Plan amount must be a non-negative integer",
+    );
+  }
+}
+
+export function getConsultantPricePlanSignature(params: {
+  name: string;
+  totalJPY: number;
+}): string {
+  return `${normalizePlanName(params.name)}:${params.totalJPY}`;
+}
+
+export function createPricePlanSelectionId(params: {
+  name: string;
+  totalJPY: number;
+}): string {
+  return `signature:${encodeURIComponent(normalizePlanName(params.name))}:${params.totalJPY}`;
+}
+
+export function parsePricePlanSelectionId(
+  selectionId: string,
+): { normalizedName: string; totalJPY: number } | null {
+  const matched = /^signature:(.+):(\d+)$/.exec(selectionId);
+  if (!matched) return null;
+  const totalJPY = Number(matched[2]);
+  if (!Number.isInteger(totalJPY)) return null;
+  try {
+    return {
+      normalizedName: decodeURIComponent(matched[1]),
+      totalJPY,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export class ConsultantPricePlan extends AggregateRoot {
+  private constructor(
+    private readonly organizationId: string,
+    private readonly consultantId: string,
+    private readonly pricePlanId: string,
+    private name: string,
+    private readonly totalJPY: number,
+    private status: ConsultantPricePlanStatus,
+    private readonly createdAt: Date,
+    private updatedAt: Date,
+    private deletedAt: Date | undefined,
+  ) {
+    super();
+  }
+
+  static create(props: ConsultantPricePlanCreateProps): ConsultantPricePlan {
+    const now = new Date();
+    validateTotalJPY(props.totalJPY);
+    return new ConsultantPricePlan(
+      props.organizationId,
+      props.consultantId,
+      props.pricePlanId,
+      validateName(props.name),
+      props.totalJPY,
+      "active",
+      now,
+      now,
+      undefined,
+    );
+  }
+
+  static reconstruct(props: ConsultantPricePlanProps): ConsultantPricePlan {
+    const createdAt = props.createdAt ?? new Date(0);
+    return new ConsultantPricePlan(
+      props.organizationId,
+      props.consultantId,
+      props.pricePlanId,
+      props.name,
+      props.totalJPY,
+      props.status,
+      createdAt,
+      props.updatedAt ?? createdAt,
+      props.deletedAt,
+    );
+  }
+
+  rename(name: string): void {
+    this.name = validateName(name);
+    this.updatedAt = new Date();
+  }
+
+  delete(): void {
+    if (this.status === "deleted") return;
+    const now = new Date();
+    this.status = "deleted";
+    this.deletedAt = now;
+    this.updatedAt = now;
+  }
+
+  restore(): void {
+    if (this.status === "active") return;
+    this.status = "active";
+    this.deletedAt = undefined;
+    this.updatedAt = new Date();
+  }
+
+  isActive(): boolean {
+    return this.status === "active";
+  }
+
+  getOrganizationId(): string {
+    return this.organizationId;
+  }
+
+  getConsultantId(): string {
+    return this.consultantId;
+  }
+
+  getPricePlanId(): string {
+    return this.pricePlanId;
+  }
+
+  getName(): string {
+    return this.name;
+  }
+
+  getNormalizedName(): string {
+    return normalizePlanName(this.name);
+  }
+
+  getTotalJPY(): number {
+    return this.totalJPY;
+  }
+
+  getStatus(): ConsultantPricePlanStatus {
+    return this.status;
+  }
+
+  getSignature(): string {
+    return getConsultantPricePlanSignature({
+      name: this.name,
+      totalJPY: this.totalJPY,
+    });
+  }
+
+  getSelectionId(): string {
+    return createPricePlanSelectionId({
+      name: this.name,
+      totalJPY: this.totalJPY,
+    });
+  }
+
+  getCreatedAt(): Date {
+    return this.createdAt;
+  }
+
+  getUpdatedAt(): Date {
+    return this.updatedAt;
+  }
+
+  getDeletedAt(): Date | undefined {
+    return this.deletedAt;
+  }
+}

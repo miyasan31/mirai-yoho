@@ -78,6 +78,7 @@ export default function ConsultantProfilePage() {
     defaultValues: {
       displayName: "",
       bio: "",
+      phone: "",
       imageUrl: undefined,
       specialties: "",
     },
@@ -89,6 +90,7 @@ export default function ConsultantProfilePage() {
       reset({
         displayName: data.data.displayName ?? "",
         bio: data.data.bio ?? "",
+        phone: data.data.phone ?? "",
         imageUrl: data.data.imageUrl,
         specialties: (data.data.specialties ?? []).join(", "),
       });
@@ -175,6 +177,7 @@ export default function ConsultantProfilePage() {
         data: {
           displayName: values.displayName,
           bio: values.bio?.trim() ?? "",
+          phone: values.phone?.trim() ?? "",
           imageUrl: values.imageUrl,
           specialties: (values.specialties ?? "")
             .split(",")
@@ -267,6 +270,13 @@ export default function ConsultantProfilePage() {
           <Field.Root>
             <Field.Label>自己紹介</Field.Label>
             <Textarea id="bio" {...register("bio")} rows={4} />
+          </Field.Root>
+          <Field.Root invalid={!!errors.phone}>
+            <Field.Label>電話番号</Field.Label>
+            <Input id="phone" type="tel" {...register("phone")} />
+            {errors.phone && (
+              <Field.ErrorText>{errors.phone.message}</Field.ErrorText>
+            )}
           </Field.Root>
           <Field.Root>
             <Field.Label>専門分野</Field.Label>

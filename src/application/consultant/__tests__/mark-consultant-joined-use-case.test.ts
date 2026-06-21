@@ -17,6 +17,9 @@ function createBooking(startDatetime = "2026-05-01T10:00:00.000Z") {
     slotId: "slot-1",
     startDatetime: new Date(startDatetime),
     consultantMemo: ConsultantMemo.create(""),
+    pricePlanId: "plan-1",
+    pricePlanName: "通常鑑定",
+    pricePlanTotalJPY: 5500,
     createdAt: new Date("2026-04-01T00:00:00.000Z"),
     updatedAt: new Date("2026-04-01T00:00:00.000Z"),
   });
@@ -34,6 +37,10 @@ class InMemoryBookingRepository implements IBookingRepository {
   }
 
   async findByStatus(): Promise<Booking[]> {
+    return this.booking ? [this.booking] : [];
+  }
+
+  async findConsultationReminderTargets(): Promise<Booking[]> {
     return this.booking ? [this.booking] : [];
   }
 

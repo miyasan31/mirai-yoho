@@ -17,6 +17,9 @@ function createPendingBooking() {
     slotId: "slot-1",
     startDatetime: futureDate,
     consultantMemo: ConsultantMemo.create(""),
+    pricePlanId: "plan-1",
+    pricePlanName: "通常鑑定",
+    pricePlanTotalJPY: 5500,
   });
 }
 
@@ -44,6 +47,31 @@ describe("Booking", () => {
     it("zoomUrl は undefined", () => {
       const booking = createPendingBooking();
       expect(booking.getZoomUrl()).toBeUndefined();
+    });
+
+    it("consultationReminderEmailSentAt は undefined", () => {
+      const booking = createPendingBooking();
+      expect(booking.getConsultationReminderEmailSentAt()).toBeUndefined();
+    });
+  });
+
+  describe("reconstruct", () => {
+    it("consultationReminderEmailSentAt を復元できる", () => {
+      const sentAt = new Date("2026-05-01T09:45:00Z");
+      const booking = Booking.reconstruct({
+        organizationId: ORGANIZATION_ID,
+        bookingId: "booking-1",
+        clientId: "client-1",
+        consultantId: "consultant-1",
+        slotId: "slot-1",
+        startDatetime: futureDate,
+        status: BookingStatus.reconstruct("confirmed"),
+        cancelDeadline: CancelDeadline.create(futureDate),
+        consultationReminderEmailSentAt: sentAt,
+        consultantMemo: ConsultantMemo.create(""),
+      });
+
+      expect(booking.getConsultationReminderEmailSentAt()).toEqual(sentAt);
     });
   });
 
@@ -217,6 +245,52 @@ describe("Booking", () => {
 
       expect(() =>
         booking.markConsultantJoined(new Date("2026-05-01T09:46:00Z")),
+      ).toThrow(DomainError);
+    });
+  });
+
+  describe("markConsultationReminderEmailSent", () => {
+    it("送信済み時刻を記録できる", () => {
+      const booking = createConfirmedBooking();
+      const sentAt = new Date("2026-05-01T09:45:00Z");
+
+      booking.markConsultationReminderEmailSent(sentAt);
+
+      expect(booking.getConsultationReminderEmailSentAt()).toEqual(sentAt);
+      expect(booking.getUpdatedAt()).toEqual(sentAt);
+    });
+
+    it("二重に記録できない", () => {
+      const booking = createConfirmedBooking();
+      booking.markConsultationReminderEmailSent(
+        new Date("2026-05-01T09:45:00Z"),
+      );
+
+      expect(() =>
+        booking.markConsultationReminderEmailSent(
+          new Date("2026-05-01T09:46:00Z"),
+        ),
+      ).toThrow(DomainError);
+    });
+  });
+
+  describe("markLateArrivalAlertSent", () => {
+    it("遅刻アラート通知済み時刻を記録する", () => {
+      const booking = createConfirmedBooking();
+      const sentAt = new Date("2026-05-01T10:30:00Z");
+
+      booking.markLateArrivalAlertSent(sentAt);
+
+      expect(booking.getLateArrivalAlertSentAt()).toEqual(sentAt);
+      expect(booking.getUpdatedAt()).toEqual(sentAt);
+    });
+
+    it("遅刻アラート通知済みの予約を再度記録するとエラー", () => {
+      const booking = createConfirmedBooking();
+      booking.markLateArrivalAlertSent(new Date("2026-05-01T10:30:00Z"));
+
+      expect(() =>
+        booking.markLateArrivalAlertSent(new Date("2026-05-01T11:00:00Z")),
       ).toThrow(DomainError);
     });
   });

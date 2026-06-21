@@ -6,10 +6,12 @@ import { evaluateChargeEligibility } from "@/application/booking/charge-eligibil
 import { MarkConsultantJoinedUseCase } from "@/application/consultant/mark-consultant-joined-use-case";
 import { UpdateMemoUseCase } from "@/application/consultant/update-memo-use-case";
 import { UpdateProfileUseCase } from "@/application/consultant/update-profile-use-case";
+import { toConsultantPricePlanOutput } from "@/application/consultant-price-plan/create-consultant-price-plan-use-case";
 import { AppError } from "@/application/shared/app-error";
 import { envServer } from "@/config/env.server";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
+import { createPricePlanSelectionId } from "@/domain/consultant-price-plan/consultant-price-plan";
 import { BusinessHours } from "@/domain/organization-settings/business-hours";
 import type { ConsultantRankProps } from "@/domain/organization-settings/consultant-rank";
 import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
@@ -30,12 +32,17 @@ import {
   createCancelBookingUseCase,
   createChargePaymentUseCase,
   createClientRepository,
+  createConsultantPricePlanRepository,
   createConsultantRepository,
   createCreateBookingUseCase,
+  createCreateConsultantPricePlanUseCase,
+  createNotifyLateConsultantArrivalUseCase,
   createOrganizationSettingsRepository,
   createPaymentRepository,
+  createSendConsultationReminderUseCase,
   createSetupPaymentUseCase,
   createSlotRepository,
+  createUpdateConsultantPricePlanUseCase,
 } from "@/infrastructure/container";
 import {
   createUser,
@@ -67,6 +74,7 @@ const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
 const USER_PREFERENCES_COLLECTION = FIRESTORE_COLLECTIONS.userPreferences;
 const FIRESTORE_IN_QUERY_CHUNK_SIZE = 10;
 const BATCH_CHARGE_COOLDOWN_MS = 60 * 1000;
+const BATCH_CONSULTATION_REMINDER_COOLDOWN_MS = 60 * 1000;
 const BOOKING_ACTION_TOKEN_TTL_MS = 30 * 60 * 1000;
 const AVATAR_MAX_FILE_SIZE = 5 * 1024 * 1024;
 const AVATAR_UPLOAD_URL_TTL_MS = 10 * 60 * 1000;
@@ -84,6 +92,11 @@ const AVATAR_EXTENSION_BY_CONTENT_TYPE: Record<string, string> = {
 
 const batchChargeInProgressOrganizations = new Set<string>();
 const batchChargeLastStartedAtByOrganization = new Map<string, number>();
+const batchConsultationReminderInProgressOrganizations = new Set<string>();
+const batchConsultationReminderLastStartedAtByOrganization = new Map<
+  string,
+  number
+>();
 
 type RouteContext = {
   params: Promise<{
@@ -119,6 +132,11 @@ function jsonError(status: number, code: string, message: string) {
   return NextResponse.json({ code, message }, { status });
 }
 
+function verifyCronSecret(request: NextRequest): boolean {
+  const expectedSecret = envServer.lateArrivalAlertCronSecret;
+  return request.headers.get("x-cron-secret") === expectedSecret;
+}
+
 function publicForbidden(message = "Invalid booking action request") {
   return jsonError(403, "FORBIDDEN", message);
 }
@@ -147,6 +165,15 @@ function toBookingSettingsResponse(settings: OrganizationSettings) {
   return {
     consultantSelectionEnabled: settings.getConsultantSelectionEnabled(),
     businessHours: settings.getBusinessHours().toJSON(),
+    pricePlanRange: settings.getPricePlanRange().toJSON(),
+  };
+}
+
+function toPublicPricePlanResponse(params: { name: string; totalJPY: number }) {
+  return {
+    pricePlanSelectionId: createPricePlanSelectionId(params),
+    name: params.name,
+    totalJPY: params.totalJPY,
   };
 }
 
@@ -361,6 +388,34 @@ function getBatchChargeRateLimitState(organizationId: string): {
     retryAfterSeconds: Math.max(
       1,
       Math.ceil((BATCH_CHARGE_COOLDOWN_MS - elapsedMs) / 1000),
+    ),
+  };
+}
+
+function getBatchConsultationReminderRateLimitState(organizationId: string): {
+  inProgress: boolean;
+  retryAfterSeconds: number;
+} {
+  if (batchConsultationReminderInProgressOrganizations.has(organizationId)) {
+    return { inProgress: true, retryAfterSeconds: 1 };
+  }
+
+  const lastStartedAt =
+    batchConsultationReminderLastStartedAtByOrganization.get(organizationId);
+  if (!lastStartedAt) {
+    return { inProgress: false, retryAfterSeconds: 0 };
+  }
+
+  const elapsedMs = Date.now() - lastStartedAt;
+  if (elapsedMs >= BATCH_CONSULTATION_REMINDER_COOLDOWN_MS) {
+    return { inProgress: false, retryAfterSeconds: 0 };
+  }
+
+  return {
+    inProgress: false,
+    retryAfterSeconds: Math.max(
+      1,
+      Math.ceil((BATCH_CONSULTATION_REMINDER_COOLDOWN_MS - elapsedMs) / 1000),
     ),
   };
 }
@@ -633,6 +688,97 @@ export async function GET(request: NextRequest, context: RouteContext) {
       );
     }
 
+    if (
+      segments.length === 2 &&
+      segments[0] === "booking" &&
+      segments[1] === "price-plans"
+    ) {
+      const slotId = request.nextUrl.searchParams.get("slotId");
+      const startDatetime = request.nextUrl.searchParams.get("startDatetime");
+      const endDatetime = request.nextUrl.searchParams.get("endDatetime");
+      const settings =
+        (await createOrganizationSettingsRepository().findByOrganizationId(
+          organizationId,
+        )) ?? OrganizationSettings.createDefault(organizationId);
+      const pricePlanRange = settings.getPricePlanRange();
+      const pricePlanRepository = createConsultantPricePlanRepository();
+
+      if (slotId) {
+        const slot = await createSlotRepository().findById(
+          organizationId,
+          slotId,
+        );
+        if (!slot) {
+          return withPublicShortCache(
+            NextResponse.json({ pricePlans: [] }),
+            "booking-price-plans",
+          );
+        }
+        const pricePlans = (
+          await pricePlanRepository.findActiveByConsultantId(
+            organizationId,
+            slot.getConsultantId(),
+          )
+        )
+          .filter((pricePlan) =>
+            pricePlanRange.contains(pricePlan.getTotalJPY()),
+          )
+          .map((pricePlan) =>
+            toPublicPricePlanResponse({
+              name: pricePlan.getName(),
+              totalJPY: pricePlan.getTotalJPY(),
+            }),
+          );
+
+        return withPublicShortCache(
+          NextResponse.json({ pricePlans }),
+          "booking-price-plans",
+        );
+      }
+
+      if (!startDatetime || !endDatetime) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "slotId or startDatetime/endDatetime is required",
+        );
+      }
+
+      const slots = await createSlotRepository().findAvailableByTimeRange(
+        organizationId,
+        new Date(startDatetime),
+        new Date(endDatetime),
+      );
+      const consultantIds = [
+        ...new Set(slots.map((slot) => slot.getConsultantId())),
+      ];
+      const plansByConsultant = await Promise.all(
+        consultantIds.map((consultantId) =>
+          pricePlanRepository.findActiveByConsultantId(
+            organizationId,
+            consultantId,
+          ),
+        ),
+      );
+      const uniquePlans = new Map<string, { name: string; totalJPY: number }>();
+      for (const plans of plansByConsultant) {
+        for (const pricePlan of plans) {
+          if (!pricePlanRange.contains(pricePlan.getTotalJPY())) continue;
+          uniquePlans.set(pricePlan.getSelectionId(), {
+            name: pricePlan.getName(),
+            totalJPY: pricePlan.getTotalJPY(),
+          });
+        }
+      }
+
+      return withPublicShortCache(
+        NextResponse.json({
+          pricePlans: [...uniquePlans.values()].map(toPublicPricePlanResponse),
+        }),
+        "booking-price-plans",
+      );
+    }
+
     const authUser = await verifyAuth(request);
     const noStoreJson = <T>(payload: T, init?: ResponseInit): NextResponse<T> =>
       withNoStore(NextResponse.json(payload, init)) as NextResponse<T>;
@@ -723,6 +869,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
             zoomUrl: b.getZoomUrl()?.getValue() ?? null,
             consultantJoinedAt:
               b.getConsultantJoinedAt()?.toISOString() ?? null,
+            lateArrivalAlertSentAt:
+              b.getLateArrivalAlertSentAt()?.toISOString() ?? null,
             consultantMemo: b.getConsultantMemo().getValue(),
             consultationContent: b.getConsultationContent() ?? null,
             chargeable: eligibility.chargeable,
@@ -780,6 +928,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           email: userRecord?.email ?? "",
           displayName: c.getProfile().getDisplayName(),
           bio: c.getProfile().getBio(),
+          phone: c.getProfile().getPhone(),
           imageUrl: c.getProfile().getImageUrl(),
           specialties: [...c.getProfile().getSpecialties()],
           zoomRoomIds: c.getZoomRoomIds(),
@@ -1022,6 +1171,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
             zoomUrl: b.getZoomUrl()?.getValue() ?? null,
             consultantJoinedAt:
               b.getConsultantJoinedAt()?.toISOString() ?? null,
+            lateArrivalAlertSentAt:
+              b.getLateArrivalAlertSentAt()?.toISOString() ?? null,
             consultantMemo: b.getConsultantMemo().getValue(),
             consultationContent: b.getConsultationContent() ?? null,
             chargeable: eligibility.chargeable,
@@ -1055,6 +1206,36 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (
       segments.length === 2 &&
       segments[0] === "consultant" &&
+      segments[1] === "price-plans"
+    ) {
+      requireOrganizationRole(authUser, organizationId, "consultant");
+      const settings =
+        (await createOrganizationSettingsRepository().findByOrganizationId(
+          organizationId,
+        )) ?? OrganizationSettings.createDefault(organizationId);
+      const pricePlanRange = settings.getPricePlanRange();
+      const pricePlans =
+        await createConsultantPricePlanRepository().findByConsultantId(
+          organizationId,
+          authUser.uid,
+        );
+
+      return noStoreJson({
+        pricePlans: pricePlans.map((pricePlan) =>
+          toConsultantPricePlanOutput({
+            pricePlan,
+            isWithinCurrentRange: pricePlanRange.contains(
+              pricePlan.getTotalJPY(),
+            ),
+          }),
+        ),
+        pricePlanRange: pricePlanRange.toJSON(),
+      });
+    }
+
+    if (
+      segments.length === 2 &&
+      segments[0] === "consultant" &&
       segments[1] === "profile"
     ) {
       requireOrganizationRole(authUser, organizationId, "consultant");
@@ -1076,6 +1257,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           consultantId: authUser.uid,
           displayName: "",
           bio: "",
+          phone: "",
           specialties: [],
           zoomRoomIds: [],
           rank: toConsultantRankResponse(rank),
@@ -1093,6 +1275,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         consultantId: consultant.getConsultantId(),
         displayName: profile.getDisplayName(),
         bio: profile.getBio(),
+        phone: profile.getPhone(),
         imageUrl: profile.getImageUrl(),
         specialties: [...profile.getSpecialties()],
         zoomRoomIds: consultant.getZoomRoomIds(),
@@ -1163,13 +1346,21 @@ export async function POST(request: NextRequest, context: RouteContext) {
         clientPhone,
         clientBirthdate,
         consultantContent,
+        pricePlanSelectionId,
       } = body;
 
-      if (!clientName || !clientEmail || !clientPhone || !clientBirthdate) {
+      if (
+        !clientName ||
+        !clientEmail ||
+        !clientPhone ||
+        !clientBirthdate ||
+        typeof pricePlanSelectionId !== "string" ||
+        pricePlanSelectionId.length === 0
+      ) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
-          "clientName, clientEmail, clientPhone, clientBirthdate are required",
+          "clientName, clientEmail, clientPhone, clientBirthdate, pricePlanSelectionId are required",
         );
       }
 
@@ -1197,6 +1388,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         clientPhone,
         clientBirthdate: clientBirthdate.trim(),
         consultationContent: consultantContent,
+        pricePlanSelectionId,
       });
 
       const bookingActionToken =
@@ -1425,7 +1617,63 @@ export async function POST(request: NextRequest, context: RouteContext) {
       return NextResponse.json({ slotId }, { status: 201 });
     }
 
+    if (
+      segments.length === 2 &&
+      segments[0] === "batch" &&
+      segments[1] === "late-arrival-alerts"
+    ) {
+      if (!verifyCronSecret(request)) {
+        return jsonError(401, "UNAUTHORIZED", "Invalid cron secret");
+      }
+
+      const startedAt = new Date();
+      const result = await createNotifyLateConsultantArrivalUseCase().execute({
+        organizationId,
+        now: startedAt,
+      });
+      console.info("Late arrival alert batch completed", {
+        category: "security-audit",
+        endpoint: postErrorContext.endpoint,
+        organizationId,
+        startedAt: startedAt.toISOString(),
+        targetCount: result.targetCount,
+        notifiedCount: result.notifiedCount,
+        errorCount: result.errors.length,
+        errors: result.errors,
+      });
+
+      return NextResponse.json(result);
+    }
+
     const authUser = await verifyAuth(request);
+
+    if (
+      segments.length === 2 &&
+      segments[0] === "consultant" &&
+      segments[1] === "price-plans"
+    ) {
+      requireOrganizationRole(authUser, organizationId, "consultant");
+      const body = await request.json();
+      if (typeof body.name !== "string" || body.name.trim().length === 0) {
+        return jsonError(400, "VALIDATION_ERROR", "name is required");
+      }
+      if (!Number.isInteger(body.totalJPY)) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "totalJPY must be an integer",
+        );
+      }
+
+      const result = await createCreateConsultantPricePlanUseCase().execute({
+        organizationId,
+        consultantId: authUser.uid,
+        name: body.name,
+        totalJPY: body.totalJPY,
+      });
+
+      return NextResponse.json(result, { status: 201 });
+    }
 
     if (
       segments.length === 2 &&
@@ -1434,7 +1682,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
     ) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
       const body = await request.json();
-      const { consultantId, displayName, bio, specialties, zoomRoomIds } = body;
+      const {
+        consultantId,
+        displayName,
+        bio,
+        specialties,
+        phone,
+        zoomRoomIds,
+      } = body;
       if (!consultantId || !displayName) {
         return jsonError(
           400,
@@ -1462,6 +1717,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           displayName,
           bio ?? "",
           specialties ?? [],
+          phone ?? "",
         ),
         zoomRoomIds: zoomRoomIds ?? [],
         rankId,
@@ -1484,7 +1740,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         "operator",
       );
       const body = await request.json();
-      const { email, role, displayName } = body;
+      const { email, role, displayName, phone } = body;
 
       if (!email || typeof email !== "string") {
         return jsonError(400, "VALIDATION_ERROR", "email is required");
@@ -1546,7 +1802,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
             Consultant.create({
               organizationId,
               consultantId: uid,
-              profile: ConsultantProfile.create(normalizedDisplayName, "", []),
+              profile: ConsultantProfile.create(
+                normalizedDisplayName,
+                "",
+                [],
+                typeof phone === "string" ? phone.trim() : "",
+              ),
               zoomRoomIds: [],
               rankId: settings.getDefaultConsultantRankId(),
             }),
@@ -1806,6 +2067,71 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }
     }
 
+    if (
+      segments.length === 2 &&
+      segments[0] === "batch" &&
+      segments[1] === "consultation-reminders"
+    ) {
+      const authUser = await verifyAuth(request);
+      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+
+      const rateLimitState =
+        getBatchConsultationReminderRateLimitState(organizationId);
+      if (rateLimitState.inProgress) {
+        return jsonError(
+          409,
+          "BATCH_CONSULTATION_REMINDER_IN_PROGRESS",
+          "Batch consultation reminder is already running for this organization",
+        );
+      }
+      if (rateLimitState.retryAfterSeconds > 0) {
+        return jsonError(
+          429,
+          "BATCH_CONSULTATION_REMINDER_RATE_LIMITED",
+          `Batch consultation reminder can be retried after ${rateLimitState.retryAfterSeconds} seconds`,
+        );
+      }
+
+      batchConsultationReminderInProgressOrganizations.add(organizationId);
+      batchConsultationReminderLastStartedAtByOrganization.set(
+        organizationId,
+        Date.now(),
+      );
+      const startedAt = new Date();
+
+      try {
+        const result =
+          await createSendConsultationReminderUseCase().execute(organizationId);
+        console.info("Batch consultation reminder completed", {
+          category: "security-audit",
+          endpoint: postErrorContext.endpoint,
+          organizationId,
+          actorUid: authUser.uid,
+          startedAt: startedAt.toISOString(),
+          sentCount: result.sentCount,
+          skippedCount: result.skippedCount,
+          errorCount: result.errors.length,
+          errors: result.errors,
+        });
+        return NextResponse.json({
+          sentCount: result.sentCount,
+          skippedCount: result.skippedCount,
+        });
+      } catch (error) {
+        console.error("Batch consultation reminder failed", {
+          category: "security-audit",
+          endpoint: postErrorContext.endpoint,
+          organizationId,
+          actorUid: authUser.uid,
+          startedAt: startedAt.toISOString(),
+          error,
+        });
+        throw error;
+      } finally {
+        batchConsultationReminderInProgressOrganizations.delete(organizationId);
+      }
+    }
+
     return jsonError(404, "NOT_FOUND", "Endpoint not found");
   } catch (error) {
     if (error instanceof AuthError) {
@@ -1905,10 +2231,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           BusinessHours["toJSON"]
         >,
       );
+      const nextPricePlanRange =
+        body.pricePlanRange ?? settings.getPricePlanRange().toJSON();
       settings.updateConsultantSelectionEnabled(
         body.consultantSelectionEnabled,
       );
       settings.updateBusinessHours(nextBusinessHours.toJSON());
+      settings.updatePricePlanRange(nextPricePlanRange);
       await repository.save(settings);
 
       const slotRepository = createSlotRepository();
@@ -1954,6 +2283,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
             body.displayName,
             body.bio ?? consultant.getProfile().getBio(),
             body.specialties ?? [...consultant.getProfile().getSpecialties()],
+            body.phone ?? consultant.getProfile().getPhone(),
+            consultant.getProfile().getImageUrl(),
           ),
         );
       }
@@ -1978,6 +2309,34 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       }
 
       await repo.save(consultant);
+      return NextResponse.json({ success: true });
+    }
+
+    if (
+      segments.length === 3 &&
+      segments[0] === "consultant" &&
+      segments[1] === "price-plans"
+    ) {
+      requireOrganizationRole(authUser, organizationId, "consultant");
+      const body = await request.json();
+      if (
+        body.name !== undefined &&
+        (typeof body.name !== "string" || body.name.trim().length === 0)
+      ) {
+        return jsonError(400, "VALIDATION_ERROR", "name is required");
+      }
+      if (body.restore !== undefined && typeof body.restore !== "boolean") {
+        return jsonError(400, "VALIDATION_ERROR", "restore must be a boolean");
+      }
+
+      await createUpdateConsultantPricePlanUseCase().execute({
+        organizationId,
+        consultantId: authUser.uid,
+        pricePlanId: segments[2],
+        name: body.name,
+        restore: body.restore,
+      });
+
       return NextResponse.json({ success: true });
     }
 
@@ -2151,6 +2510,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         displayName: body.displayName,
         bio: body.bio ?? "",
         specialties: body.specialties,
+        phone: body.phone ?? "",
         imageUrl: body.imageUrl,
       });
 
@@ -2231,6 +2591,24 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       }
       consultant.deactivate();
       await repo.save(consultant);
+      return NextResponse.json({ success: true });
+    }
+
+    if (
+      segments.length === 3 &&
+      segments[0] === "consultant" &&
+      segments[1] === "price-plans"
+    ) {
+      requireOrganizationRole(authUser, organizationId, "consultant");
+      const pricePlan = await createConsultantPricePlanRepository().findById(
+        organizationId,
+        segments[2],
+      );
+      if (!pricePlan || pricePlan.getConsultantId() !== authUser.uid) {
+        return jsonError(404, "PRICE_PLAN_NOT_FOUND", "Plan not found");
+      }
+      pricePlan.delete();
+      await createConsultantPricePlanRepository().save(pricePlan);
       return NextResponse.json({ success: true });
     }
 

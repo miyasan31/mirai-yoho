@@ -6,7 +6,6 @@ import { Money } from "@/domain/payment/money";
 import { Payment } from "@/domain/payment/payment";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 
-const AMOUNT_JPY = 5000;
 const TAX_RATE = 0.1;
 
 interface SetupPaymentInput {
@@ -49,7 +48,15 @@ export class SetupPaymentUseCase {
       );
     }
 
-    const money = Money.create(AMOUNT_JPY, TAX_RATE);
+    const pricePlanTotalJPY = booking.getPricePlanTotalJPY();
+    if (pricePlanTotalJPY === undefined) {
+      throw new AppError(
+        400,
+        "BOOKING_PRICE_PLAN_NOT_FOUND",
+        "Booking price plan is not set",
+      );
+    }
+    const money = Money.fromTaxIncluded(pricePlanTotalJPY, TAX_RATE);
 
     if (input.paymentMethodType === "card") {
       const { setupIntentId, clientSecret } =

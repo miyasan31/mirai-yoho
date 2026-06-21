@@ -23,6 +23,15 @@ export interface IEmailService {
     bookingId: string;
   }): Promise<void>;
 
+  sendConsultationReminder(params: {
+    clientEmail: string;
+    clientName: string;
+    consultantName: string;
+    zoomUrl: string;
+    startDatetime: Date;
+    bookingId: string;
+  }): Promise<void>;
+
   sendInvitation(params: {
     email: string;
     role: string;

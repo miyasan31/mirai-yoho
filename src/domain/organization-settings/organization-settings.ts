@@ -7,6 +7,10 @@ import {
   createDefaultConsultantRanks,
   validateConsultantRanks,
 } from "@/domain/organization-settings/consultant-rank";
+import {
+  PricePlanRange,
+  type PricePlanRangeProps,
+} from "@/domain/organization-settings/price-plan-range";
 
 export interface OrganizationSettingsProps {
   organizationId: string;
@@ -14,6 +18,7 @@ export interface OrganizationSettingsProps {
   businessHours: BusinessHoursProps;
   consultantRanks?: ConsultantRankProps[];
   defaultConsultantRankId?: string;
+  pricePlanRange?: PricePlanRangeProps;
 }
 
 export class OrganizationSettings {
@@ -23,6 +28,7 @@ export class OrganizationSettings {
     private businessHours: BusinessHours,
     private consultantRanks: ConsultantRankProps[],
     private defaultConsultantRankId: string,
+    private pricePlanRange: PricePlanRange,
   ) {}
 
   static create(props: OrganizationSettingsProps): OrganizationSettings {
@@ -34,6 +40,9 @@ export class OrganizationSettings {
       BusinessHours.create(props.businessHours),
       validateConsultantRanks(ranks, defaultRankId),
       defaultRankId,
+      PricePlanRange.create(
+        props.pricePlanRange ?? PricePlanRange.createDefault().toJSON(),
+      ),
     );
   }
 
@@ -46,6 +55,9 @@ export class OrganizationSettings {
       BusinessHours.reconstruct(props.businessHours),
       validateConsultantRanks(ranks, defaultRankId),
       defaultRankId,
+      PricePlanRange.reconstruct(
+        props.pricePlanRange ?? PricePlanRange.createDefault().toJSON(),
+      ),
     );
   }
 
@@ -57,6 +69,7 @@ export class OrganizationSettings {
       BusinessHours.createDefault(),
       ranks,
       ranks[0].rankId,
+      PricePlanRange.createDefault(),
     );
   }
 
@@ -74,6 +87,10 @@ export class OrganizationSettings {
   ): void {
     this.consultantRanks = validateConsultantRanks(ranks, defaultRankId);
     this.defaultConsultantRankId = defaultRankId;
+  }
+
+  updatePricePlanRange(pricePlanRange: PricePlanRangeProps): void {
+    this.pricePlanRange = PricePlanRange.create(pricePlanRange);
   }
 
   getOrganizationId(): string {
@@ -98,5 +115,9 @@ export class OrganizationSettings {
 
   findConsultantRank(rankId: string): ConsultantRankProps | null {
     return this.consultantRanks.find((rank) => rank.rankId === rankId) ?? null;
+  }
+
+  getPricePlanRange(): PricePlanRange {
+    return PricePlanRange.reconstruct(this.pricePlanRange.toJSON());
   }
 }

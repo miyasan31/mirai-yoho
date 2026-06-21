@@ -9,6 +9,7 @@ interface UpdateProfileInput {
   displayName: string;
   bio: string;
   specialties: string[];
+  phone: string;
   imageUrl?: string;
 }
 
@@ -20,6 +21,7 @@ export class UpdateProfileUseCase {
       input.displayName,
       input.bio,
       input.specialties,
+      input.phone,
       input.imageUrl,
     );
 
