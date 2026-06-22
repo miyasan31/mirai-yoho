@@ -1,0 +1,4 @@
+project_id       = "project-prod"
+region           = "asia-northeast1"
+app_base_url     = "https://app.example.com"
+organization_ids = ["org-1"]
