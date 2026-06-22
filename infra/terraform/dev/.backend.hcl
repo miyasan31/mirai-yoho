@@ -1,0 +1,1 @@
+bucket = "mirai-yoho-dev-terraform-state"
