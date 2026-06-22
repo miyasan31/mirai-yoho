@@ -10,12 +10,22 @@ variable "region" {
 }
 
 variable "app_base_url" {
-  description = "Public Firebase App Hosting URL used as the Scheduler HTTP target and OIDC audience."
+  description = "Public Firebase App Hosting URL used only by the retained manual batch APIs."
   type        = string
 
   validation {
     condition     = can(regex("^https://[^/]+(?:/.*)?$", var.app_base_url))
     error_message = "app_base_url must be an HTTPS URL."
+  }
+}
+
+variable "worker_image" {
+  description = "Artifact Registry image URI for Cloud Run batch workers, tagged with the Git SHA."
+  type        = string
+
+  validation {
+    condition     = can(regex("^.+@sha256:.+$|^.+:.+$", var.worker_image))
+    error_message = "worker_image must be a container image URI with a tag or digest."
   }
 }
 
