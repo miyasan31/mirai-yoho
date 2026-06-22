@@ -1,0 +1,44 @@
+name: Create Release PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Release environment
+        required: true
+        type: choice
+        options:
+          - dev
+          - prod
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  create-release-pr:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      TARGET_ENVIRONMENT: ${{ inputs.environment }}
+    steps:
+      - name: Create release pull request
+        run: |
+          base_branch="release/${TARGET_ENVIRONMENT}"
+          existing_pr_url="$(gh pr list \
+            --base "${base_branch}" \
+            --head main \
+            --state open \
+            --json url \
+            --jq '.[0].url')"
+
+          if [ -n "${existing_pr_url}" ]; then
+            echo "An open release pull request already exists: ${existing_pr_url}"
+            exit 0
+          fi
+
+          gh pr create \
+            --base "${base_branch}" \
+            --head main \
+            --title "chore: release main to ${TARGET_ENVIRONMENT}" \
+            --body "Creates a release pull request from \`main\` to \`${base_branch}\`."
