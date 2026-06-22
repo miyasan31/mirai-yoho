@@ -42,9 +42,6 @@ export const envServer = {
   get cancelTokenSecret(): string {
     return requireServerEnv("CANCEL_TOKEN_SECRET");
   },
-  get lateArrivalAlertCronSecret(): string {
-    return requireServerEnv("LATE_ARRIVAL_ALERT_CRON_SECRET");
-  },
   get lineWorksLateArrivalWebhookUrl(): string {
     return requireServerEnv("LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL");
   },

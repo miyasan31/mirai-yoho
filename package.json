@@ -26,6 +26,7 @@
     "date-fns": "^4.1.0",
     "firebase": "^12.11.0",
     "firebase-admin": "^13.7.0",
+    "google-auth-library": "^10.6.2",
     "lucide-react": "^1.0.1",
     "next": "16.2.1",
     "nuqs": "^2.8.9",

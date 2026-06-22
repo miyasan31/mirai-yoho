@@ -298,11 +298,6 @@ paths:
       tags: [batch]
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
-        - name: x-cron-secret
-          in: header
-          required: true
-          schema:
-            type: string
       responses:
         "200":
           description: OK

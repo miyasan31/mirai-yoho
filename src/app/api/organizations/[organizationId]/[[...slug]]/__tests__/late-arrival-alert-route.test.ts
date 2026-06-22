@@ -1,16 +1,30 @@
 import { NextRequest } from "next/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mocks = vi.hoisted(() => ({
-  execute: vi.fn(),
-  createNotifyLateConsultantArrivalUseCase: vi.fn(),
-}));
+const mocks = vi.hoisted(() => {
+  class MockAuthError extends Error {
+    constructor(
+      public readonly statusCode: number,
+      public readonly code: string,
+      message: string,
+    ) {
+      super(message);
+      this.name = "AuthError";
+    }
+  }
+
+  return {
+    AuthError: MockAuthError,
+    execute: vi.fn(),
+    createNotifyLateConsultantArrivalUseCase: vi.fn(),
+    requireOrganizationRole: vi.fn(),
+    verifyAuth: vi.fn(),
+    verifyCloudSchedulerAuth: vi.fn(),
+  };
+});
 
 vi.mock("@/config/env.server", () => ({
   envServer: {
-    get lateArrivalAlertCronSecret() {
-      return "cron-secret";
-    },
     get firebaseStorageBucket() {
       return "test-bucket";
     },
@@ -55,16 +69,27 @@ vi.mock("@/infrastructure/resend/resend-email-service", () => ({
   ResendEmailService: vi.fn(),
 }));
 
+vi.mock("@/infrastructure/auth/verify-cloud-scheduler-auth", () => ({
+  verifyCloudSchedulerAuth: mocks.verifyCloudSchedulerAuth,
+}));
+
+vi.mock("@/infrastructure/auth/verify-auth", () => ({
+  AuthError: mocks.AuthError,
+  verifyAuth: mocks.verifyAuth,
+}));
+
+vi.mock("@/infrastructure/auth/require-organization-role", () => ({
+  requireOrganizationRole: mocks.requireOrganizationRole,
+}));
+
 import { POST } from "../route";
 
-function createRequest(secret: string) {
+function createRequest(headers?: HeadersInit) {
   return new NextRequest(
     "http://localhost/api/organizations/org-1/batch/late-arrival-alerts",
     {
       method: "POST",
-      headers: {
-        "x-cron-secret": secret,
-      },
+      headers,
     },
   );
 }
@@ -89,21 +114,36 @@ describe("late arrival alert route", () => {
     mocks.createNotifyLateConsultantArrivalUseCase.mockReturnValue({
       execute: mocks.execute,
     });
+    mocks.verifyCloudSchedulerAuth.mockResolvedValue(null);
+    mocks.verifyAuth.mockRejectedValue(
+      new mocks.AuthError(
+        401,
+        "UNAUTHORIZED",
+        "Missing or invalid Authorization header",
+      ),
+    );
   });
 
-  it("returns 401 when cron secret is invalid", async () => {
-    const response = await POST(createRequest("wrong"), createContext());
+  it("rejects the removed cron secret header", async () => {
+    const response = await POST(
+      createRequest({ "x-cron-secret": "legacy-secret" }),
+      createContext(),
+    );
 
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({
       code: "UNAUTHORIZED",
-      message: "Invalid cron secret",
+      message: "Missing or invalid Authorization header",
     });
     expect(mocks.execute).not.toHaveBeenCalled();
   });
 
-  it("executes late arrival alert batch when cron secret is valid", async () => {
-    const response = await POST(createRequest("cron-secret"), createContext());
+  it("executes the batch for a verified Scheduler principal", async () => {
+    mocks.verifyCloudSchedulerAuth.mockResolvedValue({
+      serviceAccountEmail: "batch-scheduler@project-1.iam.gserviceaccount.com",
+    });
+
+    const response = await POST(createRequest(), createContext());
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
@@ -115,5 +155,29 @@ describe("late arrival alert route", () => {
       organizationId: "org-1",
       now: expect.any(Date),
     });
+    expect(mocks.verifyAuth).not.toHaveBeenCalled();
+  });
+
+  it("executes the batch for an admin manually", async () => {
+    mocks.verifyAuth.mockResolvedValue({
+      uid: "admin-1",
+      memberships: [],
+      currentOrganizationId: "org-1",
+      currentDisplayName: "Admin",
+    });
+
+    const response = await POST(
+      createRequest({ Authorization: "Bearer firebase-id-token" }),
+      createContext(),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.requireOrganizationRole).toHaveBeenCalledWith(
+      expect.objectContaining({ uid: "admin-1" }),
+      "org-1",
+      "admin",
+      "operator",
+    );
+    expect(mocks.execute).toHaveBeenCalledTimes(1);
   });
 });

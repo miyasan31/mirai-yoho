@@ -26,6 +26,7 @@ import {
 } from "@/infrastructure/auth/load-auth-context";
 import { requireOrganizationRole } from "@/infrastructure/auth/require-organization-role";
 import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
+import { verifyCloudSchedulerAuth } from "@/infrastructure/auth/verify-cloud-scheduler-auth";
 import {
   createBatchChargeUseCase,
   createBookingRepository,
@@ -132,9 +133,25 @@ function jsonError(status: number, code: string, message: string) {
   return NextResponse.json({ code, message }, { status });
 }
 
-function verifyCronSecret(request: NextRequest): boolean {
-  const expectedSecret = envServer.lateArrivalAlertCronSecret;
-  return request.headers.get("x-cron-secret") === expectedSecret;
+type BatchExecutionActor =
+  | { type: "cloud-scheduler"; principal: string }
+  | { type: "user"; principal: string };
+
+async function authorizeBatchExecution(
+  request: NextRequest,
+  organizationId: string,
+): Promise<BatchExecutionActor> {
+  const schedulerPrincipal = await verifyCloudSchedulerAuth(request);
+  if (schedulerPrincipal) {
+    return {
+      type: "cloud-scheduler",
+      principal: schedulerPrincipal.serviceAccountEmail,
+    };
+  }
+
+  const authUser = await verifyAuth(request);
+  requireOrganizationRole(authUser, organizationId, "admin", "operator");
+  return { type: "user", principal: authUser.uid };
 }
 
 function publicForbidden(message = "Invalid booking action request") {
@@ -1622,9 +1639,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       segments[0] === "batch" &&
       segments[1] === "late-arrival-alerts"
     ) {
-      if (!verifyCronSecret(request)) {
-        return jsonError(401, "UNAUTHORIZED", "Invalid cron secret");
-      }
+      const actor = await authorizeBatchExecution(request, organizationId);
 
       const startedAt = new Date();
       const result = await createNotifyLateConsultantArrivalUseCase().execute({
@@ -1635,6 +1650,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
         category: "security-audit",
         endpoint: postErrorContext.endpoint,
         organizationId,
+        actorType: actor.type,
+        actorPrincipal: actor.principal,
         startedAt: startedAt.toISOString(),
         targetCount: result.targetCount,
         notifiedCount: result.notifiedCount,
@@ -2012,8 +2029,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       segments[0] === "batch" &&
       segments[1] === "charge"
     ) {
-      const authUser = await verifyAuth(request);
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      const actor = await authorizeBatchExecution(request, organizationId);
 
       const rateLimitState = getBatchChargeRateLimitState(organizationId);
       if (rateLimitState.inProgress) {
@@ -2041,7 +2057,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
           category: "security-audit",
           endpoint: postErrorContext.endpoint,
           organizationId,
-          actorUid: authUser.uid,
+          actorType: actor.type,
+          actorPrincipal: actor.principal,
           startedAt: startedAt.toISOString(),
           chargedCount: result.chargedCount,
           completedCount: result.completedCount,
@@ -2057,7 +2074,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
           category: "security-audit",
           endpoint: postErrorContext.endpoint,
           organizationId,
-          actorUid: authUser.uid,
+          actorType: actor.type,
+          actorPrincipal: actor.principal,
           startedAt: startedAt.toISOString(),
           error,
         });
@@ -2072,8 +2090,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       segments[0] === "batch" &&
       segments[1] === "consultation-reminders"
     ) {
-      const authUser = await verifyAuth(request);
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      const actor = await authorizeBatchExecution(request, organizationId);
 
       const rateLimitState =
         getBatchConsultationReminderRateLimitState(organizationId);
@@ -2106,7 +2123,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
           category: "security-audit",
           endpoint: postErrorContext.endpoint,
           organizationId,
-          actorUid: authUser.uid,
+          actorType: actor.type,
+          actorPrincipal: actor.principal,
           startedAt: startedAt.toISOString(),
           sentCount: result.sentCount,
           skippedCount: result.skippedCount,
@@ -2122,7 +2140,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
           category: "security-audit",
           endpoint: postErrorContext.endpoint,
           organizationId,
-          actorUid: authUser.uid,
+          actorType: actor.type,
+          actorPrincipal: actor.principal,
           startedAt: startedAt.toISOString(),
           error,
         });
