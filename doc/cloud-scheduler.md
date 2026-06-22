@@ -5,8 +5,8 @@ Cloud Scheduler は Firebase App Hosting と同じ GCP project で実行しま�
 | ジョブ | スケジュール | 対象 API |
 | --- | --- | --- |
 | `batch-charge-<organizationId>` | 毎日 00:00 JST | `batch/charge` |
-| `consultation-reminders-<organizationId>` | 毎分 | `batch/consultation-reminders` |
-| `late-arrival-alerts-<organizationId>` | 毎分 | `batch/late-arrival-alerts` |
+| `consultation-reminders-<organizationId>` | 15分ごと | `batch/consultation-reminders` |
+| `late-arrival-alerts-<organizationId>` | 30分ごと | `batch/late-arrival-alerts` |
 
 ## 初期化と適用
 

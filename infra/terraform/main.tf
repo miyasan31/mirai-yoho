@@ -51,14 +51,14 @@ locals {
           organization_id = organization_id
           name            = "consultation-reminders-${organization_id}"
           path            = "batch/consultation-reminders"
-          schedule        = "* * * * *"
+          schedule        = "*/15 * * * *"
         },
         {
           key             = "${organization_id}-late-arrival-alerts"
           organization_id = organization_id
           name            = "late-arrival-alerts-${organization_id}"
           path            = "batch/late-arrival-alerts"
-          schedule        = "* * * * *"
+          schedule        = "*/30 * * * *"
         },
       ]
     ]) : job.key => job
