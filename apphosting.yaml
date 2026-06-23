@@ -66,6 +66,10 @@ env:
     secret: FIREBASE_PROJECT_ID
     availability:
       - RUNTIME
+  - variable: FIREBASE_STORAGE_BUCKET
+    secret: FIREBASE_STORAGE_BUCKET
+    availability:
+      - RUNTIME
   - variable: INVOICE_REGISTRATION_NUMBER
     secret: INVOICE_REGISTRATION_NUMBER
     availability:

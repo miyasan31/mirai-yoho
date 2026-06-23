@@ -7,8 +7,7 @@ firestore_location           = "asia-northeast1"
 firebase_storage_bucket_name = "mirai-yoho-prod.firebasestorage.app"
 firebase_storage_location    = "US-EAST1"
 
-# Replace the placeholders after obtaining access to the existing prod project,
-# then import the resources following doc/terraform-firebase-migration.md.
+# Replace these values with the existing prod Firebase resources before importing.
 firebase_web_app_id           = "1:PROJECT_NUMBER:web:WEB_APP_ID"
 firebase_web_app_display_name = "未来予報"
 app_hosting_backend_id        = "mirai-yoho"

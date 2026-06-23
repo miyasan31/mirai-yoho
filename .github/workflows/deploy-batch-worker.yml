@@ -37,4 +37,5 @@ jobs:
           TF_VAR_worker_image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/batch-worker/worker:${{ env.IMAGE_TAG }}
         run: |
           make init ENV="$DEPLOY_ENV"
+          make plan ENV="$DEPLOY_ENV"
           make apply ENV="$DEPLOY_ENV"
