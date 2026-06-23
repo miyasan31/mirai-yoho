@@ -8,32 +8,62 @@ Cloud Scheduler は Firebase App Hosting と同じ GCP project で実行しま�
 | `consultation-reminders-<organizationId>` | 15分ごと | `batch-consultation-reminders` Cloud Run Job |
 | `late-arrival-alerts-<organizationId>` | 30分ごと | `batch-late-arrival-alerts` Cloud Run Job |
 
-## 初期化と適用
+## 初回セットアップ（空の GCP プロジェクト）
 
-GCS state bucket は事前に作成し、Terraform を実行するユーザーにそのバケットの読み書き権限を付与してください。backend は Terraform variables を参照できないため、state bucket は backend 設定ファイルで渡します。
+GCS state bucket は Terraform の管理外です。最初に作成し、Terraform を実行するユーザーに読み書き権限を付与してください。backend は Terraform variables を参照できないため、state bucket は backend 設定ファイルで渡します。
+
+以下は開発環境の例です。本番環境では `ENV=prod`、`mirai-yoho-prod` に読み替えてください。
 
 ```bash
 cd infra/terraform
-cp environments/prod.tfvars.example environments/prod.tfvars
-cp environments/prod.backend.hcl.example environments/prod.backend.hcl
-# prod.tfvars と prod.backend.hcl のプレースホルダーを実環境の値に置き換える
-terraform init -backend-config=environments/prod.backend.hcl
-export TF_VAR_worker_image=asia-northeast1-docker.pkg.dev/project-prod/batch-worker/worker:<git-sha>
-terraform plan -var-file=environments/prod.tfvars
-terraform apply -var-file=environments/prod.tfvars
+make setup-config ENV=dev
+# dev/.tfvars と dev/.backend.hcl のプレースホルダーを実環境の値に置き換える
+make create-state-bucket ENV=dev
+make auth-adc ENV=dev
+make init ENV=dev
 ```
 
-`prod.tfvars` と `prod.backend.hcl` は環境固有のためコミットしません。組織を追加したら `organization_ids` に追加して apply してください。
+`dev/.tfvars` と `dev/.backend.hcl` は環境固有のためコミットしません。組織を追加したら `organization_ids` に追加して apply してください。
 
-## 初回ブートストラップと CD
+### Worker イメージを用意して通常 apply する
 
-Cloud Run Job のイメージ、Artifact Registry、Workload Identity Federation は相互に依存するため、最初の1回だけ管理者が次の順に適用します。
+`worker_image` は Cloud Run Job で実行するコンテナイメージです。Terraform の必須変数であり、`.tfvars` には含めません。`plan` または `apply` の前に、push 済みのイメージ URI を `TF_VAR_worker_image` で渡してください。未指定の場合、Terraform は入力待ちになり、値を与えずに終了すると `No value for required variable` になります。
 
-1. `google_artifact_registry_repository.batch_worker` を含む Terraform リソースを target apply し、Artifact Registry を作成する。
-2. `cloudbuild.worker.yaml` を使って Worker イメージを push する。
-3. `TF_VAR_worker_image` に push 済みイメージを設定して通常の Terraform apply を行う。
-4. GitHub Environment の `dev` / `prod` ごとに `GCP_PROJECT_NUMBER` variable を設定する。
-5. Terraform state bucket に `github-deployer` サービスアカウントの読み書き権限を付与する。
+```bash
+cd infra/terraform
+export IMAGE_TAG="$(git rev-parse HEAD)"
+export TF_VAR_worker_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:$IMAGE_TAG"
+make plan ENV=dev
+make apply ENV=dev
+```
+
+### 初回ブートストラップ
+
+Cloud Run Job のイメージと Artifact Registry は相互に依存するため、空のプロジェクトでは次の順に実行します。最初の target apply 用の `bootstrap` タグは Terraform の変数検証を通すためだけの値であり、この時点では存在しなくても構いません。
+
+```bash
+# 1. Artifact Registry だけを作成する
+cd infra/terraform
+export TF_VAR_worker_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:bootstrap"
+terraform apply -var-file="dev/.tfvars" \
+  -target=google_artifact_registry_repository.batch_worker
+
+# 2. Worker イメージを build・push する
+cd ../..
+export IMAGE_TAG="$(git rev-parse HEAD)"
+gcloud builds submit \
+  --project="mirai-yoho-dev" \
+  --config=cloudbuild.worker.yaml \
+  --substitutions="_IMAGE=asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:$IMAGE_TAG"
+
+# 3. push したイメージを指定して、全リソースを適用する
+cd infra/terraform
+export TF_VAR_worker_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:$IMAGE_TAG"
+make plan ENV=dev
+make apply ENV=dev
+```
+
+続けて GitHub Environment の `dev` / `prod` ごとに `GCP_PROJECT_NUMBER` variable を設定し、Terraform state bucket に `github-deployer` サービスアカウントの読み書き権限を付与してください。
 
 以降は `release/dev` または `release/prod` への push（マージを含む）で GitHub Actions が Workload Identity Federation を使い、対応する環境へ Git SHA タグの Worker イメージを build・push して Terraform を apply します。認証は `miyasan31/mirai-yoho` のこれら2ブランチに限定されます。
 
@@ -53,4 +83,4 @@ gcloud run jobs execute batch-consultation-reminders \
 
 管理者・operator が Web API をオンデマンド実行する運用は従来どおりです。Scheduler はこの API を呼びません。
 
-監視では Cloud Scheduler の最終実行結果に加え、Cloud Run Job の Execution 一覧と `Batch worker completed` / `Batch worker failed` ログを確認します。失敗した場合は同じ Job を `gcloud run jobs execute` で再実行します。Scheduler の実行先を切り替える Terraform apply 中は、旧 App Hosting API を手動で実行しないでください。二重実行を避けるため、apply 後に Scheduler URI が `run.googleapis.com` になっていることを確認します。
+監視では Cloud Scheduler の最終実行結果に加え、Cloud Run Job の Execution 一覧と `Batch worker completed` / `Batch worker failed` ログを確認します。失敗した場合は同じ Job を `gcloud run jobs execute` で再実行します。apply 後に Scheduler URI が `run.googleapis.com` になっていることを確認してください。

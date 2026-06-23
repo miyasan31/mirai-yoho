@@ -9,10 +9,6 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 Cloud Scheduler の Terraform 管理と運用手順は [doc/cloud-scheduler.md](doc/cloud-scheduler.md) を参照してください。
 
-## Firebase Terraform 管理
-
-Firebase Authentication、Cloud Storage、Firestore、App Hosting の Terraform 管理と既存リソースの import 手順は [doc/terraform-firebase-migration.md](doc/terraform-firebase-migration.md) を参照してください。
-
 ## Getting Started
 
 First, run the development server:

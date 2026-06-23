@@ -30,7 +30,7 @@ help:
 	@echo "  make init                        terraform init"
 	@echo ""
 	@echo "日常運用:"
-	@echo "  make plan                        変更内容を確認（初回は doc/terraform-firebase-migration.md の import を実施）"
+	@echo "  make plan                        変更内容を確認（TF_VAR_worker_image の指定が必要）"
 	@echo "  make apply                       インフラを適用"
 	@echo "  make destroy                     インフラを削除"
 	@echo ""
