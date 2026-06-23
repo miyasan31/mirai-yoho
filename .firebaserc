@@ -1,6 +1,0 @@
-{
-  "projects": {
-    "dev": "mirai-yoho-dev",
-    "prod": "mirai-yoho-prod"
-  }
-}

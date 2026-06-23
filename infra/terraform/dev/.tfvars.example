@@ -6,6 +6,10 @@ organization_ids = ["mirai-yoho-dev"]
 firestore_location          = "asia-northeast1"
 firebase_storage_bucket_name = "mirai-yoho-dev.firebasestorage.app"
 firebase_storage_location    = "US-EAST1"
+firebase_storage_cors_origins = [
+  "http://localhost:3000",
+  "https://dev.console.miraiyohou.com",
+]
 
 firebase_web_app_id           = "1:173156005504:web:478232d812edccae4cd865"
 firebase_web_app_display_name = "未来予報"

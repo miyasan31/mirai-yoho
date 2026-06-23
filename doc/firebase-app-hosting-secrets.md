@@ -16,7 +16,16 @@ env:
       - RUNTIME
 ```
 
-## 2. Secret を登録する
+## 2. Terraform で Secret と IAM を適用する
+
+Secret のコンテナと App Hosting compute service account の参照権限は Terraform で管理します。新しい Secret を追加した場合は、`apphosting.yaml` と `infra/terraform/firebase.tf` の両方に名前を追加し、対象環境で Terraform を適用してください。
+
+```bash
+cd infra/terraform
+make apply ENV=dev
+```
+
+## 3. Secret の値を登録する
 
 まとめて登録:
 
@@ -30,34 +39,16 @@ make setup-secrets PROJECT=mirai-yoho-dev
 make setup-secret PROJECT=mirai-yoho-dev KEY=OPENAI_API_KEY
 ```
 
-Cloud Secret Manager コンソールで Secret を作成した場合は、App Hosting から読み取れるようアクセス権を付与:
-
-```bash
-make grant-secret-access PROJECT=mirai-yoho-dev KEY=OPENAI_API_KEY BACKEND=<backendId>
-```
-
-またはサービスアカウントメールを直接指定:
-
-```bash
-make grant-secret-access PROJECT=mirai-yoho-dev KEY=OPENAI_API_KEY EMAILS=<service-account-email>
-```
-
-`BACKEND` が不明な場合は、Firebase CLI でバックエンド一覧を確認:
-
-```bash
-firebase apphosting:backends:list --project mirai-yoho-dev
-```
-
-## 3. Firebase Console の重複環境変数を排除する
+## 4. Firebase Console の重複環境変数を排除する
 
 Firebase Console > App Hosting の Environment variables に同名キーがあると、そちらが優先されます。  
 `apphosting.yaml` で管理するキーと同名の値は Console 側から削除（または空に）してください。
 
-## 4. 再デプロイして反映する
+## 5. 再デプロイして反映する
 
 Secret 追加・更新後は新しいロールアウトを実行して反映します。
 
-## 5. ローテーション
+## 6. ローテーション
 
 Secret 値を更新したら再ロールアウトしてください。  
 固定バージョンが必要な場合は `secret: OPENAI_API_KEY@5` のようにバージョン指定します。
@@ -72,43 +63,34 @@ Secret 値を更新したら再ロールアウトしてください。
 
 このエラーは、バージョンそのものより「App Hosting backend の Secret アクセス権不足」で起こることが多いです。
 
-1. backend 名を確認
-
-```bash
-make list-apphosting-backends PROJECT=mirai-yoho-dev
-```
-
-2. 対象 secret の状態を確認（存在・バージョン）
+1. 対象 secret の状態を確認（存在・バージョン）
 
 ```bash
 make describe-secret PROJECT=mirai-yoho-dev KEY=NEXT_PUBLIC_FIREBASE_API_KEY
 ```
 
-3. backend へアクセス権を付与
+2. Terraform plan で Secret と IAM が管理対象であることを確認
 
 ```bash
-make grant-secret-access PROJECT=mirai-yoho-dev KEY=NEXT_PUBLIC_FIREBASE_API_KEY BACKEND=<backendId>
+cd infra/terraform
+make plan ENV=dev
 ```
 
-同種エラーを防ぐため、`apphosting.yaml` で参照している全 Secret を backend に一括付与:
+不足があれば `make apply ENV=dev` を実行して IAM を反映します。
 
-```bash
-make grant-secrets-access-all PROJECT=mirai-yoho-dev BACKEND=<backendId>
-```
-
-4. `latest` 解決を確認
+3. `latest` 解決を確認
 
 ```bash
 make access-secret PROJECT=mirai-yoho-dev KEY=NEXT_PUBLIC_FIREBASE_API_KEY
 ```
 
-5. 値が空でないことを確認（値そのものは表示しない）
+4. 値が空でないことを確認（値そのものは表示しない）
 
 ```bash
 make check-secret-value PROJECT=mirai-yoho-dev KEY=NEXT_PUBLIC_FIREBASE_API_KEY
 make check-public-build-secrets PROJECT=mirai-yoho-dev
 ```
 
-6. 再ロールアウト
+5. 再ロールアウト
 
 Secret の権限変更後は App Hosting を再デプロイしてください。

@@ -6,6 +6,9 @@ organization_ids = ["mirai-yoho-prod"]
 firestore_location           = "asia-northeast1"
 firebase_storage_bucket_name = "mirai-yoho-prod.firebasestorage.app"
 firebase_storage_location    = "US-EAST1"
+firebase_storage_cors_origins = [
+  "https://console.miraiyohou.com",
+]
 
 # Replace the placeholders after obtaining access to the existing prod project,
 # then import the resources following doc/terraform-firebase-migration.md.

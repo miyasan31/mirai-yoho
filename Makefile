@@ -1,4 +1,4 @@
-.PHONY: set-claims setup-firestore-collections create-organization seed-slots delete-slots setup-secrets setup-secret grant-secret-access grant-secrets-access-all list-apphosting-backends describe-secret access-secret check-secret-value check-public-build-secrets
+.PHONY: set-claims setup-firestore-collections create-organization seed-slots delete-slots setup-secrets setup-secret list-apphosting-backends describe-secret access-secret check-secret-value check-public-build-secrets
 
 # ============================================================
 # Scripts（引数が必要なコマンド）
@@ -87,26 +87,8 @@ setup-secret:
 # Usage: make grant-secret-access PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<OPENAI_API_KEY> BACKEND=<backendId>
 # Usage: make grant-secret-access PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<OPENAI_API_KEY> EMAILS=<sa1@example.iam.gserviceaccount.com,sa2@example.iam.gserviceaccount.com>
 # Secret Manager コンソールで作成した Secret を App Hosting から読めるようにする
-grant-secret-access:
-	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make grant-secret-access PROJECT=<project> KEY=<SECRET_KEY> BACKEND=<backendId> or EMAILS=<email1,email2>" && exit 1)
-	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make grant-secret-access PROJECT=<project> KEY=<SECRET_KEY> BACKEND=<backendId> or EMAILS=<email1,email2>" && exit 1)
-	@if [ -n "$(BACKEND)" ]; then \
-		firebase apphosting:secrets:grantaccess $(KEY) --backend $(BACKEND) --project $(PROJECT); \
-	elif [ -n "$(EMAILS)" ]; then \
-		firebase apphosting:secrets:grantaccess $(KEY) --emails "$(EMAILS)" --project $(PROJECT); \
-	else \
-		echo "Error: BACKEND or EMAILS is required. Usage: make grant-secret-access PROJECT=<project> KEY=<SECRET_KEY> BACKEND=<backendId> or EMAILS=<email1,email2>"; \
-		exit 1; \
-	fi
 
 # Usage: make grant-secrets-access-all PROJECT=<mirai-yoho-dev|mirai-yoho-prod> BACKEND=<backendId>
-grant-secrets-access-all:
-	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make grant-secrets-access-all PROJECT=<project> BACKEND=<backendId>" && exit 1)
-	@test -n "$(BACKEND)" || (echo "Error: BACKEND is required. Usage: make grant-secrets-access-all PROJECT=<project> BACKEND=<backendId>" && exit 1)
-	@for secret in $(APPHOSTING_SECRET_KEYS); do \
-		echo "Granting $$secret to backend $(BACKEND)"; \
-		firebase apphosting:secrets:grantaccess $$secret --backend $(BACKEND) --project $(PROJECT); \
-	done
 
 # Usage: make list-apphosting-backends PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
 list-apphosting-backends:

@@ -57,6 +57,11 @@ variable "firebase_storage_location" {
   type        = string
 }
 
+variable "firebase_storage_cors_origins" {
+  description = "Origins permitted to upload to the Firebase Storage bucket with V4 signed URLs."
+  type        = set(string)
+}
+
 variable "firebase_web_app_id" {
   description = "Firebase Web App ID used by App Hosting."
   type        = string

@@ -6,6 +6,9 @@ organization_ids = ["mirai-yoho-prod"]
 firestore_location           = "asia-northeast1"
 firebase_storage_bucket_name = "mirai-yoho-prod.firebasestorage.app"
 firebase_storage_location    = "US-EAST1"
+firebase_storage_cors_origins = [
+  "https://console.miraiyohou.com",
+]
 
 # Replace these values with the existing prod Firebase resources before importing.
 firebase_web_app_id           = "1:PROJECT_NUMBER:web:WEB_APP_ID"

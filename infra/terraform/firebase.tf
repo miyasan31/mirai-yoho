@@ -123,6 +123,13 @@ resource "google_storage_bucket" "firebase_default" {
   uniform_bucket_level_access = false
   public_access_prevention    = "inherited"
 
+  cors {
+    origin          = sort(tolist(var.firebase_storage_cors_origins))
+    method          = ["PUT", "GET", "HEAD", "OPTIONS"]
+    response_header = ["Content-Type", "x-goog-resumable"]
+    max_age_seconds = 3600
+  }
+
   lifecycle {
     prevent_destroy = true
   }
