@@ -1,4 +1,4 @@
-.PHONY: set-claims setup-firestore-collections create-organization seed-slots delete-slots deploy-firestore setup-secrets setup-secret grant-secret-access grant-secrets-access-all list-apphosting-backends describe-secret access-secret check-secret-value check-public-build-secrets
+.PHONY: set-claims setup-firestore-collections create-organization seed-slots delete-slots setup-secrets setup-secret grant-secret-access grant-secrets-access-all list-apphosting-backends describe-secret access-secret check-secret-value check-public-build-secrets
 
 # ============================================================
 # Scripts（引数が必要なコマンド）
@@ -35,16 +35,6 @@ delete-slots:
 	pnpm dlx tsx --env-file=.env.local scripts/delete-slots.ts
 
 # ============================================================
-# Firebase Deploy（プロジェクト指定）
-# ============================================================
-
-# Usage: make deploy-firestore PROJECT=<dev|prod>
-# Example: make deploy-firestore PROJECT=dev
-deploy-firestore:
-	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make deploy-firestore PROJECT=<dev|prod>" && exit 1)
-	firebase deploy --only firestore:rules,firestore:indexes --project $(PROJECT)
-
-# ============================================================
 # Firebase App Hosting セットアップ
 # ============================================================
 
@@ -67,6 +57,8 @@ APPHOSTING_SECRET_KEYS = \
 	CANCEL_TOKEN_SECRET \
 	RESEND_FROM_EMAIL \
 	FIREBASE_PROJECT_ID \
+	FIREBASE_STORAGE_BUCKET \
+	LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL \
 	INVOICE_REGISTRATION_NUMBER
 
 PUBLIC_BUILD_SECRET_KEYS = \

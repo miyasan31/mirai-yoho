@@ -3,6 +3,11 @@ provider "google" {
   region  = var.region
 }
 
+provider "google-beta" {
+  project = var.project_id
+  region  = var.region
+}
+
 data "google_project" "current" {}
 
 resource "google_project_service" "required" {
@@ -11,8 +16,15 @@ resource "google_project_service" "required" {
     "cloudbuild.googleapis.com",
     "cloudresourcemanager.googleapis.com",
     "cloudscheduler.googleapis.com",
+    "developerconnect.googleapis.com",
+    "firebase.googleapis.com",
+    "firebaseapphosting.googleapis.com",
+    "firebaserules.googleapis.com",
+    "firebasestorage.googleapis.com",
+    "firestore.googleapis.com",
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
+    "identitytoolkit.googleapis.com",
     "run.googleapis.com",
     "secretmanager.googleapis.com",
     "sts.googleapis.com",
@@ -303,11 +315,18 @@ resource "google_project_iam_member" "github_deployer_roles" {
   for_each = toset([
     "roles/artifactregistry.writer",
     "roles/cloudbuild.builds.editor",
+    "roles/datastore.owner",
+    "roles/developerconnect.admin",
+    "roles/firebase.admin",
+    "roles/firebaseapphosting.admin",
+    "roles/firebaserules.admin",
     "roles/iam.serviceAccountAdmin",
+    "roles/identityplatform.admin",
     "roles/resourcemanager.projectIamAdmin",
     "roles/run.admin",
     "roles/secretmanager.admin",
     "roles/serviceusage.serviceUsageAdmin",
+    "roles/storage.admin",
   ])
 
   project = var.project_id
