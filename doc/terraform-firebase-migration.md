@@ -44,7 +44,7 @@ for secret in $(terraform console -var-file="$ENV/.tfvars" <<< 'join(" ", tolist
 done
 ```
 
-Firestore composite index のサーバー生成 ID は `gcloud firestore indexes composite list --project="$PROJECT_ID"` で確認して import する。index は `google_firestore_index.composite[\"<key>\"]` に対応させる。App Hosting compute account の既存 IAM member も、最初の plan が create 以外を示す場合に import する。
+Firestore composite index の server-generated ID は `gcloud firestore indexes composite list --project="$PROJECT_ID"` で確認して import する。`INDEX_ID` は説明用のプレースホルダーなので、そのまま実行しない。index は `google_firestore_index.composite[\"<key>\"]` に対応させる。App Hosting compute account の既存 IAM member も、最初の plan が create 以外を示す場合に import する。
 
 Ruleset は更新ごとに新規作成されるため import しない。最初の apply で `firestore.rules` と `storage.rules` を release へ反映する。
 

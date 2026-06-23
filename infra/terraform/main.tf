@@ -236,11 +236,11 @@ resource "google_project_iam_custom_role" "scheduler_job_runner" {
 }
 
 resource "google_cloud_run_v2_job_iam_member" "scheduler_can_run_batch" {
-  for_each = google_cloud_run_v2_job.batch
+  for_each = local.batch_worker_jobs
 
   project  = var.project_id
   location = var.region
-  name     = each.value.name
+  name     = google_cloud_run_v2_job.batch[each.key].name
   role     = google_project_iam_custom_role.scheduler_job_runner.name
   member   = "serviceAccount:${google_service_account.batch_scheduler.email}"
 }
