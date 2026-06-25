@@ -35,11 +35,6 @@ resource "google_firestore_database" "default" {
   lifecycle {
     prevent_destroy = true
   }
-
-  depends_on = [
-    google_project_iam_member.github_deployer_roles,
-    google_project_service.required,
-  ]
 }
 
 resource "google_firestore_index" "composite" {
@@ -133,11 +128,6 @@ resource "google_storage_bucket" "firebase_default" {
   lifecycle {
     prevent_destroy = true
   }
-
-  depends_on = [
-    google_project_iam_member.github_deployer_roles,
-    google_project_service.required,
-  ]
 }
 
 resource "google_identity_platform_config" "default" {
@@ -158,11 +148,6 @@ resource "google_identity_platform_config" "default" {
   lifecycle {
     prevent_destroy = true
   }
-
-  depends_on = [
-    google_project_iam_member.github_deployer_roles,
-    google_project_service.required,
-  ]
 }
 
 resource "google_firebase_web_app" "app_hosting" {
@@ -174,26 +159,6 @@ resource "google_firebase_web_app" "app_hosting" {
   lifecycle {
     prevent_destroy = true
   }
-
-  depends_on = [google_project_iam_member.github_deployer_roles]
-}
-
-resource "google_service_account" "app_hosting_compute" {
-  project      = var.project_id
-  account_id   = "firebase-app-hosting-compute"
-  display_name = "Firebase App Hosting compute service account"
-}
-
-resource "google_project_iam_member" "app_hosting_compute_roles" {
-  for_each = toset([
-    "roles/developerconnect.readTokenAccessor",
-    "roles/firebase.sdkAdminServiceAgent",
-    "roles/firebaseapphosting.computeRunner",
-  ])
-
-  project = var.project_id
-  role    = each.value
-  member  = "serviceAccount:${google_service_account.app_hosting_compute.email}"
 }
 
 resource "google_developer_connect_connection" "github" {
@@ -213,11 +178,6 @@ resource "google_developer_connect_connection" "github" {
   lifecycle {
     prevent_destroy = true
   }
-
-  depends_on = [
-    google_project_iam_member.github_deployer_roles,
-    google_project_service.required,
-  ]
 }
 
 resource "google_developer_connect_git_repository_link" "app" {
@@ -237,7 +197,7 @@ resource "google_firebase_app_hosting_backend" "app" {
   location         = var.app_hosting_location
   backend_id       = var.app_hosting_backend_id
   app_id           = google_firebase_web_app.app_hosting.app_id
-  service_account  = google_service_account.app_hosting_compute.email
+  service_account  = var.app_hosting_compute_service_account_email
   serving_locality = "GLOBAL_ACCESS"
   environment      = var.project_id == "mirai-yoho-dev" ? "dev" : "prod"
   deletion_policy  = "PREVENT"
@@ -246,8 +206,6 @@ resource "google_firebase_app_hosting_backend" "app" {
     repository     = google_developer_connect_git_repository_link.app.name
     root_directory = "/"
   }
-
-  depends_on = [google_project_iam_member.app_hosting_compute_roles]
 }
 
 resource "google_firebase_app_hosting_traffic" "app" {
@@ -273,8 +231,6 @@ resource "google_secret_manager_secret" "app_hosting" {
   replication {
     auto {}
   }
-
-  depends_on = [google_project_iam_member.github_deployer_roles]
 }
 
 resource "google_secret_manager_secret_iam_member" "app_hosting_can_read_secrets" {
@@ -283,5 +239,5 @@ resource "google_secret_manager_secret_iam_member" "app_hosting_can_read_secrets
   project   = var.project_id
   secret_id = each.value.secret_id
   role      = "roles/secretmanager.secretAccessor"
-  member    = "serviceAccount:${google_service_account.app_hosting_compute.email}"
+  member    = "serviceAccount:${var.app_hosting_compute_service_account_email}"
 }

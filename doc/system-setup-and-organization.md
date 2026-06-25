@@ -126,10 +126,10 @@ Firebase App Hosting を使うため、Firebase GitHub App をリポジトリ `m
 
 Terraform の環境別設定は次の場所です。
 
-- `infra/terraform/dev/.tfvars` / `infra/terraform/dev/.backend.hcl`
-- `infra/terraform/prod/.tfvars` / `infra/terraform/prod/.backend.hcl`
+- `infra/terraform/gcp/dev/.tfvars` / `infra/terraform/gcp/dev/.backend.hcl`
+- `infra/terraform/gcp/prod/.tfvars` / `infra/terraform/gcp/prod/.backend.hcl`
 
-新しい環境を作る場合は `prod/.tfvars.example` をひな形にし、少なくとも次を環境に合わせて設定します。
+新しい環境を作る場合は既存環境の `.tfvars` をひな形にし、少なくとも次を環境に合わせて設定します。
 
 - `project_id`、`app_base_url`、`organization_ids`
 - `organization_operator_impersonators`（組織作成コマンドを実行するユーザーや CI）
@@ -140,7 +140,7 @@ Terraform の環境別設定は次の場所です。
 Terraform state 用 GCS bucket は Terraform の外で一度だけ作成します。開発環境の例です。
 
 ```bash
-cd infra/terraform
+cd infra/terraform/gcp
 make create-state-bucket ENV=dev
 make auth-adc ENV=dev
 make init ENV=dev
@@ -151,7 +151,7 @@ dev と prod の remote state は、それぞれ別の GCS bucket で管理し�
 - dev: `mirai-yoho-dev-terraform-state`
 - prod: `mirai-yoho-prod-terraform-state`
 
-同じ `infra/terraform` ディレクトリで環境を切り替えてもローカルの backend 設定が混ざらないように、Terraform の作業ディレクトリも `TF_DATA_DIR=.terraform/<env>` で分離しています。`ENV=dev` と `ENV=prod` を切り替える時は、それぞれ一度 `make init ENV=<env>` を実行してください。
+`dev` と `prod` はそれぞれ独立した Terraform root です。`ENV=dev` と `ENV=prod` を切り替える時は、それぞれ一度 `make init ENV=<env>` を実行してください。
 
 `auth-adc` は Application Default Credentials を設定します。実行者には、プロジェクトの API 有効化、IAM、Firestore、Storage、Secret Manager、App Hosting、Cloud Run、Cloud Scheduler を管理できる権限が必要です。
 
@@ -160,19 +160,19 @@ dev と prod の remote state は、それぞれ別の GCS bucket で管理し�
 Terraform は Cloud Run Job 用の `worker_image` を必須とします。一方で、初回は Artifact Registry がまだないため、以下の順番で進めます。
 
 ```bash
-cd infra/terraform
+cd infra/terraform/gcp
 export TF_VAR_worker_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:bootstrap"
-terraform apply -var-file="dev/.tfvars" \
-  -target=google_artifact_registry_repository.batch_worker
+terraform -chdir=dev apply -var-file=".tfvars" \
+  -target=module.artifact_registry.google_artifact_registry_repository.batch_worker
 
-cd ../..
+cd ../../..
 export IMAGE_TAG="$(git rev-parse HEAD)"
 gcloud builds submit \
   --project="mirai-yoho-dev" \
   --config=cloudbuild.worker.yaml \
   --substitutions="_IMAGE=asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:$IMAGE_TAG"
 
-cd infra/terraform
+cd infra/terraform/gcp
 export TF_VAR_worker_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:$IMAGE_TAG"
 make plan ENV=dev
 make apply ENV=dev
@@ -255,7 +255,7 @@ make create-organization \
 
 ### 4.4 定期バッチを有効にする
 
-定期バッチを実行する環境では、組織作成後に `infra/terraform/<env>/.tfvars` の `organization_ids` に同じ ID を追加します。
+定期バッチを実行する環境では、組織作成後に `infra/terraform/gcp/<env>/.tfvars` の `organization_ids` に同じ ID を追加します。
 
 ```hcl
 organization_ids = ["mirai-yoho-dev", "tokyo-shibuya"]
@@ -264,7 +264,7 @@ organization_ids = ["mirai-yoho-dev", "tokyo-shibuya"]
 続けて Worker イメージを指定して apply します。
 
 ```bash
-cd infra/terraform
+cd infra/terraform/gcp
 export IMAGE_TAG="$(git rev-parse HEAD)"
 export TF_VAR_worker_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:$IMAGE_TAG"
 make plan ENV=dev

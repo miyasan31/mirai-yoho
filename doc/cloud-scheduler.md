@@ -15,22 +15,21 @@ GCS state bucket は Terraform の管理外です。最初に作成し、Terrafo
 以下は開発環境の例です。本番環境では `ENV=prod`、`mirai-yoho-prod` に読み替えてください。
 
 ```bash
-cd infra/terraform
-make setup-config ENV=dev
-# dev/.tfvars と dev/.backend.hcl のプレースホルダーを実環境の値に置き換える
+cd infra/terraform/gcp
+# dev/.tfvars と dev/.backend.hcl が対象環境の値になっていることを確認する
 make create-state-bucket ENV=dev
 make auth-adc ENV=dev
 make init ENV=dev
 ```
 
-`dev/.tfvars` と `dev/.backend.hcl` は環境固有のためコミットしません。組織を追加したら `organization_ids` に追加して apply してください。
+`dev/.tfvars` と `dev/.backend.hcl` は共有する環境設定としてコミットしています。組織を追加したら `organization_ids` に追加して apply してください。Secret の値そのものは Terraform 変数には含めません。
 
 ### Worker イメージを用意して通常 apply する
 
 `worker_image` は Cloud Run Job で実行するコンテナイメージです。Terraform の必須変数であり、`.tfvars` には含めません。`plan` または `apply` の前に、push 済みのイメージ URI を `TF_VAR_worker_image` で渡してください。未指定の場合、Terraform は入力待ちになり、値を与えずに終了すると `No value for required variable` になります。
 
 ```bash
-cd infra/terraform
+cd infra/terraform/gcp
 export IMAGE_TAG="$(git rev-parse HEAD)"
 export TF_VAR_worker_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:$IMAGE_TAG"
 make plan ENV=dev
@@ -43,13 +42,13 @@ Cloud Run Job のイメージと Artifact Registry は相互に依存するた�
 
 ```bash
 # 1. Artifact Registry だけを作成する
-cd infra/terraform
+cd infra/terraform/gcp
 export TF_VAR_worker_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:bootstrap"
-terraform apply -var-file="dev/.tfvars" \
-  -target=google_artifact_registry_repository.batch_worker
+terraform -chdir=dev apply -var-file=".tfvars" \
+  -target=module.artifact_registry.google_artifact_registry_repository.batch_worker
 
 # 2. Worker イメージを build・push する
-cd ../..
+cd ../../..
 export IMAGE_TAG="$(git rev-parse HEAD)"
 gcloud builds submit \
   --project="mirai-yoho-dev" \
@@ -57,7 +56,7 @@ gcloud builds submit \
   --substitutions="_IMAGE=asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:$IMAGE_TAG"
 
 # 3. push したイメージを指定して、全リソースを適用する
-cd infra/terraform
+cd infra/terraform/gcp
 export TF_VAR_worker_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:$IMAGE_TAG"
 make plan ENV=dev
 make apply ENV=dev

@@ -53,6 +53,6 @@ src/generated/schemas
 .worktrees/
 
 ## Terraform state and environment configuration
-infra/terraform/.terraform/
-infra/terraform/terraform.tfstate
-infra/terraform/terraform.tfstate.*
+infra/terraform/gcp/**/.terraform/
+infra/terraform/gcp/**/terraform.tfstate
+infra/terraform/gcp/**/terraform.tfstate.*

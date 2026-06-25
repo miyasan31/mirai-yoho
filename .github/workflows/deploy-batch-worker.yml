@@ -32,7 +32,7 @@ jobs:
             --config=cloudbuild.worker.yaml \
             --substitutions=_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/batch-worker/worker:$IMAGE_TAG"
       - name: Apply worker infrastructure
-        working-directory: infra/terraform
+        working-directory: infra/terraform/gcp
         env:
           TF_VAR_worker_image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/batch-worker/worker:${{ env.IMAGE_TAG }}
         run: |
