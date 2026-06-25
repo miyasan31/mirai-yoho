@@ -74,6 +74,7 @@ module "firebase" {
   project_id                                   = var.project_id
   firestore_location                           = var.firestore_location
   firebase_storage_bucket_name                 = var.firebase_storage_bucket_name
+  manage_firebase_storage_bucket               = var.manage_firebase_storage_bucket
   firebase_storage_location                    = var.firebase_storage_location
   firebase_storage_cors_origins                = var.firebase_storage_cors_origins
   authorized_domains                           = var.authorized_domains

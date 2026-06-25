@@ -110,6 +110,8 @@ resource "google_firestore_index" "composite" {
 }
 
 resource "google_storage_bucket" "firebase_default" {
+  count = var.manage_firebase_storage_bucket ? 1 : 0
+
   project                     = var.project_id
   name                        = var.firebase_storage_bucket_name
   location                    = var.firebase_storage_location
@@ -184,7 +186,7 @@ resource "google_developer_connect_git_repository_link" "app" {
   project                = var.project_id
   location               = var.app_hosting_location
   git_repository_link_id = var.developer_connect_repository_link_id
-  parent_connection      = google_developer_connect_connection.github.name
+  parent_connection      = var.developer_connect_connection_id
   clone_uri              = "https://github.com/miyasan31/mirai-yoho.git"
 
   lifecycle {

@@ -13,6 +13,12 @@ variable "firebase_storage_bucket_name" {
   type        = string
 }
 
+variable "manage_firebase_storage_bucket" {
+  description = "Whether Terraform should create/manage the Firebase default Cloud Storage bucket."
+  type        = bool
+  default     = false
+}
+
 variable "firebase_storage_location" {
   description = "Location of the Firebase default Cloud Storage bucket. This cannot be changed after creation."
   type        = string
@@ -56,6 +62,11 @@ variable "developer_connect_repository_link_id" {
 variable "developer_connect_oauth_token_secret_version" {
   description = "Existing Secret Manager version resource name used by Developer Connect to authorize GitHub."
   type        = string
+
+  validation {
+    condition     = can(regex("^projects/[^/]+/secrets/[^/]+/versions/[^/]+$", var.developer_connect_oauth_token_secret_version))
+    error_message = "developer_connect_oauth_token_secret_version must be in the format projects/<project>/secrets/<secret>/versions/<version>."
+  }
 }
 
 variable "github_app_installation_id" {

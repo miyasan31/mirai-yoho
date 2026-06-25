@@ -58,6 +58,12 @@ variable "firebase_storage_bucket_name" {
   type        = string
 }
 
+variable "manage_firebase_storage_bucket" {
+  description = "Whether Terraform should create/manage the Firebase default Cloud Storage bucket."
+  type        = bool
+  default     = false
+}
+
 variable "firebase_storage_location" {
   description = "Location of the Firebase default Cloud Storage bucket. This cannot be changed after creation."
   type        = string
