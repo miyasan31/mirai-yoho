@@ -146,6 +146,13 @@ make auth-adc ENV=dev
 make init ENV=dev
 ```
 
+dev と prod の remote state は、それぞれ別の GCS bucket で管理します。
+
+- dev: `mirai-yoho-dev-terraform-state`
+- prod: `mirai-yoho-prod-terraform-state`
+
+同じ `infra/terraform` ディレクトリで環境を切り替えてもローカルの backend 設定が混ざらないように、Terraform の作業ディレクトリも `TF_DATA_DIR=.terraform/<env>` で分離しています。`ENV=dev` と `ENV=prod` を切り替える時は、それぞれ一度 `make init ENV=<env>` を実行してください。
+
 `auth-adc` は Application Default Credentials を設定します。実行者には、プロジェクトの API 有効化、IAM、Firestore、Storage、Secret Manager、App Hosting、Cloud Run、Cloud Scheduler を管理できる権限が必要です。
 
 ### 3.3 Worker イメージと初回 apply

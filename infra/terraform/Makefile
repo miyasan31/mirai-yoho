@@ -17,6 +17,9 @@ TFVARS := $(ENV)/.tfvars
 BACKEND := $(ENV)/.backend.hcl
 TFVARS_EXAMPLE := $(ENV)/.tfvars.example
 BACKEND_EXAMPLE := $(ENV)/.backend.hcl.example
+TF_DATA_DIR := .terraform/$(ENV)
+
+export TF_DATA_DIR
 
 .DEFAULT_GOAL := help
 
