@@ -11,7 +11,3 @@ export const FIRESTORE_COLLECTIONS = {
   userPreferences: "user-preferences",
   zoomDailySessions: "zoom-daily-sessions",
 } as const;
-
-export const FIRESTORE_COLLECTION_NAMES = Object.values(FIRESTORE_COLLECTIONS);
-
-export const FIRESTORE_BOOTSTRAP_DOC_ID = "_bootstrap";

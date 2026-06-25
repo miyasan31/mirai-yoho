@@ -17,13 +17,15 @@ flowchart TD
   G --> E
 ```
 
+
+
 組織を追加する時は、Firestore に組織・初期管理者・初期設定を作るだけでは完了しません。定期バッチを使う環境では、Terraform の `organization_ids` にも組織 ID を追加して apply します。
 
 ## 1. 事前準備
 
 ### 必要なツール
 
-- Node.js 24.14.0、pnpm（[`mise.toml`](../mise.toml) を参照）
+- Node.js 24.14.0、pnpm（`[mise.toml](../mise.toml)` を参照）
 - Firebase CLI
 - Google Cloud CLI（`gcloud`）
 - Terraform 1.6 以上
@@ -42,15 +44,17 @@ pnpm install
 
 環境ごとに、次の値を準備します。Secret の値をリポジトリ、Issue、チャットに貼り付けないでください。
 
-| 区分 | 必要な値 | 用途 |
-| --- | --- | --- |
-| Firebase Client | API key、Auth domain、Project ID | ブラウザから Firebase Auth を使う |
-| Firebase Admin | Project ID、サービスアカウントの client email / private key、Storage bucket | API・スクリプト・バッチから Firebase を管理する |
-| Stripe | secret key、publishable key、webhook secret | 決済と Webhook 検証 |
-| Zoom | Server-to-Server OAuth の Account ID / Client ID / Client Secret / Host User ID | Zoom 会議 URL の作成 |
-| Resend | API key、送信元メールアドレス | 予約・招待メール |
-| App | 公開 URL、インボイス登録番号、キャンセルトークン用の十分にランダムな secret | URL 生成・帳票・トークン検証 |
-| LINE WORKS | 遅刻通知 Webhook URL | 遅刻通知バッチ（利用する場合） |
+
+| 区分              | 必要な値                                                                           | 用途                             |
+| --------------- | ------------------------------------------------------------------------------ | ------------------------------ |
+| Firebase Client | API key、Auth domain、Project ID                                                 | ブラウザから Firebase Auth を使う       |
+| Firebase Admin  | Project ID、Storage bucket、実行環境用サービスアカウント情報                                     | API・スクリプト・バッチから Firebase を管理する |
+| Stripe          | secret key、publishable key、webhook secret                                      | 決済と Webhook 検証                 |
+| Zoom            | Server-to-Server OAuth の Account ID / Client ID / Client Secret / Host User ID | Zoom 会議 URL の作成                |
+| Resend          | API key、送信元メールアドレス                                                             | 予約・招待メール                       |
+| App             | 公開 URL、インボイス登録番号、キャンセルトークン用の十分にランダムな secret                                    | URL 生成・帳票・トークン検証               |
+| LINE WORKS      | 遅刻通知 Webhook URL                                                               | 遅刻通知バッチ（利用する場合）                |
+
 
 Firebase Authentication ではメール / パスワードと匿名ログインを有効にします。認可済みドメインには、ローカル開発用の `localhost` と各環境の公開ドメインを含めます。Terraform 管理下では `authorized_domains` がこの設定を更新します。
 
@@ -66,19 +70,31 @@ cp .env.example .env.local
 
 ローカルでメール送信を避けたい場合は、`EMAIL_DELIVERY_MODE=log` を設定します。設定しない場合の既定値は `resend` です。
 
-`FIREBASE_PRIVATE_KEY` は、private key 内の改行を `\n` として 1 行で設定できます。サーバー側で実際の改行に復元されます。
+ローカルで Firebase Admin を使う場合は、サービスアカウント key を `.env.local` に置く代わりに Application Default Credentials とサービスアカウント impersonation を使います。この場合、`FIREBASE_PROJECT_ID` と `FIREBASE_STORAGE_BUCKET` を設定し、`FIREBASE_CLIENT_EMAIL` と `FIREBASE_PRIVATE_KEY` は空のままで構いません。
+
+実行環境や一時的な検証で private key を使う場合、`FIREBASE_PRIVATE_KEY` は key 内の改行を `\n` として 1 行で設定できます。サーバー側で実際の改行に復元されます。
 
 `NEXT_PUBLIC_` 付きの値はブラウザに公開され、Next.js のビルド時に埋め込まれます。ここには Firebase Client 設定、Stripe publishable key、公開 URL だけを置き、secret key や private key を置かないでください。
 
-### 2.2 Firestore への接続を確認する
+### 2.2 組織作成コマンド用の認証を設定する
 
-`.env.local` の Firebase Admin 認証情報には、対象プロジェクトで Firestore と Firebase Auth を操作できるサービスアカウントを使います。コレクションのブートストラップを実行すると、全コレクションに `_bootstrap` ドキュメントが作られます。
+Terraform は `organization-operator@<project-id>.iam.gserviceaccount.com` を作成します。このサービスアカウントには、組織作成スクリプトに必要な `roles/datastore.user` と `roles/firebaseauth.admin` を付与します。
 
-```bash
-make setup-firestore-collections
+サービスアカウント key は Terraform で発行しません。`google_service_account_key` を使うと秘密鍵が Terraform state に保存されるためです。ローカルで組織作成コマンドを実行する場合は、Terraform の `organization_operator_impersonators` に実行者を追加し、Application Default Credentials でサービスアカウントを impersonate します。
+
+```hcl
+organization_operator_impersonators = [
+  "user:admin@example.com",
+]
 ```
 
-これは空のコレクションを Firestore Console に可視化するための処理です。アプリの通常動作に必須の業務データではありません。`_bootstrap` は削除しないでください。
+Terraform apply 後、リポジトリルートで ADC を設定します。
+
+```bash
+make auth-adc-organization-operator PROJECT=mirai-yoho-dev
+```
+
+Firestore の初期コレクション作成は行いません。Firestore のコレクションは最初の実データ document が作成された時点で自動的に見えるようになります。Terraform では Firestore database、index、rules を管理し、アプリケーションに不要な `_bootstrap` document は作りません。
 
 ### 2.3 起動と確認
 
@@ -116,6 +132,7 @@ Terraform の環境別設定は次の場所です。
 新しい環境を作る場合は `prod/.tfvars.example` をひな形にし、少なくとも次を環境に合わせて設定します。
 
 - `project_id`、`app_base_url`、`organization_ids`
+- `organization_operator_impersonators`（組織作成コマンドを実行するユーザーや CI）
 - Firestore / Storage のロケーションと Storage bucket 名
 - Firebase Web App、App Hosting、Developer Connect / GitHub 接続に関する ID
 - `authorized_domains` と `firebase_storage_cors_origins`
@@ -173,7 +190,7 @@ Terraform apply 後、各 Secret に値を登録します。
 make setup-secrets PROJECT=mirai-yoho-dev
 ```
 
-App Hosting の変数は [`apphosting.yaml`](../apphosting.yaml) が正です。`NEXT_PUBLIC_*` の 5 項目はビルド時にも必要なため `BUILD` と `RUNTIME` の両方に公開されます。それ以外は Runtime Secret として扱います。
+App Hosting の変数は `[apphosting.yaml](../apphosting.yaml)` が正です。`NEXT_PUBLIC_*` の 5 項目はビルド時にも必要なため `BUILD` と `RUNTIME` の両方に公開されます。それ以外は Runtime Secret として扱います。
 
 Firebase Console の App Hosting Environment variables に同名キーがあると、`apphosting.yaml` より優先されます。重複した環境変数は Console から削除または空にしてください。Secret の追加・更新後は App Hosting を再ロールアウトします。
 
@@ -195,7 +212,11 @@ App Hosting は Terraform の rollout policy により、`dev` では `release/d
 
 ### 4.2 組織と初期管理者を作る
 
-対象環境の `.env.local` を設定した端末で実行します。
+対象環境の `.env.local` を設定し、`organization-operator` サービスアカウントを impersonate した端末で実行します。
+
+```bash
+make auth-adc-organization-operator PROJECT=mirai-yoho-dev
+```
 
 ```bash
 make create-organization \
@@ -245,11 +266,13 @@ make apply ENV=dev
 
 組織ごとに以下の Cloud Scheduler ジョブが作成されます（タイムゾーンは JST）。
 
-| ジョブ | 実行頻度 | 目的 |
-| --- | --- | --- |
-| `batch-charge-<organizationId>` | 毎日 00:00 | 決済確定バッチ |
-| `consultation-reminders-<organizationId>` | 15 分ごと | 相談リマインダー |
-| `late-arrival-alerts-<organizationId>` | 30 分ごと | 遅刻通知 |
+
+| ジョブ                                       | 実行頻度     | 目的       |
+| ----------------------------------------- | -------- | -------- |
+| `batch-charge-<organizationId>`           | 毎日 00:00 | 決済確定バッチ  |
+| `consultation-reminders-<organizationId>` | 15 分ごと   | 相談リマインダー |
+| `late-arrival-alerts-<organizationId>`    | 30 分ごと   | 遅刻通知     |
+
 
 `organization_ids` を更新しない場合、その組織の定期バッチは作成されません。組織を廃止する際も、Firestore のデータを消す前にこのリストから削除して apply し、Scheduler を停止・削除する順序にしてください。
 
@@ -265,16 +288,19 @@ make apply ENV=dev
 
 ## よくある問題
 
-| 症状 | 確認・対処 |
-| --- | --- |
-| `User has no assigned role` | organization 作成時のメールアドレスとログインした Firebase Auth ユーザーが同じか、membership の `status` が `active` / `invited` かを確認する。 |
-| `Organization '<id>' already exists` | 既存組織の上書きはできない。ID を確認し、既存データを利用するか別 ID を選ぶ。 |
-| `No value for required variable worker_image` | `make plan` / `make apply` の前に `TF_VAR_worker_image` を設定する。 |
-| App Hosting で Secret を読めない | Secret の存在・値・App Hosting 実行サービスアカウントの参照権限を確認し、再ロールアウトする。詳細は [Secret 運用手順](firebase-app-hosting-secrets.md) を参照。 |
-| 定期バッチが対象組織に存在しない | `.tfvars` の `organization_ids` に組織 ID を追加して Terraform apply する。 |
+
+| 症状                                            | 確認・対処                                                                                                           |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `User has no assigned role`                   | organization 作成時のメールアドレスとログインした Firebase Auth ユーザーが同じか、membership の `status` が `active` / `invited` かを確認する。     |
+| `Organization '<id>' already exists`          | 既存組織の上書きはできない。ID を確認し、既存データを利用するか別 ID を選ぶ。                                                                      |
+| `No value for required variable worker_image` | `make plan` / `make apply` の前に `TF_VAR_worker_image` を設定する。                                                     |
+| App Hosting で Secret を読めない                    | Secret の存在・値・App Hosting 実行サービスアカウントの参照権限を確認し、再ロールアウトする。詳細は [Secret 運用手順](firebase-app-hosting-secrets.md) を参照。 |
+| 定期バッチが対象組織に存在しない                              | `.tfvars` の `organization_ids` に組織 ID を追加して Terraform apply する。                                                 |
+
 
 ## 関連ドキュメント
 
 - [Firebase App Hosting Secret 運用手順](firebase-app-hosting-secrets.md)
 - [Cloud Scheduler バッチ運用](cloud-scheduler.md)
 - [DDD 設計](DDD_DESIGN.md)
+

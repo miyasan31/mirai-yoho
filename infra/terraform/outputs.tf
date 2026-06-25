@@ -3,6 +3,11 @@ output "batch_scheduler_service_account_email" {
   value       = google_service_account.batch_scheduler.email
 }
 
+output "organization_operator_service_account_email" {
+  description = "Service account used for local organization setup via impersonation."
+  value       = google_service_account.organization_operator.email
+}
+
 output "scheduler_job_names" {
   description = "Cloud Scheduler job names keyed by organization and batch type."
   value = {

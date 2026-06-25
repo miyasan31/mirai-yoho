@@ -42,6 +42,12 @@ variable "organization_ids" {
   }
 }
 
+variable "organization_operator_impersonators" {
+  description = "IAM members allowed to impersonate the organization-operator service account for local organization setup. Example: user:admin@example.com"
+  type        = set(string)
+  default     = []
+}
+
 variable "firestore_location" {
   description = "Location of the default Firestore Native database. This cannot be changed after creation."
   type        = string

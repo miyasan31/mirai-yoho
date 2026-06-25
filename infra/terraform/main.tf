@@ -83,6 +83,12 @@ resource "google_service_account" "github_deployer" {
   display_name = "GitHub Actions worker deployer"
 }
 
+resource "google_service_account" "organization_operator" {
+  project      = var.project_id
+  account_id   = "organization-operator"
+  display_name = "Organization setup operator"
+}
+
 resource "google_service_account_iam_member" "scheduler_can_mint_oidc_token" {
   service_account_id = google_service_account.batch_scheduler.name
   role               = "roles/iam.serviceAccountTokenCreator"
@@ -173,6 +179,25 @@ resource "google_project_iam_member" "batch_worker_roles" {
   project = var.project_id
   role    = each.value
   member  = "serviceAccount:${google_service_account.batch_worker.email}"
+}
+
+resource "google_project_iam_member" "organization_operator_roles" {
+  for_each = toset([
+    "roles/datastore.user",
+    "roles/firebaseauth.admin",
+  ])
+
+  project = var.project_id
+  role    = each.value
+  member  = "serviceAccount:${google_service_account.organization_operator.email}"
+}
+
+resource "google_service_account_iam_member" "organization_operator_impersonators" {
+  for_each = var.organization_operator_impersonators
+
+  service_account_id = google_service_account.organization_operator.name
+  role               = "roles/iam.serviceAccountTokenCreator"
+  member             = each.value
 }
 
 resource "google_secret_manager_secret_iam_member" "batch_worker_can_read_secrets" {

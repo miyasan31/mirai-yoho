@@ -7,10 +7,7 @@
 
 import { cert, getApps, initializeApp } from "firebase-admin/app";
 import { getFirestore } from "firebase-admin/firestore";
-import {
-  FIRESTORE_BOOTSTRAP_DOC_ID,
-  FIRESTORE_COLLECTIONS,
-} from "../src/infrastructure/firestore/firestore-collections";
+import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore-collections";
 
 const BATCH_SIZE = 400;
 
@@ -39,22 +36,15 @@ async function main() {
     }
 
     const batch = db.batch();
-    const deletableDocs = snapshot.docs.filter(
-      (doc) => doc.id !== FIRESTORE_BOOTSTRAP_DOC_ID,
-    );
 
-    if (deletableDocs.length === 0) {
-      break;
-    }
-
-    for (const doc of deletableDocs) {
+    for (const doc of snapshot.docs) {
       batch.delete(doc.ref);
     }
 
     await batch.commit();
-    deletedCount += deletableDocs.length;
+    deletedCount += snapshot.docs.length;
     console.log(
-      `Deleted ${deletableDocs.length} slots... total=${deletedCount}`,
+      `Deleted ${snapshot.docs.length} slots... total=${deletedCount}`,
     );
   }
 

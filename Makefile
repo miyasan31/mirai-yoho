@@ -1,4 +1,4 @@
-.PHONY: set-claims setup-firestore-collections create-organization seed-slots delete-slots setup-secrets setup-secret list-apphosting-backends describe-secret access-secret check-secret-value check-public-build-secrets
+.PHONY: set-claims auth-adc-organization-operator create-organization seed-slots delete-slots setup-secrets setup-secret list-apphosting-backends describe-secret access-secret check-secret-value check-public-build-secrets
 
 # ============================================================
 # Scripts（引数が必要なコマンド）
@@ -11,9 +11,12 @@ set-claims:
 	@test -n "$(ROLE)" || (echo "Error: ROLE is required. Usage: make set-claims UID=<uid> ROLE=<role>" && exit 1)
 	pnpm dlx tsx --env-file=.env.local scripts/set-custom-claims.ts $(UID) $(ROLE)
 
-# Usage: make setup-firestore-collections
-setup-firestore-collections:
-	pnpm dlx tsx --env-file=.env.local scripts/setup-firestore-collections.ts
+# Usage: make auth-adc-organization-operator PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
+# Example: make auth-adc-organization-operator PROJECT=mirai-yoho-dev
+auth-adc-organization-operator:
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make auth-adc-organization-operator PROJECT=<project>" && exit 1)
+	gcloud auth application-default login --impersonate-service-account=organization-operator@$(PROJECT).iam.gserviceaccount.com
+	gcloud auth application-default set-quota-project $(PROJECT)
 
 # Usage: make create-organization ORGANIZATION_ID=<organizationId> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email>
 # Example: make create-organization ORGANIZATION_ID=org-1 ORGANIZATION_NAME="Org 1" ADMIN_EMAIL=admin@example.com

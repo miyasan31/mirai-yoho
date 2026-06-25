@@ -3,6 +3,10 @@ region           = "asia-northeast1"
 app_base_url     = "https://dev.console.miraiyohou.com/"
 organization_ids = ["mirai-yoho-dev"]
 
+# Members allowed to impersonate organization-operator@PROJECT_ID.iam.gserviceaccount.com
+# for local organization setup commands. Example: ["user:admin@example.com"]
+organization_operator_impersonators = []
+
 firestore_location           = "asia-northeast1"
 firebase_storage_bucket_name = "mirai-yoho-dev.firebasestorage.app"
 firebase_storage_location    = "US-EAST1"
