@@ -234,10 +234,10 @@ resource "google_secret_manager_secret" "app_hosting" {
 }
 
 resource "google_secret_manager_secret_iam_member" "app_hosting_can_read_secrets" {
-  for_each = google_secret_manager_secret.app_hosting
+  for_each = local.app_hosting_secret_ids
 
   project   = var.project_id
-  secret_id = each.value.secret_id
+  secret_id = google_secret_manager_secret.app_hosting[each.value].secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${var.app_hosting_compute_service_account_email}"
 }
