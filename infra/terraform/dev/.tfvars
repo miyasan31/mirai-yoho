@@ -5,7 +5,7 @@ organization_ids = ["mirai-yoho-dev"]
 
 # Members allowed to impersonate organization-operator@PROJECT_ID.iam.gserviceaccount.com
 # for local organization setup commands. Example: ["user:admin@example.com"]
-organization_operator_impersonators = []
+organization_operator_impersonators = ["user:miysan.dev@gmail.com"]
 
 firestore_location           = "asia-northeast1"
 firebase_storage_bucket_name = "mirai-yoho-dev.firebasestorage.app"
