@@ -29,5 +29,5 @@ resource "google_firebaserules_ruleset" "storage" {
 resource "google_firebaserules_release" "storage" {
   project      = var.project_id
   name         = "firebase.storage/${var.storage_bucket_name}"
-  ruleset_name = google_firebaserules_ruleset.storage.name
+  ruleset_name = "projects/${var.project_id}/rulesets/${google_firebaserules_ruleset.storage.name}"
 }
