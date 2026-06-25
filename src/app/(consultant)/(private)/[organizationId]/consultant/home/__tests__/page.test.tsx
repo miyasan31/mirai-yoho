@@ -104,11 +104,11 @@ vi.mock("@/components/empty-state", () => ({
 import ConsultantHomePage from "../page";
 
 function createWrapper() {
-  const queryClient = new QueryClient({
+  const queryCustomer = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryCustomer}>{children}</QueryClientProvider>
   );
 }
 
@@ -134,19 +134,19 @@ describe("ConsultantHomePage", () => {
           bookings: [
             {
               bookingId: "b-later",
-              clientId: "c-1",
+              customerId: "c-1",
               consultantId: "cons-1",
               slotId: "s-1",
-              startDatetime: "2026-04-22T14:00:00+09:00",
+              startsAt: "2026-04-22T14:00:00+09:00",
               status: "confirmed",
-              zoomUrl: "https://zoom.us/j/123",
+              joinUrl: "https://zoom.us/j/123",
               consultantJoinedAt: null,
               consultantMemo: "",
               consultationContent: null,
               chargeable: false,
               chargeDisabledReason: null,
-              client: {
-                clientId: "c-1",
+              customer: {
+                customerId: "c-1",
                 name: "山田 太郎",
                 email: "taro@example.com",
                 phone: "090-0000-0000",
@@ -155,19 +155,19 @@ describe("ConsultantHomePage", () => {
             },
             {
               bookingId: "b-earlier",
-              clientId: "c-2",
+              customerId: "c-2",
               consultantId: "cons-1",
               slotId: "s-2",
-              startDatetime: "2026-04-22T10:00:00+09:00",
+              startsAt: "2026-04-22T10:00:00+09:00",
               status: "pending",
-              zoomUrl: null,
+              joinUrl: null,
               consultantJoinedAt: null,
               consultantMemo: "",
               consultationContent: null,
               chargeable: false,
               chargeDisabledReason: null,
-              client: {
-                clientId: "c-2",
+              customer: {
+                customerId: "c-2",
                 name: "佐藤 花子",
                 email: "hanako@example.com",
                 phone: "080-0000-0000",
@@ -232,19 +232,19 @@ describe("ConsultantHomePage", () => {
           bookings: [
             {
               bookingId: "b-joined",
-              clientId: "c-1",
+              customerId: "c-1",
               consultantId: "cons-1",
               slotId: "s-1",
-              startDatetime: "2026-04-22T10:00:00+09:00",
+              startsAt: "2026-04-22T10:00:00+09:00",
               status: "confirmed",
-              zoomUrl: "https://zoom.us/j/123",
+              joinUrl: "https://zoom.us/j/123",
               consultantJoinedAt: "2026-04-22T09:48:00+09:00",
               consultantMemo: "",
               consultationContent: null,
               chargeable: false,
               chargeDisabledReason: null,
-              client: {
-                clientId: "c-1",
+              customer: {
+                customerId: "c-1",
                 name: "山田 太郎",
                 email: "taro@example.com",
                 phone: "090-0000-0000",

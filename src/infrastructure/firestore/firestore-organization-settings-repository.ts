@@ -3,8 +3,8 @@ import type { ConsultantRankProps } from "@/domain/organization-settings/consult
 import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
 import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
 import { PricePlanRange } from "@/domain/organization-settings/price-plan-range";
-import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
+import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.organizationSettings;
 

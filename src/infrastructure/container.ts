@@ -11,9 +11,9 @@ import { UpdateConsultantPricePlanUseCase } from "@/application/consultant-price
 import { envServer } from "@/config/env.server";
 import { FirebaseUserContactService } from "@/infrastructure/firebase/firebase-user-contact-service";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
-import { FirestoreClientRepository } from "@/infrastructure/firestore/firestore-client-repository";
 import { FirestoreConsultantPricePlanRepository } from "@/infrastructure/firestore/firestore-consultant-price-plan-repository";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
+import { FirestoreCustomerRepository } from "@/infrastructure/firestore/firestore-customer-repository";
 import { FirestoreOrganizationSettingsRepository } from "@/infrastructure/firestore/firestore-organization-settings-repository";
 import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore-payment-repository";
 import { FirestoreSlotRepository } from "@/infrastructure/firestore/firestore-slot-repository";
@@ -47,7 +47,7 @@ export function createOrganizationSettingsRepository() {
 export function createCreateBookingUseCase() {
   return new CreateBookingUseCase(
     new FirestoreSlotRepository(),
-    new FirestoreClientRepository(),
+    new FirestoreCustomerRepository(),
     new FirestoreBookingRepository(),
     new ZoomService(),
     new FirestoreUnitOfWork(),
@@ -90,7 +90,7 @@ export function createCancelBookingUseCase() {
     new ResendEmailService(),
     new FirestoreZoomDailySessionRepository(),
     new ZoomService(),
-    new FirestoreClientRepository(),
+    new FirestoreCustomerRepository(),
   );
 }
 
@@ -98,7 +98,7 @@ export function createChargePaymentUseCase() {
   return new ChargePaymentUseCase(
     new FirestoreBookingRepository(),
     new FirestorePaymentRepository(),
-    new FirestoreClientRepository(),
+    new FirestoreCustomerRepository(),
     new StripeService(),
     new ResendEmailService(),
   );
@@ -108,8 +108,8 @@ export function createCompleteSetupUseCase() {
   return new CompleteSetupUseCase(new FirestorePaymentRepository());
 }
 
-export function createClientRepository() {
-  return new FirestoreClientRepository();
+export function createCustomerRepository() {
+  return new FirestoreCustomerRepository();
 }
 
 export function createPaymentRepository() {
@@ -120,7 +120,7 @@ export function createBatchChargeUseCase() {
   return new BatchChargeUseCase(
     new FirestoreBookingRepository(),
     new FirestorePaymentRepository(),
-    new FirestoreClientRepository(),
+    new FirestoreCustomerRepository(),
     new StripeService(),
     new ResendEmailService(),
   );
@@ -129,7 +129,7 @@ export function createBatchChargeUseCase() {
 export function createSendConsultationReminderUseCase() {
   return new SendConsultationReminderUseCase(
     new FirestoreBookingRepository(),
-    new FirestoreClientRepository(),
+    new FirestoreCustomerRepository(),
     new FirestoreConsultantRepository(),
     new ResendEmailService(),
   );
@@ -139,7 +139,7 @@ export function createNotifyLateConsultantArrivalUseCase() {
   return new NotifyLateConsultantArrivalUseCase(
     new FirestoreBookingRepository(),
     new FirestoreConsultantRepository(),
-    new FirestoreClientRepository(),
+    new FirestoreCustomerRepository(),
     new FirebaseUserContactService(),
     new LineWorksLateArrivalAlertService(),
     envServer.appUrl,

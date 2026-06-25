@@ -103,17 +103,17 @@ export default function ConsultantHomePage() {
             <>
               <styled.div display="flex" alignItems="center" gap="2" mb="2">
                 <Text textStyle="lg" fontWeight="bold">
-                  {formatDatetime(nextBooking.startDatetime)}
+                  {formatDatetime(nextBooking.startsAt)}
                 </Text>
                 <BookingStatusBadge status={nextBooking.status} />
               </styled.div>
               <Text textStyle="sm" mb="4">
-                クライアント: {nextBooking.clientName}
+                クライアント: {nextBooking.customerName}
               </Text>
               <styled.div mb="4">
                 <ConsultantJoinControl
                   bookingId={nextBooking.bookingId}
-                  startDatetime={nextBooking.startDatetime}
+                  startsAt={nextBooking.startsAt}
                   status={nextBooking.status}
                   consultantJoinedAt={nextBooking.consultantJoinedAt}
                   onJoined={() => {
@@ -122,10 +122,10 @@ export default function ConsultantHomePage() {
                 />
               </styled.div>
               <styled.div display="flex" gap="2" flexWrap="wrap">
-                {nextBooking.zoomUrl && (
+                {nextBooking.joinUrl && (
                   <Button asChild size="sm">
                     <a
-                      href={nextBooking.zoomUrl}
+                      href={nextBooking.joinUrl}
                       target="_blank"
                       rel="noopener noreferrer"
                     >
@@ -228,18 +228,18 @@ export default function ConsultantHomePage() {
               >
                 <styled.div>
                   <Text textStyle="sm" fontWeight="bold">
-                    {formatDatetime(booking.startDatetime)}
+                    {formatDatetime(booking.startsAt)}
                   </Text>
                   <styled.div display="flex" alignItems="center" gap="2" mt="1">
                     <BookingStatusBadge status={booking.status} />
                     <Text textStyle="sm" color="fg.muted">
-                      クライアント: {booking.clientName}
+                      クライアント: {booking.customerName}
                     </Text>
                   </styled.div>
                   <styled.div mt="2">
                     <ConsultantJoinControl
                       bookingId={booking.bookingId}
-                      startDatetime={booking.startDatetime}
+                      startsAt={booking.startsAt}
                       status={booking.status}
                       consultantJoinedAt={booking.consultantJoinedAt}
                       onJoined={() => {
@@ -254,10 +254,10 @@ export default function ConsultantHomePage() {
                   flexWrap="wrap"
                   justifyContent="flex-end"
                 >
-                  {booking.zoomUrl && (
+                  {booking.joinUrl && (
                     <Button size="sm" asChild>
                       <a
-                        href={booking.zoomUrl}
+                        href={booking.joinUrl}
                         target="_blank"
                         rel="noopener noreferrer"
                       >

@@ -12,10 +12,10 @@ function createPendingBooking() {
   return Booking.create({
     organizationId: ORGANIZATION_ID,
     bookingId: "booking-1",
-    clientId: "client-1",
+    customerId: "customer-1",
     consultantId: "consultant-1",
     slotId: "slot-1",
-    startDatetime: futureDate,
+    startsAt: futureDate,
     consultantMemo: ConsultantMemo.create(""),
     pricePlanId: "plan-1",
     pricePlanName: "通常鑑定",
@@ -41,12 +41,12 @@ describe("Booking", () => {
     it("CancelDeadline が自動設定される", () => {
       const booking = createPendingBooking();
       const expectedDeadline = CancelDeadline.create(futureDate);
-      expect(booking.getCancelDeadline().equals(expectedDeadline)).toBe(true);
+      expect(booking.getCancelDeadlineAt().equals(expectedDeadline)).toBe(true);
     });
 
-    it("zoomUrl は undefined", () => {
+    it("joinUrl は undefined", () => {
       const booking = createPendingBooking();
-      expect(booking.getZoomUrl()).toBeUndefined();
+      expect(booking.getJoinUrl()).toBeUndefined();
     });
 
     it("consultationReminderEmailSentAt は undefined", () => {
@@ -61,12 +61,12 @@ describe("Booking", () => {
       const booking = Booking.reconstruct({
         organizationId: ORGANIZATION_ID,
         bookingId: "booking-1",
-        clientId: "client-1",
+        customerId: "customer-1",
         consultantId: "consultant-1",
         slotId: "slot-1",
-        startDatetime: futureDate,
+        startsAt: futureDate,
         status: BookingStatus.reconstruct("confirmed"),
-        cancelDeadline: CancelDeadline.create(futureDate),
+        cancelDeadlineAt: CancelDeadline.create(futureDate),
         consultationReminderEmailSentAt: sentAt,
         consultantMemo: ConsultantMemo.create(""),
       });
@@ -82,11 +82,11 @@ describe("Booking", () => {
       expect(booking.getStatus().getValue()).toBe("confirmed");
     });
 
-    it("zoomUrl が設定される", () => {
+    it("joinUrl が設定される", () => {
       const booking = createPendingBooking();
-      const zoomUrl = ZoomUrl.create("https://zoom.us/j/123");
-      booking.confirm(zoomUrl);
-      expect(booking.getZoomUrl()?.getValue()).toBe("https://zoom.us/j/123");
+      const joinUrl = ZoomUrl.create("https://zoom.us/j/123");
+      booking.confirm(joinUrl);
+      expect(booking.getJoinUrl()?.getValue()).toBe("https://zoom.us/j/123");
     });
 
     it("BookingConfirmedEvent が発行される", () => {
@@ -131,31 +131,31 @@ describe("Booking", () => {
       const booking = Booking.reconstruct({
         organizationId: ORGANIZATION_ID,
         bookingId: "booking-1",
-        clientId: "client-1",
+        customerId: "customer-1",
         consultantId: "consultant-1",
         slotId: "slot-1",
-        startDatetime: pastDate,
+        startsAt: pastDate,
         status: BookingStatus.reconstruct("confirmed"),
-        cancelDeadline: CancelDeadline.create(pastDate),
+        cancelDeadlineAt: CancelDeadline.create(pastDate),
         consultantMemo: ConsultantMemo.create(""),
       });
       expect(() => booking.cancel("admin")).not.toThrow();
     });
 
-    it("client はデッドライン後にキャンセルすると DomainError", () => {
+    it("customer はデッドライン後にキャンセルすると DomainError", () => {
       const pastDate = new Date("2020-01-01T10:00:00Z");
       const booking = Booking.reconstruct({
         organizationId: ORGANIZATION_ID,
         bookingId: "booking-1",
-        clientId: "client-1",
+        customerId: "customer-1",
         consultantId: "consultant-1",
         slotId: "slot-1",
-        startDatetime: pastDate,
+        startsAt: pastDate,
         status: BookingStatus.reconstruct("confirmed"),
-        cancelDeadline: CancelDeadline.create(pastDate),
+        cancelDeadlineAt: CancelDeadline.create(pastDate),
         consultantMemo: ConsultantMemo.create(""),
       });
-      expect(() => booking.cancel("client")).toThrow(DomainError);
+      expect(() => booking.cancel("customer")).toThrow(DomainError);
     });
 
     it("completed からキャンセルすると DomainError", () => {

@@ -31,7 +31,7 @@ const {
   };
 });
 
-vi.mock("@/infrastructure/firestore/firestore-client", () => ({
+vi.mock("@/infrastructure/firestore/firestore-customer", () => ({
   db: {
     collection: mockCollection,
     batch: mockBatch,

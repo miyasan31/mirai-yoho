@@ -55,7 +55,7 @@ async function isSquareImage(file: File): Promise<boolean> {
 
 export default function ConsultantProfilePage() {
   const { organizationId } = useOrganizationRouting();
-  const queryClient = useQueryClient();
+  const queryCustomer = useQueryClient();
   const { data, isLoading } = useConsultantProfile();
   const updateProfile = useUpdateConsultantProfile();
   const createAvatarUploadUrl = useCreateConsultantAvatarUploadUrl();
@@ -76,7 +76,7 @@ export default function ConsultantProfilePage() {
   } = useForm<ProfileFormValues>({
     resolver: valibotResolver(profileFormSchema),
     defaultValues: {
-      displayName: "",
+      name: "",
       bio: "",
       phone: "",
       imageUrl: undefined,
@@ -88,7 +88,7 @@ export default function ConsultantProfilePage() {
   useEffect(() => {
     if (data?.data) {
       reset({
-        displayName: data.data.displayName ?? "",
+        name: data.data.name ?? "",
         bio: data.data.bio ?? "",
         phone: data.data.phone ?? "",
         imageUrl: data.data.imageUrl,
@@ -175,7 +175,7 @@ export default function ConsultantProfilePage() {
       await updateProfile.mutateAsync({
         organizationId: organizationId ?? "",
         data: {
-          displayName: values.displayName,
+          name: values.name,
           bio: values.bio?.trim() ?? "",
           phone: values.phone?.trim() ?? "",
           imageUrl: values.imageUrl,
@@ -187,10 +187,10 @@ export default function ConsultantProfilePage() {
       });
       if (organizationId) {
         await Promise.all([
-          queryClient.invalidateQueries({
+          queryCustomer.invalidateQueries({
             queryKey: getConsultantProfileQueryKey(organizationId),
           }),
-          queryClient.invalidateQueries({
+          queryCustomer.invalidateQueries({
             queryKey: getConsultantsQueryKey(organizationId),
           }),
         ]);
@@ -257,14 +257,14 @@ export default function ConsultantProfilePage() {
               aria-label="現在のランク"
             />
           </Field.Root>
-          <Field.Root required invalid={!!errors.displayName}>
+          <Field.Root required invalid={!!errors.name}>
             <Field.Label>
               表示名
               <Field.RequiredIndicator />
             </Field.Label>
-            <Input id="displayName" type="text" {...register("displayName")} />
-            {errors.displayName && (
-              <Field.ErrorText>{errors.displayName.message}</Field.ErrorText>
+            <Input id="name" type="text" {...register("name")} />
+            {errors.name && (
+              <Field.ErrorText>{errors.name.message}</Field.ErrorText>
             )}
           </Field.Root>
           <Field.Root>

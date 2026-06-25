@@ -1,12 +1,12 @@
 export interface IStripeService {
   createSetupIntent(params: {
     metadata: Record<string, string>;
-  }): Promise<{ setupIntentId: string; clientSecret: string }>;
+  }): Promise<{ setupIntentId: string; customerSecret: string }>;
 
   createPaymentIntent(params: {
     amountJPY: number;
     metadata: Record<string, string>;
-  }): Promise<{ paymentIntentId: string; clientSecret: string }>;
+  }): Promise<{ paymentIntentId: string; customerSecret: string }>;
 
   createOffSessionPaymentIntent(params: {
     amountJPY: number;

@@ -36,7 +36,7 @@ vi.mock("@/infrastructure/container", () => ({
   createBookingRepository: vi.fn(),
   createCancelBookingUseCase: vi.fn(),
   createChargePaymentUseCase: vi.fn(),
-  createClientRepository: vi.fn(),
+  createCustomerRepository: vi.fn(),
   createConsultantRepository: vi.fn(),
   createCreateBookingUseCase: vi.fn(),
   createNotifyLateConsultantArrivalUseCase:
@@ -47,7 +47,7 @@ vi.mock("@/infrastructure/container", () => ({
   createSlotRepository: vi.fn(),
 }));
 
-vi.mock("@/infrastructure/firestore/firestore-client", () => ({
+vi.mock("@/infrastructure/firestore/firestore-customer", () => ({
   app: {},
   db: {},
 }));

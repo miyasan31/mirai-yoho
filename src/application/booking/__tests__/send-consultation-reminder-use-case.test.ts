@@ -6,19 +6,19 @@ import { BookingStatus } from "@/domain/booking/booking-status";
 import { CancelDeadline } from "@/domain/booking/cancel-deadline";
 import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
-import { Client } from "@/domain/client/client";
-import type { IClientRepository } from "@/domain/client/client-repository";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
+import { Customer } from "@/domain/customer/customer";
+import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 
 const ORGANIZATION_ID = "org-1";
 
 function createBooking(params: {
   bookingId: string;
-  clientId?: string;
+  customerId?: string;
   consultantId?: string;
-  startDatetime: string;
+  startsAt: string;
   status?: "pending" | "confirmed" | "cancelled" | "completed";
   withZoomUrl?: boolean;
   reminderSentAt?: Date;
@@ -26,10 +26,10 @@ function createBooking(params: {
   const booking = Booking.create({
     organizationId: ORGANIZATION_ID,
     bookingId: params.bookingId,
-    clientId: params.clientId ?? "client-1",
+    customerId: params.customerId ?? "customer-1",
     consultantId: params.consultantId ?? "consultant-1",
     slotId: `slot-${params.bookingId}`,
-    startDatetime: new Date(params.startDatetime),
+    startsAt: new Date(params.startsAt),
     consultantMemo: ConsultantMemo.create(""),
     pricePlanId: "plan-1",
     pricePlanName: "通常鑑定",
@@ -59,14 +59,14 @@ function createBooking(params: {
   return booking;
 }
 
-function createClient(clientId = "client-1"): Client {
-  return Client.create({
+function createCustomer(customerId = "customer-1"): Customer {
+  return Customer.create({
     organizationId: ORGANIZATION_ID,
-    clientId,
+    customerId,
     name: "山田 太郎",
     email: "taro@example.com",
     phone: "09012345678",
-    birthdate: "1990-01-01",
+    birthDate: "1990-01-01",
   });
 }
 
@@ -121,8 +121,8 @@ class InMemoryBookingRepository implements IBookingRepository {
     return this.bookings.filter(
       (booking) =>
         booking.getStatus().getValue() === "confirmed" &&
-        booking.getStartDatetime().getTime() > now.getTime() &&
-        booking.getStartDatetime().getTime() <= windowEnd.getTime() &&
+        booking.getStartsAt().getTime() > now.getTime() &&
+        booking.getStartsAt().getTime() <= windowEnd.getTime() &&
         !booking.getConsultationReminderEmailSentAt(),
     );
   }
@@ -136,38 +136,44 @@ class InMemoryBookingRepository implements IBookingRepository {
   }
 }
 
-class InMemoryClientRepository implements IClientRepository {
-  constructor(private readonly clients: Client[]) {}
+class InMemoryCustomerRepository implements ICustomerRepository {
+  constructor(private readonly customers: Customer[]) {}
 
   async findById(
     _organizationId: string,
-    clientId: string,
-  ): Promise<Client | null> {
+    customerId: string,
+  ): Promise<Customer | null> {
     return (
-      this.clients.find((client) => client.getClientId() === clientId) ?? null
+      this.customers.find(
+        (customer) => customer.getCustomerId() === customerId,
+      ) ?? null
     );
   }
 
   async findByIds(
     _organizationId: string,
-    clientIds: string[],
-  ): Promise<Client[]> {
-    const ids = new Set(clientIds);
-    return this.clients.filter((client) => ids.has(client.getClientId()));
+    customerIds: string[],
+  ): Promise<Customer[]> {
+    const ids = new Set(customerIds);
+    return this.customers.filter((customer) =>
+      ids.has(customer.getCustomerId()),
+    );
   }
 
   async findByEmail(
     _organizationId: string,
     email: string,
-  ): Promise<Client | null> {
-    return this.clients.find((client) => client.getEmail() === email) ?? null;
+  ): Promise<Customer | null> {
+    return (
+      this.customers.find((customer) => customer.getEmail() === email) ?? null
+    );
   }
 
-  async findAll(_organizationId: string): Promise<Client[]> {
-    return this.clients;
+  async findAll(_organizationId: string): Promise<Customer[]> {
+    return this.customers;
   }
 
-  async save(_client: Client): Promise<void> {}
+  async save(_customer: Customer): Promise<void> {}
 }
 
 class InMemoryConsultantRepository implements IConsultantRepository {
@@ -223,34 +229,34 @@ describe("SendConsultationReminderUseCase", () => {
   it("sends reminders only for confirmed unsent bookings within 15 minutes before start", async () => {
     const targetBooking = createBooking({
       bookingId: "target",
-      startDatetime: "2026-05-01T09:45:00.000Z",
+      startsAt: "2026-05-01T09:45:00.000Z",
       status: "confirmed",
     });
     const bookingRepository = new InMemoryBookingRepository([
       targetBooking,
       createBooking({
         bookingId: "future",
-        startDatetime: "2026-05-01T09:45:01.000Z",
+        startsAt: "2026-05-01T09:45:01.000Z",
         status: "confirmed",
       }),
       createBooking({
         bookingId: "started",
-        startDatetime: "2026-05-01T09:29:59.000Z",
+        startsAt: "2026-05-01T09:29:59.000Z",
         status: "confirmed",
       }),
       createBooking({
         bookingId: "cancelled",
-        startDatetime: "2026-05-01T09:40:00.000Z",
+        startsAt: "2026-05-01T09:40:00.000Z",
         status: "cancelled",
       }),
       createBooking({
         bookingId: "completed",
-        startDatetime: "2026-05-01T09:40:00.000Z",
+        startsAt: "2026-05-01T09:40:00.000Z",
         status: "completed",
       }),
       createBooking({
         bookingId: "sent",
-        startDatetime: "2026-05-01T09:40:00.000Z",
+        startsAt: "2026-05-01T09:40:00.000Z",
         status: "confirmed",
         reminderSentAt: new Date("2026-05-01T09:20:00.000Z"),
       }),
@@ -258,7 +264,7 @@ describe("SendConsultationReminderUseCase", () => {
     const emailService = createEmailService();
     const useCase = new SendConsultationReminderUseCase(
       bookingRepository,
-      new InMemoryClientRepository([createClient()]),
+      new InMemoryCustomerRepository([createCustomer()]),
       new InMemoryConsultantRepository([createConsultant()]),
       emailService,
     );
@@ -268,11 +274,11 @@ describe("SendConsultationReminderUseCase", () => {
     expect(result).toEqual({ sentCount: 1, skippedCount: 0, errors: [] });
     expect(emailService.sendConsultationReminder).toHaveBeenCalledTimes(1);
     expect(emailService.sendConsultationReminder).toHaveBeenCalledWith({
-      clientEmail: "taro@example.com",
-      clientName: "山田 太郎",
+      customerEmail: "taro@example.com",
+      customerName: "山田 太郎",
       consultantName: "田中 相談員",
-      zoomUrl: "https://zoom.example.com/target",
-      startDatetime: new Date("2026-05-01T09:45:00.000Z"),
+      joinUrl: "https://zoom.example.com/target",
+      startsAt: new Date("2026-05-01T09:45:00.000Z"),
       bookingId: "target",
     });
     expect(targetBooking.getConsultationReminderEmailSentAt()).toEqual(
@@ -282,25 +288,25 @@ describe("SendConsultationReminderUseCase", () => {
   });
 
   it("continues processing and records errors when a target booking cannot be sent", async () => {
-    const missingClientBooking = createBooking({
-      bookingId: "missing-client",
-      clientId: "missing-client",
-      startDatetime: "2026-05-01T09:40:00.000Z",
+    const missingCustomerBooking = createBooking({
+      bookingId: "missing-customer",
+      customerId: "missing-customer",
+      startsAt: "2026-05-01T09:40:00.000Z",
       status: "confirmed",
     });
     const successfulBooking = createBooking({
       bookingId: "success",
-      startDatetime: "2026-05-01T09:41:00.000Z",
+      startsAt: "2026-05-01T09:41:00.000Z",
       status: "confirmed",
     });
     const bookingRepository = new InMemoryBookingRepository([
-      missingClientBooking,
+      missingCustomerBooking,
       successfulBooking,
     ]);
     const emailService = createEmailService();
     const useCase = new SendConsultationReminderUseCase(
       bookingRepository,
-      new InMemoryClientRepository([createClient()]),
+      new InMemoryCustomerRepository([createCustomer()]),
       new InMemoryConsultantRepository([createConsultant()]),
       emailService,
     );
@@ -310,14 +316,14 @@ describe("SendConsultationReminderUseCase", () => {
     expect(result).toEqual({
       sentCount: 1,
       skippedCount: 1,
-      errors: [{ bookingId: "missing-client", error: "Client not found" }],
+      errors: [{ bookingId: "missing-customer", error: "Customer not found" }],
     });
     expect(emailService.sendConsultationReminder).toHaveBeenCalledTimes(1);
     expect(successfulBooking.getConsultationReminderEmailSentAt()).toEqual(
       new Date("2026-05-01T09:30:00.000Z"),
     );
     expect(
-      missingClientBooking.getConsultationReminderEmailSentAt(),
+      missingCustomerBooking.getConsultationReminderEmailSentAt(),
     ).toBeUndefined();
     expect(bookingRepository.savedBookings).toEqual([successfulBooking]);
   });
@@ -326,12 +332,12 @@ describe("SendConsultationReminderUseCase", () => {
     const missingZoomBooking = Booking.reconstruct({
       organizationId: ORGANIZATION_ID,
       bookingId: "missing-zoom",
-      clientId: "client-1",
+      customerId: "customer-1",
       consultantId: "consultant-1",
       slotId: "slot-missing-zoom",
-      startDatetime: new Date("2026-05-01T09:40:00.000Z"),
+      startsAt: new Date("2026-05-01T09:40:00.000Z"),
       status: BookingStatus.reconstruct("confirmed"),
-      cancelDeadline: CancelDeadline.create(
+      cancelDeadlineAt: CancelDeadline.create(
         new Date("2026-05-01T09:40:00.000Z"),
       ),
       consultantMemo: ConsultantMemo.create(""),
@@ -342,7 +348,7 @@ describe("SendConsultationReminderUseCase", () => {
     const emailService = createEmailService();
     const useCase = new SendConsultationReminderUseCase(
       bookingRepository,
-      new InMemoryClientRepository([createClient()]),
+      new InMemoryCustomerRepository([createCustomer()]),
       new InMemoryConsultantRepository([createConsultant()]),
       emailService,
     );

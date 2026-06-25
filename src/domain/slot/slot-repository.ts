@@ -14,8 +14,8 @@ export interface ISlotRepository {
   ): Promise<Slot[]>;
   findAvailableByTimeRange(
     organizationId: string,
-    startAt: Date,
-    endAt: Date,
+    startsAt: Date,
+    endsAt: Date,
   ): Promise<Slot[]>;
   findAvailableByDate(organizationId: string, date: Date): Promise<Slot[]>;
   delete(organizationId: string, slotId: string): Promise<void>;

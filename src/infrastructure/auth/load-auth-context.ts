@@ -4,12 +4,11 @@ import type {
   OrganizationMembership,
   UserRole,
 } from "@/infrastructure/auth/auth-types";
-import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
+import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
 const ORGANIZATION_COLLECTION = FIRESTORE_COLLECTIONS.organizations;
-const USER_PREFERENCES_COLLECTION = FIRESTORE_COLLECTIONS.userPreferences;
 
 interface OrganizationMembershipDoc {
   uid: string;
@@ -22,11 +21,6 @@ interface OrganizationMembershipDoc {
 interface OrganizationDoc {
   organizationId: string;
   name: string;
-}
-
-interface UserPreferencesDoc {
-  lastOrganizationId?: string;
-  displayName?: string;
 }
 
 function toIsoString(value: Timestamp | Date | string): string {
@@ -69,14 +63,11 @@ export async function activateInvitedMemberships(uid: string): Promise<void> {
 }
 
 export async function loadAuthUser(uid: string): Promise<AuthUser> {
-  const [membershipSnapshot, userPreferencesDoc] = await Promise.all([
-    db
-      .collection(MEMBERSHIP_COLLECTION)
-      .where("uid", "==", uid)
-      .where("status", "==", "active")
-      .get(),
-    db.collection(USER_PREFERENCES_COLLECTION).doc(uid).get(),
-  ]);
+  const membershipSnapshot = await db
+    .collection(MEMBERSHIP_COLLECTION)
+    .where("uid", "==", uid)
+    .where("status", "==", "active")
+    .get();
 
   const membershipDocs = membershipSnapshot.docs.map(
     (doc) => doc.data() as OrganizationMembershipDoc,
@@ -96,64 +87,41 @@ export async function loadAuthUser(uid: string): Promise<AuthUser> {
     ),
   );
 
-  const organizationNameById = new Map<string, string>();
+  const nameById = new Map<string, string>();
   for (const doc of organizationDocs) {
     if (!doc.exists) continue;
     const organization = doc.data() as OrganizationDoc;
-    organizationNameById.set(organization.organizationId, organization.name);
+    nameById.set(organization.organizationId, organization.name);
   }
 
   const memberships: OrganizationMembership[] = membershipDocs.map((doc) => ({
     organizationId: doc.organizationId,
-    organizationName:
-      organizationNameById.get(doc.organizationId) ?? doc.organizationId,
+    name: nameById.get(doc.organizationId) ?? doc.organizationId,
     role: doc.role,
     status: doc.status,
     createdAt: toIsoString(doc.createdAt),
   }));
 
-  const userPreferences = userPreferencesDoc.exists
-    ? (userPreferencesDoc.data() as UserPreferencesDoc)
-    : undefined;
-
-  const preferredOrganizationId = userPreferences?.lastOrganizationId;
-  const currentOrganizationId =
-    memberships.find(
-      (membership) => membership.organizationId === preferredOrganizationId,
-    )?.organizationId ??
-    memberships[0]?.organizationId ??
-    null;
+  const currentOrganizationId = memberships[0]?.organizationId ?? null;
 
   return {
     uid,
     memberships,
     currentOrganizationId,
-    currentDisplayName: userPreferences?.displayName ?? null,
+    currentDisplayName: null,
   };
 }
 
 export async function setLastOrganizationId(
-  uid: string,
-  organizationId: string,
+  _uid: string,
+  _organizationId: string,
 ): Promise<void> {
-  await db.collection(USER_PREFERENCES_COLLECTION).doc(uid).set(
-    {
-      lastOrganizationId: organizationId,
-      updatedAt: new Date(),
-    },
-    { merge: true },
-  );
+  // 組織選択の保持はフロント側で行う
 }
 
 export async function setUserDisplayName(
-  uid: string,
-  displayName: string,
+  _uid: string,
+  _name: string,
 ): Promise<void> {
-  await db.collection(USER_PREFERENCES_COLLECTION).doc(uid).set(
-    {
-      displayName,
-      updatedAt: new Date(),
-    },
-    { merge: true },
-  );
+  // 表示名は membership.name で管理する
 }

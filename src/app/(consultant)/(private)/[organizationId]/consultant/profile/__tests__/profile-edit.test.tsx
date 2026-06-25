@@ -117,11 +117,11 @@ vi.mock("@/components/ui/toast", () => ({
 import ConsultantProfilePage from "../page";
 
 function createWrapper() {
-  const queryClient = new QueryClient({
+  const queryCustomer = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryCustomer}>{children}</QueryClientProvider>
   );
 }
 
@@ -137,7 +137,7 @@ describe("ConsultantProfilePage", () => {
       data: {
         data: {
           consultantId: "c1",
-          displayName: "田中太郎",
+          name: "田中太郎",
           bio: "自己紹介テスト",
           specialties: ["キャリア", "転職"],
           isActive: true,
@@ -152,9 +152,9 @@ describe("ConsultantProfilePage", () => {
     });
 
     await waitFor(() => {
-      expect(
-        (container.querySelector("#displayName") as HTMLInputElement).value,
-      ).toBe("田中太郎");
+      expect((container.querySelector("#name") as HTMLInputElement).value).toBe(
+        "田中太郎",
+      );
       expect(
         (container.querySelector("#bio") as HTMLTextAreaElement).value,
       ).toBe("自己紹介テスト");
@@ -169,7 +169,7 @@ describe("ConsultantProfilePage", () => {
       data: {
         data: {
           consultantId: "c1",
-          displayName: "田中太郎",
+          name: "田中太郎",
           bio: "",
           specialties: [],
           isActive: true,
@@ -186,9 +186,9 @@ describe("ConsultantProfilePage", () => {
     });
 
     await waitFor(() => {
-      expect(
-        (container.querySelector("#displayName") as HTMLInputElement).value,
-      ).toBe("田中太郎");
+      expect((container.querySelector("#name") as HTMLInputElement).value).toBe(
+        "田中太郎",
+      );
     });
 
     await user.click(screen.getByText("保存"));
@@ -197,7 +197,7 @@ describe("ConsultantProfilePage", () => {
       expect(mockMutateAsync).toHaveBeenCalledWith({
         organizationId: "org-test",
         data: {
-          displayName: "田中太郎",
+          name: "田中太郎",
           bio: "",
           phone: "",
           imageUrl: undefined,
@@ -215,7 +215,7 @@ describe("ConsultantProfilePage", () => {
       data: {
         data: {
           consultantId: "c1",
-          displayName: "田中太郎",
+          name: "田中太郎",
           bio: "",
           specialties: [],
           isActive: true,
@@ -259,9 +259,9 @@ describe("ConsultantProfilePage", () => {
     });
 
     await waitFor(() => {
-      expect(
-        (container.querySelector("#displayName") as HTMLInputElement).value,
-      ).toBe("田中太郎");
+      expect((container.querySelector("#name") as HTMLInputElement).value).toBe(
+        "田中太郎",
+      );
     });
 
     const fileInput = container.querySelector(
@@ -287,7 +287,7 @@ describe("ConsultantProfilePage", () => {
       expect(mockMutateAsync).toHaveBeenCalledWith({
         organizationId: "org-test",
         data: {
-          displayName: "田中太郎",
+          name: "田中太郎",
           bio: "",
           phone: "",
           imageUrl,
@@ -301,7 +301,7 @@ describe("ConsultantProfilePage", () => {
     mockUseConsultantProfile.mockReturnValue({
       data: {
         data: {
-          displayName: "テスト",
+          name: "テスト",
           bio: "",
           specialties: [],
         },
@@ -317,9 +317,9 @@ describe("ConsultantProfilePage", () => {
     });
 
     await waitFor(() => {
-      expect(
-        (container.querySelector("#displayName") as HTMLInputElement).value,
-      ).toBe("テスト");
+      expect((container.querySelector("#name") as HTMLInputElement).value).toBe(
+        "テスト",
+      );
     });
 
     await user.click(screen.getByText("保存"));

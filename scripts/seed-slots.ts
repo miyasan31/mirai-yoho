@@ -44,12 +44,12 @@ async function main() {
   for (let dayOffset = 1; dayOffset <= 5; dayOffset++) {
     for (let hour = 10; hour < 17; hour++) {
       for (const minute of [0, 30]) {
-        const startAt = new Date(now);
-        startAt.setDate(startAt.getDate() + dayOffset);
-        startAt.setHours(hour, minute, 0, 0);
+        const startsAt = new Date(now);
+        startsAt.setDate(startsAt.getDate() + dayOffset);
+        startsAt.setHours(hour, minute, 0, 0);
 
-        const endAt = new Date(startAt);
-        endAt.setMinutes(endAt.getMinutes() + 30);
+        const endsAt = new Date(startsAt);
+        endsAt.setMinutes(endsAt.getMinutes() + 30);
 
         const slotId = crypto.randomUUID();
         const ref = db.collection(FIRESTORE_COLLECTIONS.slots).doc(slotId);
@@ -58,15 +58,15 @@ async function main() {
           organizationId,
           slotId,
           consultantId,
-          startAt,
-          endAt,
+          startsAt,
+          endsAt,
           bookingId: null,
-          isReserved: false,
+          isAvailable: false,
         });
 
         count++;
         console.log(
-          `  ${slotId} | ${startAt.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })} - ${endAt.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}`,
+          `  ${slotId} | ${startsAt.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })} - ${endsAt.toLocaleString("ja-JP", { timeZone: "Asia/Tokyo" })}`,
         );
       }
     }

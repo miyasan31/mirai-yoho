@@ -37,7 +37,7 @@ describe("PATCH /api/auth/organization", () => {
     vi.mocked(getOrganizationMembership).mockReturnValueOnce({
       role: "admin",
       organizationId: "org-1",
-      organizationName: "テスト組織",
+      name: "テスト組織",
       status: "active",
       createdAt: "2026-04-01T00:00:00+09:00",
     });

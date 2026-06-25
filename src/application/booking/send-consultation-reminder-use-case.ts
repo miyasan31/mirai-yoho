@@ -1,7 +1,7 @@
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
-import type { IClientRepository } from "@/domain/client/client-repository";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
+import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 
 const CONSULTATION_REMINDER_WINDOW_MINUTES = 15;
 
@@ -14,7 +14,7 @@ interface SendConsultationReminderResult {
 export class SendConsultationReminderUseCase {
   constructor(
     private readonly bookingRepository: IBookingRepository,
-    private readonly clientRepository: IClientRepository,
+    private readonly customerRepository: ICustomerRepository,
     private readonly consultantRepository: IConsultantRepository,
     private readonly emailService: IEmailService,
   ) {}
@@ -39,32 +39,35 @@ export class SendConsultationReminderUseCase {
 
     for (const booking of targetBookings) {
       try {
-        const zoomUrl = booking.getZoomUrl()?.getValue();
-        if (!zoomUrl) {
+        const joinUrl = booking.getJoinUrl()?.getValue();
+        if (!joinUrl) {
           throw new Error("Zoom URL not found");
         }
 
-        const [client, consultant] = await Promise.all([
-          this.clientRepository.findById(organizationId, booking.getClientId()),
+        const [customer, consultant] = await Promise.all([
+          this.customerRepository.findById(
+            organizationId,
+            booking.getCustomerId(),
+          ),
           this.consultantRepository.findById(
             organizationId,
             booking.getConsultantId(),
           ),
         ]);
 
-        if (!client) {
-          throw new Error("Client not found");
+        if (!customer) {
+          throw new Error("Customer not found");
         }
         if (!consultant) {
           throw new Error("Consultant not found");
         }
 
         await this.emailService.sendConsultationReminder({
-          clientEmail: client.getEmail(),
-          clientName: client.getName(),
+          customerEmail: customer.getEmail(),
+          customerName: customer.getName(),
           consultantName: consultant.getProfile().getDisplayName(),
-          zoomUrl,
-          startDatetime: booking.getStartDatetime(),
+          joinUrl,
+          startsAt: booking.getStartsAt(),
           bookingId: booking.getBookingId(),
         });
 

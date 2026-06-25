@@ -9,7 +9,7 @@ export const userInviteFormSchema = v.object({
     v.minLength(1, "メールアドレスを入力してください"),
     v.email("メールアドレスの形式が正しくありません"),
   ),
-  displayName: v.pipe(
+  name: v.pipe(
     v.string(),
     v.trim(),
     v.minLength(1, "表示名を入力してください"),

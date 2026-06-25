@@ -4,15 +4,15 @@ import { Consultant as ConsultantEntity } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
 import { DEFAULT_CONSULTANT_RANK_ID } from "@/domain/organization-settings/consultant-rank";
-import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
+import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.consultants;
 
 interface ConsultantDoc {
   organizationId: string;
   consultantId: string;
-  displayName: string;
+  name: string;
   bio: string;
   specialties: string[];
   phone?: string;
@@ -36,7 +36,7 @@ function toDomain(doc: ConsultantDoc): Consultant {
     organizationId: doc.organizationId,
     consultantId: doc.consultantId,
     profile: ConsultantProfile.reconstruct(
-      doc.displayName,
+      doc.name,
       doc.bio,
       doc.specialties,
       doc.phone ?? "",
@@ -55,7 +55,7 @@ function toFirestore(consultant: Consultant): ConsultantDoc {
   return {
     organizationId: consultant.getOrganizationId(),
     consultantId: consultant.getConsultantId(),
-    displayName: profile.getDisplayName(),
+    name: profile.getDisplayName(),
     bio: profile.getBio(),
     specialties: [...profile.getSpecialties()],
     phone: profile.getPhone(),

@@ -1,4 +1,4 @@
 import { getAuth } from "firebase/auth";
-import { firebaseClientApp } from "@/infrastructure/firebase/firebase-client-config";
+import { firebaseCustomerApp } from "@/infrastructure/firebase/firebase-customer-config";
 
-export const auth = getAuth(firebaseClientApp);
+export const auth = getAuth(firebaseCustomerApp);

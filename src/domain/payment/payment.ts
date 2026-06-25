@@ -11,7 +11,7 @@ interface PaymentDeferredCreateProps {
   organizationId: string;
   paymentId: string;
   bookingId: string;
-  clientId: string;
+  customerId: string;
   stripeSetupIntentId: string;
   money: Money;
   createdAt?: Date;
@@ -22,7 +22,7 @@ interface PaymentImmediateCreateProps {
   organizationId: string;
   paymentId: string;
   bookingId: string;
-  clientId: string;
+  customerId: string;
   stripePaymentIntentId: string;
   money: Money;
   createdAt?: Date;
@@ -33,7 +33,7 @@ interface PaymentProps {
   organizationId: string;
   paymentId: string;
   bookingId: string;
-  clientId: string;
+  customerId: string;
   money: Money;
   status: PaymentStatus;
   paymentStrategy: PaymentStrategy;
@@ -50,7 +50,7 @@ export class Payment extends AggregateRoot {
     private readonly organizationId: string,
     private readonly paymentId: string,
     private readonly bookingId: string,
-    private readonly clientId: string,
+    private readonly customerId: string,
     private readonly money: Money,
     private status: PaymentStatus,
     private readonly paymentStrategy: PaymentStrategy,
@@ -70,7 +70,7 @@ export class Payment extends AggregateRoot {
       props.organizationId,
       props.paymentId,
       props.bookingId,
-      props.clientId,
+      props.customerId,
       props.money,
       PaymentStatus.create("setup_pending"),
       PaymentStrategy.create("deferred"),
@@ -89,7 +89,7 @@ export class Payment extends AggregateRoot {
       props.organizationId,
       props.paymentId,
       props.bookingId,
-      props.clientId,
+      props.customerId,
       props.money,
       PaymentStatus.create("charged"),
       PaymentStrategy.create("immediate"),
@@ -108,7 +108,7 @@ export class Payment extends AggregateRoot {
       props.organizationId,
       props.paymentId,
       props.bookingId,
-      props.clientId,
+      props.customerId,
       props.money,
       props.status,
       props.paymentStrategy,
@@ -148,7 +148,7 @@ export class Payment extends AggregateRoot {
       PaymentChargedEvent.create({
         paymentId: this.paymentId,
         bookingId: this.bookingId,
-        clientId: this.clientId,
+        customerId: this.customerId,
         chargeMethod: method,
         amountJPY: this.money.getTotalJPY(),
       }),
@@ -210,8 +210,8 @@ export class Payment extends AggregateRoot {
     return this.bookingId;
   }
 
-  getClientId(): string {
-    return this.clientId;
+  getCustomerId(): string {
+    return this.customerId;
   }
 
   getStripePaymentIntentId(): string | undefined {

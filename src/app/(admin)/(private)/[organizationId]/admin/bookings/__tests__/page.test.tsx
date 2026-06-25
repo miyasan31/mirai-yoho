@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 
 const mockUseAdminBookings = vi.fn();
-const mockUseAdminClients = vi.fn();
+const mockUseAdminCustomers = vi.fn();
 const mockUseAdminConsultants = vi.fn();
 const mockMutateAsync = vi.fn();
 const mockUseChargePayment = vi.fn();
@@ -27,11 +27,11 @@ vi.mock("@/hooks/use-booking", () => ({
   useChargePayment: () => mockUseChargePayment(),
 }));
 
-vi.mock("@/hooks/use-admin-clients", () => ({
-  useAdminClients: (
+vi.mock("@/hooks/use-admin-customers", () => ({
+  useAdminCustomers: (
     params?: Record<string, unknown>,
     options?: { enabled?: boolean },
-  ) => mockUseAdminClients(params, options),
+  ) => mockUseAdminCustomers(params, options),
 }));
 
 vi.mock("@/hooks/use-admin-consultants", () => ({
@@ -173,12 +173,12 @@ describe("AdminBookingsPage", () => {
           bookings: [
             {
               bookingId: "b1",
-              clientId: "c1",
+              customerId: "c1",
               consultantId: "co1",
               slotId: "s1",
-              startDatetime: "2026-04-21T01:30:00.000Z",
+              startsAt: "2026-04-21T01:30:00.000Z",
               status: "confirmed",
-              zoomUrl: null,
+              joinUrl: null,
               consultantJoinedAt: null,
               consultantMemo: "",
               consultationContent: null,
@@ -195,8 +195,8 @@ describe("AdminBookingsPage", () => {
       isPending: false,
       variables: null,
     });
-    mockUseAdminClients.mockReturnValue({
-      data: { data: { clients: [] } },
+    mockUseAdminCustomers.mockReturnValue({
+      data: { data: { customers: [] } },
       isLoading: false,
       error: null,
     });
@@ -223,12 +223,12 @@ describe("AdminBookingsPage", () => {
           bookings: [
             {
               bookingId: "b2",
-              clientId: "c2",
+              customerId: "c2",
               consultantId: "co2",
               slotId: "s2",
-              startDatetime: "2026-04-19T01:30:00.000Z",
+              startsAt: "2026-04-19T01:30:00.000Z",
               status: "confirmed",
-              zoomUrl: null,
+              joinUrl: null,
               consultantJoinedAt: "2026-04-19T01:20:00.000Z",
               consultantMemo: "",
               consultationContent: null,
@@ -245,8 +245,8 @@ describe("AdminBookingsPage", () => {
       isPending: false,
       variables: null,
     });
-    mockUseAdminClients.mockReturnValue({
-      data: { data: { clients: [] } },
+    mockUseAdminCustomers.mockReturnValue({
+      data: { data: { customers: [] } },
       isLoading: false,
       error: null,
     });

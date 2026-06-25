@@ -4,10 +4,10 @@ import {
   type ConsultantPricePlanStatus,
 } from "@/domain/consultant-price-plan/consultant-price-plan";
 import type { IConsultantPricePlanRepository } from "@/domain/consultant-price-plan/consultant-price-plan-repository";
-import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
+import { db } from "@/infrastructure/firestore/firestore-customer";
 
-const COLLECTION = FIRESTORE_COLLECTIONS.consultantPricePlans;
+const COLLECTION = FIRESTORE_COLLECTIONS.pricePlans;
 
 interface ConsultantPricePlanDoc {
   organizationId: string;

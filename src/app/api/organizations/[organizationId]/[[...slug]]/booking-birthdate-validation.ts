@@ -1,31 +1,31 @@
 import {
-  isFutureClientBirthdate,
-  isValidClientBirthdateFormat,
-} from "@/lib/client-birthdate";
+  isFutureCustomerBirthdate,
+  isValidCustomerBirthdateFormat,
+} from "@/lib/customer-birthdate";
 
-export function validateClientBirthdate(value: unknown): {
+export function validateCustomerBirthdate(value: unknown): {
   valid: boolean;
   errorMessage?: string;
 } {
   if (typeof value !== "string" || value.trim().length === 0) {
     return {
       valid: false,
-      errorMessage: "clientBirthdate is required",
+      errorMessage: "customerBirthDate is required",
     };
   }
 
-  const birthdate = value.trim();
-  if (!isValidClientBirthdateFormat(birthdate)) {
+  const birthDate = value.trim();
+  if (!isValidCustomerBirthdateFormat(birthDate)) {
     return {
       valid: false,
-      errorMessage: "clientBirthdate must be in YYYY-MM-DD format",
+      errorMessage: "customerBirthDate must be in YYYY-MM-DD format",
     };
   }
 
-  if (isFutureClientBirthdate(birthdate)) {
+  if (isFutureCustomerBirthdate(birthDate)) {
     return {
       valid: false,
-      errorMessage: "clientBirthdate cannot be in the future",
+      errorMessage: "customerBirthDate cannot be in the future",
     };
   }
 

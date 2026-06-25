@@ -44,7 +44,7 @@ export default function CancelPage() {
         organizationId: organizationId ?? "",
         bookingId,
         // token は OpenAPI スキーマに未定義だが API 側で必要
-        data: { cancelledBy: "client", token } as CancelBookingBody,
+        data: { cancelledBy: "customer", token } as CancelBookingBody,
       });
       setStatus("success");
     } catch (e) {

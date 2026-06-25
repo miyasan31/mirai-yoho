@@ -1,6 +1,6 @@
 import type {
   BookingDetail,
-  ClientDetail,
+  CustomerDetail,
   PaymentDetail,
 } from "@/generated/schemas";
 
@@ -9,22 +9,20 @@ const CHARGEABLE_LIMIT_DEFAULT = 5;
 
 export interface AdminHomeBookingItem {
   bookingId: string;
-  clientId: string;
-  clientName: string;
+  customerId: string;
+  customerName: string;
   consultantId: string;
   status: string;
-  startDatetime: string;
-  startAt: Date;
+  startsAt: string;
   consultantMemo: string;
   chargeable: boolean;
 }
 
 export interface AdminHomeChargeableItem {
   bookingId: string;
-  clientId: string;
-  clientName: string;
-  startDatetime: string;
-  startAt: Date;
+  customerId: string;
+  customerName: string;
+  startsAt: string;
   status: string;
   paymentStatus: string | null;
 }
@@ -44,7 +42,7 @@ export interface AdminHomeViewModel {
 interface BuildAdminHomeViewModelParams {
   bookings: BookingDetail[];
   payments: PaymentDetail[];
-  clients: ClientDetail[];
+  customers: CustomerDetail[];
   now?: Date;
   upcomingLimit?: number;
   chargeableLimit?: number;
@@ -69,13 +67,13 @@ function isBlank(value: string | undefined): boolean {
 export function buildAdminHomeViewModel({
   bookings,
   payments,
-  clients,
+  customers,
   now = new Date(),
   upcomingLimit = UPCOMING_LIMIT_DEFAULT,
   chargeableLimit = CHARGEABLE_LIMIT_DEFAULT,
 }: BuildAdminHomeViewModelParams): AdminHomeViewModel {
-  const clientNameById = new Map(
-    clients.map((client) => [client.clientId, client.name]),
+  const customerNameById = new Map(
+    customers.map((customer) => [customer.customerId, customer.name]),
   );
   const paymentByBookingId = new Map(
     payments.map((payment) => [payment.bookingId, payment]),
@@ -84,21 +82,23 @@ export function buildAdminHomeViewModel({
   const mappedBookings: AdminHomeBookingItem[] = bookings
     .map((booking) => ({
       bookingId: booking.bookingId,
-      clientId: booking.clientId,
-      clientName: clientNameById.get(booking.clientId) ?? booking.clientId,
+      customerId: booking.customerId,
+      customerName:
+        customerNameById.get(booking.customerId) ?? booking.customerId,
       consultantId: booking.consultantId,
       status: booking.status,
-      startDatetime: booking.startDatetime,
-      startAt: new Date(booking.startDatetime),
+      startsAt: booking.startsAt,
       consultantMemo: booking.consultantMemo ?? "",
       chargeable: booking.chargeable,
     }))
-    .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+    .sort(
+      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+    );
 
   const next24Hours = now.getTime() + 24 * 60 * 60 * 1000;
 
   const upcomingUnprocessed = mappedBookings.filter((booking) => {
-    const startTime = booking.startAt.getTime();
+    const startTime = new Date(booking.startsAt).getTime();
     return (
       isPendingStatus(booking.status) &&
       startTime >= now.getTime() &&
@@ -109,7 +109,7 @@ export function buildAdminHomeViewModel({
   const memoMissingToday = mappedBookings.filter(
     (booking) =>
       booking.status === "completed" &&
-      isSameLocalDate(booking.startAt, now) &&
+      isSameLocalDate(new Date(booking.startsAt), now) &&
       isBlank(booking.consultantMemo),
   );
 
@@ -117,14 +117,15 @@ export function buildAdminHomeViewModel({
     .filter((booking) => booking.chargeable)
     .map((booking) => ({
       bookingId: booking.bookingId,
-      clientId: booking.clientId,
-      clientName: booking.clientName,
-      startDatetime: booking.startDatetime,
-      startAt: booking.startAt,
+      customerId: booking.customerId,
+      customerName: booking.customerName,
+      startsAt: booking.startsAt,
       status: booking.status,
       paymentStatus: paymentByBookingId.get(booking.bookingId)?.status ?? null,
     }))
-    .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+    .sort(
+      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+    );
 
   return {
     todo: {

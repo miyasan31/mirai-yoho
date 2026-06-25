@@ -37,7 +37,7 @@ export function ConsultantEditForm({
   onNotFound,
 }: ConsultantEditFormProps) {
   const { organizationId } = useOrganizationRouting();
-  const queryClient = useQueryClient();
+  const queryCustomer = useQueryClient();
   const [error, setError] = useState("");
   const {
     register,
@@ -47,7 +47,7 @@ export function ConsultantEditForm({
   } = useForm<ConsultantFormValues>({
     resolver: valibotResolver(consultantFormSchema),
     defaultValues: {
-      displayName: "",
+      name: "",
       bio: "",
       phone: "",
       specialties: "",
@@ -74,7 +74,7 @@ export function ConsultantEditForm({
   useEffect(() => {
     if (consultant) {
       reset({
-        displayName: consultant.displayName ?? "",
+        name: consultant.name ?? "",
         bio: consultant.bio ?? "",
         phone: consultant.phone ?? "",
         specialties: (consultant.specialties ?? []).join(", "),
@@ -93,7 +93,7 @@ export function ConsultantEditForm({
     if (!organizationId) {
       return;
     }
-    await queryClient.invalidateQueries({
+    await queryCustomer.invalidateQueries({
       queryKey: getGetAdminConsultantsQueryKey(organizationId),
     });
   };
@@ -105,7 +105,7 @@ export function ConsultantEditForm({
         organizationId: organizationId ?? "",
         id: consultantId,
         data: {
-          displayName: values.displayName,
+          name: values.name,
           bio: values.bio?.trim() ?? "",
           phone: values.phone?.trim() ?? "",
           specialties: (values.specialties ?? "")
@@ -165,11 +165,11 @@ export function ConsultantEditForm({
       flexDir="column"
       gap="4"
     >
-      <Field.Root invalid={!!errors.displayName}>
+      <Field.Root invalid={!!errors.name}>
         <Field.Label>表示名</Field.Label>
-        <Input id="displayName" type="text" {...register("displayName")} />
-        {errors.displayName && (
-          <Field.ErrorText>{errors.displayName.message}</Field.ErrorText>
+        <Input id="name" type="text" {...register("name")} />
+        {errors.name && (
+          <Field.ErrorText>{errors.name.message}</Field.ErrorText>
         )}
       </Field.Root>
       <Field.Root>

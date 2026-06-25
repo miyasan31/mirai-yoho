@@ -2,7 +2,7 @@ export type UserRole = "admin" | "operator" | "consultant";
 
 export interface OrganizationMembership {
   organizationId: string;
-  organizationName: string;
+  name: string;
   role: UserRole;
   status: "active" | "invited" | "disabled";
   createdAt: string;

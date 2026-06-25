@@ -12,7 +12,7 @@ interface SlotCreateProps {
 
 interface SlotProps extends SlotCreateProps {
   bookingId?: string;
-  isReserved: boolean;
+  isAvailable: boolean;
 }
 
 export class Slot extends AggregateRoot {
@@ -22,7 +22,7 @@ export class Slot extends AggregateRoot {
     private readonly consultantId: string,
     private readonly timeRange: TimeRange,
     private bookingId: string | undefined,
-    private isReserved: boolean,
+    private isAvailable: boolean,
   ) {
     super();
   }
@@ -34,7 +34,7 @@ export class Slot extends AggregateRoot {
       props.consultantId,
       props.timeRange,
       undefined,
-      false,
+      true,
     );
   }
 
@@ -45,39 +45,39 @@ export class Slot extends AggregateRoot {
       props.consultantId,
       props.timeRange,
       props.bookingId,
-      props.isReserved,
+      props.isAvailable,
     );
   }
 
   reserve(bookingId: string): void {
-    if (this.isReserved) {
+    if (!this.isAvailable) {
       throw new DomainError(
         "SLOT_ALREADY_RESERVED",
         "This slot is already reserved",
       );
     }
-    if (this.timeRange.getStartAt() < new Date()) {
+    if (this.timeRange.getStartsAt() < new Date()) {
       throw new DomainError(
         "SLOT_IN_PAST",
         "Cannot reserve a slot in the past",
       );
     }
-    if (!isBeforeBookingDeadline(this.timeRange.getStartAt())) {
+    if (!isBeforeBookingDeadline(this.timeRange.getStartsAt())) {
       throw new DomainError(
         "BOOKING_CUTOFF_EXCEEDED",
         "Reservations must be made at least 15 minutes before the start time",
       );
     }
     this.bookingId = bookingId;
-    this.isReserved = true;
+    this.isAvailable = false;
   }
 
   release(): void {
-    if (!this.isReserved) {
+    if (this.isAvailable) {
       throw new DomainError("SLOT_NOT_RESERVED", "This slot is not reserved");
     }
     this.bookingId = undefined;
-    this.isReserved = false;
+    this.isAvailable = true;
   }
 
   getSlotId(): string {
@@ -100,7 +100,7 @@ export class Slot extends AggregateRoot {
     return this.bookingId;
   }
 
-  getIsReserved(): boolean {
-    return this.isReserved;
+  getIsAvailable(): boolean {
+    return this.isAvailable;
   }
 }

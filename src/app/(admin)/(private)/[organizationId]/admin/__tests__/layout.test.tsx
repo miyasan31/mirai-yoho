@@ -58,7 +58,7 @@ describe("AdminLayout", () => {
       role: "operator",
       memberships: [
         {
-          organizationName: "Org Test",
+          name: "Org Test",
           organizationId: "org-test",
         },
       ],

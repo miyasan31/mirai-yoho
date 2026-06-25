@@ -5,8 +5,8 @@ import { Payment as PaymentEntity } from "@/domain/payment/payment";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 import { PaymentStatus } from "@/domain/payment/payment-status";
 import { PaymentStrategy } from "@/domain/payment/payment-strategy";
-import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
+import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.payments;
 
@@ -14,7 +14,7 @@ interface PaymentDoc {
   organizationId: string;
   paymentId: string;
   bookingId: string;
-  clientId: string;
+  customerId: string;
   amountJPY: number;
   taxAmountJPY: number;
   taxRate: number;
@@ -34,7 +34,7 @@ function toDomain(doc: PaymentDoc): Payment {
     organizationId: doc.organizationId,
     paymentId: doc.paymentId,
     bookingId: doc.bookingId,
-    clientId: doc.clientId,
+    customerId: doc.customerId,
     money: Money.reconstruct(doc.amountJPY, doc.taxAmountJPY, doc.taxRate),
     status: PaymentStatus.reconstruct(doc.status),
     paymentStrategy: PaymentStrategy.reconstruct(doc.paymentStrategy),
@@ -53,7 +53,7 @@ function toFirestore(payment: Payment): Record<string, unknown> {
     organizationId: payment.getOrganizationId(),
     paymentId: payment.getPaymentId(),
     bookingId: payment.getBookingId(),
-    clientId: payment.getClientId(),
+    customerId: payment.getCustomerId(),
     amountJPY: money.getAmountJPY(),
     taxAmountJPY: money.getTaxAmountJPY(),
     taxRate: money.getTaxRate(),

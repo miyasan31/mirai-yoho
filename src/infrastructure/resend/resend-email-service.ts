@@ -2,13 +2,13 @@ import { Resend } from "resend";
 import type { IEmailService } from "@/application/shared/email-service";
 import { envServer } from "@/config/env.server";
 
-let resendClient: Resend | null = null;
+let resendCustomer: Resend | null = null;
 
-function getResendClient(): Resend {
-  if (!resendClient) {
-    resendClient = new Resend(envServer.resendApiKey);
+function getResendCustomer(): Resend {
+  if (!resendCustomer) {
+    resendCustomer = new Resend(envServer.resendApiKey);
   }
-  return resendClient;
+  return resendCustomer;
 }
 
 type EmailPayload = {
@@ -45,7 +45,7 @@ async function deliverEmail(
     return;
   }
 
-  await getResendClient().emails.send({
+  await getResendCustomer().emails.send({
     from: envServer.resendFromEmail,
     to: payload.to,
     subject: payload.subject,
@@ -55,47 +55,47 @@ async function deliverEmail(
 
 export class ResendEmailService implements IEmailService {
   async sendBookingConfirmation(params: {
-    clientEmail: string;
-    clientName: string;
+    customerEmail: string;
+    customerName: string;
     consultantName: string;
-    zoomUrl: string;
-    startDatetime: Date;
+    joinUrl: string;
+    startsAt: Date;
     bookingId: string;
   }): Promise<void> {
     const subject = "【未来予報】ご予約確認";
     const html = `
 				<h2>ご予約が確認されました</h2>
-				<p>${params.clientName} 様</p>
+				<p>${params.customerName} 様</p>
 				<p>以下の内容でご予約を承りました。</p>
 				<ul>
 					<li><strong>相談員:</strong> ${params.consultantName}</li>
-					<li><strong>日時:</strong> ${formatDatetime(params.startDatetime)}</li>
+					<li><strong>日時:</strong> ${formatDatetime(params.startsAt)}</li>
 					<li><strong>予約ID:</strong> ${params.bookingId}</li>
 				</ul>
-				<p><strong>Zoom URL:</strong> <a href="${params.zoomUrl}">${params.zoomUrl}</a></p>
+				<p><strong>Zoom URL:</strong> <a href="${params.joinUrl}">${params.joinUrl}</a></p>
 				<p>開始時刻の24時間前までキャンセル可能です。</p>
 			`;
 
     await deliverEmail("booking-confirmation", {
-      to: params.clientEmail,
+      to: params.customerEmail,
       subject,
       html,
     });
   }
 
   async sendBookingCancellation(params: {
-    clientEmail: string;
-    clientName: string;
+    customerEmail: string;
+    customerName: string;
     consultantName: string;
     bookingId: string;
-    cancelledBy: "client" | "admin";
+    cancelledBy: "customer" | "admin";
   }): Promise<void> {
     const cancelledByText =
-      params.cancelledBy === "client" ? "お客様" : "管理者";
+      params.cancelledBy === "customer" ? "お客様" : "管理者";
     const subject = "【未来予報】ご予約キャンセルのお知らせ";
     const html = `
 				<h2>ご予約がキャンセルされました</h2>
-				<p>${params.clientName} 様</p>
+				<p>${params.customerName} 様</p>
 				<p>${cancelledByText}によりご予約がキャンセルされました。</p>
 				<ul>
 					<li><strong>相談員:</strong> ${params.consultantName}</li>
@@ -104,22 +104,22 @@ export class ResendEmailService implements IEmailService {
 			`;
 
     await deliverEmail("booking-cancellation", {
-      to: params.clientEmail,
+      to: params.customerEmail,
       subject,
       html,
     });
   }
 
   async sendPaymentReceipt(params: {
-    clientEmail: string;
-    clientName: string;
+    customerEmail: string;
+    customerName: string;
     amountJPY: number;
     bookingId: string;
   }): Promise<void> {
     const subject = "【未来予報】お支払い完了のお知らせ";
     const html = `
 				<h2>お支払いが完了しました</h2>
-				<p>${params.clientName} 様</p>
+				<p>${params.customerName} 様</p>
 				<ul>
 					<li><strong>金額:</strong> ¥${params.amountJPY.toLocaleString()}</li>
 					<li><strong>予約ID:</strong> ${params.bookingId}</li>
@@ -127,36 +127,36 @@ export class ResendEmailService implements IEmailService {
 			`;
 
     await deliverEmail("payment-receipt", {
-      to: params.clientEmail,
+      to: params.customerEmail,
       subject,
       html,
     });
   }
 
   async sendConsultationReminder(params: {
-    clientEmail: string;
-    clientName: string;
+    customerEmail: string;
+    customerName: string;
     consultantName: string;
-    zoomUrl: string;
-    startDatetime: Date;
+    joinUrl: string;
+    startsAt: Date;
     bookingId: string;
   }): Promise<void> {
     const subject = "【未来予報】相談開始15分前のお知らせ";
     const html = `
 				<h2>相談開始15分前のお知らせ</h2>
-				<p>${params.clientName} 様</p>
+				<p>${params.customerName} 様</p>
 				<p>ご予約の相談開始時刻が近づいています。</p>
 				<ul>
 					<li><strong>相談員:</strong> ${params.consultantName}</li>
-					<li><strong>日時:</strong> ${formatDatetime(params.startDatetime)}</li>
+					<li><strong>日時:</strong> ${formatDatetime(params.startsAt)}</li>
 					<li><strong>予約ID:</strong> ${params.bookingId}</li>
 				</ul>
-				<p><strong>Zoom URL:</strong> <a href="${params.zoomUrl}">${params.zoomUrl}</a></p>
+				<p><strong>Zoom URL:</strong> <a href="${params.joinUrl}">${params.joinUrl}</a></p>
 				<p>お時間になりましたら、上記のZoom URLからご参加ください。</p>
 			`;
 
     await deliverEmail("consultation-reminder", {
-      to: params.clientEmail,
+      to: params.customerEmail,
       subject,
       html,
     });

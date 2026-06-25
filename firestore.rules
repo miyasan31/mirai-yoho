@@ -100,13 +100,10 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    match /clients/{clientId} {
+    match /customers/{customerId} {
       allow read: if isOrganizationAdmin(resource.data.organizationId);
       allow write: if false;
     }
 
-    match /user-preferences/{uid} {
-      allow read, write: if isAuthenticated() && request.auth.uid == uid;
-    }
   }
 }

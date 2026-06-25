@@ -1,6 +1,6 @@
 import type {
   BookingDetail,
-  ClientDetail,
+  CustomerDetail,
   PaymentDetail,
 } from "@/generated/schemas";
 import { buildAdminHomeViewModel } from "../home-view-model";
@@ -8,12 +8,12 @@ import { buildAdminHomeViewModel } from "../home-view-model";
 function createBooking(overrides: Partial<BookingDetail> = {}): BookingDetail {
   return {
     bookingId: overrides.bookingId ?? "booking-1",
-    clientId: overrides.clientId ?? "client-1",
+    customerId: overrides.customerId ?? "customer-1",
     consultantId: overrides.consultantId ?? "consultant-1",
     slotId: overrides.slotId ?? "slot-1",
-    startDatetime: overrides.startDatetime ?? "2026-04-22T10:00:00+09:00",
+    startsAt: overrides.startsAt ?? "2026-04-22T10:00:00+09:00",
     status: overrides.status ?? "confirmed",
-    zoomUrl: overrides.zoomUrl ?? null,
+    joinUrl: overrides.joinUrl ?? null,
     consultantMemo: overrides.consultantMemo ?? "",
     consultationContent: overrides.consultationContent ?? null,
     chargeable: overrides.chargeable ?? false,
@@ -27,7 +27,7 @@ function createPayment(overrides: Partial<PaymentDetail> = {}): PaymentDetail {
   return {
     paymentId: overrides.paymentId ?? "payment-1",
     bookingId: overrides.bookingId ?? "booking-1",
-    clientId: overrides.clientId ?? "client-1",
+    customerId: overrides.customerId ?? "customer-1",
     paymentStrategy: overrides.paymentStrategy ?? "deferred",
     stripePaymentIntentId: overrides.stripePaymentIntentId ?? null,
     stripeSetupIntentId: overrides.stripeSetupIntentId ?? null,
@@ -42,9 +42,11 @@ function createPayment(overrides: Partial<PaymentDetail> = {}): PaymentDetail {
   };
 }
 
-function createClient(overrides: Partial<ClientDetail> = {}): ClientDetail {
+function createCustomer(
+  overrides: Partial<CustomerDetail> = {},
+): CustomerDetail {
   return {
-    clientId: overrides.clientId ?? "client-1",
+    customerId: overrides.customerId ?? "customer-1",
     name: overrides.name ?? "山田 太郎",
     email: overrides.email ?? "taro@example.com",
     phone: overrides.phone ?? "090-0000-0000",
@@ -62,27 +64,27 @@ describe("buildAdminHomeViewModel", () => {
       bookings: [
         createBooking({
           bookingId: "in-window-late",
-          startDatetime: "2026-04-22T23:00:00+09:00",
+          startsAt: "2026-04-22T23:00:00+09:00",
           status: "confirmed",
         }),
         createBooking({
           bookingId: "out-of-window",
-          startDatetime: "2026-04-23T09:00:01+09:00",
+          startsAt: "2026-04-23T09:00:01+09:00",
           status: "pending",
         }),
         createBooking({
           bookingId: "in-window-early",
-          startDatetime: "2026-04-22T10:00:00+09:00",
+          startsAt: "2026-04-22T10:00:00+09:00",
           status: "pending",
         }),
         createBooking({
           bookingId: "completed",
-          startDatetime: "2026-04-22T11:00:00+09:00",
+          startsAt: "2026-04-22T11:00:00+09:00",
           status: "completed",
         }),
       ],
       payments: [],
-      clients: [createClient()],
+      customers: [createCustomer()],
       now,
     });
 
@@ -101,29 +103,29 @@ describe("buildAdminHomeViewModel", () => {
           bookingId: "missing-today",
           status: "completed",
           consultantMemo: " ",
-          startDatetime: "2026-04-22T10:00:00+09:00",
+          startsAt: "2026-04-22T10:00:00+09:00",
         }),
         createBooking({
           bookingId: "filled-today",
           status: "completed",
           consultantMemo: "対応済み",
-          startDatetime: "2026-04-22T11:00:00+09:00",
+          startsAt: "2026-04-22T11:00:00+09:00",
         }),
         createBooking({
           bookingId: "missing-other-day",
           status: "completed",
           consultantMemo: "",
-          startDatetime: "2026-04-23T10:00:00+09:00",
+          startsAt: "2026-04-23T10:00:00+09:00",
         }),
         createBooking({
           bookingId: "pending-no-memo",
           status: "pending",
           consultantMemo: "",
-          startDatetime: "2026-04-22T12:00:00+09:00",
+          startsAt: "2026-04-22T12:00:00+09:00",
         }),
       ],
       payments: [],
-      clients: [createClient()],
+      customers: [createCustomer()],
       now,
     });
 
@@ -137,29 +139,29 @@ describe("buildAdminHomeViewModel", () => {
       bookings: [
         createBooking({
           bookingId: "chargeable-a",
-          clientId: "client-a",
+          customerId: "customer-a",
           chargeable: true,
-          startDatetime: "2026-04-22T10:00:00+09:00",
+          startsAt: "2026-04-22T10:00:00+09:00",
         }),
         createBooking({
           bookingId: "not-chargeable",
           chargeable: false,
-          startDatetime: "2026-04-22T11:00:00+09:00",
+          startsAt: "2026-04-22T11:00:00+09:00",
         }),
         createBooking({
           bookingId: "chargeable-b",
-          clientId: "client-b",
+          customerId: "customer-b",
           chargeable: true,
-          startDatetime: "2026-04-22T09:30:00+09:00",
+          startsAt: "2026-04-22T09:30:00+09:00",
         }),
       ],
       payments: [
         createPayment({ bookingId: "chargeable-a", status: "setup_complete" }),
         createPayment({ bookingId: "chargeable-b", status: "failed" }),
       ],
-      clients: [
-        createClient({ clientId: "client-a", name: "田中 一郎" }),
-        createClient({ clientId: "client-b", name: "鈴木 花" }),
+      customers: [
+        createCustomer({ customerId: "customer-a", name: "田中 一郎" }),
+        createCustomer({ customerId: "customer-b", name: "鈴木 花" }),
       ],
       now,
       chargeableLimit: 1,
@@ -169,7 +171,7 @@ describe("buildAdminHomeViewModel", () => {
     expect(viewModel.chargeableBookings).toHaveLength(1);
     expect(viewModel.chargeableBookings[0]).toMatchObject({
       bookingId: "chargeable-b",
-      clientName: "鈴木 花",
+      customerName: "鈴木 花",
       paymentStatus: "failed",
     });
   });

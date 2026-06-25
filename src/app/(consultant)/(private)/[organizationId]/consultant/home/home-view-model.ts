@@ -2,12 +2,11 @@ import type { ConsultantBookingDetail } from "@/generated/schemas";
 
 export interface HomeBookingItem {
   bookingId: string;
-  clientId: string;
-  clientName: string;
+  customerId: string;
+  customerName: string;
   status: string;
-  startDatetime: string;
-  startAt: Date;
-  zoomUrl: string | null;
+  startsAt: string;
+  joinUrl: string | null;
   consultantJoinedAt: string | null;
   consultantMemo: string;
 }
@@ -28,12 +27,11 @@ export interface ConsultantHomeViewModel {
 function toHomeBookingItem(booking: ConsultantBookingDetail): HomeBookingItem {
   return {
     bookingId: booking.bookingId,
-    clientId: booking.clientId,
-    clientName: booking.client?.name ?? booking.clientId,
+    customerId: booking.customerId,
+    customerName: booking.customer?.name ?? booking.customerId,
     status: booking.status,
-    startDatetime: booking.startDatetime,
-    startAt: new Date(booking.startDatetime),
-    zoomUrl: booking.zoomUrl ?? null,
+    startsAt: booking.startsAt,
+    joinUrl: booking.joinUrl ?? null,
     consultantJoinedAt: booking.consultantJoinedAt ?? null,
     consultantMemo: booking.consultantMemo ?? "",
   };
@@ -57,8 +55,8 @@ function isRemainingStatus(status: string): boolean {
 
 function isTodayOrFuture(booking: HomeBookingItem, now: Date): boolean {
   return (
-    isSameLocalDate(booking.startAt, now) ||
-    booking.startAt.getTime() >= now.getTime()
+    isSameLocalDate(new Date(booking.startsAt), now) ||
+    new Date(booking.startsAt).getTime() >= now.getTime()
   );
 }
 
@@ -68,7 +66,9 @@ export function buildConsultantHomeViewModel(
 ): ConsultantHomeViewModel {
   const bookings = sourceBookings
     .map(toHomeBookingItem)
-    .sort((a, b) => a.startAt.getTime() - b.startAt.getTime());
+    .sort(
+      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+    );
 
   const nextBooking =
     bookings.find(
@@ -77,7 +77,7 @@ export function buildConsultantHomeViewModel(
     ) ?? null;
 
   const todayBookings = bookings.filter((booking) =>
-    isSameLocalDate(booking.startAt, now),
+    isSameLocalDate(new Date(booking.startsAt), now),
   );
 
   const summary: HomeSummary = {

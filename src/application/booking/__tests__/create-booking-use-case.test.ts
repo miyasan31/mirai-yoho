@@ -5,8 +5,6 @@ import type { IUnitOfWork } from "@/application/shared/unit-of-work";
 import type { IZoomService } from "@/application/shared/zoom-service";
 import type { Booking } from "@/domain/booking/booking";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
-import { Client } from "@/domain/client/client";
-import type { IClientRepository } from "@/domain/client/client-repository";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
@@ -15,6 +13,8 @@ import {
   createPricePlanSelectionId,
 } from "@/domain/consultant-price-plan/consultant-price-plan";
 import type { IConsultantPricePlanRepository } from "@/domain/consultant-price-plan/consultant-price-plan-repository";
+import { Customer } from "@/domain/customer/customer";
+import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
 import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
 import { Slot } from "@/domain/slot/slot";
@@ -31,11 +31,11 @@ const DEFAULT_PRICE_PLAN_SELECTION_ID = createPricePlanSelectionId({
   totalJPY: DEFAULT_PRICE_PLAN_TOTAL_JPY,
 });
 
-function createConsultant(consultantId: string, displayName: string) {
+function createConsultant(consultantId: string, name: string) {
   return Consultant.create({
     organizationId: ORGANIZATION_ID,
     consultantId,
-    profile: ConsultantProfile.create(displayName, "", []),
+    profile: ConsultantProfile.create(name, "", []),
     zoomRoomIds: [],
     rankId: "standard",
   });
@@ -44,17 +44,14 @@ function createConsultant(consultantId: string, displayName: string) {
 function createSlot(
   slotId: string,
   consultantId: string,
-  startDatetime: string,
-  endDatetime: string,
+  startsAt: string,
+  endsAt: string,
 ) {
   return Slot.create({
     organizationId: ORGANIZATION_ID,
     slotId,
     consultantId,
-    timeRange: TimeRange.reconstruct(
-      new Date(startDatetime),
-      new Date(endDatetime),
-    ),
+    timeRange: TimeRange.reconstruct(new Date(startsAt), new Date(endsAt)),
   });
 }
 
@@ -69,7 +66,7 @@ class InMemorySlotRepository implements ISlotRepository {
   }
 
   async findAllAvailable(_organizationId: string): Promise<Slot[]> {
-    return this.slots.filter((slot) => !slot.getIsReserved());
+    return this.slots.filter((slot) => slot.getIsAvailable());
   }
 
   async findByOrganizationId(_organizationId: string): Promise<Slot[]> {
@@ -89,20 +86,20 @@ class InMemorySlotRepository implements ISlotRepository {
   ): Promise<Slot[]> {
     return this.slots.filter(
       (slot) =>
-        slot.getConsultantId() === consultantId && !slot.getIsReserved(),
+        slot.getConsultantId() === consultantId && slot.getIsAvailable(),
     );
   }
 
   async findAvailableByTimeRange(
     _organizationId: string,
-    startAt: Date,
-    endAt: Date,
+    startsAt: Date,
+    endsAt: Date,
   ): Promise<Slot[]> {
     return this.slots.filter(
       (slot) =>
-        !slot.getIsReserved() &&
-        slot.getTimeRange().getStartAt().getTime() === startAt.getTime() &&
-        slot.getTimeRange().getEndAt().getTime() === endAt.getTime(),
+        slot.getIsAvailable() &&
+        slot.getTimeRange().getStartsAt().getTime() === startsAt.getTime() &&
+        slot.getTimeRange().getEndsAt().getTime() === endsAt.getTime(),
     );
   }
 
@@ -112,8 +109,8 @@ class InMemorySlotRepository implements ISlotRepository {
   ): Promise<Slot[]> {
     return this.slots.filter(
       (slot) =>
-        !slot.getIsReserved() &&
-        slot.getTimeRange().getStartAt().toISOString().slice(0, 10) ===
+        slot.getIsAvailable() &&
+        slot.getTimeRange().getStartsAt().toISOString().slice(0, 10) ===
           date.toISOString().slice(0, 10),
     );
   }
@@ -123,39 +120,45 @@ class InMemorySlotRepository implements ISlotRepository {
   async delete(_organizationId: string, _slotId: string): Promise<void> {}
 }
 
-class InMemoryClientRepository implements IClientRepository {
-  public readonly clients: Client[] = [];
+class InMemoryCustomerRepository implements ICustomerRepository {
+  public readonly customers: Customer[] = [];
 
   async findById(
     _organizationId: string,
-    clientId: string,
-  ): Promise<Client | null> {
+    customerId: string,
+  ): Promise<Customer | null> {
     return (
-      this.clients.find((client) => client.getClientId() === clientId) ?? null
+      this.customers.find(
+        (customer) => customer.getCustomerId() === customerId,
+      ) ?? null
     );
   }
 
   async findByEmail(
     _organizationId: string,
     email: string,
-  ): Promise<Client | null> {
-    return this.clients.find((client) => client.getEmail() === email) ?? null;
+  ): Promise<Customer | null> {
+    return (
+      this.customers.find((customer) => customer.getEmail() === email) ?? null
+    );
   }
 
-  async findAll(_organizationId: string): Promise<Client[]> {
-    return this.clients;
+  async findAll(_organizationId: string): Promise<Customer[]> {
+    return this.customers;
   }
 
   async findByIds(
     _organizationId: string,
-    clientIds: string[],
-  ): Promise<Client[]> {
-    const ids = new Set(clientIds);
-    return this.clients.filter((client) => ids.has(client.getClientId()));
+    customerIds: string[],
+  ): Promise<Customer[]> {
+    const ids = new Set(customerIds);
+    return this.customers.filter((customer) =>
+      ids.has(customer.getCustomerId()),
+    );
   }
 
-  async save(client: Client): Promise<void> {
-    this.clients.push(client);
+  async save(customer: Customer): Promise<void> {
+    this.customers.push(customer);
   }
 }
 
@@ -339,7 +342,7 @@ function createUseCase(
   },
 ) {
   const slotRepository = new InMemorySlotRepository(slots);
-  const clientRepository = new InMemoryClientRepository();
+  const customerRepository = new InMemoryCustomerRepository();
   const bookingRepository = new InMemoryBookingRepository();
   const zoomDailySessionRepository = new InMemoryZoomDailySessionRepository();
   const consultantRepository = new InMemoryConsultantRepository([
@@ -380,7 +383,7 @@ function createUseCase(
   return {
     useCase: new CreateBookingUseCase(
       slotRepository,
-      clientRepository,
+      customerRepository,
       bookingRepository,
       options?.zoomService ?? defaultZoomService,
       unitOfWork,
@@ -391,7 +394,7 @@ function createUseCase(
       new InMemoryOrganizationSettingsRepository(),
     ),
     bookingRepository,
-    clientRepository,
+    customerRepository,
   };
 }
 
@@ -429,13 +432,13 @@ describe("CreateBookingUseCase", () => {
 
     await useCase.execute({
       organizationId: ORGANIZATION_ID,
-      startDatetime: new Date("2026-05-01T10:00:00.000Z"),
-      endDatetime: new Date("2026-05-01T10:30:00.000Z"),
-      clientName: "山田太郎",
-      clientEmail: "taro@example.com",
-      clientPhone: "090-1234-5678",
-      clientBirthdate: "1990-01-01",
-      pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
+      startsAt: new Date("2026-05-01T10:00:00.000Z"),
+      endsAt: new Date("2026-05-01T10:30:00.000Z"),
+      customerName: "山田太郎",
+      customerEmail: "taro@example.com",
+      customerPhone: "090-1234-5678",
+      customerBirthDate: "1990-01-01",
+      selectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
     });
 
     expect(bookingRepository.bookings).toHaveLength(1);
@@ -462,13 +465,13 @@ describe("CreateBookingUseCase", () => {
 
     await useCase.execute({
       organizationId: ORGANIZATION_ID,
-      startDatetime: new Date("2026-05-01T10:00:00.000Z"),
-      endDatetime: new Date("2026-05-01T10:30:00.000Z"),
-      clientName: "山田太郎",
-      clientEmail: "taro@example.com",
-      clientPhone: "090-1234-5678",
-      clientBirthdate: "1990-01-01",
-      pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
+      startsAt: new Date("2026-05-01T10:00:00.000Z"),
+      endsAt: new Date("2026-05-01T10:30:00.000Z"),
+      customerName: "山田太郎",
+      customerEmail: "taro@example.com",
+      customerPhone: "090-1234-5678",
+      customerBirthDate: "1990-01-01",
+      selectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
     });
 
     expect(bookingRepository.bookings[0]?.getConsultantId()).toBe(
@@ -489,11 +492,11 @@ describe("CreateBookingUseCase", () => {
     await useCase.execute({
       organizationId: ORGANIZATION_ID,
       slotId: "slot-1",
-      clientName: "山田太郎",
-      clientEmail: "taro@example.com",
-      clientPhone: "090-1234-5678",
-      clientBirthdate: "1990-01-01",
-      pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
+      customerName: "山田太郎",
+      customerEmail: "taro@example.com",
+      customerPhone: "090-1234-5678",
+      customerBirthDate: "1990-01-01",
+      selectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
     });
 
     expect(bookingRepository.bookings[0]?.getConsultantId()).toBe(
@@ -507,13 +510,13 @@ describe("CreateBookingUseCase", () => {
     await expect(
       useCase.execute({
         organizationId: ORGANIZATION_ID,
-        startDatetime: new Date("2026-05-01T10:00:00.000Z"),
-        endDatetime: new Date("2026-05-01T10:30:00.000Z"),
-        clientName: "山田太郎",
-        clientEmail: "taro@example.com",
-        clientPhone: "090-1234-5678",
-        clientBirthdate: "1990-01-01",
-        pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
+        startsAt: new Date("2026-05-01T10:00:00.000Z"),
+        endsAt: new Date("2026-05-01T10:30:00.000Z"),
+        customerName: "山田太郎",
+        customerEmail: "taro@example.com",
+        customerPhone: "090-1234-5678",
+        customerBirthDate: "1990-01-01",
+        selectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
       }),
     ).rejects.toThrow("Slot is no longer available");
   });
@@ -535,11 +538,11 @@ describe("CreateBookingUseCase", () => {
       useCase.execute({
         organizationId: ORGANIZATION_ID,
         slotId: "slot-1",
-        clientName: "山田太郎",
-        clientEmail: "taro@example.com",
-        clientPhone: "090-1234-5678",
-        clientBirthdate: "1990-01-01",
-        pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
+        customerName: "山田太郎",
+        customerEmail: "taro@example.com",
+        customerPhone: "090-1234-5678",
+        customerBirthDate: "1990-01-01",
+        selectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
       }),
     ).rejects.toMatchObject({
       code: "CONSULTANT_NOT_FOUND",
@@ -561,11 +564,11 @@ describe("CreateBookingUseCase", () => {
       useCase.execute({
         organizationId: ORGANIZATION_ID,
         slotId: "slot-1",
-        clientName: "山田太郎",
-        clientEmail: "taro@example.com",
-        clientPhone: "090-1234-5678",
-        clientBirthdate: "1990-01-01",
-        pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
+        customerName: "山田太郎",
+        customerEmail: "taro@example.com",
+        customerPhone: "090-1234-5678",
+        customerBirthDate: "1990-01-01",
+        selectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
       }),
     ).rejects.toMatchObject({
       code: "BOOKING_CUTOFF_EXCEEDED",
@@ -586,13 +589,13 @@ describe("CreateBookingUseCase", () => {
     await expect(
       useCase.execute({
         organizationId: ORGANIZATION_ID,
-        startDatetime: new Date("2026-05-01T10:00:00.000Z"),
-        endDatetime: new Date("2026-05-01T10:30:00.000Z"),
-        clientName: "山田太郎",
-        clientEmail: "taro@example.com",
-        clientPhone: "090-1234-5678",
-        clientBirthdate: "1990-01-01",
-        pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
+        startsAt: new Date("2026-05-01T10:00:00.000Z"),
+        endsAt: new Date("2026-05-01T10:30:00.000Z"),
+        customerName: "山田太郎",
+        customerEmail: "taro@example.com",
+        customerPhone: "090-1234-5678",
+        customerBirthDate: "1990-01-01",
+        selectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
       }),
     ).rejects.toMatchObject({
       code: "BOOKING_CUTOFF_EXCEEDED",
@@ -604,7 +607,7 @@ describe("CreateBookingUseCase", () => {
       createDailyMeeting: vi.fn().mockRejectedValue(new Error("zoom error")),
       updateBreakoutRooms: vi.fn().mockResolvedValue(undefined),
     };
-    const { useCase, bookingRepository, clientRepository } = createUseCase(
+    const { useCase, bookingRepository, customerRepository } = createUseCase(
       [
         createSlot(
           "slot-1",
@@ -620,11 +623,11 @@ describe("CreateBookingUseCase", () => {
       useCase.execute({
         organizationId: ORGANIZATION_ID,
         slotId: "slot-1",
-        clientName: "山田太郎",
-        clientEmail: "taro@example.com",
-        clientPhone: "090-1234-5678",
-        clientBirthdate: "1990-01-01",
-        pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
+        customerName: "山田太郎",
+        customerEmail: "taro@example.com",
+        customerPhone: "090-1234-5678",
+        customerBirthDate: "1990-01-01",
+        selectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
       }),
     ).rejects.toMatchObject({
       statusCode: 502,
@@ -632,7 +635,7 @@ describe("CreateBookingUseCase", () => {
     });
 
     expect(bookingRepository.bookings).toHaveLength(0);
-    expect(clientRepository.clients).toHaveLength(0);
+    expect(customerRepository.customers).toHaveLength(0);
   });
 
   it("throws app error and does not persist booking when email delivery fails", async () => {
@@ -646,7 +649,7 @@ describe("CreateBookingUseCase", () => {
       sendInvitation: vi.fn().mockResolvedValue(undefined),
       sendPasswordReset: vi.fn().mockResolvedValue(undefined),
     };
-    const { useCase, bookingRepository, clientRepository } = createUseCase(
+    const { useCase, bookingRepository, customerRepository } = createUseCase(
       [
         createSlot(
           "slot-1",
@@ -662,11 +665,11 @@ describe("CreateBookingUseCase", () => {
       useCase.execute({
         organizationId: ORGANIZATION_ID,
         slotId: "slot-1",
-        clientName: "山田太郎",
-        clientEmail: "taro@example.com",
-        clientPhone: "090-1234-5678",
-        clientBirthdate: "1990-01-01",
-        pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
+        customerName: "山田太郎",
+        customerEmail: "taro@example.com",
+        customerPhone: "090-1234-5678",
+        customerBirthDate: "1990-01-01",
+        selectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
       }),
     ).rejects.toMatchObject({
       statusCode: 502,
@@ -674,11 +677,11 @@ describe("CreateBookingUseCase", () => {
     });
 
     expect(bookingRepository.bookings).toHaveLength(0);
-    expect(clientRepository.clients).toHaveLength(0);
+    expect(customerRepository.customers).toHaveLength(0);
   });
 
-  it("updates existing client birthdate with latest input", async () => {
-    const { useCase, clientRepository } = createUseCase([
+  it("updates existing customer birthDate with latest input", async () => {
+    const { useCase, customerRepository } = createUseCase([
       createSlot(
         "slot-1",
         "consultant-1",
@@ -686,29 +689,29 @@ describe("CreateBookingUseCase", () => {
         "2026-05-01T10:30:00.000Z",
       ),
     ]);
-    clientRepository.clients.push(
-      Client.create({
+    customerRepository.customers.push(
+      Customer.create({
         organizationId: ORGANIZATION_ID,
-        clientId: "client-1",
+        customerId: "customer-1",
         name: "既存太郎",
         email: "taro@example.com",
         phone: "090-1111-2222",
-        birthdate: "1980-01-01",
+        birthDate: "1980-01-01",
       }),
     );
 
     await useCase.execute({
       organizationId: ORGANIZATION_ID,
       slotId: "slot-1",
-      clientName: "山田太郎",
-      clientEmail: "taro@example.com",
-      clientPhone: "090-1234-5678",
-      clientBirthdate: "1995-12-31",
-      pricePlanSelectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
+      customerName: "山田太郎",
+      customerEmail: "taro@example.com",
+      customerPhone: "090-1234-5678",
+      customerBirthDate: "1995-12-31",
+      selectionId: DEFAULT_PRICE_PLAN_SELECTION_ID,
     });
 
-    const existingClient = clientRepository.clients[0];
-    expect(existingClient?.getBirthdate()).toBe("1995-12-31");
-    expect(existingClient?.getName()).toBe("山田太郎");
+    const existingCustomer = customerRepository.customers[0];
+    expect(existingCustomer?.getBirthDate()).toBe("1995-12-31");
+    expect(existingCustomer?.getName()).toBe("山田太郎");
   });
 });

@@ -47,7 +47,7 @@ export function evaluateChargeEligibility(params: {
     return createIneligibleReason("BOOKING_NOT_CONFIRMED");
   }
 
-  if (booking.getStartDatetime() > now) {
+  if (booking.getStartsAt() > now) {
     return createIneligibleReason("BOOKING_NOT_CHARGEABLE_YET");
   }
 

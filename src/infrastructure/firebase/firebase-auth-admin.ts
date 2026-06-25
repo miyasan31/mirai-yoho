@@ -1,5 +1,5 @@
 import { getAuth, type UserRecord } from "firebase-admin/auth";
-import { app } from "@/infrastructure/firestore/firestore-client";
+import { app } from "@/infrastructure/firestore/firestore-customer";
 import { chunkArray } from "@/lib/chunk-array";
 
 const auth = getAuth(app);

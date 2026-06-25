@@ -28,7 +28,7 @@ vi.mock("@/hooks/use-price-plans", () => ({
       data: {
         pricePlans: [
           {
-            pricePlanSelectionId: "signature:%E9%80%9A%E5%B8%B8:5000",
+            selectionId: "signature:%E9%80%9A%E5%B8%B8:5000",
             name: "通常",
             totalJPY: 5000,
           },
@@ -213,7 +213,7 @@ import BookingPage from "../page";
 
 function getBirthdateInput() {
   const input = document.querySelector(
-    'input[name="clientBirthdate"]',
+    'input[name="customerBirthDate"]',
   ) as HTMLInputElement | null;
   if (!input) {
     throw new Error("Birthdate input not found");
@@ -277,7 +277,7 @@ describe("BookingPage", () => {
     });
   });
 
-  it("shows birthdate validation error for future date", async () => {
+  it("shows birthDate validation error for future date", async () => {
     const user = userEvent.setup();
     render(<BookingPage />);
 
@@ -303,7 +303,7 @@ describe("BookingPage", () => {
     mockMutateAsync.mockResolvedValue({
       data: {
         bookingId: "b1",
-        zoomUrl: "https://zoom.us/j/1",
+        joinUrl: "https://zoom.us/j/1",
         bookingActionToken: "booking-action-token-1",
       },
     });
@@ -328,12 +328,12 @@ describe("BookingPage", () => {
         organizationId: "org-test",
         data: expect.objectContaining({
           slotId: "slot-1",
-          startDatetime: undefined,
-          endDatetime: undefined,
-          clientName: "テスト太郎",
-          clientEmail: "test@example.com",
-          clientPhone: "090-0000-0000",
-          clientBirthdate: "1990-01-01",
+          startsAt: undefined,
+          endsAt: undefined,
+          customerName: "テスト太郎",
+          customerEmail: "test@example.com",
+          customerPhone: "090-0000-0000",
+          customerBirthDate: "1990-01-01",
         }),
       });
       expect(mockPush).toHaveBeenCalledWith(
@@ -368,17 +368,17 @@ describe("BookingPage", () => {
     });
   });
 
-  it("submits the form with startDatetime/endDatetime when consultant is auto assigned", async () => {
+  it("submits the form with startsAt/endsAt when consultant is auto assigned", async () => {
     mockMutateAsync.mockResolvedValue({
       data: {
         bookingId: "b2",
-        zoomUrl: "https://zoom.us/j/2",
+        joinUrl: "https://zoom.us/j/2",
         bookingActionToken: "booking-action-token-2",
       },
     });
     mockSearchParams.delete("slotId");
-    mockSearchParams.set("startDatetime", "2026-07-01T10:00:00.000Z");
-    mockSearchParams.set("endDatetime", "2026-07-01T10:30:00.000Z");
+    mockSearchParams.set("startsAt", "2026-07-01T10:00:00.000Z");
+    mockSearchParams.set("endsAt", "2026-07-01T10:30:00.000Z");
 
     const user = userEvent.setup();
     render(<BookingPage />);
@@ -400,12 +400,12 @@ describe("BookingPage", () => {
         organizationId: "org-test",
         data: expect.objectContaining({
           slotId: undefined,
-          startDatetime: "2026-07-01T10:00:00.000Z",
-          endDatetime: "2026-07-01T10:30:00.000Z",
-          clientName: "自動割当太郎",
-          clientEmail: "auto@example.com",
-          clientPhone: "080-0000-0000",
-          clientBirthdate: "1995-12-31",
+          startsAt: "2026-07-01T10:00:00.000Z",
+          endsAt: "2026-07-01T10:30:00.000Z",
+          customerName: "自動割当太郎",
+          customerEmail: "auto@example.com",
+          customerPhone: "080-0000-0000",
+          customerBirthDate: "1995-12-31",
         }),
       });
     });
@@ -414,8 +414,8 @@ describe("BookingPage", () => {
   it("hides the form when the selected slot is past the 15-minute cutoff", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-05-01T09:45:00.000Z"));
-    mockSearchParams.set("startDatetime", "2026-05-01T10:00:00.000Z");
-    mockSearchParams.set("endDatetime", "2026-05-01T10:30:00.000Z");
+    mockSearchParams.set("startsAt", "2026-05-01T10:00:00.000Z");
+    mockSearchParams.set("endsAt", "2026-05-01T10:30:00.000Z");
 
     render(<BookingPage />);
 

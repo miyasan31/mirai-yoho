@@ -34,21 +34,21 @@ export default function BookingPage() {
   const router = useRouter();
   const { organizationId, buildPath } = useOrganizationRouting();
   const slotId = searchParams.get("slotId");
-  const startDatetime = searchParams.get("startDatetime");
-  const endDatetime = searchParams.get("endDatetime");
-  const hasDateRange = Boolean(startDatetime && endDatetime);
+  const startsAt = searchParams.get("startsAt");
+  const endsAt = searchParams.get("endsAt");
+  const hasDateRange = Boolean(startsAt && endsAt);
   const selectedStartAt =
-    typeof startDatetime === "string" ? new Date(startDatetime) : null;
+    typeof startsAt === "string" ? new Date(startsAt) : null;
   const hasValidSelectedStartAt =
     selectedStartAt !== null && !Number.isNaN(selectedStartAt.getTime());
   const bookingCutoffExceeded =
     hasValidSelectedStartAt && !isBeforeBookingDeadline(selectedStartAt);
-  const [pricePlanSelectionId, setPricePlanSelectionId] = useState("");
+  const [selectionId, setPricePlanSelectionId] = useState("");
   const pricePlansQuery = useBookingPricePlans(
     {
       slotId: slotId ?? undefined,
-      startDatetime: slotId ? undefined : (startDatetime ?? undefined),
-      endDatetime: slotId ? undefined : (endDatetime ?? undefined),
+      startsAt: slotId ? undefined : (startsAt ?? undefined),
+      endsAt: slotId ? undefined : (endsAt ?? undefined),
     },
     Boolean(slotId || hasDateRange),
   );
@@ -61,10 +61,10 @@ export default function BookingPage() {
   } = useForm<BookingFormValues>({
     resolver: valibotResolver(bookingFormSchema),
     defaultValues: {
-      clientName: "",
-      clientEmail: "",
-      clientPhone: "",
-      clientBirthdate: "",
+      customerName: "",
+      customerEmail: "",
+      customerPhone: "",
+      customerBirthDate: "",
       consultantContent: "",
     },
   });
@@ -72,12 +72,12 @@ export default function BookingPage() {
   const createBooking = useCreateBooking();
 
   useEffect(() => {
-    if (pricePlanSelectionId) return;
+    if (selectionId) return;
     const firstPricePlan = pricePlans[0];
     if (firstPricePlan) {
-      setPricePlanSelectionId(firstPricePlan.pricePlanSelectionId);
+      setPricePlanSelectionId(firstPricePlan.selectionId);
     }
-  }, [pricePlanSelectionId, pricePlans]);
+  }, [selectionId, pricePlans]);
 
   if (!slotId && !hasDateRange) {
     return (
@@ -115,7 +115,7 @@ export default function BookingPage() {
 
   const onSubmit = async (values: BookingFormValues) => {
     if (!organizationId) return;
-    if (!pricePlanSelectionId) {
+    if (!selectionId) {
       toaster.create({
         type: "error",
         title: "料金プランを選択してください",
@@ -127,14 +127,14 @@ export default function BookingPage() {
         organizationId,
         data: {
           slotId: slotId ?? undefined,
-          startDatetime: startDatetime ?? undefined,
-          endDatetime: endDatetime ?? undefined,
-          clientName: values.clientName,
-          clientEmail: values.clientEmail,
-          clientPhone: values.clientPhone,
-          clientBirthdate: values.clientBirthdate,
+          startsAt: startsAt ?? undefined,
+          endsAt: endsAt ?? undefined,
+          customerName: values.customerName,
+          customerEmail: values.customerEmail,
+          customerPhone: values.customerPhone,
+          customerBirthDate: values.customerBirthDate,
           consultantContent: values.consultantContent?.trim() || undefined,
-          pricePlanSelectionId,
+          selectionId,
         },
       });
 
@@ -191,60 +191,60 @@ export default function BookingPage() {
           flexDirection="column"
           gap="5"
         >
-          <Field.Root invalid={!!errors.clientName}>
+          <Field.Root invalid={!!errors.customerName}>
             <Field.Label>
               お名前
               <Field.RequiredIndicator />
             </Field.Label>
-            <Input {...register("clientName")} placeholder="山田 太郎" />
-            {errors.clientName && (
-              <Field.ErrorText>{errors.clientName.message}</Field.ErrorText>
+            <Input {...register("customerName")} placeholder="山田 太郎" />
+            {errors.customerName && (
+              <Field.ErrorText>{errors.customerName.message}</Field.ErrorText>
             )}
           </Field.Root>
 
-          <Field.Root invalid={!!errors.clientEmail}>
+          <Field.Root invalid={!!errors.customerEmail}>
             <Field.Label>
               メールアドレス
               <Field.RequiredIndicator />
             </Field.Label>
             <Input
-              {...register("clientEmail")}
+              {...register("customerEmail")}
               type="email"
               placeholder="example@email.com"
             />
             <Field.HelperText>予約確認メールをお送りします</Field.HelperText>
-            {errors.clientEmail && (
-              <Field.ErrorText>{errors.clientEmail.message}</Field.ErrorText>
+            {errors.customerEmail && (
+              <Field.ErrorText>{errors.customerEmail.message}</Field.ErrorText>
             )}
           </Field.Root>
 
-          <Field.Root invalid={!!errors.clientPhone}>
+          <Field.Root invalid={!!errors.customerPhone}>
             <Field.Label>
               電話番号
               <Field.RequiredIndicator />
             </Field.Label>
             <Input
-              {...register("clientPhone")}
+              {...register("customerPhone")}
               type="tel"
               placeholder="090-1234-5678"
             />
             <Field.HelperText>
               緊急連絡用（ハイフンあり・なし可）
             </Field.HelperText>
-            {errors.clientPhone && (
-              <Field.ErrorText>{errors.clientPhone.message}</Field.ErrorText>
+            {errors.customerPhone && (
+              <Field.ErrorText>{errors.customerPhone.message}</Field.ErrorText>
             )}
           </Field.Root>
 
-          <Field.Root invalid={!!errors.clientBirthdate}>
+          <Field.Root invalid={!!errors.customerBirthDate}>
             <Field.Label>
               生年月日
               <Field.RequiredIndicator />
             </Field.Label>
-            <Input {...register("clientBirthdate")} type="date" />
-            {errors.clientBirthdate && (
+            <Input {...register("customerBirthDate")} type="date" />
+            {errors.customerBirthDate && (
               <Field.ErrorText>
-                {errors.clientBirthdate.message}
+                {errors.customerBirthDate.message}
               </Field.ErrorText>
             )}
           </Field.Root>
@@ -272,16 +272,16 @@ export default function BookingPage() {
               </Text>
             ) : (
               <RadioGroup.Root
-                name="pricePlanSelectionId"
-                value={pricePlanSelectionId}
+                name="selectionId"
+                value={selectionId}
                 onValueChange={(details) =>
                   setPricePlanSelectionId(details.value ?? "")
                 }
               >
                 {pricePlans.map((pricePlan) => (
                   <RadioGroup.Item
-                    key={pricePlan.pricePlanSelectionId}
-                    value={pricePlan.pricePlanSelectionId}
+                    key={pricePlan.selectionId}
+                    value={pricePlan.selectionId}
                   >
                     <RadioGroup.ItemHiddenInput />
                     <RadioGroup.ItemControl>

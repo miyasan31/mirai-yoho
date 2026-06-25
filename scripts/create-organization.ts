@@ -2,20 +2,19 @@ import crypto from "node:crypto";
 import { getAuth } from "firebase-admin/auth";
 import { Timestamp } from "firebase-admin/firestore";
 import { createDefaultConsultantRanks } from "../src/domain/organization-settings/consultant-rank";
-import { app, db } from "../src/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore-collections";
+import { app, db } from "../src/infrastructure/firestore/firestore-customer";
 
 const ORGANIZATION_COLLECTION = FIRESTORE_COLLECTIONS.organizations;
 const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
-const USER_PREFERENCES_COLLECTION = FIRESTORE_COLLECTIONS.userPreferences;
 const SETTINGS_COLLECTION = FIRESTORE_COLLECTIONS.organizationSettings;
 
 async function main() {
-  const [organizationId, organizationName, adminEmail] = process.argv.slice(2);
+  const [organizationId, name, adminEmail] = process.argv.slice(2);
 
-  if (!organizationId || !organizationName || !adminEmail) {
+  if (!organizationId || !name || !adminEmail) {
     console.error(
-      "Usage: pnpm dlx tsx --env-file=.env.local scripts/create-organization.ts <organizationId> <organizationName> <adminEmail>",
+      "Usage: pnpm dlx tsx --env-file=.env.local scripts/create-organization.ts <organizationId> <name> <adminEmail>",
     );
     process.exit(1);
   }
@@ -47,7 +46,7 @@ async function main() {
 
   await db.collection(ORGANIZATION_COLLECTION).doc(organizationId).set({
     organizationId,
-    name: organizationName,
+    name: name,
     createdAt: now,
     updatedAt: now,
   });
@@ -63,14 +62,6 @@ async function main() {
       createdAt: now,
       updatedAt: now,
     });
-
-  await db.collection(USER_PREFERENCES_COLLECTION).doc(userRecord.uid).set(
-    {
-      lastOrganizationId: organizationId,
-      updatedAt: now,
-    },
-    { merge: true },
-  );
 
   await db.collection(SETTINGS_COLLECTION).doc(organizationId).set(
     {
@@ -88,7 +79,7 @@ async function main() {
 
   console.log("Organization created successfully");
   console.log(`organizationId: ${organizationId}`);
-  console.log(`organizationName: ${organizationName}`);
+  console.log(`name: ${name}`);
   console.log(`adminUid: ${userRecord.uid}`);
   console.log(`adminEmail: ${adminEmail}`);
   console.log(`passwordResetLink: ${passwordResetLink}`);

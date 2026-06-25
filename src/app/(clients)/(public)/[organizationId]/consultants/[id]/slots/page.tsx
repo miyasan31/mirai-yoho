@@ -53,7 +53,7 @@ export default function SlotsPage({
   const groupedSlots = useMemo(() => {
     const groups: Record<string, typeof slots> = {};
     for (const slot of slots) {
-      const dateKey = formatDate(slot.startDatetime);
+      const dateKey = formatDate(slot.startsAt);
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
@@ -133,7 +133,7 @@ export default function SlotsPage({
                   <styled.a
                     key={slot.slotId}
                     href={buildPath(
-                      `/booking?slotId=${slot.slotId}&consultantId=${consultantId}&startDatetime=${encodeURIComponent(slot.startDatetime)}&endDatetime=${encodeURIComponent(slot.endDatetime)}`,
+                      `/booking?slotId=${slot.slotId}&consultantId=${consultantId}&startsAt=${encodeURIComponent(slot.startsAt)}&endsAt=${encodeURIComponent(slot.endsAt)}`,
                     )}
                     shadow="xs"
                     border="1px solid"
@@ -160,8 +160,7 @@ export default function SlotsPage({
                     }}
                   >
                     <Text fontWeight="medium">
-                      {formatTime(slot.startDatetime)} 〜{" "}
-                      {formatTime(slot.endDatetime)}
+                      {formatTime(slot.startsAt)} 〜 {formatTime(slot.endsAt)}
                     </Text>
                   </styled.a>
                 ))}

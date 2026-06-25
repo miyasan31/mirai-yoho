@@ -4,8 +4,8 @@ export interface LateArrivalAlertParams {
   consultantName: string;
   consultantEmail: string;
   consultantPhone: string;
-  clientName: string;
-  startDatetime: Date;
+  customerName: string;
+  startsAt: Date;
   elapsedMinutes: number;
   adminBookingsUrl: string;
 }

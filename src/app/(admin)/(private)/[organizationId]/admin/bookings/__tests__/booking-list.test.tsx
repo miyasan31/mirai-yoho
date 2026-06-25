@@ -43,7 +43,7 @@ vi.mock("styled-system/recipes", () => ({
 }));
 
 const mockUseAdminBookings = vi.fn();
-const mockUseAdminClients = vi.fn();
+const mockUseAdminCustomers = vi.fn();
 const mockUseAdminConsultants = vi.fn();
 const mockMutateAsync = vi.fn();
 
@@ -62,11 +62,11 @@ vi.mock("@/hooks/use-admin-bookings", () => ({
   useAdminBookings: () => mockUseAdminBookings(),
 }));
 
-vi.mock("@/hooks/use-admin-clients", () => ({
-  useAdminClients: (
+vi.mock("@/hooks/use-admin-customers", () => ({
+  useAdminCustomers: (
     params?: Record<string, unknown>,
     options?: { enabled?: boolean },
-  ) => mockUseAdminClients(params, options),
+  ) => mockUseAdminCustomers(params, options),
 }));
 
 vi.mock("@/hooks/use-admin-consultants", () => ({
@@ -192,9 +192,9 @@ import AdminBookingsPage from "../page";
 function createBooking() {
   return {
     bookingId: "booking-1",
-    clientId: "client-001-abcdef",
+    customerId: "customer-001-abcdef",
     consultantId: "consultant-001-abcdef",
-    startDatetime: "2026-04-01T10:00:00.000Z",
+    startsAt: "2026-04-01T10:00:00.000Z",
     status: "confirmed",
     consultantJoinedAt: null,
     chargeable: true,
@@ -215,7 +215,7 @@ describe("AdminBookingsPage", () => {
       error: null,
       refetch: vi.fn(),
     });
-    mockUseAdminClients.mockReturnValue({
+    mockUseAdminCustomers.mockReturnValue({
       data: undefined,
       isLoading: true,
       error: null,
@@ -239,12 +239,12 @@ describe("AdminBookingsPage", () => {
       error: null,
       refetch: vi.fn(),
     });
-    mockUseAdminClients.mockReturnValue({
+    mockUseAdminCustomers.mockReturnValue({
       data: {
         data: {
-          clients: [
+          customers: [
             {
-              clientId: "client-001-abcdef",
+              customerId: "customer-001-abcdef",
               name: "山田 太郎",
               email: "taro@example.com",
               phone: "090-0000-0000",
@@ -263,7 +263,7 @@ describe("AdminBookingsPage", () => {
           consultants: [
             {
               consultantId: "consultant-001-abcdef",
-              displayName: "佐藤 花子",
+              name: "佐藤 花子",
               email: "hanako@example.com",
               specialties: ["キャリア", "子育て"],
               bio: "5年の相談実績",
@@ -286,7 +286,7 @@ describe("AdminBookingsPage", () => {
     expect(screen.getByText("未確認")).toBeInTheDocument();
     expect(screen.getByText("山田 太郎")).toBeInTheDocument();
     expect(screen.getByText("佐藤 花子")).toBeInTheDocument();
-    expect(mockUseAdminClients).toHaveBeenCalledWith(
+    expect(mockUseAdminCustomers).toHaveBeenCalledWith(
       { page: 1, pageSize: 100, sortBy: "createdAt", sortOrder: "desc" },
       { enabled: true },
     );
@@ -313,12 +313,12 @@ describe("AdminBookingsPage", () => {
       error: null,
       refetch: vi.fn(),
     });
-    mockUseAdminClients.mockReturnValue({
+    mockUseAdminCustomers.mockReturnValue({
       data: {
         data: {
-          clients: [
+          customers: [
             {
-              clientId: "client-001-abcdef",
+              customerId: "customer-001-abcdef",
               name: "山田 太郎",
               email: "taro@example.com",
               phone: "090-0000-0000",
@@ -337,7 +337,7 @@ describe("AdminBookingsPage", () => {
           consultants: [
             {
               consultantId: "consultant-001-abcdef",
-              displayName: "佐藤 花子",
+              name: "佐藤 花子",
               email: "hanako@example.com",
               specialties: ["キャリア", "子育て"],
               bio: "5年の相談実績",
@@ -369,13 +369,13 @@ describe("AdminBookingsPage", () => {
       expect(screen.getByText("自己紹介: 5年の相談実績")).toBeInTheDocument();
     });
 
-    expect(mockUseAdminClients).toHaveBeenCalledTimes(1);
+    expect(mockUseAdminCustomers).toHaveBeenCalledTimes(1);
     expect(mockUseAdminConsultants).toHaveBeenCalledTimes(1);
   });
 
-  it("shows error screen and retries when clients or consultants query fails", async () => {
+  it("shows error screen and retries when customers or consultants query fails", async () => {
     const refetchBookings = vi.fn();
-    const refetchClients = vi.fn();
+    const refetchCustomers = vi.fn();
     const refetchConsultants = vi.fn();
 
     mockUseAdminBookings.mockReturnValue({
@@ -384,11 +384,11 @@ describe("AdminBookingsPage", () => {
       error: null,
       refetch: refetchBookings,
     });
-    mockUseAdminClients.mockReturnValue({
+    mockUseAdminCustomers.mockReturnValue({
       data: undefined,
       isLoading: false,
-      error: new Error("clients failed"),
-      refetch: refetchClients,
+      error: new Error("customers failed"),
+      refetch: refetchCustomers,
     });
     mockUseAdminConsultants.mockReturnValue({
       data: undefined,
@@ -407,7 +407,7 @@ describe("AdminBookingsPage", () => {
 
     await waitFor(() => {
       expect(refetchBookings).toHaveBeenCalledTimes(1);
-      expect(refetchClients).toHaveBeenCalledTimes(1);
+      expect(refetchCustomers).toHaveBeenCalledTimes(1);
       expect(refetchConsultants).toHaveBeenCalledTimes(1);
     });
   });
@@ -419,7 +419,7 @@ describe("AdminBookingsPage", () => {
           bookings: [
             {
               ...createBooking(),
-              clientId: "client-404-abcdef",
+              customerId: "customer-404-abcdef",
               consultantId: "consultant-404-abcdef",
             },
           ],
@@ -429,8 +429,8 @@ describe("AdminBookingsPage", () => {
       error: null,
       refetch: vi.fn(),
     });
-    mockUseAdminClients.mockReturnValue({
-      data: { data: { clients: [] } },
+    mockUseAdminCustomers.mockReturnValue({
+      data: { data: { customers: [] } },
       isLoading: false,
       error: null,
       refetch: vi.fn(),
@@ -444,10 +444,10 @@ describe("AdminBookingsPage", () => {
 
     render(<AdminBookingsPage />);
 
-    expect(screen.getByText("client-4…")).toBeInTheDocument();
+    expect(screen.getByText("customer…")).toBeInTheDocument();
     expect(screen.getByText("consulta…")).toBeInTheDocument();
 
-    fireEvent.mouseEnter(screen.getByText("client-4…"));
+    fireEvent.mouseEnter(screen.getByText("customer…"));
     fireEvent.mouseEnter(screen.getByText("consulta…"));
 
     await waitFor(() => {

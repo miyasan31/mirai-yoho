@@ -6,7 +6,7 @@ export class PaymentChargedEvent implements DomainEvent {
   readonly payload: {
     paymentId: string;
     bookingId: string;
-    clientId: string;
+    customerId: string;
     chargeMethod: "batch" | "manual";
     amountJPY: number;
   };

@@ -344,11 +344,9 @@ describe("ConsultantSlotsPage", () => {
     expect(
       calls.every(([arg]) => {
         const start = new Date(
-          (arg as { data: { startDatetime: string } }).data.startDatetime,
+          (arg as { data: { startsAt: string } }).data.startsAt,
         );
-        const end = new Date(
-          (arg as { data: { endDatetime: string } }).data.endDatetime,
-        );
+        const end = new Date((arg as { data: { endsAt: string } }).data.endsAt);
         const startHour = start.getHours();
         const endHour = end.getHours();
         return startHour >= 10 && endHour <= 17 && startHour !== 0;
@@ -367,7 +365,7 @@ describe("ConsultantSlotsPage", () => {
     const days = new Set(
       mockCreateSlotMutateAsync.mock.calls.map(([arg]) => {
         const start = new Date(
-          (arg as { data: { startDatetime: string } }).data.startDatetime,
+          (arg as { data: { startsAt: string } }).data.startsAt,
         );
         return `${start.getFullYear()}-${start.getMonth()}-${start.getDate()}`;
       }),

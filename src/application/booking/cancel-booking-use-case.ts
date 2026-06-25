@@ -3,7 +3,7 @@ import type { IStripeService } from "@/application/shared/stripe-service";
 import type { IZoomService } from "@/application/shared/zoom-service";
 import type { BookingCancelledEvent } from "@/domain/booking/booking-events";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
-import type { IClientRepository } from "@/domain/client/client-repository";
+import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
@@ -11,7 +11,7 @@ import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-dai
 interface CancelBookingInput {
   organizationId: string;
   bookingId: string;
-  cancelledBy: "client" | "admin";
+  cancelledBy: "customer" | "admin";
 }
 
 function toSessionDate(date: Date): string {
@@ -34,7 +34,7 @@ export class CancelBookingUseCase {
     private readonly emailService: IEmailService,
     private readonly zoomDailySessionRepository: IZoomDailySessionRepository,
     private readonly zoomService: IZoomService,
-    private readonly clientRepository: IClientRepository,
+    private readonly customerRepository: ICustomerRepository,
   ) {}
 
   async execute(input: CancelBookingInput): Promise<void> {
@@ -78,18 +78,18 @@ export class CancelBookingUseCase {
       slot.release();
     }
 
-    const sessionDate = toSessionDate(booking.getStartDatetime());
+    const sessionDate = toSessionDate(booking.getStartsAt());
     const session = await this.zoomDailySessionRepository.findByDate(
       input.organizationId,
       sessionDate,
     );
     if (session) {
-      const client = await this.clientRepository.findById(
+      const customer = await this.customerRepository.findById(
         input.organizationId,
-        booking.getClientId(),
+        booking.getCustomerId(),
       );
-      if (client) {
-        session.removeParticipant(client.getEmail());
+      if (customer) {
+        session.removeParticipant(customer.getEmail());
         await this.zoomService.updateBreakoutRooms({
           meetingId: session.getZoomMeetingId(),
           breakoutRooms: session.getBreakoutRooms().map((r) => ({
@@ -112,8 +112,8 @@ export class CancelBookingUseCase {
       if (event.eventName === "BookingCancelled") {
         const e = event as BookingCancelledEvent;
         await this.emailService.sendBookingCancellation({
-          clientEmail: "",
-          clientName: "",
+          customerEmail: "",
+          customerName: "",
           consultantName: "",
           bookingId: e.payload.bookingId,
           cancelledBy: e.payload.cancelledBy,

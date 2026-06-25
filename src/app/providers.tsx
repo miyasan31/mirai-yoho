@@ -20,7 +20,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
 }
 
 export function Providers({ children }: ProvidersProps) {
-  const [queryClient] = useState(
+  const [queryCustomer] = useState(
     () =>
       new QueryClient({
         defaultOptions: {
@@ -45,7 +45,7 @@ export function Providers({ children }: ProvidersProps) {
   );
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryCustomer}>
       <NuqsAdapter>
         <AuthProvider>{children}</AuthProvider>
         <Toaster />

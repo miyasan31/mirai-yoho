@@ -14,14 +14,14 @@ import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useAdminBookings } from "@/hooks/use-admin-bookings";
-import { useAdminClients } from "@/hooks/use-admin-clients";
 import { useAdminConsultants } from "@/hooks/use-admin-consultants";
+import { useAdminCustomers } from "@/hooks/use-admin-customers";
 import { useChargePayment } from "@/hooks/use-booking";
 import { useListQueryParams } from "@/hooks/use-list-query-params";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
-type ClientSummary = {
-  clientId: string;
+type CustomerSummary = {
+  customerId: string;
   name: string;
   email: string;
   phone: string;
@@ -30,18 +30,18 @@ type ClientSummary = {
 
 type ConsultantSummary = {
   consultantId: string;
-  displayName: string;
+  name: string;
   email?: string;
   specialties: string[];
   bio?: string;
 };
 
-function ClientCell({
-  clientId,
-  client,
+function CustomerCell({
+  customerId,
+  customer,
 }: {
-  clientId: string;
-  client: ClientSummary | null;
+  customerId: string;
+  customer: CustomerSummary | null;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -55,19 +55,19 @@ function ClientCell({
       showArrow
       content={
         <styled.div display="flex" flexDir="column" gap="1" minW="240px">
-          {client ? (
+          {customer ? (
             <>
               <Text textStyle="sm" fontWeight="bold">
-                {client.name}
+                {customer.name}
               </Text>
               <Text textStyle="xs" color="fg.muted">
-                メール: {client.email}
+                メール: {customer.email}
               </Text>
               <Text textStyle="xs" color="fg.muted">
-                電話: {client.phone}
+                電話: {customer.phone}
               </Text>
               <Text textStyle="xs" color="fg.muted">
-                メモ: {client.memo ?? "-"}
+                メモ: {customer.memo ?? "-"}
               </Text>
             </>
           ) : (
@@ -77,10 +77,10 @@ function ClientCell({
       }
     >
       <styled.span cursor="default" display="inline-block">
-        {client ? (
-          <Text textStyle="sm">{client.name}</Text>
+        {customer ? (
+          <Text textStyle="sm">{customer.name}</Text>
         ) : (
-          <TruncatedId id={clientId} />
+          <TruncatedId id={customerId} />
         )}
       </styled.span>
     </HoverCard>
@@ -109,7 +109,7 @@ function ConsultantCell({
           {consultant ? (
             <>
               <Text textStyle="sm" fontWeight="bold">
-                {consultant.displayName}
+                {consultant.name}
               </Text>
               <Text textStyle="xs" color="fg.muted">
                 メール: {consultant.email ?? "-"}
@@ -129,7 +129,7 @@ function ConsultantCell({
     >
       <styled.span cursor="default" display="inline-block">
         {consultant ? (
-          <Text textStyle="sm">{consultant.displayName}</Text>
+          <Text textStyle="sm">{consultant.name}</Text>
         ) : (
           <TruncatedId id={consultantId} />
         )}
@@ -158,7 +158,7 @@ export default function AdminBookingsPage() {
     sortBy,
     sortOrder: "desc",
   });
-  const clientsQuery = useAdminClients(
+  const customersQuery = useAdminCustomers(
     { page: 1, pageSize: 100, sortBy: "createdAt", sortOrder: "desc" },
     { enabled: true },
   );
@@ -175,12 +175,12 @@ export default function AdminBookingsPage() {
     total: bookings.length,
     totalPages: 1,
   };
-  const clients = clientsQuery.data?.data?.clients ?? [];
+  const customers = customersQuery.data?.data?.customers ?? [];
   const consultants = consultantsQuery.data?.data?.consultants ?? [];
 
-  const clientsById = useMemo(
-    () => new Map(clients.map((client) => [client.clientId, client])),
-    [clients],
+  const customersById = useMemo(
+    () => new Map(customers.map((customer) => [customer.customerId, customer])),
+    [customers],
   );
   const consultantsById = useMemo(
     () =>
@@ -214,7 +214,7 @@ export default function AdminBookingsPage() {
 
   const isLoading =
     bookingsQuery.isLoading ||
-    clientsQuery.isLoading ||
+    customersQuery.isLoading ||
     consultantsQuery.isLoading;
 
   if (isLoading) {
@@ -233,7 +233,7 @@ export default function AdminBookingsPage() {
     );
   }
 
-  if (clientsQuery.error || consultantsQuery.error) {
+  if (customersQuery.error || consultantsQuery.error) {
     return (
       <styled.div>
         <styled.div mb="4">
@@ -254,7 +254,7 @@ export default function AdminBookingsPage() {
             variant="outline"
             onClick={() => {
               void bookingsQuery.refetch();
-              void clientsQuery.refetch();
+              void customersQuery.refetch();
               void consultantsQuery.refetch();
             }}
           >
@@ -311,19 +311,20 @@ export default function AdminBookingsPage() {
                       ).chargeDisabledReason
                     : null;
 
-                const client = clientsById.get(b.clientId) ?? null;
+                const customer = customersById.get(b.customerId) ?? null;
                 const consultant = consultantsById.get(b.consultantId) ?? null;
 
                 return (
                   <Table.Row key={b.bookingId}>
-                    <Table.Cell>
-                      {formatBookingDatetime(b.startDatetime)}
-                    </Table.Cell>
+                    <Table.Cell>{formatBookingDatetime(b.startsAt)}</Table.Cell>
                     <Table.Cell>
                       <BookingStatusBadge status={b.status} />
                     </Table.Cell>
                     <Table.Cell>
-                      <ClientCell clientId={b.clientId} client={client} />
+                      <CustomerCell
+                        customerId={b.customerId}
+                        customer={customer}
+                      />
                     </Table.Cell>
                     <Table.Cell>
                       <ConsultantCell

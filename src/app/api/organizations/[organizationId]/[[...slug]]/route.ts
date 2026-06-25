@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { FieldPath, type Timestamp } from "firebase-admin/firestore";
+import type { Timestamp } from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 import { type NextRequest, NextResponse } from "next/server";
 import { evaluateChargeEligibility } from "@/application/booking/charge-eligibility";
@@ -32,11 +32,11 @@ import {
   createBookingRepository,
   createCancelBookingUseCase,
   createChargePaymentUseCase,
-  createClientRepository,
   createConsultantPricePlanRepository,
   createConsultantRepository,
   createCreateBookingUseCase,
   createCreateConsultantPricePlanUseCase,
+  createCustomerRepository,
   createNotifyLateConsultantArrivalUseCase,
   createOrganizationSettingsRepository,
   createPaymentRepository,
@@ -54,9 +54,9 @@ import {
   getUsersByUids,
 } from "@/infrastructure/firebase/firebase-auth-admin";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
-import { app, db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
+import { app, db } from "@/infrastructure/firestore/firestore-customer";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
 import { HmacBookingActionTokenService } from "@/infrastructure/token/booking-action-token-service";
 import { HmacCancelTokenService } from "@/infrastructure/token/cancel-token-service";
@@ -69,10 +69,9 @@ import {
   validateAdminUserDeletionTarget,
 } from "./admin-user-policy";
 import { logUnexpectedPostError, mapApiError } from "./api-error-mapper";
-import { validateClientBirthdate } from "./booking-birthdate-validation";
+import { validateCustomerBirthdate } from "./booking-birthdate-validation";
 
 const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
-const USER_PREFERENCES_COLLECTION = FIRESTORE_COLLECTIONS.userPreferences;
 const FIRESTORE_IN_QUERY_CHUNK_SIZE = 10;
 const BATCH_CHARGE_COOLDOWN_MS = 60 * 1000;
 const BATCH_CONSULTATION_REMINDER_COOLDOWN_MS = 60 * 1000;
@@ -188,7 +187,7 @@ function toBookingSettingsResponse(settings: OrganizationSettings) {
 
 function toPublicPricePlanResponse(params: { name: string; totalJPY: number }) {
   return {
-    pricePlanSelectionId: createPricePlanSelectionId(params),
+    selectionId: createPricePlanSelectionId(params),
     name: params.name,
     totalJPY: params.totalJPY,
   };
@@ -480,27 +479,29 @@ async function getAdminOrOperatorDisplayNameMap(
   uids: string[],
 ): Promise<Map<string, string>> {
   const uniqueUids = [...new Set(uids)];
-  const displayNameByUid = new Map<string, string>();
-  if (uniqueUids.length === 0) return displayNameByUid;
+  const nameByUid = new Map<string, string>();
+  if (uniqueUids.length === 0) return nameByUid;
 
   const snapshots = await Promise.all(
     chunkArray(uniqueUids, FIRESTORE_IN_QUERY_CHUNK_SIZE).map((uidChunk) =>
       db
-        .collection(USER_PREFERENCES_COLLECTION)
-        .where(FieldPath.documentId(), "in", uidChunk)
+        .collection(MEMBERSHIP_COLLECTION)
+        .where("uid", "in", uidChunk)
+        .where("status", "==", "active")
         .get(),
     ),
   );
 
   for (const snapshot of snapshots) {
     for (const doc of snapshot.docs) {
-      const data = doc.data() as { displayName?: string };
-      if (!data.displayName) continue;
-      displayNameByUid.set(doc.id, data.displayName);
+      const data = doc.data() as { uid: string; name?: string };
+      if (!data.name) continue;
+      if (nameByUid.has(data.uid)) continue;
+      nameByUid.set(data.uid, data.name);
     }
   }
 
-  return displayNameByUid;
+  return nameByUid;
 }
 
 async function handleGetPublicConsultants(organizationId: string) {
@@ -573,8 +574,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
         );
         const filteredSlots = availableSlots.filter((slot) =>
           businessHours.containsRange(
-            slot.getTimeRange().getStartAt(),
-            slot.getTimeRange().getEndAt(),
+            slot.getTimeRange().getStartsAt(),
+            slot.getTimeRange().getEndsAt(),
           ),
         );
 
@@ -583,9 +584,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
             slots: filteredSlots.map((s) => ({
               slotId: s.getSlotId(),
               consultantId: s.getConsultantId(),
-              startDatetime: s.getTimeRange().getStartAt().toISOString(),
-              endDatetime: s.getTimeRange().getEndAt().toISOString(),
-              isAvailable: !s.getIsReserved(),
+              startsAt: s.getTimeRange().getStartsAt().toISOString(),
+              endsAt: s.getTimeRange().getEndsAt().toISOString(),
+              isAvailable: !s.getIsAvailable(),
             })),
           }),
         );
@@ -594,23 +595,23 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const aggregatedSlots = await repository.findAllAvailable(organizationId);
       const groupedSlots = new Map<
         string,
-        { startDatetime: string; endDatetime: string }
+        { startsAt: string; endsAt: string }
       >();
 
       for (const slot of aggregatedSlots) {
         if (
           !businessHours.containsRange(
-            slot.getTimeRange().getStartAt(),
-            slot.getTimeRange().getEndAt(),
+            slot.getTimeRange().getStartsAt(),
+            slot.getTimeRange().getEndsAt(),
           )
         ) {
           continue;
         }
-        const startDatetime = slot.getTimeRange().getStartAt().toISOString();
-        const endDatetime = slot.getTimeRange().getEndAt().toISOString();
-        const key = `${startDatetime}_${endDatetime}`;
+        const startsAt = slot.getTimeRange().getStartsAt().toISOString();
+        const endsAt = slot.getTimeRange().getEndsAt().toISOString();
+        const key = `${startsAt}_${endsAt}`;
         if (!groupedSlots.has(key)) {
-          groupedSlots.set(key, { startDatetime, endDatetime });
+          groupedSlots.set(key, { startsAt, endsAt });
         }
       }
 
@@ -639,8 +640,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
         );
         const filteredSlots = availableSlots.filter((slot) =>
           businessHours.containsRange(
-            slot.getTimeRange().getStartAt(),
-            slot.getTimeRange().getEndAt(),
+            slot.getTimeRange().getStartsAt(),
+            slot.getTimeRange().getEndsAt(),
           ),
         );
 
@@ -649,9 +650,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
             slots: filteredSlots.map((s) => ({
               slotId: s.getSlotId(),
               consultantId: s.getConsultantId(),
-              startDatetime: s.getTimeRange().getStartAt().toISOString(),
-              endDatetime: s.getTimeRange().getEndAt().toISOString(),
-              isAvailable: !s.getIsReserved(),
+              startsAt: s.getTimeRange().getStartsAt().toISOString(),
+              endsAt: s.getTimeRange().getEndsAt().toISOString(),
+              isAvailable: !s.getIsAvailable(),
             })),
           }),
           "slots",
@@ -661,23 +662,23 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const aggregatedSlots = await repository.findAllAvailable(organizationId);
       const groupedSlots = new Map<
         string,
-        { startDatetime: string; endDatetime: string }
+        { startsAt: string; endsAt: string }
       >();
 
       for (const slot of aggregatedSlots) {
         if (
           !businessHours.containsRange(
-            slot.getTimeRange().getStartAt(),
-            slot.getTimeRange().getEndAt(),
+            slot.getTimeRange().getStartsAt(),
+            slot.getTimeRange().getEndsAt(),
           )
         ) {
           continue;
         }
-        const startDatetime = slot.getTimeRange().getStartAt().toISOString();
-        const endDatetime = slot.getTimeRange().getEndAt().toISOString();
-        const key = `${startDatetime}_${endDatetime}`;
+        const startsAt = slot.getTimeRange().getStartsAt().toISOString();
+        const endsAt = slot.getTimeRange().getEndsAt().toISOString();
+        const key = `${startsAt}_${endsAt}`;
         if (!groupedSlots.has(key)) {
-          groupedSlots.set(key, { startDatetime, endDatetime });
+          groupedSlots.set(key, { startsAt, endsAt });
         }
       }
 
@@ -711,8 +712,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[1] === "price-plans"
     ) {
       const slotId = request.nextUrl.searchParams.get("slotId");
-      const startDatetime = request.nextUrl.searchParams.get("startDatetime");
-      const endDatetime = request.nextUrl.searchParams.get("endDatetime");
+      const startsAt = request.nextUrl.searchParams.get("startsAt");
+      const endsAt = request.nextUrl.searchParams.get("endsAt");
       const settings =
         (await createOrganizationSettingsRepository().findByOrganizationId(
           organizationId,
@@ -753,18 +754,18 @@ export async function GET(request: NextRequest, context: RouteContext) {
         );
       }
 
-      if (!startDatetime || !endDatetime) {
+      if (!startsAt || !endsAt) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
-          "slotId or startDatetime/endDatetime is required",
+          "slotId or startsAt/endsAt is required",
         );
       }
 
       const slots = await createSlotRepository().findAvailableByTimeRange(
         organizationId,
-        new Date(startDatetime),
-        new Date(endDatetime),
+        new Date(startsAt),
+        new Date(endsAt),
       );
       const consultantIds = [
         ...new Set(slots.map((slot) => slot.getConsultantId())),
@@ -808,10 +809,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[1] === "dashboard"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
-      const [bookings, payments, clients, consultants] = await Promise.all([
+      const [bookings, payments, customers, consultants] = await Promise.all([
         createBookingRepository().findAll(organizationId),
         createPaymentRepository().findAll(organizationId),
-        createClientRepository().findAll(organizationId),
+        createCustomerRepository().findAll(organizationId),
         createConsultantRepository().findAllActive(organizationId),
       ]);
 
@@ -823,7 +824,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         organizationId,
         totalBookings: bookings.length,
         totalPayments: payments.length,
-        totalClients: clients.length,
+        totalCustomers: customers.length,
         totalConsultants: consultants.length,
         totalRevenue,
         bookingsByStatus: {
@@ -878,12 +879,12 @@ export async function GET(request: NextRequest, context: RouteContext) {
           });
           return {
             bookingId: b.getBookingId(),
-            clientId: b.getClientId(),
+            customerId: b.getCustomerId(),
             consultantId: b.getConsultantId(),
             slotId: b.getSlotId(),
-            startDatetime: b.getStartDatetime().toISOString(),
+            startsAt: b.getStartsAt().toISOString(),
             status: b.getStatus().getValue(),
-            zoomUrl: b.getZoomUrl()?.getValue() ?? null,
+            joinUrl: b.getJoinUrl()?.getValue() ?? null,
             consultantJoinedAt:
               b.getConsultantJoinedAt()?.toISOString() ?? null,
             lateArrivalAlertSentAt:
@@ -943,7 +944,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         return {
           consultantId: c.getConsultantId(),
           email: userRecord?.email ?? "",
-          displayName: c.getProfile().getDisplayName(),
+          name: c.getProfile().getDisplayName(),
           bio: c.getProfile().getBio(),
           phone: c.getProfile().getPhone(),
           imageUrl: c.getProfile().getImageUrl(),
@@ -972,7 +973,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (
       segments.length === 2 &&
       segments[0] === "admin" &&
-      segments[1] === "clients"
+      segments[1] === "customers"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
       const listQueryParams = parseListQueryParams(
@@ -985,25 +986,26 @@ export async function GET(request: NextRequest, context: RouteContext) {
           "page must be >= 1, pageSize must be one of 20/50/100, and sortBy must be createdAt or updatedAt",
         );
       }
-      const clients = await createClientRepository().findAll(organizationId);
-      const sortedClients = sortByTimestampDesc(
-        clients.map((c) => ({
-          clientId: c.getClientId(),
+      const customers =
+        await createCustomerRepository().findAll(organizationId);
+      const sortedCustomers = sortByTimestampDesc(
+        customers.map((c) => ({
+          customerId: c.getCustomerId(),
           name: c.getName(),
           email: c.getEmail(),
           phone: c.getPhone(),
-          memo: c.getMemo() ?? null,
+          memo: c.getNote() ?? null,
           createdAt: c.getCreatedAt().toISOString(),
           updatedAt: c.getUpdatedAt().toISOString(),
         })),
         listQueryParams.sortBy,
       );
       const { items, pagination } = paginateArray(
-        sortedClients,
+        sortedCustomers,
         listQueryParams,
       );
       return noStoreJson({
-        clients: items,
+        customers: items,
         pagination,
       });
     }
@@ -1029,7 +1031,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         payments.map((p) => ({
           paymentId: p.getPaymentId(),
           bookingId: p.getBookingId(),
-          clientId: p.getClientId(),
+          customerId: p.getCustomerId(),
           paymentStrategy: p.getPaymentStrategy().getValue(),
           stripePaymentIntentId: p.getStripePaymentIntentId() ?? null,
           stripeSetupIntentId: p.getStripeSetupIntentId() ?? null,
@@ -1106,21 +1108,21 @@ export async function GET(request: NextRequest, context: RouteContext) {
         await listOrganizationMemberships(organizationId)
       ).filter((membership) => isAdminPanelUserRole(membership.role));
       const memberUids = memberships.map((membership) => membership.uid);
-      const [userByUid, displayNameByUid] = await Promise.all([
+      const [userByUid, nameByUid] = await Promise.all([
         getUsersByUids(memberUids),
         getAdminOrOperatorDisplayNameMap(memberUids),
       ]);
 
       const users = memberships.map((membership) => {
         const userRecord = userByUid.get(membership.uid) ?? null;
-        const displayName = displayNameByUid.get(membership.uid) ?? "";
+        const name = nameByUid.get(membership.uid) ?? "";
         const createdAtDate = membership.createdAt?.toDate() ?? new Date(0);
         const updatedAtDate = membership.updatedAt?.toDate() ?? createdAtDate;
 
         return {
           uid: membership.uid,
           email: userRecord?.email ?? "",
-          displayName: displayName || userRecord?.email || "",
+          name: name || userRecord?.email || "",
           role: membership.role,
           status: membership.status === "active" ? "registered" : "pending",
           createdAt: createdAtDate.toISOString(),
@@ -1151,7 +1153,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       }
       const bookingRepository = createBookingRepository();
       const paymentRepository = createPaymentRepository();
-      const clientRepository = createClientRepository();
+      const customerRepository = createCustomerRepository();
       const [bookings, payments] = await Promise.all([
         bookingRepository.findByConsultantId(organizationId, authUser.uid),
         paymentRepository.findAll(organizationId),
@@ -1159,15 +1161,17 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const paymentByBookingId = new Map(
         payments.map((payment) => [payment.getBookingId(), payment]),
       );
-      const uniqueClientIds = [
-        ...new Set(bookings.map((b) => b.getClientId())),
+      const uniqueCustomerIds = [
+        ...new Set(bookings.map((b) => b.getCustomerId())),
       ];
-      const clients = await clientRepository.findByIds(
+      const customers = await customerRepository.findByIds(
         organizationId,
-        uniqueClientIds,
+        uniqueCustomerIds,
       );
-      const clientById = new Map(
-        clients.map((client) => [client.getClientId(), client] as const),
+      const customerById = new Map(
+        customers.map(
+          (customer) => [customer.getCustomerId(), customer] as const,
+        ),
       );
 
       const bookingItems = sortByTimestampDesc(
@@ -1176,16 +1180,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
             booking: b,
             payment: paymentByBookingId.get(b.getBookingId()) ?? null,
           });
-          const client = clientById.get(b.getClientId()) ?? null;
+          const customer = customerById.get(b.getCustomerId()) ?? null;
 
           return {
             bookingId: b.getBookingId(),
-            clientId: b.getClientId(),
+            customerId: b.getCustomerId(),
             consultantId: b.getConsultantId(),
             slotId: b.getSlotId(),
-            startDatetime: b.getStartDatetime().toISOString(),
+            startsAt: b.getStartsAt().toISOString(),
             status: b.getStatus().getValue(),
-            zoomUrl: b.getZoomUrl()?.getValue() ?? null,
+            joinUrl: b.getJoinUrl()?.getValue() ?? null,
             consultantJoinedAt:
               b.getConsultantJoinedAt()?.toISOString() ?? null,
             lateArrivalAlertSentAt:
@@ -1194,13 +1198,13 @@ export async function GET(request: NextRequest, context: RouteContext) {
             consultationContent: b.getConsultationContent() ?? null,
             chargeable: eligibility.chargeable,
             chargeDisabledReason: eligibility.reason,
-            client: client
+            customer: customer
               ? {
-                  clientId: client.getClientId(),
-                  name: client.getName(),
-                  email: client.getEmail(),
-                  phone: client.getPhone(),
-                  memo: client.getMemo() ?? null,
+                  customerId: customer.getCustomerId(),
+                  name: customer.getName(),
+                  email: customer.getEmail(),
+                  phone: customer.getPhone(),
+                  memo: customer.getNote() ?? null,
                 }
               : null,
             createdAt: b.getCreatedAt().toISOString(),
@@ -1272,7 +1276,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         );
         return noStoreJson({
           consultantId: authUser.uid,
-          displayName: "",
+          name: "",
           bio: "",
           phone: "",
           specialties: [],
@@ -1290,7 +1294,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const rank = resolveConsultantRank(settings, consultant.getRankId());
       return noStoreJson({
         consultantId: consultant.getConsultantId(),
-        displayName: profile.getDisplayName(),
+        name: profile.getDisplayName(),
         bio: profile.getBio(),
         phone: profile.getPhone(),
         imageUrl: profile.getImageUrl(),
@@ -1356,37 +1360,37 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const body = await request.json();
       const {
         slotId,
-        startDatetime,
-        endDatetime,
-        clientName,
-        clientEmail,
-        clientPhone,
-        clientBirthdate,
+        startsAt,
+        endsAt,
+        customerName,
+        customerEmail,
+        customerPhone,
+        customerBirthDate,
         consultantContent,
-        pricePlanSelectionId,
+        selectionId,
       } = body;
 
       if (
-        !clientName ||
-        !clientEmail ||
-        !clientPhone ||
-        !clientBirthdate ||
-        typeof pricePlanSelectionId !== "string" ||
-        pricePlanSelectionId.length === 0
+        !customerName ||
+        !customerEmail ||
+        !customerPhone ||
+        !customerBirthDate ||
+        typeof selectionId !== "string" ||
+        selectionId.length === 0
       ) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
-          "clientName, clientEmail, clientPhone, clientBirthdate, pricePlanSelectionId are required",
+          "customerName, customerEmail, customerPhone, customerBirthDate, selectionId are required",
         );
       }
 
-      const birthdateValidation = validateClientBirthdate(clientBirthdate);
-      if (!birthdateValidation.valid) {
+      const birthDateValidation = validateCustomerBirthdate(customerBirthDate);
+      if (!birthDateValidation.valid) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
-          birthdateValidation.errorMessage ?? "clientBirthdate is invalid",
+          birthDateValidation.errorMessage ?? "customerBirthDate is invalid",
         );
       }
 
@@ -1394,18 +1398,14 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const result = await useCase.execute({
         organizationId,
         slotId: typeof slotId === "string" ? slotId : undefined,
-        startDatetime:
-          typeof startDatetime === "string"
-            ? new Date(startDatetime)
-            : undefined,
-        endDatetime:
-          typeof endDatetime === "string" ? new Date(endDatetime) : undefined,
-        clientName,
-        clientEmail,
-        clientPhone,
-        clientBirthdate: clientBirthdate.trim(),
+        startsAt: typeof startsAt === "string" ? new Date(startsAt) : undefined,
+        endsAt: typeof endsAt === "string" ? new Date(endsAt) : undefined,
+        customerName,
+        customerEmail,
+        customerPhone,
+        customerBirthDate: customerBirthDate.trim(),
         consultationContent: consultantContent,
-        pricePlanSelectionId,
+        selectionId,
       });
 
       const bookingActionToken =
@@ -1482,15 +1482,15 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const body = await request.json();
       const { cancelledBy, token } = body;
 
-      if (!cancelledBy || !["client", "admin"].includes(cancelledBy)) {
+      if (!cancelledBy || !["customer", "admin"].includes(cancelledBy)) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
-          "cancelledBy must be 'client' or 'admin'",
+          "cancelledBy must be 'customer' or 'admin'",
         );
       }
 
-      if (cancelledBy === "client") {
+      if (cancelledBy === "customer") {
         if (!token) {
           return publicForbidden("Invalid booking cancellation request");
         }
@@ -1567,12 +1567,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
       );
 
       const body = await request.json();
-      const { consultantId, startDatetime, endDatetime } = body;
-      if (!consultantId || !startDatetime || !endDatetime) {
+      const { consultantId, startsAt, endsAt } = body;
+      if (!consultantId || !startsAt || !endsAt) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
-          "consultantId, startDatetime, and endDatetime are required",
+          "consultantId, startsAt, and endsAt are required",
         );
       }
 
@@ -1585,8 +1585,8 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }
 
       const slotId = crypto.randomUUID();
-      const start = new Date(startDatetime);
-      const end = new Date(endDatetime);
+      const start = new Date(startsAt);
+      const end = new Date(endsAt);
       const repo = createSlotRepository();
       const existingSlots = await repo.findByConsultantId(
         organizationId,
@@ -1699,19 +1699,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
     ) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
       const body = await request.json();
-      const {
-        consultantId,
-        displayName,
-        bio,
-        specialties,
-        phone,
-        zoomRoomIds,
-      } = body;
-      if (!consultantId || !displayName) {
+      const { consultantId, name, bio, specialties, phone, zoomRoomIds } = body;
+      if (!consultantId || !name) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
-          "consultantId and displayName are required",
+          "consultantId and name are required",
         );
       }
       if (body.rankId !== undefined) {
@@ -1731,7 +1724,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         organizationId,
         consultantId,
         profile: ConsultantProfile.create(
-          displayName,
+          name,
           bio ?? "",
           specialties ?? [],
           phone ?? "",
@@ -1757,7 +1750,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         "operator",
       );
       const body = await request.json();
-      const { email, role, displayName, phone } = body;
+      const { email, role, name, phone } = body;
 
       if (!email || typeof email !== "string") {
         return jsonError(400, "VALIDATION_ERROR", "email is required");
@@ -1769,16 +1762,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
           "role must be one of: admin, operator, consultant",
         );
       }
-      if (!displayName || typeof displayName !== "string") {
-        return jsonError(400, "VALIDATION_ERROR", "displayName is required");
+      if (!name || typeof name !== "string") {
+        return jsonError(400, "VALIDATION_ERROR", "name is required");
       }
-      const normalizedDisplayName = displayName.trim();
+      const normalizedDisplayName = name.trim();
       if (!normalizedDisplayName) {
-        return jsonError(
-          400,
-          "VALIDATION_ERROR",
-          "displayName must not be empty",
-        );
+        return jsonError(400, "VALIDATION_ERROR", "name must not be empty");
       }
 
       let uid: string;
@@ -2265,11 +2254,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         await slotRepository.findByOrganizationId(organizationId);
       const removableSlotIds = allSlots
         .filter((slot) => {
-          if (slot.getIsReserved()) return false;
-          if (slot.getTimeRange().getStartAt() <= now) return false;
+          if (slot.getIsAvailable()) return false;
+          if (slot.getTimeRange().getStartsAt() <= now) return false;
           return !nextBusinessHours.containsRange(
-            slot.getTimeRange().getStartAt(),
-            slot.getTimeRange().getEndAt(),
+            slot.getTimeRange().getStartsAt(),
+            slot.getTimeRange().getEndsAt(),
           );
         })
         .map((slot) => slot.getSlotId());
@@ -2296,10 +2285,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         return jsonError(404, "NOT_FOUND", "Consultant not found");
       }
 
-      if (body.displayName) {
+      if (body.name) {
         consultant.updateProfile(
           ConsultantProfile.create(
-            body.displayName,
+            body.name,
             body.bio ?? consultant.getProfile().getBio(),
             body.specialties ?? [...consultant.getProfile().getSpecialties()],
             body.phone ?? consultant.getProfile().getPhone(),
@@ -2400,17 +2389,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           "operator can only update their own display name",
         );
       }
-      if (!body.displayName || typeof body.displayName !== "string") {
-        return jsonError(400, "VALIDATION_ERROR", "displayName is required");
+      if (!body.name || typeof body.name !== "string") {
+        return jsonError(400, "VALIDATION_ERROR", "name is required");
       }
 
-      const normalizedDisplayName = body.displayName.trim();
+      const normalizedDisplayName = body.name.trim();
       if (!normalizedDisplayName) {
-        return jsonError(
-          400,
-          "VALIDATION_ERROR",
-          "displayName must not be empty",
-        );
+        return jsonError(400, "VALIDATION_ERROR", "name must not be empty");
       }
 
       await setUserDisplayName(segments[2], normalizedDisplayName);
@@ -2513,11 +2498,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     ) {
       requireOrganizationRole(authUser, organizationId, "consultant");
       const body = await request.json();
-      if (!body.displayName || !Array.isArray(body.specialties)) {
+      if (!body.name || !Array.isArray(body.specialties)) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
-          "displayName and specialties are required",
+          "name and specialties are required",
         );
       }
 
@@ -2526,7 +2511,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       ).execute({
         organizationId,
         consultantId: authUser.uid,
-        displayName: body.displayName,
+        name: body.name,
         bio: body.bio ?? "",
         specialties: body.specialties,
         phone: body.phone ?? "",

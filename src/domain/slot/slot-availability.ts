@@ -19,15 +19,15 @@ export function getBookingCutoffMs(): number {
   return BOOKING_CUTOFF_MS;
 }
 
-export function getBookingDeadline(startAt: Date): Date {
-  return new Date(startAt.getTime() - BOOKING_CUTOFF_MS);
+export function getBookingDeadline(startsAt: Date): Date {
+  return new Date(startsAt.getTime() - BOOKING_CUTOFF_MS);
 }
 
 export function isBeforeBookingDeadline(
-  startAt: Date,
+  startsAt: Date,
   now: Date = new Date(),
 ): boolean {
-  return now.getTime() < getBookingDeadline(startAt).getTime();
+  return now.getTime() < getBookingDeadline(startsAt).getTime();
 }
 
 export function isAlignedToSlotBoundary(date: Date): boolean {

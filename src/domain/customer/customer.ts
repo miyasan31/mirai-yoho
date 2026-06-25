@@ -1,64 +1,64 @@
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 
-interface ClientCreateProps {
+interface CustomerCreateProps {
   organizationId: string;
-  clientId: string;
+  customerId: string;
   name: string;
   email: string;
   phone: string;
-  birthdate: string;
+  birthDate: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface ClientProps
-  extends Omit<ClientCreateProps, "birthdate" | "createdAt" | "updatedAt"> {
-  birthdate?: string;
-  memo?: string;
+interface CustomerProps
+  extends Omit<CustomerCreateProps, "birthDate" | "createdAt" | "updatedAt"> {
+  birthDate?: string;
+  note?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-export class Client extends AggregateRoot {
+export class Customer extends AggregateRoot {
   private constructor(
     private readonly organizationId: string,
-    private readonly clientId: string,
+    private readonly customerId: string,
     private name: string,
     private email: string,
     private phone: string,
-    private birthdate: string | undefined,
-    private memo: string | undefined,
+    private birthDate: string | undefined,
+    private note: string | undefined,
     private readonly createdAt: Date,
     private updatedAt: Date,
   ) {
     super();
   }
 
-  static create(props: ClientCreateProps): Client {
+  static create(props: CustomerCreateProps): Customer {
     const now = new Date();
-    return new Client(
+    return new Customer(
       props.organizationId,
-      props.clientId,
+      props.customerId,
       props.name,
       props.email,
       props.phone,
-      props.birthdate,
+      props.birthDate,
       undefined,
       props.createdAt ?? now,
       props.updatedAt ?? now,
     );
   }
 
-  static reconstruct(props: ClientProps): Client {
+  static reconstruct(props: CustomerProps): Customer {
     const createdAt = props.createdAt ?? new Date(0);
-    return new Client(
+    return new Customer(
       props.organizationId,
-      props.clientId,
+      props.customerId,
       props.name,
       props.email,
       props.phone,
-      props.birthdate,
-      props.memo,
+      props.birthDate,
+      props.note,
       createdAt,
       props.updatedAt ?? createdAt,
     );
@@ -68,22 +68,22 @@ export class Client extends AggregateRoot {
     name: string;
     email: string;
     phone: string;
-    birthdate: string;
+    birthDate: string;
   }): void {
     this.name = props.name;
     this.email = props.email;
     this.phone = props.phone;
-    this.birthdate = props.birthdate;
+    this.birthDate = props.birthDate;
     this.updatedAt = new Date();
   }
 
-  updateMemo(memo: string): void {
-    this.memo = memo;
+  updateNote(note: string): void {
+    this.note = note;
     this.updatedAt = new Date();
   }
 
-  getClientId(): string {
-    return this.clientId;
+  getCustomerId(): string {
+    return this.customerId;
   }
 
   getOrganizationId(): string {
@@ -102,12 +102,12 @@ export class Client extends AggregateRoot {
     return this.phone;
   }
 
-  getBirthdate(): string | undefined {
-    return this.birthdate;
+  getBirthDate(): string | undefined {
+    return this.birthDate;
   }
 
-  getMemo(): string | undefined {
-    return this.memo;
+  getNote(): string | undefined {
+    return this.note;
   }
 
   getCreatedAt(): Date {
