@@ -96,6 +96,13 @@ resource "google_cloud_run_v2_job" "batch" {
         image = var.worker_image
         args  = [each.value.command]
 
+        resources {
+          limits = {
+            cpu    = "1000m"
+            memory = "512Mi"
+          }
+        }
+
         dynamic "env" {
           for_each = local.worker_secret_names_by_command[each.key]
           content {
