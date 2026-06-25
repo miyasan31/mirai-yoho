@@ -44,8 +44,8 @@ resource "google_firestore_index" "composite" {
       fields = [
         ["organizationId", "ASCENDING"],
         ["consultantId", "ASCENDING"],
-        ["isReserved", "ASCENDING"],
-        ["startAt", "ASCENDING"],
+        ["isAvailable", "ASCENDING"],
+        ["startsAt", "ASCENDING"],
       ]
     }
     slots-by-consultant-start = {
@@ -53,26 +53,26 @@ resource "google_firestore_index" "composite" {
       fields = [
         ["organizationId", "ASCENDING"],
         ["consultantId", "ASCENDING"],
-        ["startAt", "ASCENDING"],
+        ["startsAt", "ASCENDING"],
       ]
     }
     slots-by-reserved-start = {
       collection = "slots"
       fields = [
         ["organizationId", "ASCENDING"],
-        ["isReserved", "ASCENDING"],
-        ["startAt", "ASCENDING"],
+        ["isAvailable", "ASCENDING"],
+        ["startsAt", "ASCENDING"],
       ]
     }
     slots-by-start = {
       collection = "slots"
       fields = [
         ["organizationId", "ASCENDING"],
-        ["startAt", "ASCENDING"],
+        ["startsAt", "ASCENDING"],
       ]
     }
     price-plans-by-status = {
-      collection = "consultant-price-plans"
+      collection = "price-plans"
       fields = [
         ["organizationId", "ASCENDING"],
         ["consultantId", "ASCENDING"],
@@ -80,7 +80,7 @@ resource "google_firestore_index" "composite" {
       ]
     }
     price-plans-by-name-price = {
-      collection = "consultant-price-plans"
+      collection = "price-plans"
       fields = [
         ["organizationId", "ASCENDING"],
         ["consultantId", "ASCENDING"],

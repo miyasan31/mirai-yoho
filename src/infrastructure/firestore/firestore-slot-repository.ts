@@ -4,8 +4,8 @@ import { Slot as SlotEntity } from "@/domain/slot/slot";
 import { isBeforeBookingDeadline } from "@/domain/slot/slot-availability";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import { TimeRange } from "@/domain/slot/time-range";
-import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
+import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.slots;
 
@@ -13,10 +13,10 @@ interface SlotDoc {
   organizationId: string;
   slotId: string;
   consultantId: string;
-  startAt: Timestamp;
-  endAt: Timestamp;
+  startsAt: Timestamp;
+  endsAt: Timestamp;
   bookingId?: string;
-  isReserved: boolean;
+  isAvailable: boolean;
 }
 
 function isFirestoreFailedPrecondition(error: unknown): boolean {
@@ -42,9 +42,12 @@ function toDomain(doc: SlotDoc): Slot {
     organizationId: doc.organizationId,
     slotId: doc.slotId,
     consultantId: doc.consultantId,
-    timeRange: TimeRange.reconstruct(doc.startAt.toDate(), doc.endAt.toDate()),
+    timeRange: TimeRange.reconstruct(
+      doc.startsAt.toDate(),
+      doc.endsAt.toDate(),
+    ),
     bookingId: doc.bookingId,
-    isReserved: doc.isReserved,
+    isAvailable: doc.isAvailable,
   });
 }
 
@@ -54,10 +57,10 @@ function toFirestore(slot: Slot): Record<string, unknown> {
     organizationId: slot.getOrganizationId(),
     slotId: slot.getSlotId(),
     consultantId: slot.getConsultantId(),
-    startAt: timeRange.getStartAt(),
-    endAt: timeRange.getEndAt(),
+    startsAt: timeRange.getStartsAt(),
+    endsAt: timeRange.getEndsAt(),
     bookingId: slot.getBookingId() ?? null,
-    isReserved: slot.getIsReserved(),
+    isAvailable: slot.getIsAvailable(),
   };
 }
 
@@ -98,17 +101,17 @@ export class FirestoreSlotRepository implements ISlotRepository {
       const snapshot = await db
         .collection(COLLECTION)
         .where("organizationId", "==", organizationId)
-        .where("isReserved", "==", false)
+        .where("isAvailable", "==", true)
         .get();
       return snapshot.docs
         .map((doc) => toDomain(doc.data() as SlotDoc))
         .filter((slot) =>
-          isBeforeBookingDeadline(slot.getTimeRange().getStartAt()),
+          isBeforeBookingDeadline(slot.getTimeRange().getStartsAt()),
         )
         .sort(
           (a, b) =>
-            a.getTimeRange().getStartAt().getTime() -
-            b.getTimeRange().getStartAt().getTime(),
+            a.getTimeRange().getStartsAt().getTime() -
+            b.getTimeRange().getStartsAt().getTime(),
         );
     } catch (error) {
       if (!isFirestoreFailedPrecondition(error)) {
@@ -123,13 +126,13 @@ export class FirestoreSlotRepository implements ISlotRepository {
         .map((doc) => toDomain(doc.data() as SlotDoc))
         .filter(
           (slot) =>
-            !slot.getIsReserved() &&
-            isBeforeBookingDeadline(slot.getTimeRange().getStartAt()),
+            slot.getIsAvailable() &&
+            isBeforeBookingDeadline(slot.getTimeRange().getStartsAt()),
         )
         .sort(
           (a, b) =>
-            a.getTimeRange().getStartAt().getTime() -
-            b.getTimeRange().getStartAt().getTime(),
+            a.getTimeRange().getStartsAt().getTime() -
+            b.getTimeRange().getStartsAt().getTime(),
         );
     }
   }
@@ -145,11 +148,11 @@ export class FirestoreSlotRepository implements ISlotRepository {
       .get();
     return snapshot.docs
       .map((doc) => toDomain(doc.data() as SlotDoc))
-      .filter((slot) => slot.getTimeRange().getStartAt() > new Date())
+      .filter((slot) => slot.getTimeRange().getStartsAt() > new Date())
       .sort(
         (a, b) =>
-          a.getTimeRange().getStartAt().getTime() -
-          b.getTimeRange().getStartAt().getTime(),
+          a.getTimeRange().getStartsAt().getTime() -
+          b.getTimeRange().getStartsAt().getTime(),
       );
   }
 
@@ -162,14 +165,14 @@ export class FirestoreSlotRepository implements ISlotRepository {
         .collection(COLLECTION)
         .where("organizationId", "==", organizationId)
         .where("consultantId", "==", consultantId)
-        .where("isReserved", "==", false)
-        .where("startAt", ">", new Date())
-        .orderBy("startAt", "asc")
+        .where("isAvailable", "==", true)
+        .where("startsAt", ">", new Date())
+        .orderBy("startsAt", "asc")
         .get();
       return snapshot.docs
         .map((doc) => toDomain(doc.data() as SlotDoc))
         .filter((slot) =>
-          isBeforeBookingDeadline(slot.getTimeRange().getStartAt()),
+          isBeforeBookingDeadline(slot.getTimeRange().getStartsAt()),
         );
     } catch (error) {
       if (!isFirestoreFailedPrecondition(error)) {
@@ -185,34 +188,34 @@ export class FirestoreSlotRepository implements ISlotRepository {
         .map((doc) => toDomain(doc.data() as SlotDoc))
         .filter(
           (slot) =>
-            !slot.getIsReserved() &&
-            isBeforeBookingDeadline(slot.getTimeRange().getStartAt()),
+            slot.getIsAvailable() &&
+            isBeforeBookingDeadline(slot.getTimeRange().getStartsAt()),
         )
         .sort(
           (a, b) =>
-            a.getTimeRange().getStartAt().getTime() -
-            b.getTimeRange().getStartAt().getTime(),
+            a.getTimeRange().getStartsAt().getTime() -
+            b.getTimeRange().getStartsAt().getTime(),
         );
     }
   }
 
   async findAvailableByTimeRange(
     organizationId: string,
-    startAt: Date,
-    endAt: Date,
+    startsAt: Date,
+    endsAt: Date,
   ): Promise<Slot[]> {
     const snapshot = await db
       .collection(COLLECTION)
       .where("organizationId", "==", organizationId)
-      .where("startAt", "==", startAt)
+      .where("startsAt", "==", startsAt)
       .get();
     return snapshot.docs
       .map((doc) => toDomain(doc.data() as SlotDoc))
       .filter(
         (slot) =>
-          !slot.getIsReserved() &&
-          isBeforeBookingDeadline(slot.getTimeRange().getStartAt()) &&
-          slot.getTimeRange().getEndAt().getTime() === endAt.getTime(),
+          slot.getIsAvailable() &&
+          isBeforeBookingDeadline(slot.getTimeRange().getStartsAt()) &&
+          slot.getTimeRange().getEndsAt().getTime() === endsAt.getTime(),
       )
       .sort((a, b) => a.getConsultantId().localeCompare(b.getConsultantId()));
   }
@@ -226,16 +229,16 @@ export class FirestoreSlotRepository implements ISlotRepository {
       const snapshot = await db
         .collection(COLLECTION)
         .where("organizationId", "==", organizationId)
-        .where("startAt", ">=", start)
-        .where("startAt", "<", end)
-        .orderBy("startAt", "asc")
+        .where("startsAt", ">=", start)
+        .where("startsAt", "<", end)
+        .orderBy("startsAt", "asc")
         .get();
       return snapshot.docs
         .map((doc) => toDomain(doc.data() as SlotDoc))
         .filter(
           (slot) =>
-            !slot.getIsReserved() &&
-            isBeforeBookingDeadline(slot.getTimeRange().getStartAt()),
+            slot.getIsAvailable() &&
+            isBeforeBookingDeadline(slot.getTimeRange().getStartsAt()),
         );
     } catch (error) {
       if (!isFirestoreFailedPrecondition(error)) {
@@ -249,18 +252,18 @@ export class FirestoreSlotRepository implements ISlotRepository {
       return fallbackSnapshot.docs
         .map((doc) => toDomain(doc.data() as SlotDoc))
         .filter((slot) => {
-          if (slot.getIsReserved()) return false;
-          const startAt = slot.getTimeRange().getStartAt().getTime();
+          if (!slot.getIsAvailable()) return false;
+          const startsAt = slot.getTimeRange().getStartsAt().getTime();
           return (
-            startAt >= start.getTime() &&
-            startAt < end.getTime() &&
-            isBeforeBookingDeadline(slot.getTimeRange().getStartAt())
+            startsAt >= start.getTime() &&
+            startsAt < end.getTime() &&
+            isBeforeBookingDeadline(slot.getTimeRange().getStartsAt())
           );
         })
         .sort(
           (a, b) =>
-            a.getTimeRange().getStartAt().getTime() -
-            b.getTimeRange().getStartAt().getTime(),
+            a.getTimeRange().getStartsAt().getTime() -
+            b.getTimeRange().getStartsAt().getTime(),
         );
     }
   }

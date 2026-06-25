@@ -70,7 +70,7 @@ describe("ConsultantLayout", () => {
       role: "consultant",
       memberships: [
         {
-          organizationName: "Org Test",
+          name: "Org Test",
           organizationId: "org-test",
         },
       ],
@@ -82,12 +82,12 @@ describe("ConsultantLayout", () => {
     });
   }
 
-  it("shows consultant profile displayName when available", () => {
+  it("shows consultant profile name when available", () => {
     mockAuthorizedConsultantAuth();
     mockUseConsultantProfile.mockReturnValue({
       data: {
         data: {
-          displayName: "相談員プロフィール名",
+          name: "相談員プロフィール名",
         },
       },
     });
@@ -103,13 +103,13 @@ describe("ConsultantLayout", () => {
     );
   });
 
-  it("falls back to user email when consultant profile displayName is empty", () => {
+  it("falls back to user email when consultant profile name is empty", () => {
     mockUseAuth.mockReturnValue({
       user: { email: "consultant@example.com" },
       role: "consultant",
       memberships: [
         {
-          organizationName: "Org Test",
+          name: "Org Test",
           organizationId: "org-test",
         },
       ],
@@ -122,7 +122,7 @@ describe("ConsultantLayout", () => {
     mockUseConsultantProfile.mockReturnValue({
       data: {
         data: {
-          displayName: "   ",
+          name: "   ",
         },
       },
     });

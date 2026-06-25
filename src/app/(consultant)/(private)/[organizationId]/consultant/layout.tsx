@@ -47,7 +47,7 @@ export default function ConsultantLayout({
   const { organizationId, buildPath, replaceOrganization } =
     useOrganizationRouting();
   const consultantProfileDisplayName =
-    consultantProfileData?.data.displayName?.trim() ?? "";
+    consultantProfileData?.data.name?.trim() ?? "";
   const sidebarDisplayName =
     consultantProfileDisplayName || currentDisplayName || user?.email || "-";
 
@@ -104,7 +104,7 @@ export default function ConsultantLayout({
       }))}
       organizationSwitcher={{
         items: memberships.map((membership) => ({
-          label: membership.organizationName,
+          label: membership.name,
           value: membership.organizationId,
         })),
         value: currentOrganizationId,

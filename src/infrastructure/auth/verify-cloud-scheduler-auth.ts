@@ -7,7 +7,7 @@ export type CloudSchedulerPrincipal = {
   serviceAccountEmail: string;
 };
 
-const oauth2Client = new OAuth2Client();
+const oauth2Customer = new OAuth2Client();
 
 function getExpectedServiceAccountEmail(): string | null {
   const projectId = envServer.firebaseProjectId;
@@ -37,7 +37,7 @@ export async function verifyCloudSchedulerAuth(
   }
 
   try {
-    const ticket = await oauth2Client.verifyIdToken({
+    const ticket = await oauth2Customer.verifyIdToken({
       idToken,
       audience: envServer.appUrl,
     });

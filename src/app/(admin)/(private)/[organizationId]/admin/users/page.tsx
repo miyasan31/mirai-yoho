@@ -102,7 +102,7 @@ export default function AdminUsersPage() {
     sortOrder: "desc",
   });
   const queryKey = useAdminUsersQueryKey();
-  const queryClient = useQueryClient();
+  const queryCustomer = useQueryClient();
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const {
@@ -116,7 +116,7 @@ export default function AdminUsersPage() {
     resolver: valibotResolver(userInviteFormSchema),
     defaultValues: {
       email: "",
-      displayName: "",
+      name: "",
       role: "operator",
     },
   });
@@ -148,7 +148,7 @@ export default function AdminUsersPage() {
   } = useForm<UserEditDisplayNameFormValues>({
     resolver: valibotResolver(userEditDisplayNameFormSchema),
     defaultValues: {
-      displayName: "",
+      name: "",
     },
   });
   const updateUserDisplayName = useUpdateUserDisplayName();
@@ -177,7 +177,7 @@ export default function AdminUsersPage() {
   }
 
   const invalidate = () =>
-    queryClient.invalidateQueries({
+    queryCustomer.invalidateQueries({
       queryKey,
     });
 
@@ -187,7 +187,7 @@ export default function AdminUsersPage() {
         organizationId: resolvedOrganizationId,
         data: {
           email: values.email,
-          displayName: values.displayName,
+          name: values.name,
           role: values.role,
         },
       });
@@ -226,7 +226,7 @@ export default function AdminUsersPage() {
       await updateUserDisplayName.mutateAsync({
         organizationId: resolvedOrganizationId,
         uid: editDisplayNameUid,
-        data: { displayName: values.displayName },
+        data: { name: values.name },
       });
       toaster.success({
         title: "成功",
@@ -339,12 +339,12 @@ export default function AdminUsersPage() {
                         </Field.ErrorText>
                       )}
                     </Field.Root>
-                    <Field.Root invalid={!!inviteErrors.displayName}>
+                    <Field.Root invalid={!!inviteErrors.name}>
                       <Field.Label>表示名</Field.Label>
-                      <Input {...registerInvite("displayName")} />
-                      {inviteErrors.displayName && (
+                      <Input {...registerInvite("name")} />
+                      {inviteErrors.name && (
                         <Field.ErrorText>
-                          {inviteErrors.displayName.message}
+                          {inviteErrors.name.message}
                         </Field.ErrorText>
                       )}
                     </Field.Root>
@@ -430,7 +430,7 @@ export default function AdminUsersPage() {
                       gap="2"
                     >
                       <Text as="span">
-                        {adminUser.displayName || adminUser.email || "-"}
+                        {adminUser.name || adminUser.email || "-"}
                       </Text>
                       {currentUid === adminUser.uid && (
                         <styled.div
@@ -466,10 +466,7 @@ export default function AdminUsersPage() {
                             onClick={() => {
                               setEditDisplayNameUid(adminUser.uid);
                               resetEditDisplayNameForm({
-                                displayName:
-                                  adminUser.displayName ||
-                                  adminUser.email ||
-                                  "",
+                                name: adminUser.name || adminUser.email || "",
                               });
                               setEditDisplayNameOpen(true);
                             }}
@@ -652,12 +649,12 @@ export default function AdminUsersPage() {
                 <Dialog.Title>表示名変更</Dialog.Title>
               </Dialog.Header>
               <Dialog.Body>
-                <Field.Root invalid={!!editDisplayNameErrors.displayName}>
+                <Field.Root invalid={!!editDisplayNameErrors.name}>
                   <Field.Label>表示名</Field.Label>
-                  <Input {...registerEditDisplayName("displayName")} />
-                  {editDisplayNameErrors.displayName && (
+                  <Input {...registerEditDisplayName("name")} />
+                  {editDisplayNameErrors.name && (
                     <Field.ErrorText>
-                      {editDisplayNameErrors.displayName.message}
+                      {editDisplayNameErrors.name.message}
                     </Field.ErrorText>
                   )}
                 </Field.Root>

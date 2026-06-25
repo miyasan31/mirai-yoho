@@ -8,7 +8,7 @@ import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 interface ConsultantJoinControlProps {
   bookingId: string;
-  startDatetime: string;
+  startsAt: string;
   status: string;
   consultantJoinedAt?: string | null;
   onJoined?: () => void;
@@ -25,7 +25,7 @@ function formatJoinedAt(value: string): string {
 }
 
 function canJoinBooking(params: {
-  startDatetime: string;
+  startsAt: string;
   status: string;
   consultantJoinedAt?: string | null;
   now?: Date;
@@ -38,15 +38,15 @@ function canJoinBooking(params: {
     return false;
   }
 
-  const startAt = new Date(params.startDatetime);
-  const joinAvailableAt = new Date(startAt.getTime() - 15 * 60 * 1000);
+  const startsAt = new Date(params.startsAt);
+  const joinAvailableAt = new Date(startsAt.getTime() - 15 * 60 * 1000);
 
   return (params.now ?? new Date()).getTime() >= joinAvailableAt.getTime();
 }
 
 export function ConsultantJoinControl({
   bookingId,
-  startDatetime,
+  startsAt,
   status,
   consultantJoinedAt,
   onJoined,
@@ -77,7 +77,7 @@ export function ConsultantJoinControl({
     );
   }
 
-  if (!canJoinBooking({ startDatetime, status, consultantJoinedAt })) {
+  if (!canJoinBooking({ startsAt, status, consultantJoinedAt })) {
     if (status === "pending" || status === "confirmed") {
       return (
         <Text textStyle="sm" color="fg.muted">

@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Text } from "@/components/ui/text";
 import { useAdminBookings } from "@/hooks/use-admin-bookings";
-import { useAdminClients } from "@/hooks/use-admin-clients";
+import { useAdminCustomers } from "@/hooks/use-admin-customers";
 import { useAdminPayments } from "@/hooks/use-admin-payments";
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
@@ -44,7 +44,7 @@ export default function AdminHomePage() {
     sortBy: "createdAt",
     sortOrder: "desc",
   });
-  const clientsQuery = useAdminClients(
+  const customersQuery = useAdminCustomers(
     {
       page: 1,
       pageSize: 100,
@@ -57,18 +57,18 @@ export default function AdminHomePage() {
   const isLoading =
     bookingsQuery.isLoading ||
     paymentsQuery.isLoading ||
-    clientsQuery.isLoading;
+    customersQuery.isLoading;
   const bookings = bookingsQuery.data?.data?.bookings ?? [];
   const payments = paymentsQuery.data?.data?.payments ?? [];
-  const clients = clientsQuery.data?.data?.clients ?? [];
+  const customers = customersQuery.data?.data?.customers ?? [];
   const viewModel = useMemo(
     () =>
       buildAdminHomeViewModel({
         bookings,
         payments,
-        clients,
+        customers,
       }),
-    [bookings, payments, clients],
+    [bookings, payments, customers],
   );
 
   if (isLoading) {
@@ -106,7 +106,7 @@ export default function AdminHomePage() {
     );
   }
 
-  if (bookingsQuery.error || paymentsQuery.error || clientsQuery.error) {
+  if (bookingsQuery.error || paymentsQuery.error || customersQuery.error) {
     return (
       <EmptyState
         icon={CircleAlert}
@@ -234,12 +234,12 @@ export default function AdminHomePage() {
                 >
                   <styled.div display="flex" alignItems="center" gap="2" mb="1">
                     <Text textStyle="sm" fontWeight="bold">
-                      {formatDatetime(booking.startDatetime)}
+                      {formatDatetime(booking.startsAt)}
                     </Text>
                     <BookingStatusBadge status={booking.status} />
                   </styled.div>
                   <Text textStyle="sm" color="fg.muted">
-                    クライアント: {booking.clientName}
+                    クライアント: {booking.customerName}
                   </Text>
                 </styled.div>
               ))}
@@ -292,14 +292,14 @@ export default function AdminHomePage() {
                     flexWrap="wrap"
                   >
                     <Text textStyle="sm" fontWeight="bold">
-                      {formatDatetime(booking.startDatetime)}
+                      {formatDatetime(booking.startsAt)}
                     </Text>
                     {booking.paymentStatus && (
                       <PaymentStatusBadge status={booking.paymentStatus} />
                     )}
                   </styled.div>
                   <Text textStyle="sm" color="fg.muted">
-                    クライアント: {booking.clientName}
+                    クライアント: {booking.customerName}
                   </Text>
                 </styled.div>
               ))}

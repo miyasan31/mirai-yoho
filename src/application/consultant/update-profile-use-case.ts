@@ -6,7 +6,7 @@ import { DEFAULT_CONSULTANT_RANK_ID } from "@/domain/organization-settings/consu
 interface UpdateProfileInput {
   organizationId: string;
   consultantId: string;
-  displayName: string;
+  name: string;
   bio: string;
   specialties: string[];
   phone: string;
@@ -18,7 +18,7 @@ export class UpdateProfileUseCase {
 
   async execute(input: UpdateProfileInput): Promise<void> {
     const profile = ConsultantProfile.create(
-      input.displayName,
+      input.name,
       input.bio,
       input.specialties,
       input.phone,

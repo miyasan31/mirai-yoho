@@ -15,7 +15,7 @@ interface SetupPaymentInput {
 }
 
 interface SetupPaymentOutput {
-  clientSecret: string;
+  customerSecret: string;
   mode: "setup" | "payment";
 }
 
@@ -59,7 +59,7 @@ export class SetupPaymentUseCase {
     const money = Money.fromTaxIncluded(pricePlanTotalJPY, TAX_RATE);
 
     if (input.paymentMethodType === "card") {
-      const { setupIntentId, clientSecret } =
+      const { setupIntentId, customerSecret } =
         await this.stripeService.createSetupIntent({
           metadata: { bookingId: input.bookingId },
         });
@@ -68,7 +68,7 @@ export class SetupPaymentUseCase {
         organizationId: input.organizationId,
         paymentId: crypto.randomUUID(),
         bookingId: input.bookingId,
-        clientId: booking.getClientId(),
+        customerId: booking.getCustomerId(),
         stripeSetupIntentId: setupIntentId,
         money,
       });
@@ -77,10 +77,10 @@ export class SetupPaymentUseCase {
         await this.paymentRepository.save(payment);
       });
 
-      return { clientSecret, mode: "setup" };
+      return { customerSecret, mode: "setup" };
     }
 
-    const { paymentIntentId, clientSecret } =
+    const { paymentIntentId, customerSecret } =
       await this.stripeService.createPaymentIntent({
         amountJPY: money.getTotalJPY(),
         metadata: { bookingId: input.bookingId },
@@ -90,7 +90,7 @@ export class SetupPaymentUseCase {
       organizationId: input.organizationId,
       paymentId: crypto.randomUUID(),
       bookingId: input.bookingId,
-      clientId: booking.getClientId(),
+      customerId: booking.getCustomerId(),
       stripePaymentIntentId: paymentIntentId,
       money,
     });
@@ -99,6 +99,6 @@ export class SetupPaymentUseCase {
       await this.paymentRepository.save(payment);
     });
 
-    return { clientSecret, mode: "payment" };
+    return { customerSecret, mode: "payment" };
   }
 }

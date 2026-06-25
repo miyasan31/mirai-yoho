@@ -1,0 +1,665 @@
+# 命名台帳 — Firestore / Domain / API
+
+> Version 1.0 | 2026-06-26  
+> 対象: 全11コレクション + 横断命名ルール  
+> 目的: 永続化・ドメイン・API の名称を整理し、今後の実装・リネームの基準とする
+
+---
+
+## 目次
+
+1. [横断命名ルール](#1-横断命名ルール)
+2. [コレクション一覧（現状 → 正準名）](#2-コレクション一覧現状--正準名)
+3. [コレクション別詳細](#3-コレクション別詳細)
+4. [変更影響マップ](#4-変更影響マップ)
+5. [レビュー進捗](#5-レビュー進捗)
+
+---
+
+## 1. 横断命名ルール
+
+### 1.1 レイヤー別の役割
+
+| レイヤー | 命名規則 | 責務 |
+|---|---|---|
+| **Firestore（永続化）** | camelCase フィールド、kebab-case コレクション名 | クエリ・インデックスに最適化した保存名 |
+| **Domain（集約）** | camelCase、VO でネスト可能 | ユビキタス言語に沿った内部名 |
+| **API（OpenAPI / JSON）** | camelCase | クライアント向け公開名。計算値・展開オブジェクト可 |
+
+**原則**: Domain を正とし、Firestore は Domain に合わせる。API は用途に応じて別名を許容するが、**同一概念に複数の別名を持たせない**。
+
+### 1.2 時刻・日付フィールド（確定 — 2026-06-26 更新）
+
+| 種類 | サフィックス | 保存形式 | 例 |
+|---|---|---|---|
+| **瞬間**（1点） | `*At` | `Timestamp` / ISO8601（時刻あり） | `createdAt`, `consultantJoinedAt`, `cancelDeadlineAt` |
+| **区間の端点** | **`startsAt` / `endsAt`** | 同上（時刻あり） | slot の開始・終了（ペア） |
+| **区間の開始のみ** | **`startsAt`** | 同上 | booking の相談開始（`endsAt` は slot 側） |
+| **カレンダー日** | **`*Date`** | **`YYYY-MM-DD` 文字列** | `sessionDate`, `birthDate`, 休業 `startDate`/`endDate` |
+| **壁時計**（繰り返し） | `*Time` | **`HH:mm` 文字列** | businessHours の `startTime`/`endTime` |
+
+**決定**:
+- 区間は **`startsAt` / `endsAt`** に統一（`startDatetime`/`endDatetime`/`startAt`/`endAt` は廃止）
+- カレンダー日は **`*Date` + 日付文字列**。フル datetime には変換しない（TZ ずれ防止）
+- 瞬間は `*At` + フル datetime
+- `cancelDeadline` → **`cancelDeadlineAt`**
+- `birthdate` → **`birthDate`**（`*Date` 規則に合わせる）
+
+**Domain**: `TimeRange` の `startAt`/`endAt` → **`startsAt`/`endsAt`** に追随。
+
+### 1.3 料金プラン識別子（確定）
+
+| 識別子 | 正準名 | 永続化 | 用途 |
+|---|---|---|---|
+| プラン UUID | `pricePlanId` | ○ | マスタ参照・booking スナップショットの主キー |
+| 選択用署名 | `selectionId` | ×（計算値） | 予約フローでクライアントが選択する ID。`name` + `totalJPY` から生成 |
+| 検索用正規化名 | `normalizedName` | ○（FS のみ） | 重複検索・署名解決用。Domain getter、API 非公開 |
+
+**決定**:
+- API の `pricePlanSelectionId` は **`selectionId` に統一**（Public / CreateBooking とも）
+- booking 保存時は `pricePlanId` + `pricePlanName` + `pricePlanTotalJPY` のスナップショットを維持
+- `normalizedName` は Firestore 専用派生フィールドとして維持（Domain/API には露出しない）
+
+### 1.4 Repository 境界（確定）
+
+| コレクション | 現状 | 方針 |
+|---|---|---|
+| `organizations` | route / auth で直接アクセス | **Repository 化**し `OrganizationDoc` を定義 |
+| `organization-memberships` | route / auth で直接アクセス | **Repository 化**し enum 変換を集約 |
+| ~~`user-preferences`~~ | 廃止 | **`lastOrganizationId` はクライアント側のみ** |
+
+**決定**: 直接 Firestore アクセスは廃止し、`*Repository` + `*Doc` 型に集約する。
+
+**membership status**: FS / Domain / API すべて **`active` / `invited` / `disabled`** で統一（§3.5 合意）。Mapper による `registered` / `pending` 変換は廃止。
+
+### 1.5 その他の横断規則
+
+| 項目 | 規則 |
+|---|---|
+| コレクション名 | kebab-case（Firestore）、TS 定数は camelCase（`FIRESTORE_COLLECTIONS`） |
+| 通貨 | `*JPY` サフィックス（例: `totalJPY`, `amountJPY`） |
+| 顧客参照 | **`customer*` に統一**。API / Domain / FS すべて `client*` 禁止（§3.2, §6.3-A 合意） |
+| ドキュメント ID | エンティティ ID 単体を原則。複合 ID は `{organizationId}_{entityId}` 形式 |
+| null / omit | optional フィールドは Repository 層で方針統一（booking/payment: `null`、customer: omit） |
+| 真偽値 | 状態は `is*` プレフィックス（例: `isActive`, `isAvailable`, `isClosed`）。意味反転の別名は持たない |
+
+---
+
+## 2. コレクション一覧（現状 → 正準名）
+
+| # | Firestore（現状） | 正準コレクション名 | 変更 | Doc ID（正準） |
+|---|---|---|---|---|
+| 1 | `bookings` | `bookings` | 維持 | `bookingId` |
+| 2 | `clients` | `customers` | **リネーム** | `customerId` |
+| 3 | `consultant-price-plans` | `price-plans` | **リネーム** | `pricePlanId` |
+| 4 | `consultants` | `consultants` | 維持 | `{organizationId}_{consultantId}` |
+| 5 | `organization-memberships` | `organization-memberships` | 維持 | `{organizationId}_{uid}` |
+| 6 | `organization-settings` | `organization-settings` | 維持 | `organizationId` |
+| 7 | `organizations` | `organizations` | 維持 | `organizationId` |
+| 8 | `payments` | `payments` | 維持 | `paymentId` |
+| 9 | `slots` | `slots` | フィールドリネーム | `slotId` |
+| 10 | ~~`user-preferences`~~ | **廃止** | 削除 | — |
+| 11 | `zoom-daily-sessions` | `zoom-sessions` | **リネーム** | `{organizationId}_{sessionDate}` |
+
+---
+
+## 3. コレクション別詳細
+
+### 3.1 `bookings` ✅ 合意済み（2026-06-26）
+
+**Doc ID**: `bookingId`（維持）
+
+| プロパティ | Firestore | Domain | API | 正準名 | 判定 |
+|---|---|---|---|---|---|
+| 組織 ID | `organizationId` | `organizationId` | — | `organizationId` | 維持 |
+| 予約 ID | `bookingId` | `bookingId` | `bookingId` | `bookingId` | 維持 |
+| 顧客 ID | `clientId` | `clientId` | `clientId` → | **`customerId`** | **リネーム** |
+| 顧客名（予約入力） | — | — | `clientName` → | **`customerName`** | **リネーム** |
+| 顧客メール（予約入力） | — | — | `clientEmail` → | **`customerEmail`** | **リネーム** |
+| 顧客電話（予約入力） | — | — | `clientPhone` → | **`customerPhone`** | **リネーム** |
+| 相談員 ID | `consultantId` | `consultantId` | `consultantId` | `consultantId` | 維持 |
+| 枠 ID | `slotId` | `slotId` | `slotId` | `slotId` | 維持 |
+| 開始日時 | `startDatetime` | `startDatetime` | `startDatetime` → | **`startsAt`** | **リネーム** |
+| ステータス | `status` | `status` | `status` | `status` | 維持 |
+| キャンセル期限 | `cancelDeadline` | `cancelDeadline` | — | **`cancelDeadlineAt`** | **リネーム** |
+| Zoom 参加 URL | `zoomUrl` | `zoomUrl` | `zoomUrl` → | **`joinUrl`** | **合意: joinUrl に統一** |
+| 相談員入室時刻 | `consultantJoinedAt` | `consultantJoinedAt` | `consultantJoinedAt` | `consultantJoinedAt` | 維持 |
+| リマインド送信時刻 | `consultationReminderEmailSentAt` | 同名 | — | 同名 | 維持（内部） |
+| 遅刻アラート送信時刻 | `lateArrivalAlertSentAt` | 同名 | `lateArrivalAlertSentAt` | 同名 | 維持 |
+| 相談員メモ | `consultantMemo` | `consultantMemo` | `consultantMemo` | `consultantMemo` | 維持 |
+| 相談内容 | `consultationContent` | `consultationContent` | `consultationContent` | `consultationContent` | 維持 |
+| 相談内容（入力） | — | — | `consultantContent` → | **`consultationContent`** | **合意: リネーム** |
+| 料金プラン ID | `pricePlanId` | `pricePlanId` | — | `pricePlanId` | 維持（スナップショット） |
+| 料金プラン名 | `pricePlanName` | `pricePlanName` | — | `pricePlanName` | 維持 |
+| 料金プラン金額 | `pricePlanTotalJPY` | `pricePlanTotalJPY` | — | `pricePlanTotalJPY` | 維持 |
+| 作成/更新 | `createdAt`, `updatedAt` | 同名 | 同名 | 同名 | 維持 |
+| 課金可否 | — | 計算 | `chargeable` | `chargeable` | API 計算値 |
+| 課金不可理由 | — | 計算 | `chargeDisabledReason` | `chargeDisabledReason` | API 計算値 |
+
+**合意サマリー**
+- コレクション名 `bookings`、Doc ID `bookingId` は維持
+- CreateBookingRequest の `consultantContent` → `consultationContent` に統一
+- `zoomUrl` → **`joinUrl`** に全レイヤー統一
+- `startDatetime` → **`startsAt`**、`cancelDeadline` → **`cancelDeadlineAt`**
+- CreateBooking の枠指定: `startDatetime`/`endDatetime` → **`startsAt`/`endsAt`**
+- `cancelDeadlineAt` / `consultationReminderEmailSentAt` は API 非公開のまま
+- CreateBookingRequest: `clientName`/`clientEmail`/`clientPhone` → **`customerName`/`customerEmail`/`customerPhone`**
+- ConsultantBookingDetail のネスト `client` → **`customer`**
+
+**根拠**: `firestore-booking-repository.ts`, `domain/booking/booking.ts`, `openapi.yaml` (BookingDetail, CreateBookingRequest)
+
+---
+
+### 3.2 `clients` → `customers` ✅ 合意済み（2026-06-26）
+
+**変更**: コレクション名・Doc ID・Domain 集約名・**API スキーマ名**を **Customer** に統一
+
+#### Firestore / Domain
+
+| プロパティ | Firestore（現状） | 正準名 | 判定 |
+|---|---|---|---|
+| コレクション | `clients` | **`customers`** | **リネーム** |
+| Doc ID | `clientId` | **`customerId`** | **リネーム** |
+| 組織 ID | `organizationId` | `organizationId` | 維持 |
+| 顧客 ID | `clientId` | **`customerId`** | **リネーム** |
+| 氏名 | `name` | `name` | 維持 |
+| メール | `email` | `email` | 維持 |
+| 電話 | `phone` | `phone` | 維持 |
+| 生年月日 | `birthdate` | **`birthDate`** | **リネーム**（`*Date` / `YYYY-MM-DD` 文字列・API 非公開） |
+| メモ | `memo` | **`note`** | **リネーム** |
+| 作成/更新 | `createdAt`, `updatedAt` | 同名 | 維持 |
+
+#### API スキーマ（`client*` 完全排除）✅ 合意（2026-06-26）
+
+| 現状 | 正準名 | 判定 |
+|---|---|---|
+| `ClientDetail` | **`CustomerDetail`** | **リネーム** |
+| `clientId` | **`customerId`** | **リネーム** |
+| `clientName`（CreateBookingRequest） | **`customerName`** | **リネーム** |
+| `clientEmail`（CreateBookingRequest） | **`customerEmail`** | **リネーム** |
+| `clientPhone`（CreateBookingRequest） | **`customerPhone`** | **リネーム** |
+| `clientBirthdate`（CreateBookingRequest） | — | **削除**（合意済み） |
+| ConsultantBookingDetail.`client` | **`customer`** | **リネーム** |
+
+**合意サマリー**
+- `Client` → `Customer`、`clients` → `customers`、`clientId` → `customerId` を全レイヤーで統一
+- **API から `client*` プレフィックスを完全排除**（スキーマ名・フィールド名・ネストキーすべて）
+- `birthDate` は `YYYY-MM-DD` 文字列のまま（フル datetime 化しない）
+- `memo` → `note` を FS / Domain / API 全レイヤーで統一
+- **注意**: DDD_DESIGN.md の「Client ≠ Customer」定義と矛盾するため、ドキュメント更新が必要
+
+**影響**: `domain/client/` → `domain/customer/`、`firestore-client-repository.ts`、`bookings.customerId`、`openapi.yaml`、`booking-form-schema.ts`、予約フォーム、管理 UI、Orval 生成物、全テスト
+
+**根拠**: `firestore-client-repository.ts`, `domain/client/client.ts`, `openapi.yaml`
+
+---
+
+### 3.3 `consultant-price-plans` → `price-plans` ✅ 合意済み（2026-06-26）
+
+**Doc ID**: `pricePlanId`（維持）
+
+| プロパティ | Firestore | Domain | API | 正準名 | 判定 |
+|---|---|---|---|---|---|
+| コレクション | `consultant-price-plans` | — | — | **`price-plans`** | **リネーム** |
+| 組織 ID | `organizationId` | `organizationId` | — | `organizationId` | 維持 |
+| 相談員 ID | `consultantId` | `consultantId` | — | `consultantId` | 維持 |
+| プラン ID | `pricePlanId` | `pricePlanId` | `pricePlanId` | `pricePlanId` | 維持 |
+| プラン名 | `name` | `name` | `name` | `name` | 維持 |
+| 正規化名 | `normalizedName` | getter のみ | — | `normalizedName` | 維持（FS 専用） |
+| 金額 | `totalJPY` | `totalJPY` | `totalJPY` | `totalJPY` | 維持 |
+| ステータス | `status` | `status` | `status` | `status` | 維持 |
+| 選択 ID | — | 計算 | `pricePlanSelectionId` → | **`selectionId`** | **合意: API 統一** |
+| 削除日時 | `deletedAt` | `deletedAt` | `deletedAt` | `deletedAt` | 維持 |
+| 作成/更新 | `createdAt`, `updatedAt` | 同名 | 同名 | 同名 | 維持 |
+
+**合意サマリー**
+- コレクション名 `consultant-price-plans` → **`price-plans`**
+- `pricePlanId` は Doc ID / フィールド名とも維持
+- API の `pricePlanSelectionId` → **`selectionId`** に統一
+- `normalizedName` は Firestore 専用のまま
+
+**根拠**: `firestore-consultant-price-plan-repository.ts`, `consultant-price-plan.ts`, `openapi.yaml`
+
+---
+
+### 3.4 `consultants` ✅ 合意済み（2026-06-26）
+
+**Doc ID**: `{organizationId}_{consultantId}`（維持）
+
+**複合 ID の理由**: `consultantId` = Firebase Auth `uid` のため、同一ユーザーが複数 org の相談員になると Doc ID が衝突する。`organization-memberships` と同様の複合キーで回避している。
+
+| プロパティ | Firestore（現状） | 正準名 | 判定 |
+|---|---|---|---|
+| コレクション | `consultants` | `consultants` | 維持 |
+| 相談員 ID | `consultantId` | `consultantId` | 維持 |
+| 表示名 | `displayName` | **`name`** | **全レイヤー統一** |
+| 自己紹介 | `bio` | `bio` | 維持 |
+| 専門分野 | `specialties` | `specialties` | 維持 |
+| 電話 | `phone` | `phone` | 維持 |
+| 画像 URL | `imageUrl` | `imageUrl` | 維持 |
+| Zoom ルーム | `zoomRoomIds` | `zoomRoomIds` | 維持 |
+| ランク | `rankId` / API `rank` オブジェクト | **`rankId`** | **API も rankId のみ** |
+| 有効フラグ | `isActive` | `isActive` | 維持 |
+| 作成/更新 | `createdAt`, `updatedAt` | 同名 | 維持 |
+
+**合意サマリー**
+- コレクション名 `consultants`、複合 Doc ID は維持
+- `displayName` → **`name`** に全レイヤー統一（FS / Domain / API）
+- API の `rank` オブジェクト展開を廃止し **`rankId`** のみ返す
+
+**根拠**: `firestore-consultant-repository.ts`, `consultant.ts`, `consultant-profile.ts`, `openapi.yaml`, `firestore.rules`
+
+---
+
+### 3.5 `organization-memberships` ✅ 合意済み（2026-06-26）
+
+**Doc ID**: `{organizationId}_{uid}`（維持）
+
+| プロパティ | Firestore（現状） | 正準名 | 判定 |
+|---|---|---|---|
+| コレクション | `organization-memberships` | `organization-memberships` | 維持 |
+| ユーザー ID | `uid` | `uid` | 維持 |
+| 組織 ID | `organizationId` | `organizationId` | 維持 |
+| ロール | `role` | `role` | 維持 |
+| ステータス | `active` / `invited` / `disabled` | **同名（API も統一）** | **合意: FS 値に API 統一** |
+| 表示名 | `user-preferences` 参照 | **`name`（membership へ移動）** | **移動 + consultants と統一** |
+| 作成/更新 | `createdAt`, `updatedAt` | 同名 | 維持 |
+
+**合意サマリー**
+- コレクション名・複合 Doc ID は維持
+- API の `registered`/`pending` を廃止し、FS と同じ **`active`/`invited`/`disabled`** に統一
+- **`name`** を `user-preferences` から **membership ドキュメントへ移動**（consultants と統一）
+- **Repository 化**（`OrganizationMembershipRepository` + `OrganizationMembershipDoc`）
+
+**連鎖影響**
+- `openapi.yaml` AdminUser.status enum 変更
+- `load-auth-context.ts` の name 取得元変更
+- AdminUser API の `displayName` → **`name`** にリネーム
+- ~~`user-preferences`~~ 廃止（§3.10）
+
+**根拠**: `load-auth-context.ts`, `route.ts`, `openapi.yaml` (AdminUser), `auth-types.ts`
+
+---
+
+### 3.6 `organization-settings` ✅ 合意済み（2026-06-26）
+
+**Doc ID**: `organizationId`（維持）
+
+| プロパティ | 正準名 | 判定 |
+|---|---|---|
+| コレクション | `organization-settings` | 維持 |
+| 組織 ID | `organizationId` | 維持 |
+| 相談員選択可否 | `consultantSelectionEnabled` | 維持 |
+| 営業時間 | `businessHours`（ネスト維持） | 維持 |
+| 相談員ランク | `consultantRanks` | 維持 |
+| デフォルトランク ID | `defaultConsultantRankId` | 維持 |
+| 料金プラン範囲 | `pricePlanRange`（ネスト維持） | 維持 |
+| 作成/更新 | `createdAt`, `updatedAt` | **Repository に追加** |
+
+**ネスト構造（維持）**
+
+```
+businessHours
+  weekly[]: { dayOfWeek, isClosed, timeWindows[]: { startTime, endTime } }
+  includePublicHolidays
+  exceptions[]: { startDate, endDate, isClosed, timeWindows[] }
+consultantRanks[]: { rankId, name }
+pricePlanRange: { minTotalJPY, maxTotalJPY }
+```
+
+**合意サマリー**
+- コレクション名・フィールド名は現状維持
+- `businessHours` / `pricePlanRange` のネスト構造も維持
+- `createdAt` / `updatedAt` を Repository 型・`toFirestore` に追加
+
+**根拠**: `firestore-organization-settings-repository.ts`, `scripts/create-organization.ts`
+
+---
+
+### 3.7 `organizations` ✅ 合意済み（2026-06-26）
+
+**Doc ID**: `organizationId`（維持）
+
+| プロパティ | Firestore（現状） | 正準名 | 判定 |
+|---|---|---|---|
+| コレクション | `organizations` | `organizations` | 維持 |
+| 組織 ID | `organizationId`（Doc ID と重複） | `organizationId` | 維持 |
+| 組織名（FS） | `name` | `name` | 維持 |
+| 組織名（membership/API join） | `organizationName` | **`name`** | **リネーム** |
+| 作成/更新 | `createdAt`, `updatedAt` | 同名 | 維持 |
+
+**合意サマリー**
+- コレクション名・Doc ID・`organizationId` フィールドは維持
+- API の `organizationName` → **`name`** に統一
+- **Repository 化**（`OrganizationRepository` + `OrganizationDoc`）
+
+**連鎖影響**: `auth-types.ts` OrganizationMembership、`load-auth-context.ts`、admin/consultant layout
+
+**根拠**: `load-auth-context.ts`, `scripts/create-organization.ts`
+
+---
+
+### 3.8 `payments` ✅ 合意済み（2026-06-26）
+
+**Doc ID**: `paymentId`（維持）
+
+| プロパティ | Firestore（現状） | 正準名 | 判定 |
+|---|---|---|---|
+| コレクション | `payments` | `payments` | 維持 |
+| 組織 ID | `organizationId` | `organizationId` | 維持 |
+| 決済 ID | `paymentId` | `paymentId` | 維持 |
+| 予約 ID | `bookingId` | `bookingId` | 維持 |
+| 顧客 ID | `clientId` | **`customerId`** | **リネーム** |
+| 税抜金額 | `amountJPY` | `amountJPY` | 維持 |
+| 税額 | `taxAmountJPY` | `taxAmountJPY` | 維持 |
+| 税率 | `taxRate` | `taxRate` | 維持（API 非公開） |
+| 合計 | — | **`totalJPY`** | API 計算値のまま |
+| ステータス | `status` | `status` | 維持 |
+| 決済戦略 | `paymentStrategy` | 同名 | 維持 |
+| Stripe 系 | `stripe*` | 同名 | 維持 |
+| 課金方法 | `chargeMethod` | 同名 | 維持 |
+| 作成/更新 | `createdAt`, `updatedAt` | 同名 | 維持 |
+
+**合意サマリー**
+- コレクション名・Doc ID は維持
+- `clientId` → **`customerId`**（customers 統一）
+- `taxRate` は内部専用、`totalJPY` は API 計算値のまま
+
+**根拠**: `firestore-payment-repository.ts`, `domain/payment/payment.ts`, `openapi.yaml`
+
+---
+
+### 3.9 `slots` ✅ 合意済み（2026-06-26）
+
+**Doc ID**: `slotId`（維持）
+
+| プロパティ | Firestore（現状） | Domain | API（現状） | 正準名 | 判定 |
+|---|---|---|---|---|---|
+| コレクション | `slots` | — | — | `slots` | 維持 |
+| 開始 | `startAt` | `timeRange.startAt` | `startDatetime` → | **`startsAt`** | **リネーム** |
+| 終了 | `endAt` | `timeRange.endAt` | `endDatetime` → | **`endsAt`** | **リネーム** |
+| 予約済み/空き | `isReserved` | `isReserved` | `isAvailable`（反転） | **`isAvailable`** | **全レイヤー統一** |
+| その他 | `organizationId`, `slotId`, `consultantId`, `bookingId` | 同名 | 同名 | 同名 | 維持 |
+
+**合意サマリー**
+- `startAt`/`endAt` → **`startsAt`/`endsAt`**
+- `isReserved` → **`isAvailable`** に FS/Domain/API 統一
+- Domain `TimeRange` も **`startsAt`/`endsAt`** に追随
+
+**根拠**: `firestore-slot-repository.ts`, `domain/slot/slot.ts`, `openapi.yaml`, `infra/terraform/gcp/common/firebase/main.tf`
+
+---
+
+### 3.10 `user-preferences` → **廃止** ✅ 合意済み（2026-06-26）
+
+| 項目 | 現状 | 正準 | 判定 |
+|---|---|---|---|
+| コレクション | `user-preferences` | **廃止** | 削除 |
+| `displayName` | user-preferences | **organization-memberships.name** | 移動済み（§3.5） |
+| `lastOrganizationId` | user-preferences | **クライアント側のみ**（localStorage 等） | FS から削除 |
+
+**合意サマリー**
+- `user-preferences` コレクション自体を廃止
+- 最後に選択した org は **サーバーに保存せず** クライアント側で保持
+- `load-auth-context.ts` / `setLastOrganizationId` / `POST /api/auth/organization` を削除またはクライアント専用化
+
+**根拠**: `load-auth-context.ts`, `scripts/create-organization.ts`, `src/app/api/auth/organization/route.ts`
+
+---
+
+### 3.11 `zoom-daily-sessions` → `zoom-sessions` ✅ 合意済み（2026-06-26）
+
+**Doc ID**: `{organizationId}_{sessionDate}`（維持）
+
+| プロパティ | 正準名 | 判定 |
+|---|---|---|
+| コレクション | **`zoom-sessions`** | **リネーム** |
+| 参加 URL | **`joinUrl`** | 維持（booking 側も `joinUrl` に統一） |
+| その他 | `organizationId`, `sessionId`, `sessionDate`, `zoomMeetingId`, `breakoutRooms[]`, `createdAt` | 維持 |
+
+**補足（joinUrl 統一の理由）**  
+現状、予約確定時に `session.joinUrl` をそのまま `booking.zoomUrl` にコピーしており、値は同一 URL。集約は分かれるが名称は **`joinUrl`** に統一する。
+
+**根拠**: `firestore-zoom-daily-session-repository.ts`, `create-booking-use-case.ts`, `domain/booking/booking.ts`
+
+---
+
+## 4. 変更影響マップ
+
+### 4.1 優先度: 高（命名不整合の解消）
+
+| 変更 | 影響ファイル |
+|---|---|
+| `clients` → `customers`、`clientId` → `customerId` | 全 Repository / Domain / FS / bookings / payments / テスト |
+| API `client*` → `customer*` 完全統一 | `ClientDetail`→`CustomerDetail`, `clientName`→`customerName`, ConsultantBookingDetail.`client`→`customer`, openapi, route, 予約フォーム, Orval |
+| `consultant-price-plans` → `price-plans` | `firestore-collections.ts`, repository, Terraform index |
+| `zoom-daily-sessions` → `zoom-sessions` | `firestore-collections.ts`, repository, batch |
+| `slots.startAt/endAt` → `startsAt/endsAt` | `firestore-slot-repository.ts`, `domain/slot/time-range.ts`, `main.tf`, seed/delete scripts |
+| `bookings.startDatetime` → `startsAt`、`cancelDeadline` → `cancelDeadlineAt` | booking domain/repository, openapi, route, batch |
+| `customers.birthdate` → `birthDate` | customer repository, domain |
+| `slots.isReserved` → `isAvailable` | 同上 + Domain `slot.ts` + API route |
+| API クエリ `startDatetime`/`endDatetime` → `startsAt`/`endsAt` | openapi, route, 予約 UI, Orval |
+| `booking.zoomUrl` → `joinUrl` | `domain/booking/`, repository, openapi, email templates |
+| CreateBookingRequest `consultantContent` → `consultationContent` | `openapi.yaml`, route, 予約フォーム, Orval |
+| API `pricePlanSelectionId` → `selectionId` | `openapi.yaml`, route, 公開予約 UI, Orval |
+| CreateBooking から `clientBirthdate` 削除 | `openapi.yaml`, route, 予約フォーム |
+| `customers.memo` → `note` | customer repository, openapi, 管理 UI |
+| AdminUser `displayName` → `name`、status enum 統一 | openapi, route, admin UI |
+| `organizations.organizationName` → `name` | auth-types, layouts, load-auth-context |
+
+### 4.2 優先度: 中（アーキテクチャ整備）
+
+| 変更 | 影響ファイル |
+|---|---|
+| `organizations` Repository 化 | 新規 repository, `load-auth-context.ts`, `route.ts`, scripts |
+| `organization-memberships` Repository 化 + `name` 追加 | 新規 repository, auth, route, scripts |
+| **`user-preferences` 廃止** | `load-auth-context.ts`, `create-organization.ts`, `POST /api/auth/organization`, クライアント localStorage 化 |
+| `organization-settings` に `createdAt`/`updatedAt` 追加 | repository, scripts |
+| `consultants.displayName` → `name`、API `rank` → `rankId` | domain, repository, openapi, route |
+
+### 4.3 優先度: 低（将来検討）
+
+| 変更 | 備考 |
+|---|---|
+| `consultants` Doc ID を `consultantId` 単体に | データ移行が必要。急ぎ不要 |
+| `price-plans` / `zoom-sessions` の Security Rules 追加 | Admin SDK のみなら現状維持可 |
+
+### 4.4 データ移行が必要な変更
+
+| 変更 | 移行方法 |
+|---|---|
+| `clients` → `customers` コレクションリネーム | Firestore コレクションコピー + フィールド `clientId`→`customerId`, `memo`→`note` |
+| `slots` フィールドリネーム | `startsAt`/`endsAt`/`isAvailable` + インデックス再作成 |
+| `bookings` 時刻フィールド | `startsAt`, `cancelDeadlineAt` |
+| `customers.birthdate` → `birthDate` | フィールドリネーム（値は `YYYY-MM-DD` のまま） |
+| `isReserved` → `isAvailable` | 値反転してコピー（`isAvailable = !isReserved`） |
+| `zoom-daily-sessions` → `zoom-sessions` | コレクションコピー |
+| `booking.zoomUrl` → `joinUrl` | フィールドリネーム |
+| `user-preferences` 削除 | ドキュメント削除（`lastOrganizationId` はクライアントへ） |
+
+---
+
+## 5. レビュー進捗
+
+| # | コレクション | 現状整理 | 正準名決定 | 影響整理 | 状態 |
+|---|---|---|---|---|---|
+| 1 | `bookings` | ✅ | ✅ | ✅ | **合意済み** |
+| 2 | `clients` → `customers` | ✅ | ✅ | ✅ | **合意済み** |
+| 3 | `consultant-price-plans` → `price-plans` | ✅ | ✅ | ✅ | **合意済み** |
+| 4 | `consultants` | ✅ | ✅ | ✅ | **合意済み** |
+| 5 | `organization-memberships` | ✅ | ✅ | ✅ | **合意済み** |
+| 6 | `organization-settings` | ✅ | ✅ | ✅ | **合意済み** |
+| 7 | `organizations` | ✅ | ✅ | ✅ | **合意済み** |
+| 8 | `payments` | ✅ | ✅ | ✅ | **合意済み** |
+| 9 | `slots` | ✅ | ✅ | ✅ | **合意済み** |
+| 10 | ~~`user-preferences`~~ 廃止 | ✅ | ✅ | ✅ | **合意済み** |
+| 11 | `zoom-daily-sessions` → `zoom-sessions` | ✅ | ✅ | ✅ | **合意済み** |
+
+**全11コレクションの命名レビュー完了（2026-06-26）**
+
+---
+
+## 付録: TS 定数 ↔ Firestore 実体（合意後）
+
+> 注: 以下は「目標状態」。2026-06-26 時点の現行実装（`firestore-collections.ts`）には未反映項目を含む。反映状況は「次のアクション（実装フェーズ）」を参照。
+
+```typescript
+// src/infrastructure/firestore/firestore-collections.ts（目標状態）
+export const FIRESTORE_COLLECTIONS = {
+  bookings: "bookings",
+  customers: "customers",           // was: clients
+  pricePlans: "price-plans",        // was: consultant-price-plans
+  consultants: "consultants",
+  organizationMemberships: "organization-memberships",
+  organizationSettings: "organization-settings",
+  organizations: "organizations",
+  payments: "payments",
+  slots: "slots",
+  zoomSessions: "zoom-sessions",    // was: zoom-daily-sessions
+  // userPreferences: 廃止
+} as const;
+```
+
+---
+
+## 次のアクション（実装フェーズ）
+
+1. **データ移行 PR**: コレクションリネーム（customers, price-plans, zoom-sessions）+ フィールド移行
+2. **slots PR**: `startsAt`/`endsAt` + `isAvailable` + インデックス更新
+3. **API 整合 PR**: 名称統一（`customer*`, `startsAt`/`endsAt`, `joinUrl`, `selectionId`, `consultationContent` 等）+ `pnpm generate`
+4. **Repository 化 PR**: organizations / organization-memberships
+5. **user-preferences 廃止 PR**: クライアント localStorage 化 + サーバー側削除
+6. **DDD_DESIGN.md 更新**: Client → Customer、用語表の整合
+
+---
+
+## 6. 一貫性監査（2026-06-26）
+
+### 6.1 ✅ 一貫している点
+
+| 観点 | 状態 |
+|---|---|
+| 外部キー `organizationId` | 全コレクションで統一 |
+| 外部キー `consultantId` | bookings / slots / price-plans でトップレベル統一（zoom-sessions は `breakoutRooms[].consultantId` で保持） |
+| 外部キー `customerId` | customers / bookings / payments / API 全スキーマで統一 |
+| API 顧客参照 | **`customer*` 統一**。`client*` プレフィックス禁止（§3.2 合意） |
+| エンティティ ID | `{entity}Id` 形式（`bookingId`, `slotId`, `paymentId` 等） |
+| 通貨 | `*JPY` サフィックス統一 |
+| 監査フィールド | 原則 `createdAt` / `updatedAt` を使用（例外: `zoom-sessions` は `createdAt` のみ） |
+| 表示名 | `name` に統一（organizations / consultants / memberships / customers） |
+| 参加 URL | `joinUrl` に統一（bookings / zoom-sessions） |
+| 区間端点 | **`startsAt` / `endsAt`** + フル datetime（bookings / slots / API） |
+| カレンダー日 | **`*Date`** + `YYYY-MM-DD` 文字列（`sessionDate`, `birthDate`, 休業日） |
+| 料金プラン選択 | API `selectionId`、永続化 `pricePlanId` で役割分離 |
+
+### 6.2 ⚠️ 台帳内の矛盾（修正済み）
+
+| 箇所 | 問題 | 対応 |
+|---|---|---|
+| §1.4 status 表 | §3.5 と矛盾（registered/pending） | 削除・§3.5 に合わせて更新 |
+| §3.5 連鎖影響 | user-preferences「次回レビュー」の記述が §3.10 と矛盾 | 修正 |
+| §1.5 null/omit | `client` のまま | `customer` に修正 |
+
+### 6.3 ✅ 合意済み / 許容の不整合
+
+#### A. Customer 統一（API `client*` 排除）✅ 合意済み（2026-06-26）
+
+| 現状 | 正準名 | 状態 |
+|---|---|---|
+| `ClientDetail` | **`CustomerDetail`** | 合意 |
+| `clientId`（BookingDetail / PaymentDetail） | **`customerId`** | 合意 |
+| `clientName` / `clientEmail` / `clientPhone` | **`customerName` / `customerEmail` / `customerPhone`** | 合意 |
+| ConsultantBookingDetail の `client` ネスト | **`customer`** | 合意 |
+
+**ルール**: API / Domain / FS すべて **`client*` 禁止**。詳細は §3.2。
+
+#### B. コレクション名の粒度（許容）
+
+| パターン | コレクション |
+|---|---|
+| `organization-*` プレフィックス | `organizations`, `organization-memberships`, `organization-settings` |
+| エンティティ単体名 | `bookings`, `customers`, `consultants`, `payments`, `slots`, `price-plans`, `zoom-sessions` |
+
+**現状**: 意図的な混在。org スコープの設定・所属は `organization-*`、業務エンティティは単体名。  
+**判断**: 許容範囲だが、`price-plans` だけ `consultantId` を持ちながら `consultant-` を外している点は命名方針として文書化が必要。
+
+#### C. 時刻・日付サフィックス ✅ 合意済み（§1.2 に昇格）
+
+§1.2 の4分類（`*At` / `startsAt·endsAt` / `*Date` / `*Time`）で確定。混在は意図的な型の違いによるもの。
+
+| 変更 | 正準名 |
+|---|---|
+| `birthdate` | **`birthDate`** |
+| `cancelDeadline` | **`cancelDeadlineAt`** |
+| `startDatetime`/`endDatetime`/`startAt`/`endAt` | **`startsAt`/`endsAt`** |
+| `sessionDate`, 休業 `startDate`/`endDate` | 維持（`*Date` + 文字列） |
+| businessHours `startTime`/`endTime` | 維持（`*Time` + `HH:mm`） |
+
+#### D. Domain 集約名 vs コレクション名（優先度: 低・許容）
+
+| Domain 集約 | コレクション | ズレ |
+|---|---|---|
+| `Customer` | `customers` | なし |
+| `ConsultantPricePlan` | `price-plans` | Domain に consultant 残存 |
+| `ZoomDailySession` | `zoom-sessions` | Domain に Daily 残存 |
+
+**判断**: コレクション名は短く、Domain は明示的 — DDD では一般的。リネーム不要。
+
+#### E. メモ系フィールド（優先度: 低・意図的分離）
+
+| 場所 | フィールド | 理由 |
+|---|---|---|
+| customers | `note` | 顧客メモ |
+| bookings | `consultantMemo` | 相談員の内部メモ（予約に紐づく） |
+
+**判断**: 主体が異なるため別名は妥当。統一不要。
+
+#### F. ~~payments テーブル漏れ~~（修正済み）
+
+§3.8 に `organizationId` を追記済み。
+
+### 6.4 第1回監査結論（2026-06-26）
+
+| 区分 | 件数 |
+|---|---|
+| 一貫性 OK | 12 項目 |
+| 台帳矛盾（修正済み） | 3 件 |
+| 合意済み | Customer 統一、日付4分類 |
+| 許容 | B〜E |
+
+### 6.5 第2回監査（2026-06-26）
+
+#### ✅ 整合性 OK（台帳内）
+
+| 観点 | 結果 |
+|---|---|
+| §1.2 日付4分類 ↔ §3.x 各コレクション | 一致（`*Date`/`startsAt`/`endsAt`/`*At`/`*Time`） |
+| Customer 統一 | §1.5 / §3.2 / §6.3-A / §4.1 で一貫 |
+| membership status | §1.4 / §3.5 一致（`active`/`invited`/`disabled`） |
+| joinUrl | §3.1 / §3.11 / §6.1 一致 |
+| 外部キー | `organizationId` 全コレクション、`customerId` 3コレクション、`consultantId` 4コレクション |
+
+#### ⚠️ 軽微な論点（許容・文書化済み）
+
+| 論点 | 内容 | 判断 |
+|---|---|---|
+| booking の `startsAt` | 区間ペアではなく単一時点。終了は slot の `endsAt` | §1.2 に「区間の開始のみ」行を追加して解消 |
+| Domain 名 vs コレクション名 | `ConsultantPricePlan`/`ZoomDailySession` vs 短縮コレクション名 | 許容（§6.3-D） |
+| `organization-*` vs 単体名混在 | コレクション粒度の意図的分離 | 許容（§6.3-B） |
+| `note` vs `consultantMemo` | 主体が異なるメモ | 許容（§6.3-E） |
+| `AggregatedSlot`（openapi） | 台帳未記載だが `startsAt`/`endsAt` に追随すれば OK | 実装時に openapi 更新で対応 |
+
+#### ❌ 台帳と現行コードのギャップ（想定内・未実装）
+
+| 項目 | 台帳（正） | 現行コード |
+|---|---|---|
+| コレクション名 | `customers`, `price-plans`, `zoom-sessions` | `clients`, `consultant-price-plans`, `zoom-daily-sessions` |
+| 時刻フィールド | `startsAt`/`endsAt` | `startDatetime`/`startAt` 混在 |
+| 顧客 | `customerId`, `CustomerDetail` | `clientId`, `ClientDetail` |
+| user-preferences | 廃止 | 存続 |
+
+→ 実装 PR 前の状態。付録に「目標状態」注記あり。
+
+#### 第2回監査結論
+
+**台帳内の一貫性: OK**（矛盾なし）。残る作業は現行コードへの反映のみ。

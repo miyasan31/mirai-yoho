@@ -5,13 +5,13 @@ import { createCompleteSetupUseCase } from "@/infrastructure/container";
 import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore-payment-repository";
 import { withNoStore } from "../../cache-control";
 
-let stripeClient: Stripe | null = null;
+let stripeCustomer: Stripe | null = null;
 
-function getStripeClient(): Stripe {
-  if (!stripeClient) {
-    stripeClient = new Stripe(envServer.stripeSecretKey);
+function getStripeCustomer(): Stripe {
+  if (!stripeCustomer) {
+    stripeCustomer = new Stripe(envServer.stripeSecretKey);
   }
-  return stripeClient;
+  return stripeCustomer;
 }
 
 export async function POST(request: Request) {
@@ -33,7 +33,7 @@ export async function POST(request: Request) {
 
   let event: Stripe.Event;
   try {
-    event = getStripeClient().webhooks.constructEvent(
+    event = getStripeCustomer().webhooks.constructEvent(
       body,
       signature,
       webhookSecret,

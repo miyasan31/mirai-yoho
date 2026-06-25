@@ -6,21 +6,21 @@ import { BookingStatus } from "@/domain/booking/booking-status";
 import { CancelDeadline } from "@/domain/booking/cancel-deadline";
 import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
-import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
+import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.bookings;
 
 interface BookingDoc {
   organizationId: string;
   bookingId: string;
-  clientId: string;
+  customerId: string;
   consultantId: string;
   slotId: string;
-  startDatetime: Timestamp;
+  startsAt: Timestamp;
   status: string;
-  cancelDeadline: Timestamp;
-  zoomUrl?: string;
+  cancelDeadlineAt: Timestamp;
+  joinUrl?: string;
   consultantJoinedAt?: Timestamp;
   consultationReminderEmailSentAt?: Timestamp;
   lateArrivalAlertSentAt?: Timestamp;
@@ -38,13 +38,13 @@ function toDomain(doc: BookingDoc): Booking {
   return BookingEntity.reconstruct({
     organizationId: doc.organizationId,
     bookingId: doc.bookingId,
-    clientId: doc.clientId,
+    customerId: doc.customerId,
     consultantId: doc.consultantId,
     slotId: doc.slotId,
-    startDatetime: doc.startDatetime.toDate(),
+    startsAt: doc.startsAt.toDate(),
     status: BookingStatus.reconstruct(doc.status),
-    cancelDeadline: CancelDeadline.reconstruct(doc.cancelDeadline.toDate()),
-    zoomUrl: doc.zoomUrl ? ZoomUrl.reconstruct(doc.zoomUrl) : undefined,
+    cancelDeadlineAt: CancelDeadline.reconstruct(doc.cancelDeadlineAt.toDate()),
+    joinUrl: doc.joinUrl ? ZoomUrl.reconstruct(doc.joinUrl) : undefined,
     consultantJoinedAt: doc.consultantJoinedAt?.toDate(),
     consultationReminderEmailSentAt:
       doc.consultationReminderEmailSentAt?.toDate(),
@@ -63,13 +63,13 @@ function toFirestore(booking: Booking): Record<string, unknown> {
   return {
     organizationId: booking.getOrganizationId(),
     bookingId: booking.getBookingId(),
-    clientId: booking.getClientId(),
+    customerId: booking.getCustomerId(),
     consultantId: booking.getConsultantId(),
     slotId: booking.getSlotId(),
-    startDatetime: booking.getStartDatetime(),
+    startsAt: booking.getStartsAt(),
     status: booking.getStatus().getValue(),
-    cancelDeadline: booking.getCancelDeadline().getValue(),
-    zoomUrl: booking.getZoomUrl()?.getValue() ?? null,
+    cancelDeadlineAt: booking.getCancelDeadlineAt().getValue(),
+    joinUrl: booking.getJoinUrl()?.getValue() ?? null,
     consultantJoinedAt: booking.getConsultantJoinedAt() ?? null,
     consultationReminderEmailSentAt:
       booking.getConsultationReminderEmailSentAt() ?? null,
@@ -128,8 +128,8 @@ export class FirestoreBookingRepository implements IBookingRepository {
       .collection(COLLECTION)
       .where("organizationId", "==", organizationId)
       .where("status", "==", "confirmed")
-      .where("startDatetime", ">", now)
-      .where("startDatetime", "<=", windowEnd)
+      .where("startsAt", ">", now)
+      .where("startsAt", "<=", windowEnd)
       .get();
 
     return snapshot.docs

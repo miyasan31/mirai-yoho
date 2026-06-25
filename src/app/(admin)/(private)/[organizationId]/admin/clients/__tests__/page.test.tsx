@@ -4,7 +4,7 @@ import type * as React from "react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockUseAdminClients = vi.fn();
+const mockUseAdminCustomers = vi.fn();
 const mockSetQuery = vi.fn(
   async () => new URLSearchParams("page=3&page-size=50&sort-by=2"),
 );
@@ -23,9 +23,9 @@ let mockQueryState: QueryState = {
   "sort-by": 2,
 };
 
-vi.mock("@/hooks/use-admin-clients", () => ({
-  useAdminClients: (params?: Record<string, unknown>) =>
-    mockUseAdminClients(params),
+vi.mock("@/hooks/use-admin-customers", () => ({
+  useAdminCustomers: (params?: Record<string, unknown>) =>
+    mockUseAdminCustomers(params),
 }));
 
 vi.mock("@/components/list-controls", () => ({
@@ -128,11 +128,11 @@ vi.mock("nuqs", () => ({
   useQueryStates: (...args: unknown[]) => mockUseQueryStates(...args),
 }));
 
-import AdminClientsPage from "../page";
+import AdminCustomersPage from "../page";
 
-describe("AdminClientsPage query params", () => {
+describe("AdminCustomersPage query params", () => {
   beforeEach(() => {
-    mockUseAdminClients.mockReset();
+    mockUseAdminCustomers.mockReset();
     mockSetQuery.mockClear();
     mockSearchParams = new URLSearchParams("page=3&page-size=50&sort-by=2");
     mockQueryState = {
@@ -142,10 +142,10 @@ describe("AdminClientsPage query params", () => {
     };
     mockUseQueryStates.mockReset();
     mockUseQueryStates.mockReturnValue([mockQueryState, mockSetQuery]);
-    mockUseAdminClients.mockReturnValue({
+    mockUseAdminCustomers.mockReturnValue({
       data: {
         data: {
-          clients: [],
+          customers: [],
           pagination: {
             page: 3,
             pageSize: 50,
@@ -159,9 +159,9 @@ describe("AdminClientsPage query params", () => {
   });
 
   it("passes URL query values to API query params", () => {
-    render(<AdminClientsPage />);
+    render(<AdminCustomersPage />);
 
-    expect(mockUseAdminClients).toHaveBeenCalledWith({
+    expect(mockUseAdminCustomers).toHaveBeenCalledWith({
       page: 3,
       pageSize: 50,
       sortBy: "updatedAt",

@@ -87,7 +87,7 @@ function buildBusinessHourRangesFromAllDaySelection(
   while (currentDay < end) {
     const timeRanges = businessHours.getEffectiveTimeRanges(currentDay);
     for (const timeRange of timeRanges) {
-      ranges.push(...splitIntoSlotRanges(timeRange.startAt, timeRange.endAt));
+      ranges.push(...splitIntoSlotRanges(timeRange.startsAt, timeRange.endsAt));
     }
     currentDay.setDate(currentDay.getDate() + 1);
   }
@@ -129,8 +129,8 @@ export default function ConsultantSlotsPage() {
     return slots.map((slot) => ({
       id: slot.slotId,
       title: "予約可能",
-      start: new Date(slot.startDatetime),
-      end: new Date(slot.endDatetime),
+      start: new Date(slot.startsAt),
+      end: new Date(slot.endsAt),
       type: "available" as const,
     }));
   }, [data]);
@@ -229,8 +229,8 @@ export default function ConsultantSlotsPage() {
               organizationId: organizationId ?? "",
               data: {
                 consultantId: user.uid,
-                startDatetime: range.start.toISOString(),
-                endDatetime: range.end.toISOString(),
+                startsAt: range.start.toISOString(),
+                endsAt: range.end.toISOString(),
               },
             }),
           ),

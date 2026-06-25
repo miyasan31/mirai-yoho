@@ -6,14 +6,14 @@ import { Booking } from "@/domain/booking/booking";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
-import { Client } from "@/domain/client/client";
-import type { IClientRepository } from "@/domain/client/client-repository";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
 import {
   type ConsultantPricePlan,
   parsePricePlanSelectionId,
 } from "@/domain/consultant-price-plan/consultant-price-plan";
 import type { IConsultantPricePlanRepository } from "@/domain/consultant-price-plan/consultant-price-plan-repository";
+import { Customer } from "@/domain/customer/customer";
+import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
 import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
 import { DomainError } from "@/domain/shared/domain-error";
@@ -25,19 +25,19 @@ import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-dai
 interface CreateBookingInput {
   organizationId: string;
   slotId?: string;
-  startDatetime?: Date;
-  endDatetime?: Date;
-  clientName: string;
-  clientEmail: string;
-  clientPhone: string;
-  clientBirthdate: string;
+  startsAt?: Date;
+  endsAt?: Date;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  customerBirthDate: string;
   consultationContent?: string;
-  pricePlanSelectionId: string;
+  selectionId: string;
 }
 
 interface CreateBookingOutput {
   bookingId: string;
-  zoomUrl: string;
+  joinUrl: string;
 }
 
 function toSessionDate(date: Date): string {
@@ -63,7 +63,7 @@ function toBreakoutRoomParams(
 export class CreateBookingUseCase {
   constructor(
     private readonly slotRepository: ISlotRepository,
-    private readonly clientRepository: IClientRepository,
+    private readonly customerRepository: ICustomerRepository,
     private readonly bookingRepository: IBookingRepository,
     private readonly zoomService: IZoomService,
     private readonly unitOfWork: IUnitOfWork,
@@ -80,37 +80,37 @@ export class CreateBookingUseCase {
     const bookingId = crypto.randomUUID();
     slot.reserve(bookingId);
 
-    const existingClient = await this.clientRepository.findByEmail(
+    const existingCustomer = await this.customerRepository.findByEmail(
       input.organizationId,
-      input.clientEmail,
+      input.customerEmail,
     );
-    const client =
-      existingClient ??
-      Client.create({
+    const customer =
+      existingCustomer ??
+      Customer.create({
         organizationId: input.organizationId,
-        clientId: crypto.randomUUID(),
-        name: input.clientName,
-        email: input.clientEmail,
-        phone: input.clientPhone,
-        birthdate: input.clientBirthdate,
+        customerId: crypto.randomUUID(),
+        name: input.customerName,
+        email: input.customerEmail,
+        phone: input.customerPhone,
+        birthDate: input.customerBirthDate,
       });
 
-    if (existingClient) {
-      existingClient.updateInfo({
-        name: input.clientName,
-        email: input.clientEmail,
-        phone: input.clientPhone,
-        birthdate: input.clientBirthdate,
+    if (existingCustomer) {
+      existingCustomer.updateInfo({
+        name: input.customerName,
+        email: input.customerEmail,
+        phone: input.customerPhone,
+        birthDate: input.customerBirthDate,
       });
     }
 
     const booking = Booking.create({
       organizationId: input.organizationId,
       bookingId,
-      clientId: client.getClientId(),
+      customerId: customer.getCustomerId(),
       consultantId: slot.getConsultantId(),
       slotId: slot.getSlotId(),
-      startDatetime: slot.getTimeRange().getStartAt(),
+      startsAt: slot.getTimeRange().getStartsAt(),
       consultantMemo: ConsultantMemo.create(""),
       consultationContent: input.consultationContent,
       pricePlanId: pricePlan.getPricePlanId(),
@@ -127,7 +127,7 @@ export class CreateBookingUseCase {
     }
     const consultantName = consultant.getProfile().getDisplayName();
 
-    const sessionDate = toSessionDate(slot.getTimeRange().getStartAt());
+    const sessionDate = toSessionDate(slot.getTimeRange().getStartsAt());
     const existingSession = await this.zoomDailySessionRepository.findByDate(
       input.organizationId,
       sessionDate,
@@ -141,7 +141,7 @@ export class CreateBookingUseCase {
         session.assignParticipant(
           slot.getConsultantId(),
           consultantName,
-          input.clientEmail,
+          input.customerEmail,
         );
         await this.zoomService.updateBreakoutRooms({
           meetingId: session.getZoomMeetingId(),
@@ -156,7 +156,7 @@ export class CreateBookingUseCase {
         session.assignParticipant(
           slot.getConsultantId(),
           consultantName,
-          input.clientEmail,
+          input.customerEmail,
         );
         const { meetingId, joinUrl } =
           await this.zoomService.createDailyMeeting({
@@ -173,16 +173,16 @@ export class CreateBookingUseCase {
       );
     }
 
-    const zoomUrl = ZoomUrl.create(session.getJoinUrl());
-    booking.confirm(zoomUrl);
+    const joinUrl = ZoomUrl.create(session.getJoinUrl());
+    booking.confirm(joinUrl);
 
     try {
       await this.emailService.sendBookingConfirmation({
-        clientEmail: input.clientEmail,
-        clientName: input.clientName,
+        customerEmail: input.customerEmail,
+        customerName: input.customerName,
         consultantName,
-        zoomUrl: session.getJoinUrl(),
-        startDatetime: booking.getStartDatetime(),
+        joinUrl: session.getJoinUrl(),
+        startsAt: booking.getStartsAt(),
         bookingId,
       });
     } catch {
@@ -195,19 +195,19 @@ export class CreateBookingUseCase {
     booking.pullDomainEvents();
 
     await this.unitOfWork.runInTransaction(async () => {
-      await this.clientRepository.save(client);
+      await this.customerRepository.save(customer);
       await this.slotRepository.save(slot);
       await this.bookingRepository.save(booking);
       await this.zoomDailySessionRepository.save(session);
     });
 
-    return { bookingId, zoomUrl: session.getJoinUrl() };
+    return { bookingId, joinUrl: session.getJoinUrl() };
   }
 
   private async resolveSlotAndPricePlan(
     input: CreateBookingInput,
   ): Promise<{ slot: Slot; pricePlan: ConsultantPricePlan }> {
-    const selection = parsePricePlanSelectionId(input.pricePlanSelectionId);
+    const selection = parsePricePlanSelectionId(input.selectionId);
     if (!selection) {
       throw new AppError(
         400,
@@ -245,14 +245,14 @@ export class CreateBookingUseCase {
       return { slot, pricePlan };
     }
 
-    if (!input.startDatetime || !input.endDatetime) {
+    if (!input.startsAt || !input.endsAt) {
       throw new Error("Booking slot information is required");
     }
 
     const candidateSlots = await this.slotRepository.findAvailableByTimeRange(
       input.organizationId,
-      input.startDatetime,
-      input.endDatetime,
+      input.startsAt,
+      input.endsAt,
     );
 
     const candidateSlotsWithPricePlans = await Promise.all(
@@ -282,7 +282,7 @@ export class CreateBookingUseCase {
 
     const dailySlots = await this.slotRepository.findAvailableByDate(
       input.organizationId,
-      input.startDatetime,
+      input.startsAt,
     );
     const availableCountByConsultant = new Map<string, number>();
 

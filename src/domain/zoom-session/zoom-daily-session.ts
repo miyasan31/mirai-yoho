@@ -69,14 +69,14 @@ export class ZoomDailySession extends AggregateRoot {
   assignParticipant(
     consultantId: string,
     consultantName: string,
-    clientEmail: string,
+    customerEmail: string,
   ): void {
     const existingRoom = this.breakoutRooms.find(
       (r) => r.getConsultantId() === consultantId,
     );
 
     if (existingRoom) {
-      const updatedRoom = existingRoom.addParticipant(clientEmail);
+      const updatedRoom = existingRoom.addParticipant(customerEmail);
       this.breakoutRooms = this.breakoutRooms.map((r) =>
         r.getConsultantId() === consultantId ? updatedRoom : r,
       );
@@ -84,16 +84,16 @@ export class ZoomDailySession extends AggregateRoot {
       const newRoom = BreakoutRoom.create({
         consultantId,
         roomName: consultantName,
-        participantEmails: [clientEmail],
+        participantEmails: [customerEmail],
       });
       this.breakoutRooms = [...this.breakoutRooms, newRoom];
     }
   }
 
-  removeParticipant(clientEmail: string): void {
+  removeParticipant(customerEmail: string): void {
     this.breakoutRooms = this.breakoutRooms.map((room) =>
-      room.hasParticipant(clientEmail)
-        ? room.removeParticipant(clientEmail)
+      room.hasParticipant(customerEmail)
+        ? room.removeParticipant(customerEmail)
         : room,
     );
   }

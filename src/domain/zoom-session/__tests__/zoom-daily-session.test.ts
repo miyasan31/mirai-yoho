@@ -12,9 +12,9 @@ describe("BreakoutRoom", () => {
       participantEmails: [],
     });
 
-    const updated = room.addParticipant("client@example.com");
+    const updated = room.addParticipant("customer@example.com");
 
-    expect(updated.getParticipantEmails()).toEqual(["client@example.com"]);
+    expect(updated.getParticipantEmails()).toEqual(["customer@example.com"]);
     expect(room.getParticipantEmails()).toEqual([]);
   });
 
@@ -22,10 +22,10 @@ describe("BreakoutRoom", () => {
     const room = BreakoutRoom.create({
       consultantId: "c-1",
       roomName: "田中太郎",
-      participantEmails: ["client@example.com"],
+      participantEmails: ["customer@example.com"],
     });
 
-    expect(() => room.addParticipant("client@example.com")).toThrow(
+    expect(() => room.addParticipant("customer@example.com")).toThrow(
       DomainError,
     );
   });
@@ -50,10 +50,10 @@ describe("BreakoutRoom", () => {
     const room = BreakoutRoom.create({
       consultantId: "c-1",
       roomName: "田中太郎",
-      participantEmails: ["client@example.com"],
+      participantEmails: ["customer@example.com"],
     });
 
-    expect(room.hasParticipant("client@example.com")).toBe(true);
+    expect(room.hasParticipant("customer@example.com")).toBe(true);
     expect(room.hasParticipant("other@example.com")).toBe(false);
   });
 });
@@ -99,32 +99,32 @@ describe("ZoomDailySession", () => {
   describe("assignParticipant", () => {
     it("新しい相談員のルームが作成され参加者が追加される", () => {
       const session = createSession();
-      session.assignParticipant("c-1", "田中太郎", "client@example.com");
+      session.assignParticipant("c-1", "田中太郎", "customer@example.com");
 
       const rooms = session.getBreakoutRooms();
       expect(rooms).toHaveLength(1);
       expect(rooms[0].getConsultantId()).toBe("c-1");
       expect(rooms[0].getRoomName()).toBe("田中太郎");
-      expect(rooms[0].getParticipantEmails()).toEqual(["client@example.com"]);
+      expect(rooms[0].getParticipantEmails()).toEqual(["customer@example.com"]);
     });
 
     it("既存の相談員ルームに参加者を追加できる", () => {
       const session = createSession();
-      session.assignParticipant("c-1", "田中太郎", "client1@example.com");
-      session.assignParticipant("c-1", "田中太郎", "client2@example.com");
+      session.assignParticipant("c-1", "田中太郎", "customer1@example.com");
+      session.assignParticipant("c-1", "田中太郎", "customer2@example.com");
 
       const rooms = session.getBreakoutRooms();
       expect(rooms).toHaveLength(1);
       expect(rooms[0].getParticipantEmails()).toEqual([
-        "client1@example.com",
-        "client2@example.com",
+        "customer1@example.com",
+        "customer2@example.com",
       ]);
     });
 
     it("異なる相談員には別のルームが作成される", () => {
       const session = createSession();
-      session.assignParticipant("c-1", "田中太郎", "client1@example.com");
-      session.assignParticipant("c-2", "佐藤花子", "client2@example.com");
+      session.assignParticipant("c-1", "田中太郎", "customer1@example.com");
+      session.assignParticipant("c-2", "佐藤花子", "customer2@example.com");
 
       const rooms = session.getBreakoutRooms();
       expect(rooms).toHaveLength(2);
@@ -134,10 +134,10 @@ describe("ZoomDailySession", () => {
 
     it("同じメールを同じルームに二重追加すると PARTICIPANT_ALREADY_ASSIGNED エラー", () => {
       const session = createSession();
-      session.assignParticipant("c-1", "田中太郎", "client@example.com");
+      session.assignParticipant("c-1", "田中太郎", "customer@example.com");
 
       expect(() =>
-        session.assignParticipant("c-1", "田中太郎", "client@example.com"),
+        session.assignParticipant("c-1", "田中太郎", "customer@example.com"),
       ).toThrow(DomainError);
     });
   });
@@ -145,8 +145,8 @@ describe("ZoomDailySession", () => {
   describe("removeParticipant", () => {
     it("参加者をルームから削除できる", () => {
       const session = createSession();
-      session.assignParticipant("c-1", "田中太郎", "client@example.com");
-      session.removeParticipant("client@example.com");
+      session.assignParticipant("c-1", "田中太郎", "customer@example.com");
+      session.removeParticipant("customer@example.com");
 
       const rooms = session.getBreakoutRooms();
       expect(rooms).toHaveLength(1);
@@ -155,7 +155,7 @@ describe("ZoomDailySession", () => {
 
     it("存在しないメールを削除してもエラーにならない", () => {
       const session = createSession();
-      session.assignParticipant("c-1", "田中太郎", "client@example.com");
+      session.assignParticipant("c-1", "田中太郎", "customer@example.com");
 
       expect(() =>
         session.removeParticipant("nonexistent@example.com"),
@@ -175,7 +175,7 @@ describe("ZoomDailySession", () => {
           BreakoutRoom.create({
             consultantId: "c-1",
             roomName: "田中太郎",
-            participantEmails: ["client@example.com"],
+            participantEmails: ["customer@example.com"],
           }),
         ],
         createdAt: new Date("2026-04-01T00:00:00Z"),

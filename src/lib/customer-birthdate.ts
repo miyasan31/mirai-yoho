@@ -30,7 +30,7 @@ function toUtcDateValue(parts: BirthdateParts): number {
   return Date.UTC(parts.year, parts.month - 1, parts.day);
 }
 
-export function isValidClientBirthdateFormat(value: string): boolean {
+export function isValidCustomerBirthdateFormat(value: string): boolean {
   const parts = parseBirthdateParts(value);
   if (!parts) return false;
 
@@ -44,20 +44,20 @@ export function isValidClientBirthdateFormat(value: string): boolean {
   );
 }
 
-export function isFutureClientBirthdate(
+export function isFutureCustomerBirthdate(
   value: string,
   now = new Date(),
 ): boolean {
   const parts = parseBirthdateParts(value);
   if (!parts) return false;
-  if (!isValidClientBirthdateFormat(value)) return false;
+  if (!isValidCustomerBirthdateFormat(value)) return false;
 
-  const birthdateUtc = toUtcDateValue(parts);
+  const birthDateUtc = toUtcDateValue(parts);
   const todayUtc = Date.UTC(
     now.getUTCFullYear(),
     now.getUTCMonth(),
     now.getUTCDate(),
   );
 
-  return birthdateUtc > todayUtc;
+  return birthDateUtc > todayUtc;
 }

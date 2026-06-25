@@ -13,7 +13,7 @@ export default function BookingCompletePage() {
   const searchParams = useSearchParams();
   const { buildPath } = useOrganizationRouting();
   const bookingId = searchParams.get("bookingId");
-  const zoomUrl = searchParams.get("zoomUrl");
+  const joinUrl = searchParams.get("joinUrl");
   const mode = searchParams.get("mode");
 
   const isSetupMode = mode === "setup";
@@ -46,7 +46,7 @@ export default function BookingCompletePage() {
         </Tooltip>
       )}
 
-      {zoomUrl && (
+      {joinUrl && (
         <styled.div
           mb="8"
           p="6"
@@ -60,7 +60,7 @@ export default function BookingCompletePage() {
             Zoom ミーティング URL
           </Text>
           <styled.a
-            href={zoomUrl}
+            href={joinUrl}
             target="_blank"
             rel="noopener noreferrer"
             color="colorPalette.default"
@@ -68,7 +68,7 @@ export default function BookingCompletePage() {
             wordBreak="break-all"
             _hover={{ color: "colorPalette.emphasized" }}
           >
-            {zoomUrl}
+            {joinUrl}
           </styled.a>
         </styled.div>
       )}

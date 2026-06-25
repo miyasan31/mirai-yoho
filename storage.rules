@@ -1,7 +1,7 @@
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
-    // Browser clients never access Storage through the Firebase SDK. Uploads use
+    // Browser customers never access Storage through the Firebase SDK. Uploads use
     // short-lived V4 signed URLs issued by the authenticated application server.
     allow read, write: if false;
   }

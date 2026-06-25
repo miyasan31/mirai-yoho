@@ -19,20 +19,20 @@ import { useListQueryParams } from "@/hooks/use-list-query-params";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import { ConsultantJoinControl } from "./consultant-join-control";
 
-type ClientSummary = {
-  clientId: string;
+type CustomerSummary = {
+  customerId: string;
   name: string;
   email: string;
   phone: string;
   memo?: string | null;
 };
 
-function ClientCell({
-  clientId,
-  client,
+function CustomerCell({
+  customerId,
+  customer,
 }: {
-  clientId: string;
-  client: ClientSummary | null;
+  customerId: string;
+  customer: CustomerSummary | null;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -46,16 +46,16 @@ function ClientCell({
       showArrow
       content={
         <styled.div display="flex" flexDir="column" gap="1" minW="240px">
-          {client ? (
+          {customer ? (
             <>
               <Text textStyle="sm" fontWeight="bold">
-                {client.name}
+                {customer.name}
               </Text>
               <Text textStyle="xs" color="fg.muted">
-                メール: {client.email}
+                メール: {customer.email}
               </Text>
               <Text textStyle="xs" color="fg.muted">
-                電話: {client.phone}
+                電話: {customer.phone}
               </Text>
             </>
           ) : (
@@ -65,10 +65,10 @@ function ClientCell({
       }
     >
       <styled.span cursor="default" display="inline-block">
-        {client ? (
-          <Text textStyle="sm">{client.name}</Text>
+        {customer ? (
+          <Text textStyle="sm">{customer.name}</Text>
         ) : (
-          <TruncatedId id={clientId} />
+          <TruncatedId id={customerId} />
         )}
       </styled.span>
     </HoverCard>
@@ -144,23 +144,23 @@ export default function ConsultantBookingsPage() {
               {bookings.map((b) => (
                 <Table.Row key={b.bookingId}>
                   <Table.Cell>
-                    {new Date(b.startDatetime).toLocaleString("ja-JP")}
+                    {new Date(b.startsAt).toLocaleString("ja-JP")}
                   </Table.Cell>
                   <Table.Cell>
                     <BookingStatusBadge status={b.status} />
                   </Table.Cell>
                   <Table.Cell>
-                    <ClientCell
-                      clientId={b.clientId}
-                      client={b.client ?? null}
+                    <CustomerCell
+                      customerId={b.customerId}
+                      customer={b.customer ?? null}
                     />
                   </Table.Cell>
                   <Table.Cell>
-                    {b.zoomUrl ? (
+                    {b.joinUrl ? (
                       <Tooltip content="Zoom に参加" showArrow>
                         <IconButton variant="subtle" size="sm" asChild>
                           <a
-                            href={b.zoomUrl}
+                            href={b.joinUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                           >
@@ -184,7 +184,7 @@ export default function ConsultantBookingsPage() {
                   <Table.Cell>
                     <ConsultantJoinControl
                       bookingId={b.bookingId}
-                      startDatetime={b.startDatetime}
+                      startsAt={b.startsAt}
                       status={b.status}
                       consultantJoinedAt={b.consultantJoinedAt ?? null}
                       onJoined={() => {

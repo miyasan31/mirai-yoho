@@ -6,18 +6,18 @@ Usage:
 # 同じ時間帯に2つのブレイクアウトルーム
 pnpm dlx tsx scripts/create-zoom-breakout-test.ts same-time \
   --room1-consultant miyasan.dev@gmail.com \
-  --room1-client crzbe35290@yahoo.co.jp \
+  --room1-customer crzbe35290@yahoo.co.jp \
   --room2-consultant miyasan.dev@gmail.com \
-  --room2-client ms.0301@icloud.com \
+  --room2-customer ms.0301@icloud.com \
   --date 2026-04-01
 
 # 違う時間帯に2つのブレイクアウトルーム
 pnpm dlx tsx scripts/create-zoom-breakout-test.ts different-time \
   --room1-consultant miyasan.dev@gmail.com \
-  --room1-client crzbe35290@yahoo.co.jp \
+  --room1-customer crzbe35290@yahoo.co.jp \
   --room1-hour 10 \
   --room2-consultant miyasan.dev@gmail.com \
-  --room2-client ms.0301@icloud.com \
+  --room2-customer ms.0301@icloud.com \
   --room2-hour 14 \
   --date 2026-04-01
  */
@@ -63,9 +63,9 @@ function getTomorrowDate(): string {
 
 async function getAccessToken(): Promise<string> {
   const accountId = process.env.ZOOM_ACCOUNT_ID as string;
-  const clientId = process.env.ZOOM_CLIENT_ID as string;
-  const clientSecret = process.env.ZOOM_CLIENT_SECRET as string;
-  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString(
+  const customerId = process.env.ZOOM_CLIENT_ID as string;
+  const customerSecret = process.env.ZOOM_CLIENT_SECRET as string;
+  const credentials = Buffer.from(`${customerId}:${customerSecret}`).toString(
     "base64",
   );
 
@@ -152,14 +152,19 @@ function printMeeting(
 async function sameTime(argv: string[]) {
   const args = parseArgs(argv);
   const room1Consultant = args["room1-consultant"];
-  const room1Client = args["room1-client"];
+  const room1Customer = args["room1-customer"];
   const room2Consultant = args["room2-consultant"];
-  const room2Client = args["room2-client"];
+  const room2Customer = args["room2-customer"];
   const date = args.date || getTomorrowDate();
 
-  if (!room1Consultant || !room1Client || !room2Consultant || !room2Client) {
+  if (
+    !room1Consultant ||
+    !room1Customer ||
+    !room2Consultant ||
+    !room2Customer
+  ) {
     console.error(
-      "Usage: same-time --room1-consultant <email> --room1-client <email> --room2-consultant <email> --room2-client <email> [--date YYYY-MM-DD]",
+      "Usage: same-time --room1-consultant <email> --room1-customer <email> --room2-consultant <email> --room2-customer <email> [--date YYYY-MM-DD]",
     );
     process.exit(1);
   }
@@ -167,8 +172,8 @@ async function sameTime(argv: string[]) {
   const token = await getAccessToken();
 
   const rooms = [
-    { name: "Room 1", participants: [room1Consultant, room1Client] },
-    { name: "Room 2", participants: [room2Consultant, room2Client] },
+    { name: "Room 1", participants: [room1Consultant, room1Customer] },
+    { name: "Room 2", participants: [room2Consultant, room2Customer] },
   ];
 
   const topic = `未来予報 ブレイクアウトテスト (same-time) ${date}`;
@@ -187,16 +192,21 @@ async function sameTime(argv: string[]) {
 async function differentTime(argv: string[]) {
   const args = parseArgs(argv);
   const room1Consultant = args["room1-consultant"];
-  const room1Client = args["room1-client"];
+  const room1Customer = args["room1-customer"];
   const room1Hour = args["room1-hour"] || "10";
   const room2Consultant = args["room2-consultant"];
-  const room2Client = args["room2-client"];
+  const room2Customer = args["room2-customer"];
   const room2Hour = args["room2-hour"] || "14";
   const date = args.date || getTomorrowDate();
 
-  if (!room1Consultant || !room1Client || !room2Consultant || !room2Client) {
+  if (
+    !room1Consultant ||
+    !room1Customer ||
+    !room2Consultant ||
+    !room2Customer
+  ) {
     console.error(
-      "Usage: different-time --room1-consultant <email> --room1-client <email> [--room1-hour 10] --room2-consultant <email> --room2-client <email> [--room2-hour 14] [--date YYYY-MM-DD]",
+      "Usage: different-time --room1-consultant <email> --room1-customer <email> [--room1-hour 10] --room2-consultant <email> --room2-customer <email> [--room2-hour 14] [--date YYYY-MM-DD]",
     );
     process.exit(1);
   }
@@ -207,7 +217,7 @@ async function differentTime(argv: string[]) {
   const h2 = room2Hour.padStart(2, "0");
 
   const rooms1 = [
-    { name: "Room 1", participants: [room1Consultant, room1Client] },
+    { name: "Room 1", participants: [room1Consultant, room1Customer] },
   ];
   const topic1 = `未来予報 ブレイクアウトテスト (different-time Room1 ${h1}:00) ${date}`;
 
@@ -222,7 +232,7 @@ async function differentTime(argv: string[]) {
   printMeeting(meeting1, topic1, rooms1);
 
   const rooms2 = [
-    { name: "Room 2", participants: [room2Consultant, room2Client] },
+    { name: "Room 2", participants: [room2Consultant, room2Customer] },
   ];
   const topic2 = `未来予報 ブレイクアウトテスト (different-time Room2 ${h2}:00) ${date}`;
 

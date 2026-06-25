@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 
 const mockUseAdminBookings = vi.fn();
 const mockUseAdminPayments = vi.fn();
-const mockUseAdminClients = vi.fn();
+const mockUseAdminCustomers = vi.fn();
 const mockUseAuth = vi.fn();
 
 vi.mock("@/hooks/use-admin-bookings", () => ({
@@ -15,11 +15,11 @@ vi.mock("@/hooks/use-admin-payments", () => ({
   useAdminPayments: () => mockUseAdminPayments(),
 }));
 
-vi.mock("@/hooks/use-admin-clients", () => ({
-  useAdminClients: (
+vi.mock("@/hooks/use-admin-customers", () => ({
+  useAdminCustomers: (
     params?: Record<string, unknown>,
     options?: { enabled?: boolean },
-  ) => mockUseAdminClients(params, options),
+  ) => mockUseAdminCustomers(params, options),
 }));
 
 vi.mock("@/hooks/use-auth", () => ({
@@ -128,12 +128,12 @@ describe("AdminHomePage", () => {
           bookings: [
             {
               bookingId: "booking-1",
-              clientId: "client-1",
+              customerId: "customer-1",
               consultantId: "consultant-1",
               slotId: "slot-1",
-              startDatetime: plus1h,
+              startsAt: plus1h,
               status: "confirmed",
-              zoomUrl: null,
+              joinUrl: null,
               consultantMemo: "",
               consultationContent: null,
               chargeable: true,
@@ -141,12 +141,12 @@ describe("AdminHomePage", () => {
             },
             {
               bookingId: "booking-2",
-              clientId: "client-2",
+              customerId: "customer-2",
               consultantId: "consultant-1",
               slotId: "slot-2",
-              startDatetime: plus2h,
+              startsAt: plus2h,
               status: "completed",
-              zoomUrl: null,
+              joinUrl: null,
               consultantMemo: " ",
               consultationContent: null,
               chargeable: false,
@@ -165,7 +165,7 @@ describe("AdminHomePage", () => {
             {
               paymentId: "payment-1",
               bookingId: "booking-1",
-              clientId: "client-1",
+              customerId: "customer-1",
               paymentStrategy: "deferred",
               stripePaymentIntentId: null,
               stripeSetupIntentId: null,
@@ -182,19 +182,19 @@ describe("AdminHomePage", () => {
       isLoading: false,
       error: null,
     });
-    mockUseAdminClients.mockReturnValue({
+    mockUseAdminCustomers.mockReturnValue({
       data: {
         data: {
-          clients: [
+          customers: [
             {
-              clientId: "client-1",
+              customerId: "customer-1",
               name: "山田 太郎",
               email: "taro@example.com",
               phone: "090-0000-0000",
               memo: null,
             },
             {
-              clientId: "client-2",
+              customerId: "customer-2",
               name: "佐藤 花子",
               email: "hanako@example.com",
               phone: "080-0000-0000",
@@ -234,7 +234,7 @@ describe("AdminHomePage", () => {
       screen.getByRole("link", { name: "設定を編集する" }),
     ).toHaveAttribute("href", "/org-test/admin/settings");
 
-    expect(mockUseAdminClients).toHaveBeenCalledWith(
+    expect(mockUseAdminCustomers).toHaveBeenCalledWith(
       { page: 1, pageSize: 100, sortBy: "createdAt", sortOrder: "desc" },
       { enabled: true },
     );
@@ -252,8 +252,8 @@ describe("AdminHomePage", () => {
       isLoading: false,
       error: null,
     });
-    mockUseAdminClients.mockReturnValue({
-      data: { data: { clients: [] } },
+    mockUseAdminCustomers.mockReturnValue({
+      data: { data: { customers: [] } },
       isLoading: false,
       error: null,
     });
@@ -271,7 +271,7 @@ describe("AdminHomePage", () => {
     mockUseAuth.mockReturnValue({ role: "admin" });
     mockUseAdminBookings.mockReturnValue({ isLoading: true });
     mockUseAdminPayments.mockReturnValue({ isLoading: false });
-    mockUseAdminClients.mockReturnValue({ isLoading: false });
+    mockUseAdminCustomers.mockReturnValue({ isLoading: false });
 
     render(<AdminHomePage />);
 

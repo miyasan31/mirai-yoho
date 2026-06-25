@@ -7,5 +7,5 @@ const firebaseConfig = {
   projectId: envClient.firebaseProjectId,
 };
 
-export const firebaseClientApp =
+export const firebaseCustomerApp =
   getApps().length > 0 ? getApps()[0] : initializeApp(firebaseConfig);

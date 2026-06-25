@@ -466,23 +466,23 @@ export class BusinessHours {
     return weekly.timeWindows.map(cloneTimeWindow);
   }
 
-  getEffectiveTimeRanges(date: Date): Array<{ startAt: Date; endAt: Date }> {
+  getEffectiveTimeRanges(date: Date): Array<{ startsAt: Date; endsAt: Date }> {
     const jst = getJstDateParts(date);
     const windows = this.getEffectiveTimeWindows(date);
     return windows.map((window) => {
       const startMinutes = parseTimeToMinutes(window.startTime);
       const endMinutes = parseTimeToMinutes(window.endTime);
       return {
-        startAt: buildDateFromJst(jst.year, jst.month, jst.day, startMinutes),
-        endAt: buildDateFromJst(jst.year, jst.month, jst.day, endMinutes),
+        startsAt: buildDateFromJst(jst.year, jst.month, jst.day, startMinutes),
+        endsAt: buildDateFromJst(jst.year, jst.month, jst.day, endMinutes),
       };
     });
   }
 
-  containsRange(startAt: Date, endAt: Date): boolean {
-    if (endAt <= startAt) return false;
-    const startParts = getJstDateParts(startAt);
-    const endParts = getJstDateParts(new Date(endAt.getTime() - 1));
+  containsRange(startsAt: Date, endsAt: Date): boolean {
+    if (endsAt <= startsAt) return false;
+    const startParts = getJstDateParts(startsAt);
+    const endParts = getJstDateParts(new Date(endsAt.getTime() - 1));
     if (
       startParts.year !== endParts.year ||
       startParts.month !== endParts.month ||
@@ -491,9 +491,9 @@ export class BusinessHours {
       return false;
     }
 
-    const windows = this.getEffectiveTimeRanges(startAt);
+    const windows = this.getEffectiveTimeRanges(startsAt);
     return windows.some(
-      (window) => startAt >= window.startAt && endAt <= window.endAt,
+      (window) => startsAt >= window.startsAt && endsAt <= window.endsAt,
     );
   }
 

@@ -7,24 +7,24 @@ import { ListControls } from "@/components/list-controls";
 import { TableSkeleton } from "@/components/table-skeleton";
 import * as Table from "@/components/ui/table";
 import { Text } from "@/components/ui/text";
-import { useAdminClients } from "@/hooks/use-admin-clients";
+import { useAdminCustomers } from "@/hooks/use-admin-customers";
 import { useListQueryParams } from "@/hooks/use-list-query-params";
 
-export default function AdminClientsPage() {
+export default function AdminCustomersPage() {
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
     useListQueryParams();
-  const { data, isLoading } = useAdminClients({
+  const { data, isLoading } = useAdminCustomers({
     page,
     pageSize,
     sortBy,
     sortOrder: "desc",
   });
 
-  const clients = data?.data?.clients ?? [];
+  const customers = data?.data?.customers ?? [];
   const pagination = data?.data?.pagination ?? {
     page,
     pageSize,
-    total: clients.length,
+    total: customers.length,
     totalPages: 1,
   };
 
@@ -54,7 +54,7 @@ export default function AdminClientsPage() {
           利用者情報を一覧で確認し、連絡先や登録内容を参照する画面です。
         </Text>
       </styled.div>
-      {clients.length === 0 ? (
+      {customers.length === 0 ? (
         <EmptyState
           icon={Building2}
           message="クライアントはいません"
@@ -72,8 +72,8 @@ export default function AdminClientsPage() {
               </Table.Row>
             </Table.Head>
             <Table.Body>
-              {clients.map((c) => (
-                <Table.Row key={c.clientId}>
+              {customers.map((c) => (
+                <Table.Row key={c.customerId}>
                   <Table.Cell>{c.name}</Table.Cell>
                   <Table.Cell>{c.email}</Table.Cell>
                   <Table.Cell>{c.phone}</Table.Cell>

@@ -96,7 +96,7 @@ export default function ConsultantsPage() {
   const groupedAggregatedSlots = useMemo(() => {
     const groups: Record<string, typeof aggregatedSlots> = {};
     for (const slot of aggregatedSlots) {
-      const dateKey = formatDate(slot.startDatetime);
+      const dateKey = formatDate(slot.startsAt);
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
@@ -287,9 +287,9 @@ export default function ConsultantsPage() {
               <styled.div display="flex" flexDirection="column" gap="2">
                 {dateSlots.map((slot) => (
                   <styled.a
-                    key={`${slot.startDatetime}_${slot.endDatetime}`}
+                    key={`${slot.startsAt}_${slot.endsAt}`}
                     href={buildPath(
-                      `/booking?startDatetime=${encodeURIComponent(slot.startDatetime)}&endDatetime=${encodeURIComponent(slot.endDatetime)}`,
+                      `/booking?startsAt=${encodeURIComponent(slot.startsAt)}&endsAt=${encodeURIComponent(slot.endsAt)}`,
                     )}
                     shadow="xs"
                     border="1px solid"
@@ -308,8 +308,7 @@ export default function ConsultantsPage() {
                     }}
                   >
                     <Text fontWeight="medium" mb="1">
-                      {formatTime(slot.startDatetime)} 〜{" "}
-                      {formatTime(slot.endDatetime)}
+                      {formatTime(slot.startsAt)} 〜 {formatTime(slot.endsAt)}
                     </Text>
                   </styled.a>
                 ))}

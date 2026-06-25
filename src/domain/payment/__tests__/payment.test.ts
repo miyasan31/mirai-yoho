@@ -9,7 +9,7 @@ function createDeferredPayment() {
     organizationId: ORGANIZATION_ID,
     paymentId: "pay-1",
     bookingId: "booking-1",
-    clientId: "client-1",
+    customerId: "customer-1",
     stripeSetupIntentId: "si_test_123",
     money: Money.create(10000, 0.1),
   });
@@ -40,7 +40,7 @@ describe("Payment", () => {
         organizationId: ORGANIZATION_ID,
         paymentId: "pay-2",
         bookingId: "booking-2",
-        clientId: "client-2",
+        customerId: "customer-2",
         stripePaymentIntentId: "pi_test_123",
         money: Money.create(10000, 0.1),
       });

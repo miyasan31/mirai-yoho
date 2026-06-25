@@ -2,7 +2,7 @@ import { DomainError } from "@/domain/shared/domain-error";
 
 export class ConsultantProfile {
   private constructor(
-    private readonly displayName: string,
+    private readonly name: string,
     private readonly bio: string,
     private readonly specialties: readonly string[],
     private readonly phone: string,
@@ -10,45 +10,33 @@ export class ConsultantProfile {
   ) {}
 
   static create(
-    displayName: string,
+    name: string,
     bio: string,
     specialties: string[],
     phone = "",
     imageUrl?: string,
   ): ConsultantProfile {
-    if (!displayName || displayName.trim().length === 0) {
+    if (!name || name.trim().length === 0) {
       throw new DomainError(
         "INVALID_DISPLAY_NAME",
         "Display name must not be empty",
       );
     }
-    return new ConsultantProfile(
-      displayName,
-      bio,
-      [...specialties],
-      phone,
-      imageUrl,
-    );
+    return new ConsultantProfile(name, bio, [...specialties], phone, imageUrl);
   }
 
   static reconstruct(
-    displayName: string,
+    name: string,
     bio: string,
     specialties: string[],
     phone = "",
     imageUrl?: string,
   ): ConsultantProfile {
-    return new ConsultantProfile(
-      displayName,
-      bio,
-      [...specialties],
-      phone,
-      imageUrl,
-    );
+    return new ConsultantProfile(name, bio, [...specialties], phone, imageUrl);
   }
 
   getDisplayName(): string {
-    return this.displayName;
+    return this.name;
   }
 
   getBio(): string {
@@ -69,7 +57,7 @@ export class ConsultantProfile {
 
   equals(other: ConsultantProfile): boolean {
     return (
-      this.displayName === other.displayName &&
+      this.name === other.name &&
       this.bio === other.bio &&
       this.phone === other.phone &&
       this.imageUrl === other.imageUrl &&

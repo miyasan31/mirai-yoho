@@ -270,8 +270,8 @@ describe("ConsultantsPage", () => {
   });
 
   it("renders aggregated slots when consultant selection is disabled", () => {
-    const startDatetime = "2026-05-01T10:00:00.000Z";
-    const endDatetime = "2026-05-01T10:30:00.000Z";
+    const startsAt = "2026-05-01T10:00:00.000Z";
+    const endsAt = "2026-05-01T10:30:00.000Z";
 
     mockUsePublicBookingSettings.mockReturnValue({
       data: { data: { consultantSelectionEnabled: false } },
@@ -287,8 +287,8 @@ describe("ConsultantsPage", () => {
         data: {
           aggregatedSlots: [
             {
-              startDatetime,
-              endDatetime,
+              startsAt,
+              endsAt,
             },
           ],
         },
@@ -299,14 +299,14 @@ describe("ConsultantsPage", () => {
 
     render(<ConsultantsPage />);
 
-    const expectedTimeRange = `${format(parseISO(startDatetime), "HH:mm")} 〜 ${format(parseISO(endDatetime), "HH:mm")}`;
+    const expectedTimeRange = `${format(parseISO(startsAt), "HH:mm")} 〜 ${format(parseISO(endsAt), "HH:mm")}`;
 
     expect(screen.getByText("予約可能な日時")).toBeDefined();
     expect(
       screen.getByRole("link", { name: expectedTimeRange }),
     ).toHaveAttribute(
       "href",
-      `/org-test/booking?startDatetime=${encodeURIComponent(startDatetime)}&endDatetime=${encodeURIComponent(endDatetime)}`,
+      `/org-test/booking?startsAt=${encodeURIComponent(startsAt)}&endsAt=${encodeURIComponent(endsAt)}`,
     );
   });
 });

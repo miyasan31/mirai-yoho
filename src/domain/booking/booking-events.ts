@@ -5,10 +5,10 @@ export class BookingConfirmedEvent implements DomainEvent {
   readonly occurredAt: Date;
   readonly payload: {
     bookingId: string;
-    clientId: string;
+    customerId: string;
     consultantId: string;
-    zoomUrl: string;
-    startDatetime: Date;
+    joinUrl: string;
+    startsAt: Date;
   };
 
   private constructor(payload: BookingConfirmedEvent["payload"]) {
@@ -28,9 +28,9 @@ export class BookingCancelledEvent implements DomainEvent {
   readonly occurredAt: Date;
   readonly payload: {
     bookingId: string;
-    clientId: string;
+    customerId: string;
     consultantId: string;
-    cancelledBy: "client" | "admin";
+    cancelledBy: "customer" | "admin";
   };
 
   private constructor(payload: BookingCancelledEvent["payload"]) {

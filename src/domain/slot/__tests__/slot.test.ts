@@ -20,20 +20,20 @@ describe("Slot", () => {
   describe("create", () => {
     it("未予約の状態で作成される", () => {
       const slot = createSlot();
-      expect(slot.getIsReserved()).toBe(false);
+      expect(slot.getIsAvailable()).toBe(true);
       expect(slot.getBookingId()).toBeUndefined();
     });
   });
 
   describe("reserve", () => {
-    it("予約すると isReserved が true になり bookingId が設定される", () => {
+    it("予約すると isAvailable が false になり bookingId が設定される", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-04-01T00:00:00Z"));
 
       const slot = createSlot();
       slot.reserve("booking-1");
 
-      expect(slot.getIsReserved()).toBe(true);
+      expect(slot.getIsAvailable()).toBe(false);
       expect(slot.getBookingId()).toBe("booking-1");
 
       vi.useRealTimers();
@@ -84,7 +84,7 @@ describe("Slot", () => {
   });
 
   describe("release", () => {
-    it("予約を解除すると isReserved が false になり bookingId が undefined になる", () => {
+    it("予約を解除すると isAvailable が true になり bookingId が undefined になる", () => {
       vi.useFakeTimers();
       vi.setSystemTime(new Date("2026-04-01T00:00:00Z"));
 
@@ -92,7 +92,7 @@ describe("Slot", () => {
       slot.reserve("booking-1");
       slot.release();
 
-      expect(slot.getIsReserved()).toBe(false);
+      expect(slot.getIsAvailable()).toBe(true);
       expect(slot.getBookingId()).toBeUndefined();
 
       vi.useRealTimers();
@@ -112,13 +112,13 @@ describe("TimeRange", () => {
     vi.setSystemTime(new Date("2026-04-01T00:00:00Z"));
 
     const timeRange = TimeRange.create(futureStart, futureEnd);
-    expect(timeRange.getStartAt().getTime()).toBe(futureStart.getTime());
-    expect(timeRange.getEndAt().getTime()).toBe(futureEnd.getTime());
+    expect(timeRange.getStartsAt().getTime()).toBe(futureStart.getTime());
+    expect(timeRange.getEndsAt().getTime()).toBe(futureEnd.getTime());
 
     vi.useRealTimers();
   });
 
-  it("startAt >= endAt だと INVALID_TIME_RANGE エラー", () => {
+  it("startsAt >= endsAt だと INVALID_TIME_RANGE エラー", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-04-01T00:00:00Z"));
 
@@ -127,7 +127,7 @@ describe("TimeRange", () => {
     vi.useRealTimers();
   });
 
-  it("過去の startAt だと PAST_TIME_RANGE エラー", () => {
+  it("過去の startsAt だと PAST_TIME_RANGE エラー", () => {
     const pastStart = new Date("2020-01-01T10:00:00Z");
     const pastEnd = new Date("2020-01-01T11:00:00Z");
     expect(() => TimeRange.create(pastStart, pastEnd)).toThrow(DomainError);

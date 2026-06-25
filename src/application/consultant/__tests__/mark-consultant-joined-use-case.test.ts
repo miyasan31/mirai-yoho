@@ -8,14 +8,14 @@ const ORGANIZATION_ID = "org-1";
 const CONSULTANT_ID = "consultant-1";
 const BOOKING_ID = "booking-1";
 
-function createBooking(startDatetime = "2026-05-01T10:00:00.000Z") {
+function createBooking(startsAt = "2026-05-01T10:00:00.000Z") {
   return Booking.create({
     organizationId: ORGANIZATION_ID,
     bookingId: BOOKING_ID,
-    clientId: "client-1",
+    customerId: "customer-1",
     consultantId: CONSULTANT_ID,
     slotId: "slot-1",
-    startDatetime: new Date(startDatetime),
+    startsAt: new Date(startsAt),
     consultantMemo: ConsultantMemo.create(""),
     pricePlanId: "plan-1",
     pricePlanName: "通常鑑定",

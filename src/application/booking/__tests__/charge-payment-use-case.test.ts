@@ -5,15 +5,15 @@ import { Booking } from "@/domain/booking/booking";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
-import { Client } from "@/domain/client/client";
-import type { IClientRepository } from "@/domain/client/client-repository";
+import { Customer } from "@/domain/customer/customer";
+import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 import { Money } from "@/domain/payment/money";
 import { Payment } from "@/domain/payment/payment";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 
 const ORGANIZATION_ID = "org-1";
 const BOOKING_ID = "booking-1";
-const CLIENT_ID = "client-1";
+const CLIENT_ID = "customer-1";
 
 class InMemoryBookingRepository implements IBookingRepository {
   constructor(public readonly booking: Booking | null) {}
@@ -77,45 +77,45 @@ class InMemoryPaymentRepository implements IPaymentRepository {
   async save(_payment: Payment): Promise<void> {}
 }
 
-class InMemoryClientRepository implements IClientRepository {
-  constructor(private readonly client: Client | null) {}
+class InMemoryCustomerRepository implements ICustomerRepository {
+  constructor(private readonly customer: Customer | null) {}
 
   async findById(
     _organizationId: string,
-    _clientId: string,
-  ): Promise<Client | null> {
-    return this.client;
+    _customerId: string,
+  ): Promise<Customer | null> {
+    return this.customer;
   }
 
   async findByEmail(
     _organizationId: string,
     _email: string,
-  ): Promise<Client | null> {
-    return this.client;
+  ): Promise<Customer | null> {
+    return this.customer;
   }
 
-  async findAll(_organizationId: string): Promise<Client[]> {
-    return this.client ? [this.client] : [];
+  async findAll(_organizationId: string): Promise<Customer[]> {
+    return this.customer ? [this.customer] : [];
   }
 
   async findByIds(
     _organizationId: string,
-    _clientIds: string[],
-  ): Promise<Client[]> {
-    return this.client ? [this.client] : [];
+    _customerIds: string[],
+  ): Promise<Customer[]> {
+    return this.customer ? [this.customer] : [];
   }
 
-  async save(_client: Client): Promise<void> {}
+  async save(_customer: Customer): Promise<void> {}
 }
 
-function createConfirmedBooking(startDatetime: string): Booking {
+function createConfirmedBooking(startsAt: string): Booking {
   const booking = Booking.create({
     organizationId: ORGANIZATION_ID,
     bookingId: BOOKING_ID,
-    clientId: CLIENT_ID,
+    customerId: CLIENT_ID,
     consultantId: "consultant-1",
     slotId: "slot-1",
-    startDatetime: new Date(startDatetime),
+    startsAt: new Date(startsAt),
     consultantMemo: ConsultantMemo.create("memo"),
     pricePlanId: "plan-1",
     pricePlanName: "通常鑑定",
@@ -130,20 +130,20 @@ function createDeferredPayment(): Payment {
     organizationId: ORGANIZATION_ID,
     paymentId: "payment-1",
     bookingId: BOOKING_ID,
-    clientId: CLIENT_ID,
+    customerId: CLIENT_ID,
     stripeSetupIntentId: "si_123",
     money: Money.create(5000, 0.1),
   });
 }
 
-function createClient(): Client {
-  return Client.create({
+function createCustomer(): Customer {
+  return Customer.create({
     organizationId: ORGANIZATION_ID,
-    clientId: CLIENT_ID,
+    customerId: CLIENT_ID,
     name: "山田 太郎",
     email: "taro@example.com",
     phone: "09012345678",
-    birthdate: "1990-01-01",
+    birthDate: "1990-01-01",
   });
 }
 
@@ -179,7 +179,7 @@ function createUseCase(input: {
     useCase: new ChargePaymentUseCase(
       new InMemoryBookingRepository(input.booking),
       new InMemoryPaymentRepository(input.payment),
-      new InMemoryClientRepository(createClient()),
+      new InMemoryCustomerRepository(createCustomer()),
       stripeService,
       emailService,
     ),

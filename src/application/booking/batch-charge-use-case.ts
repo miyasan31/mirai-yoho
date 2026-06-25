@@ -2,7 +2,7 @@ import { ChargePaymentUseCase } from "@/application/booking/charge-payment-use-c
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IStripeService } from "@/application/shared/stripe-service";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
-import type { IClientRepository } from "@/domain/client/client-repository";
+import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 
 interface BatchChargeResult {
@@ -17,14 +17,14 @@ export class BatchChargeUseCase {
   constructor(
     private readonly bookingRepository: IBookingRepository,
     private readonly paymentRepository: IPaymentRepository,
-    clientRepository: IClientRepository,
+    customerRepository: ICustomerRepository,
     stripeService: IStripeService,
     emailService: IEmailService,
   ) {
     this.chargeUseCase = new ChargePaymentUseCase(
       bookingRepository,
       paymentRepository,
-      clientRepository,
+      customerRepository,
       stripeService,
       emailService,
     );
@@ -38,7 +38,7 @@ export class BatchChargeUseCase {
 
     const now = new Date();
     const eligibleBookings = confirmedBookings.filter(
-      (booking) => booking.getStartDatetime() < now,
+      (booking) => booking.getStartsAt() < now,
     );
 
     let chargedCount = 0;

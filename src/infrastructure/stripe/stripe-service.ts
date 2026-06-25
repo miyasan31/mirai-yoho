@@ -2,35 +2,35 @@ import Stripe from "stripe";
 import type { IStripeService } from "@/application/shared/stripe-service";
 import { envServer } from "@/config/env.server";
 
-let stripeClient: Stripe | null = null;
+let stripeCustomer: Stripe | null = null;
 
-function getStripeClient(): Stripe {
-  if (!stripeClient) {
-    stripeClient = new Stripe(envServer.stripeSecretKey);
+function getStripeCustomer(): Stripe {
+  if (!stripeCustomer) {
+    stripeCustomer = new Stripe(envServer.stripeSecretKey);
   }
-  return stripeClient;
+  return stripeCustomer;
 }
 
 export class StripeService implements IStripeService {
   async createSetupIntent(params: {
     metadata: Record<string, string>;
-  }): Promise<{ setupIntentId: string; clientSecret: string }> {
-    const setupIntent = await getStripeClient().setupIntents.create({
+  }): Promise<{ setupIntentId: string; customerSecret: string }> {
+    const setupIntent = await getStripeCustomer().setupIntents.create({
       metadata: params.metadata,
       usage: "off_session",
     });
 
     return {
       setupIntentId: setupIntent.id,
-      clientSecret: setupIntent.client_secret as string,
+      customerSecret: setupIntent.client_secret as string,
     };
   }
 
   async createPaymentIntent(params: {
     amountJPY: number;
     metadata: Record<string, string>;
-  }): Promise<{ paymentIntentId: string; clientSecret: string }> {
-    const paymentIntent = await getStripeClient().paymentIntents.create({
+  }): Promise<{ paymentIntentId: string; customerSecret: string }> {
+    const paymentIntent = await getStripeCustomer().paymentIntents.create({
       amount: params.amountJPY,
       currency: "jpy",
       payment_method_types: ["paypay"],
@@ -39,7 +39,7 @@ export class StripeService implements IStripeService {
 
     return {
       paymentIntentId: paymentIntent.id,
-      clientSecret: paymentIntent.client_secret as string,
+      customerSecret: paymentIntent.client_secret as string,
     };
   }
 
@@ -48,7 +48,7 @@ export class StripeService implements IStripeService {
     paymentMethodId: string;
     metadata: Record<string, string>;
   }): Promise<{ paymentIntentId: string }> {
-    const paymentIntent = await getStripeClient().paymentIntents.create({
+    const paymentIntent = await getStripeCustomer().paymentIntents.create({
       amount: params.amountJPY,
       currency: "jpy",
       payment_method: params.paymentMethodId,
@@ -61,10 +61,12 @@ export class StripeService implements IStripeService {
   }
 
   async cancelPaymentIntent(paymentIntentId: string): Promise<void> {
-    await getStripeClient().paymentIntents.cancel(paymentIntentId);
+    await getStripeCustomer().paymentIntents.cancel(paymentIntentId);
   }
 
   async refundPaymentIntent(paymentIntentId: string): Promise<void> {
-    await getStripeClient().refunds.create({ payment_intent: paymentIntentId });
+    await getStripeCustomer().refunds.create({
+      payment_intent: paymentIntentId,
+    });
   }
 }

@@ -36,7 +36,7 @@ export default function AdminConsultantsPage() {
   const { role } = useAuth();
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
     useListQueryParams();
-  const queryClient = useQueryClient();
+  const queryCustomer = useQueryClient();
   const { data, isLoading } = useAdminConsultants({
     page,
     pageSize,
@@ -54,7 +54,7 @@ export default function AdminConsultantsPage() {
   } = useForm<ConsultantInviteFormValues>({
     resolver: valibotResolver(consultantInviteFormSchema),
     defaultValues: {
-      displayName: "",
+      name: "",
       email: "",
       phone: "",
     },
@@ -78,7 +78,7 @@ export default function AdminConsultantsPage() {
         organizationId,
         data: {
           email: values.email,
-          displayName: values.displayName,
+          name: values.name,
           phone: values.phone,
           role: "consultant",
         },
@@ -89,7 +89,7 @@ export default function AdminConsultantsPage() {
       });
       reset();
       setInviteOpen(false);
-      await queryClient.invalidateQueries({
+      await queryCustomer.invalidateQueries({
         queryKey: getGetAdminConsultantsQueryKey(organizationId),
       });
     } catch {
@@ -163,13 +163,11 @@ export default function AdminConsultantsPage() {
                     </Dialog.Description>
                   </Dialog.Header>
                   <Dialog.Body display="flex" flexDir="column" gap="4">
-                    <Field.Root invalid={!!errors.displayName}>
+                    <Field.Root invalid={!!errors.name}>
                       <Field.Label>表示名</Field.Label>
-                      <Input {...register("displayName")} />
-                      {errors.displayName && (
-                        <Field.ErrorText>
-                          {errors.displayName.message}
-                        </Field.ErrorText>
+                      <Input {...register("name")} />
+                      {errors.name && (
+                        <Field.ErrorText>{errors.name.message}</Field.ErrorText>
                       )}
                     </Field.Root>
                     <Field.Root invalid={!!errors.email}>
@@ -236,7 +234,7 @@ export default function AdminConsultantsPage() {
             <Table.Body>
               {consultants.map((c) => (
                 <Table.Row key={c.consultantId}>
-                  <Table.Cell>{c.displayName}</Table.Cell>
+                  <Table.Cell>{c.name}</Table.Cell>
                   <Table.Cell>{c.email}</Table.Cell>
                   <Table.Cell>{c.phone || "-"}</Table.Cell>
                   <Table.Cell>{c.specialties.join(", ")}</Table.Cell>

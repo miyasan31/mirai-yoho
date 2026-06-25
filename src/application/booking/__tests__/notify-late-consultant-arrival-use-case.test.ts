@@ -13,11 +13,11 @@ import { BookingStatus } from "@/domain/booking/booking-status";
 import { CancelDeadline } from "@/domain/booking/cancel-deadline";
 import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
-import { Client } from "@/domain/client/client";
-import type { IClientRepository } from "@/domain/client/client-repository";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
+import { Customer } from "@/domain/customer/customer";
+import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 
 const ORGANIZATION_ID = "org-1";
 const NOW = new Date("2026-05-01T10:30:00.000Z");
@@ -26,7 +26,7 @@ function createBooking(
   overrides: {
     bookingId?: string;
     status?: "pending" | "confirmed" | "completed" | "cancelled";
-    startDatetime?: Date;
+    startsAt?: Date;
     consultantJoinedAt?: Date;
     lateArrivalAlertSentAt?: Date;
   } = {},
@@ -34,16 +34,15 @@ function createBooking(
   return Booking.reconstruct({
     organizationId: ORGANIZATION_ID,
     bookingId: overrides.bookingId ?? "booking-1",
-    clientId: "client-1",
+    customerId: "customer-1",
     consultantId: "consultant-1",
     slotId: "slot-1",
-    startDatetime:
-      overrides.startDatetime ?? new Date("2026-05-01T10:00:00.000Z"),
+    startsAt: overrides.startsAt ?? new Date("2026-05-01T10:00:00.000Z"),
     status: BookingStatus.reconstruct(overrides.status ?? "confirmed"),
-    cancelDeadline: CancelDeadline.reconstruct(
+    cancelDeadlineAt: CancelDeadline.reconstruct(
       new Date("2026-04-30T10:00:00.000Z"),
     ),
-    zoomUrl: ZoomUrl.reconstruct("https://zoom.us/j/123"),
+    joinUrl: ZoomUrl.reconstruct("https://zoom.us/j/123"),
     consultantJoinedAt: overrides.consultantJoinedAt,
     lateArrivalAlertSentAt: overrides.lateArrivalAlertSentAt,
     consultantMemo: ConsultantMemo.reconstruct(""),
@@ -62,14 +61,14 @@ function createConsultant() {
   });
 }
 
-function createClient() {
-  return Client.create({
+function createCustomer() {
+  return Customer.create({
     organizationId: ORGANIZATION_ID,
-    clientId: "client-1",
+    customerId: "customer-1",
     name: "山田太郎",
-    email: "client@example.com",
+    email: "customer@example.com",
     phone: "080-1111-2222",
-    birthdate: "1990-01-01",
+    birthDate: "1990-01-01",
   });
 }
 
@@ -131,33 +130,37 @@ class InMemoryConsultantRepository implements IConsultantRepository {
   async delete(): Promise<void> {}
 }
 
-class InMemoryClientRepository implements IClientRepository {
-  constructor(private readonly clients: Client[]) {}
+class InMemoryCustomerRepository implements ICustomerRepository {
+  constructor(private readonly customers: Customer[]) {}
 
   async findById(
     _organizationId: string,
-    clientId: string,
-  ): Promise<Client | null> {
+    customerId: string,
+  ): Promise<Customer | null> {
     return (
-      this.clients.find((client) => client.getClientId() === clientId) ?? null
+      this.customers.find(
+        (customer) => customer.getCustomerId() === customerId,
+      ) ?? null
     );
   }
 
-  async findByIds(_organizationId: string, clientIds: string[]) {
-    return this.clients.filter((client) =>
-      clientIds.includes(client.getClientId()),
+  async findByIds(_organizationId: string, customerIds: string[]) {
+    return this.customers.filter((customer) =>
+      customerIds.includes(customer.getCustomerId()),
     );
   }
 
   async findByEmail(
     _organizationId: string,
     email: string,
-  ): Promise<Client | null> {
-    return this.clients.find((client) => client.getEmail() === email) ?? null;
+  ): Promise<Customer | null> {
+    return (
+      this.customers.find((customer) => customer.getEmail() === email) ?? null
+    );
   }
 
-  async findAll(): Promise<Client[]> {
-    return this.clients;
+  async findAll(): Promise<Customer[]> {
+    return this.customers;
   }
 
   async save(): Promise<void> {}
@@ -197,7 +200,7 @@ function createUseCase(params: {
   const useCase = new NotifyLateConsultantArrivalUseCase(
     bookingRepository,
     new InMemoryConsultantRepository(createConsultant()),
-    new InMemoryClientRepository([createClient()]),
+    new InMemoryCustomerRepository([createCustomer()]),
     new InMemoryUserContactService(),
     alertService,
     "https://example.com",
@@ -226,7 +229,7 @@ describe("NotifyLateConsultantArrivalUseCase", () => {
       consultantName: "佐藤相談員",
       consultantEmail: "consultant@example.com",
       consultantPhone: "090-1111-2222",
-      clientName: "山田太郎",
+      customerName: "山田太郎",
       elapsedMinutes: 30,
       adminBookingsUrl: "https://example.com/org-1/admin/bookings",
     });
@@ -239,7 +242,7 @@ describe("NotifyLateConsultantArrivalUseCase", () => {
       bookings: [
         createBooking({
           bookingId: "future",
-          startDatetime: new Date("2026-05-01T11:00:00.000Z"),
+          startsAt: new Date("2026-05-01T11:00:00.000Z"),
         }),
         createBooking({
           bookingId: "joined",

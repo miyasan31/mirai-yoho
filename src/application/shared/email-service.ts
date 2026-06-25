@@ -1,34 +1,34 @@
 export interface IEmailService {
   sendBookingConfirmation(params: {
-    clientEmail: string;
-    clientName: string;
+    customerEmail: string;
+    customerName: string;
     consultantName: string;
-    zoomUrl: string;
-    startDatetime: Date;
+    joinUrl: string;
+    startsAt: Date;
     bookingId: string;
   }): Promise<void>;
 
   sendBookingCancellation(params: {
-    clientEmail: string;
-    clientName: string;
+    customerEmail: string;
+    customerName: string;
     consultantName: string;
     bookingId: string;
-    cancelledBy: "client" | "admin";
+    cancelledBy: "customer" | "admin";
   }): Promise<void>;
 
   sendPaymentReceipt(params: {
-    clientEmail: string;
-    clientName: string;
+    customerEmail: string;
+    customerName: string;
     amountJPY: number;
     bookingId: string;
   }): Promise<void>;
 
   sendConsultationReminder(params: {
-    clientEmail: string;
-    clientName: string;
+    customerEmail: string;
+    customerName: string;
     consultantName: string;
-    zoomUrl: string;
-    startDatetime: Date;
+    joinUrl: string;
+    startsAt: Date;
     bookingId: string;
   }): Promise<void>;
 

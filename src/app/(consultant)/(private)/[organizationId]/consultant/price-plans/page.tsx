@@ -28,7 +28,7 @@ function getPricePlansQueryKey(organizationId: string) {
 }
 
 export default function ConsultantPricePlansPage() {
-  const queryClient = useQueryClient();
+  const queryCustomer = useQueryClient();
   const { organizationId } = useOrganizationRouting();
   const { data, isLoading } = useConsultantPricePlans();
   const createPricePlan = useCreateConsultantPricePlan();
@@ -43,7 +43,7 @@ export default function ConsultantPricePlansPage() {
 
   const invalidatePricePlans = async () => {
     if (!organizationId) return;
-    await queryClient.invalidateQueries({
+    await queryCustomer.invalidateQueries({
       queryKey: getPricePlansQueryKey(organizationId),
     });
   };

@@ -1,8 +1,8 @@
 import type { ILateArrivalAlertService } from "@/application/shared/late-arrival-alert-service";
 import type { IUserContactService } from "@/application/shared/user-contact-service";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
-import type { IClientRepository } from "@/domain/client/client-repository";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
+import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 
 interface NotifyLateConsultantArrivalInput {
   organizationId: string;
@@ -19,7 +19,7 @@ export class NotifyLateConsultantArrivalUseCase {
   constructor(
     private readonly bookingRepository: IBookingRepository,
     private readonly consultantRepository: IConsultantRepository,
-    private readonly clientRepository: IClientRepository,
+    private readonly customerRepository: ICustomerRepository,
     private readonly userContactService: IUserContactService,
     private readonly lateArrivalAlertService: ILateArrivalAlertService,
     private readonly appUrl: string,
@@ -35,22 +35,26 @@ export class NotifyLateConsultantArrivalUseCase {
 
     const targetBookings = confirmedBookings.filter((booking) => {
       return (
-        booking.getStartDatetime().getTime() <= input.now.getTime() &&
+        booking.getStartsAt().getTime() <= input.now.getTime() &&
         !booking.getConsultantJoinedAt() &&
         !booking.getLateArrivalAlertSentAt()
       );
     });
 
-    const clientIds = targetBookings.map((booking) => booking.getClientId());
+    const customerIds = targetBookings.map((booking) =>
+      booking.getCustomerId(),
+    );
     const consultantIds = targetBookings.map((booking) =>
       booking.getConsultantId(),
     );
-    const [clients, userContacts] = await Promise.all([
-      this.clientRepository.findByIds(input.organizationId, clientIds),
+    const [customers, userContacts] = await Promise.all([
+      this.customerRepository.findByIds(input.organizationId, customerIds),
       this.userContactService.findByUids(consultantIds),
     ]);
-    const clientById = new Map(
-      clients.map((client) => [client.getClientId(), client] as const),
+    const customerById = new Map(
+      customers.map(
+        (customer) => [customer.getCustomerId(), customer] as const,
+      ),
     );
 
     let notifiedCount = 0;
@@ -62,7 +66,7 @@ export class NotifyLateConsultantArrivalUseCase {
           input.organizationId,
           booking.getConsultantId(),
         );
-        const client = clientById.get(booking.getClientId()) ?? null;
+        const customer = customerById.get(booking.getCustomerId()) ?? null;
         const consultantProfile = consultant?.getProfile();
         const userContact = userContacts.get(booking.getConsultantId());
 
@@ -72,13 +76,12 @@ export class NotifyLateConsultantArrivalUseCase {
           consultantName: consultantProfile?.getDisplayName() ?? "未登録",
           consultantEmail: userContact?.email ?? "未登録",
           consultantPhone: consultantProfile?.getPhone() || "未登録",
-          clientName: client?.getName() ?? "未登録",
-          startDatetime: booking.getStartDatetime(),
+          customerName: customer?.getName() ?? "未登録",
+          startsAt: booking.getStartsAt(),
           elapsedMinutes: Math.max(
             0,
             Math.floor(
-              (input.now.getTime() - booking.getStartDatetime().getTime()) /
-                60_000,
+              (input.now.getTime() - booking.getStartsAt().getTime()) / 60_000,
             ),
           ),
           adminBookingsUrl: this.buildAdminBookingsUrl(input.organizationId),

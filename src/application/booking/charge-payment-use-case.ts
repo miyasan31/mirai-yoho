@@ -3,7 +3,7 @@ import { AppError } from "@/application/shared/app-error";
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IStripeService } from "@/application/shared/stripe-service";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
-import type { IClientRepository } from "@/domain/client/client-repository";
+import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 import type { ChargeMethod } from "@/domain/payment/payment";
 import type { PaymentChargedEvent } from "@/domain/payment/payment-events";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
@@ -18,7 +18,7 @@ export class ChargePaymentUseCase {
   constructor(
     private readonly bookingRepository: IBookingRepository,
     private readonly paymentRepository: IPaymentRepository,
-    private readonly clientRepository: IClientRepository,
+    private readonly customerRepository: ICustomerRepository,
     private readonly stripeService: IStripeService,
     private readonly emailService: IEmailService,
   ) {}
@@ -37,12 +37,12 @@ export class ChargePaymentUseCase {
       input.bookingId,
     );
 
-    const client = await this.clientRepository.findById(
+    const customer = await this.customerRepository.findById(
       input.organizationId,
-      booking.getClientId(),
+      booking.getCustomerId(),
     );
-    if (!client) {
-      throw new AppError(404, "CLIENT_NOT_FOUND", "Client not found");
+    if (!customer) {
+      throw new AppError(404, "CLIENT_NOT_FOUND", "Customer not found");
     }
 
     const chargeEligibility = evaluateChargeEligibility({ booking, payment });
@@ -89,8 +89,8 @@ export class ChargePaymentUseCase {
         if (event.eventName === "PaymentCharged") {
           const e = event as PaymentChargedEvent;
           await this.emailService.sendPaymentReceipt({
-            clientEmail: client.getEmail(),
-            clientName: client.getName(),
+            customerEmail: customer.getEmail(),
+            customerName: customer.getName(),
             amountJPY: e.payload.amountJPY,
             bookingId: e.payload.bookingId,
           });

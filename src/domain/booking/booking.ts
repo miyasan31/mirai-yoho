@@ -12,10 +12,10 @@ import { DomainError } from "@/domain/shared/domain-error";
 interface BookingCreateProps {
   organizationId: string;
   bookingId: string;
-  clientId: string;
+  customerId: string;
   consultantId: string;
   slotId: string;
-  startDatetime: Date;
+  startsAt: Date;
   consultantMemo: ConsultantMemo;
   consultationContent?: string;
   pricePlanId: string;
@@ -31,8 +31,8 @@ interface BookingProps
     "pricePlanId" | "pricePlanName" | "pricePlanTotalJPY"
   > {
   status: BookingStatus;
-  cancelDeadline: CancelDeadline;
-  zoomUrl?: ZoomUrl;
+  cancelDeadlineAt: CancelDeadline;
+  joinUrl?: ZoomUrl;
   consultantJoinedAt?: Date;
   consultationReminderEmailSentAt?: Date;
   pricePlanId?: string;
@@ -45,13 +45,13 @@ export class Booking extends AggregateRoot {
   private constructor(
     private readonly organizationId: string,
     private readonly bookingId: string,
-    private readonly clientId: string,
+    private readonly customerId: string,
     private readonly consultantId: string,
     private readonly slotId: string,
-    private readonly startDatetime: Date,
+    private readonly startsAt: Date,
     private status: BookingStatus,
-    private readonly cancelDeadline: CancelDeadline,
-    private zoomUrl: ZoomUrl | undefined,
+    private readonly cancelDeadlineAt: CancelDeadline,
+    private joinUrl: ZoomUrl | undefined,
     private consultantJoinedAt: Date | undefined,
     private consultationReminderEmailSentAt: Date | undefined,
     private lateArrivalAlertSentAt: Date | undefined,
@@ -71,12 +71,12 @@ export class Booking extends AggregateRoot {
     return new Booking(
       props.organizationId,
       props.bookingId,
-      props.clientId,
+      props.customerId,
       props.consultantId,
       props.slotId,
-      props.startDatetime,
+      props.startsAt,
       BookingStatus.create("pending"),
-      CancelDeadline.create(props.startDatetime),
+      CancelDeadline.create(props.startsAt),
       undefined,
       undefined,
       undefined,
@@ -96,13 +96,13 @@ export class Booking extends AggregateRoot {
     return new Booking(
       props.organizationId,
       props.bookingId,
-      props.clientId,
+      props.customerId,
       props.consultantId,
       props.slotId,
-      props.startDatetime,
+      props.startsAt,
       props.status,
-      props.cancelDeadline,
-      props.zoomUrl,
+      props.cancelDeadlineAt,
+      props.joinUrl,
       props.consultantJoinedAt,
       props.consultationReminderEmailSentAt,
       props.lateArrivalAlertSentAt,
@@ -116,7 +116,7 @@ export class Booking extends AggregateRoot {
     );
   }
 
-  confirm(zoomUrl: ZoomUrl): void {
+  confirm(joinUrl: ZoomUrl): void {
     if (this.status.getValue() !== "pending") {
       throw new DomainError(
         "INVALID_STATUS_TRANSITION",
@@ -124,21 +124,24 @@ export class Booking extends AggregateRoot {
       );
     }
     this.status = BookingStatus.reconstruct("confirmed");
-    this.zoomUrl = zoomUrl;
+    this.joinUrl = joinUrl;
     this.updatedAt = new Date();
     this.addDomainEvent(
       BookingConfirmedEvent.create({
         bookingId: this.bookingId,
-        clientId: this.clientId,
+        customerId: this.customerId,
         consultantId: this.consultantId,
-        zoomUrl: zoomUrl.getValue(),
-        startDatetime: this.startDatetime,
+        joinUrl: joinUrl.getValue(),
+        startsAt: this.startsAt,
       }),
     );
   }
 
-  cancel(cancelledBy: "client" | "admin"): void {
-    if (cancelledBy === "client" && this.cancelDeadline.isExpired(new Date())) {
+  cancel(cancelledBy: "customer" | "admin"): void {
+    if (
+      cancelledBy === "customer" &&
+      this.cancelDeadlineAt.isExpired(new Date())
+    ) {
       throw new DomainError(
         "CANCEL_DEADLINE_EXPIRED",
         "Cancel deadline has passed",
@@ -156,7 +159,7 @@ export class Booking extends AggregateRoot {
     this.addDomainEvent(
       BookingCancelledEvent.create({
         bookingId: this.bookingId,
-        clientId: this.clientId,
+        customerId: this.customerId,
         consultantId: this.consultantId,
         cancelledBy,
       }),
@@ -190,9 +193,7 @@ export class Booking extends AggregateRoot {
       );
     }
 
-    const joinAvailableAt = new Date(
-      this.startDatetime.getTime() - 15 * 60 * 1000,
-    );
+    const joinAvailableAt = new Date(this.startsAt.getTime() - 15 * 60 * 1000);
     if (now.getTime() < joinAvailableAt.getTime()) {
       throw new DomainError(
         "CONSULTANT_JOIN_TOO_EARLY",
@@ -241,8 +242,8 @@ export class Booking extends AggregateRoot {
     return this.organizationId;
   }
 
-  getClientId(): string {
-    return this.clientId;
+  getCustomerId(): string {
+    return this.customerId;
   }
 
   getConsultantId(): string {
@@ -253,20 +254,20 @@ export class Booking extends AggregateRoot {
     return this.slotId;
   }
 
-  getStartDatetime(): Date {
-    return this.startDatetime;
+  getStartsAt(): Date {
+    return this.startsAt;
   }
 
   getStatus(): BookingStatus {
     return this.status;
   }
 
-  getCancelDeadline(): CancelDeadline {
-    return this.cancelDeadline;
+  getCancelDeadlineAt(): CancelDeadline {
+    return this.cancelDeadlineAt;
   }
 
-  getZoomUrl(): ZoomUrl | undefined {
-    return this.zoomUrl;
+  getJoinUrl(): ZoomUrl | undefined {
+    return this.joinUrl;
   }
 
   getConsultantJoinedAt(): Date | undefined {

@@ -186,11 +186,11 @@ vi.mock("lucide-react", () => ({
 import ConsultantBookingsPage from "../page";
 
 function createWrapper() {
-  const queryClient = new QueryClient({
+  const queryCustomer = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryCustomer}>{children}</QueryClientProvider>
   );
 }
 
@@ -227,15 +227,15 @@ describe("ConsultantBookingsPage", () => {
           bookings: [
             {
               bookingId: "b1",
-              clientId: "c1",
-              startDatetime: "2026-04-01T10:00:00Z",
+              customerId: "c1",
+              startsAt: "2026-04-01T10:00:00Z",
               status: "confirmed",
-              zoomUrl: "https://zoom.us/j/123",
+              joinUrl: "https://zoom.us/j/123",
               consultantJoinedAt: null,
               consultantMemo: "テストメモ",
               consultationContent: null,
-              client: {
-                clientId: "c1",
+              customer: {
+                customerId: "c1",
                 name: "山田 太郎",
                 email: "taro@example.com",
                 phone: "090-0000-0000",
@@ -260,7 +260,7 @@ describe("ConsultantBookingsPage", () => {
     });
   });
 
-  it("shows client hover card details", async () => {
+  it("shows customer hover card details", async () => {
     mockUseJoinConsultantBooking.mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
@@ -272,15 +272,15 @@ describe("ConsultantBookingsPage", () => {
           bookings: [
             {
               bookingId: "b1",
-              clientId: "client-001-abcdef",
-              startDatetime: "2026-04-01T10:00:00Z",
+              customerId: "customer-001-abcdef",
+              startsAt: "2026-04-01T10:00:00Z",
               status: "confirmed",
-              zoomUrl: "https://zoom.us/j/123",
+              joinUrl: "https://zoom.us/j/123",
               consultantJoinedAt: null,
               consultantMemo: "テストメモ",
               consultationContent: null,
-              client: {
-                clientId: "client-001-abcdef",
+              customer: {
+                customerId: "customer-001-abcdef",
                 name: "山田 太郎",
                 email: "taro@example.com",
                 phone: "090-0000-0000",
@@ -304,7 +304,7 @@ describe("ConsultantBookingsPage", () => {
     });
   });
 
-  it("falls back to truncated id and missing message when client is null", async () => {
+  it("falls back to truncated id and missing message when customer is null", async () => {
     mockUseJoinConsultantBooking.mockReturnValue({
       mutateAsync: vi.fn(),
       isPending: false,
@@ -316,14 +316,14 @@ describe("ConsultantBookingsPage", () => {
           bookings: [
             {
               bookingId: "b2",
-              clientId: "client-404-abcdef",
-              startDatetime: "2026-04-01T10:00:00Z",
+              customerId: "customer-404-abcdef",
+              startsAt: "2026-04-01T10:00:00Z",
               status: "pending",
-              zoomUrl: null,
+              joinUrl: null,
               consultantJoinedAt: null,
               consultantMemo: "",
               consultationContent: null,
-              client: null,
+              customer: null,
             },
           ],
         },
@@ -334,7 +334,7 @@ describe("ConsultantBookingsPage", () => {
 
     render(<ConsultantBookingsPage />, { wrapper: createWrapper() });
 
-    const truncatedId = screen.getByText("client-4…");
+    const truncatedId = screen.getByText("customer…");
     fireEvent.mouseEnter(truncatedId);
 
     await waitFor(() => {
@@ -373,14 +373,14 @@ describe("ConsultantBookingsPage", () => {
           bookings: [
             {
               bookingId: "b1",
-              clientId: "c1",
-              startDatetime: "2026-04-01T10:00:00Z",
+              customerId: "c1",
+              startsAt: "2026-04-01T10:00:00Z",
               status: "confirmed",
-              zoomUrl: "https://zoom.us/j/123",
+              joinUrl: "https://zoom.us/j/123",
               consultantJoinedAt: "2026-04-01T09:55:00Z",
               consultantMemo: "",
               consultationContent: null,
-              client: null,
+              customer: null,
             },
           ],
         },

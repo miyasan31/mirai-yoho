@@ -42,11 +42,11 @@ describe("ResendEmailService", () => {
       .mockImplementation(() => {});
 
     await service.sendBookingConfirmation({
-      clientEmail: "taro@example.com",
-      clientName: "太郎",
+      customerEmail: "taro@example.com",
+      customerName: "太郎",
       consultantName: "山田",
-      zoomUrl: "https://zoom.example.com/abc",
-      startDatetime: new Date("2026-04-20T10:00:00+09:00"),
+      joinUrl: "https://zoom.example.com/abc",
+      startsAt: new Date("2026-04-20T10:00:00+09:00"),
       bookingId: "booking-123",
     });
 

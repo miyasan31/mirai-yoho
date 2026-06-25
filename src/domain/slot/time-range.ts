@@ -2,46 +2,46 @@ import { DomainError } from "@/domain/shared/domain-error";
 
 export class TimeRange {
   private constructor(
-    private readonly startAt: Date,
-    private readonly endAt: Date,
+    private readonly startsAt: Date,
+    private readonly endsAt: Date,
   ) {}
 
-  static create(startAt: Date, endAt: Date): TimeRange {
-    if (startAt >= endAt) {
+  static create(startsAt: Date, endsAt: Date): TimeRange {
+    if (startsAt >= endsAt) {
       throw new DomainError(
         "INVALID_TIME_RANGE",
-        "startAt must be before endAt",
+        "startsAt must be before endsAt",
       );
     }
-    if (startAt < new Date()) {
+    if (startsAt < new Date()) {
       throw new DomainError(
         "PAST_TIME_RANGE",
-        "startAt must not be in the past",
+        "startsAt must not be in the past",
       );
     }
-    return new TimeRange(startAt, endAt);
+    return new TimeRange(startsAt, endsAt);
   }
 
-  static reconstruct(startAt: Date, endAt: Date): TimeRange {
-    return new TimeRange(startAt, endAt);
+  static reconstruct(startsAt: Date, endsAt: Date): TimeRange {
+    return new TimeRange(startsAt, endsAt);
   }
 
-  getStartAt(): Date {
-    return this.startAt;
+  getStartsAt(): Date {
+    return this.startsAt;
   }
 
-  getEndAt(): Date {
-    return this.endAt;
+  getEndsAt(): Date {
+    return this.endsAt;
   }
 
   overlaps(other: TimeRange): boolean {
-    return this.startAt < other.endAt && other.startAt < this.endAt;
+    return this.startsAt < other.endsAt && other.startsAt < this.endsAt;
   }
 
   equals(other: TimeRange): boolean {
     return (
-      this.startAt.getTime() === other.startAt.getTime() &&
-      this.endAt.getTime() === other.endAt.getTime()
+      this.startsAt.getTime() === other.startsAt.getTime() &&
+      this.endsAt.getTime() === other.endsAt.getTime()
     );
   }
 }
