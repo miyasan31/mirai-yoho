@@ -1,13 +1,10 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
-## Firebase App Hosting の Secret 運用
+## 運用ドキュメント
 
-機密値は Firebase Console の通常環境変数ではなく、Cloud Secret Manager 経由で管理してください。  
-手順は [doc/firebase-app-hosting-secrets.md](doc/firebase-app-hosting-secrets.md) を参照してください。
-
-## Cloud Scheduler バッチ運用
-
-Cloud Scheduler の Terraform 管理と運用手順は [doc/cloud-scheduler.md](doc/cloud-scheduler.md) を参照してください。
+- [システム環境構築・組織作成ガイド](doc/system-setup-and-organization.md)
+- [Firebase App Hosting Secret 運用手順](doc/firebase-app-hosting-secrets.md)
+- [Cloud Scheduler バッチ運用](doc/cloud-scheduler.md)
 
 ## Getting Started
 
