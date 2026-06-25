@@ -18,10 +18,10 @@ env:
 
 ## 2. Terraform で Secret と IAM を適用する
 
-Secret のコンテナと App Hosting compute service account の参照権限は Terraform で管理します。新しい Secret を追加した場合は、`apphosting.yaml` と `infra/terraform/firebase.tf` の両方に名前を追加し、対象環境で Terraform を適用してください。
+Secret のコンテナと App Hosting compute service account の参照権限は Terraform で管理します。新しい Secret を追加した場合は、`apphosting.yaml` と `infra/terraform/gcp/common/firebase/main.tf` の両方に名前を追加し、対象環境で Terraform を適用してください。
 
 ```bash
-cd infra/terraform
+cd infra/terraform/gcp
 make apply ENV=dev
 ```
 
@@ -72,7 +72,7 @@ make describe-secret PROJECT=mirai-yoho-dev KEY=NEXT_PUBLIC_FIREBASE_API_KEY
 2. Terraform plan で Secret と IAM が管理対象であることを確認
 
 ```bash
-cd infra/terraform
+cd infra/terraform/gcp
 make plan ENV=dev
 ```
 

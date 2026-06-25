@@ -4,11 +4,9 @@ resource "google_firebaserules_ruleset" "firestore" {
   source {
     files {
       name    = "firestore.rules"
-      content = file("${path.module}/../../firestore.rules")
+      content = file(var.firestore_rules_path)
     }
   }
-
-  depends_on = [google_project_iam_member.github_deployer_roles]
 }
 
 resource "google_firebaserules_release" "firestore" {
@@ -23,15 +21,13 @@ resource "google_firebaserules_ruleset" "storage" {
   source {
     files {
       name    = "storage.rules"
-      content = file("${path.module}/../../storage.rules")
+      content = file(var.storage_rules_path)
     }
   }
-
-  depends_on = [google_project_iam_member.github_deployer_roles]
 }
 
 resource "google_firebaserules_release" "storage" {
   project      = var.project_id
-  name         = "firebase.storage/${google_storage_bucket.firebase_default.name}"
+  name         = "firebase.storage/${var.storage_bucket_name}"
   ruleset_name = google_firebaserules_ruleset.storage.name
 }
