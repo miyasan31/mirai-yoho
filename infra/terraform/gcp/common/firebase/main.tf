@@ -21,6 +21,15 @@ locals {
     "ZOOM_CLIENT_SECRET",
     "ZOOM_HOST_USER_ID",
   ])
+
+  app_hosting_build_secret_accessor_members = toset([
+    "serviceAccount:${data.google_project.current.number}@cloudbuild.gserviceaccount.com",
+    "serviceAccount:service-${data.google_project.current.number}@gcp-sa-firebaseapphosting.iam.gserviceaccount.com",
+  ])
+}
+
+data "google_project" "current" {
+  project_id = var.project_id
 }
 
 resource "google_firestore_database" "default" {
@@ -242,4 +251,19 @@ resource "google_secret_manager_secret_iam_member" "app_hosting_can_read_secrets
   secret_id = google_secret_manager_secret.app_hosting[each.value].secret_id
   role      = "roles/secretmanager.secretAccessor"
   member    = "serviceAccount:${var.app_hosting_compute_service_account_email}"
+}
+
+resource "google_secret_manager_secret_iam_member" "app_hosting_build_can_read_secrets" {
+  for_each = {
+    for pair in setproduct(local.app_hosting_secret_ids, local.app_hosting_build_secret_accessor_members) :
+    "${pair[0]}:${pair[1]}" => {
+      secret_id = pair[0]
+      member    = pair[1]
+    }
+  }
+
+  project   = var.project_id
+  secret_id = google_secret_manager_secret.app_hosting[each.value.secret_id].secret_id
+  role      = "roles/secretmanager.secretAccessor"
+  member    = each.value.member
 }
