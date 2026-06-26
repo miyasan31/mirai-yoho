@@ -1,4 +1,4 @@
-.PHONY: set-claims auth-adc-organization-operator create-organization seed-slots delete-slots setup-secrets setup-secret list-apphosting-backends describe-secret access-secret check-secret-value check-public-build-secrets
+.PHONY: set-claims auth-adc-organization-operator create-organization seed-slots delete-slots setup-secrets setup-secret setup-apphosting-secrets-from-env setup-apphosting-secrets-from-env-fish setup-batch-worker-secrets list-apphosting-backends describe-secret access-secret check-secret-value check-public-build-secrets
 
 # ============================================================
 # Scripts（引数が必要なコマンド）
@@ -70,6 +70,16 @@ PUBLIC_BUILD_SECRET_KEYS = \
 	NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY \
 	NEXT_PUBLIC_APP_URL
 
+BATCH_WORKER_SECRET_KEYS = \
+	FIREBASE_CLIENT_EMAIL \
+	FIREBASE_PRIVATE_KEY \
+	FIREBASE_PROJECT_ID \
+	RESEND_API_KEY \
+	RESEND_FROM_EMAIL \
+	STRIPE_SECRET_KEY \
+	LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL \
+	NEXT_PUBLIC_APP_URL
+
 # Usage: make setup-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
 # Example: make setup-secrets PROJECT=mirai-yoho-dev
 setup-secrets:
@@ -85,6 +95,41 @@ setup-secret:
 	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>" && exit 1)
 	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make setup-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>" && exit 1)
 	firebase apphosting:secrets:set $(KEY) --project $(PROJECT)
+
+# Usage: make setup-apphosting-secrets-from-env PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
+# Required environment variables: APPHOSTING_SECRET_KEYS と同名の env をすべて設定
+setup-apphosting-secrets-from-env:
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-apphosting-secrets-from-env PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
+	@for secret in $(APPHOSTING_SECRET_KEYS); do \
+		value="$$(printenv $$secret)"; \
+		if [ -z "$$value" ]; then \
+			echo "Error: environment variable $$secret is required"; \
+			exit 1; \
+		fi; \
+		printf '%s' "$$value" | gcloud secrets versions add $$secret --project "$(PROJECT)" --data-file=- >/dev/null; \
+		echo "Added new version for $$secret"; \
+	done
+
+# Usage: make setup-apphosting-secrets-from-env-fish PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
+setup-apphosting-secrets-from-env-fish:
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-apphosting-secrets-from-env-fish PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
+	PROJECT="$(PROJECT)" fish scripts/setup-apphosting-secrets-from-env.fish
+
+# Usage: make setup-batch-worker-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
+# Required environment variables:
+# FIREBASE_CLIENT_EMAIL FIREBASE_PRIVATE_KEY FIREBASE_PROJECT_ID RESEND_API_KEY
+# RESEND_FROM_EMAIL STRIPE_SECRET_KEY LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL NEXT_PUBLIC_APP_URL
+setup-batch-worker-secrets:
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-batch-worker-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
+	@for secret in $(BATCH_WORKER_SECRET_KEYS); do \
+		value="$$(printenv $$secret)"; \
+		if [ -z "$$value" ]; then \
+			echo "Error: environment variable $$secret is required"; \
+			exit 1; \
+		fi; \
+		printf '%s' "$$value" | gcloud secrets versions add $$secret --project "$(PROJECT)" --data-file=- >/dev/null; \
+		echo "Added new version for $$secret"; \
+	done
 
 # Usage: make grant-secret-access PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<OPENAI_API_KEY> BACKEND=<backendId>
 # Usage: make grant-secret-access PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<OPENAI_API_KEY> EMAILS=<sa1@example.iam.gserviceaccount.com,sa2@example.iam.gserviceaccount.com>
