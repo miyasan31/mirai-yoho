@@ -2,6 +2,10 @@ data "google_project" "current" {
   project_id = var.project_id
 }
 
+locals {
+  cloud_build_default_service_account_email = "${data.google_project.current.number}-compute@developer.gserviceaccount.com"
+}
+
 resource "google_service_account_iam_member" "scheduler_can_mint_oidc_token" {
   service_account_id = var.batch_scheduler_service_account_name
   role               = "roles/iam.serviceAccountTokenCreator"
@@ -94,6 +98,7 @@ resource "google_project_iam_member" "github_deployer_roles" {
     "roles/secretmanager.admin",
     "roles/serviceusage.serviceUsageAdmin",
     "roles/storage.admin",
+    "roles/viewer",
   ])
 
   project = var.project_id
@@ -103,6 +108,12 @@ resource "google_project_iam_member" "github_deployer_roles" {
 
 resource "google_service_account_iam_member" "github_can_deploy_worker" {
   service_account_id = var.batch_worker_service_account_name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${var.github_deployer_service_account_email}"
+}
+
+resource "google_service_account_iam_member" "github_can_run_cloud_build" {
+  service_account_id = "projects/${var.project_id}/serviceAccounts/${local.cloud_build_default_service_account_email}"
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${var.github_deployer_service_account_email}"
 }
