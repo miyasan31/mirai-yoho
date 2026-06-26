@@ -38,4 +38,4 @@ jobs:
         run: |
           make init ENV="$DEPLOY_ENV"
           make plan ENV="$DEPLOY_ENV"
-          make apply ENV="$DEPLOY_ENV"
+          make apply ENV="$DEPLOY_ENV" TF_APPLY_FLAGS="-auto-approve"

@@ -2,6 +2,7 @@
 
 ENV ?= dev
 REGION ?= asia-northeast1
+TF_APPLY_FLAGS ?=
 
 ifeq ($(ENV),dev)
   PROJECT_ID := mirai-yoho-dev
@@ -72,7 +73,7 @@ plan: check-env
 
 # Usage: make apply ENV=dev
 apply: check-env
-	terraform -chdir="$(TF_DIR)" apply -var-file="$(TFVARS)"
+	terraform -chdir="$(TF_DIR)" apply $(TF_APPLY_FLAGS) -var-file="$(TFVARS)"
 
 # Usage: make destroy ENV=dev
 destroy: check-env
