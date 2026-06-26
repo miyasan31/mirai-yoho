@@ -2,6 +2,7 @@
 
 ENV ?= dev
 REGION ?= asia-northeast1
+TF_PLAN_FLAGS ?=
 TF_APPLY_FLAGS ?=
 
 ifeq ($(ENV),dev)
@@ -69,7 +70,7 @@ init: check-env
 
 # Usage: make plan ENV=dev
 plan: check-env
-	terraform -chdir="$(TF_DIR)" plan -var-file="$(TFVARS)"
+	terraform -chdir="$(TF_DIR)" plan $(TF_PLAN_FLAGS) -var-file="$(TFVARS)"
 
 # Usage: make apply ENV=dev
 apply: check-env

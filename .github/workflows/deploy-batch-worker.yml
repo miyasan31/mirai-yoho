@@ -8,6 +8,10 @@ permissions:
   contents: read
   id-token: write
 
+concurrency:
+  group: deploy-batch-worker-${{ github.ref_name }}
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
@@ -37,5 +41,5 @@ jobs:
           TF_VAR_worker_image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/batch-worker/worker:${{ env.IMAGE_TAG }}
         run: |
           make init ENV="$DEPLOY_ENV"
-          make plan ENV="$DEPLOY_ENV"
-          make apply ENV="$DEPLOY_ENV" TF_APPLY_FLAGS="-auto-approve"
+          make plan ENV="$DEPLOY_ENV" TF_PLAN_FLAGS="-lock-timeout=10m"
+          make apply ENV="$DEPLOY_ENV" TF_APPLY_FLAGS="-auto-approve -lock-timeout=10m"
