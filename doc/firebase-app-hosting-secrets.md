@@ -30,13 +30,13 @@ make apply ENV=dev
 まとめて登録:
 
 ```bash
-make setup-secrets PROJECT=mirai-yoho-dev
+make setup-secrets:dev
 ```
 
 単体登録（新規追加時）:
 
 ```bash
-make setup-secret PROJECT=mirai-yoho-dev KEY=OPENAI_API_KEY
+make setup-secret:dev KEY=OPENAI_API_KEY
 ```
 
 ## 4. Firebase Console の重複環境変数を排除する
@@ -66,7 +66,7 @@ Secret 値を更新したら再ロールアウトしてください。
 1. 対象 secret の状態を確認（存在・バージョン）
 
 ```bash
-make describe-secret PROJECT=mirai-yoho-dev KEY=NEXT_PUBLIC_FIREBASE_API_KEY
+make describe-secret:dev KEY=NEXT_PUBLIC_FIREBASE_API_KEY
 ```
 
 2. Terraform plan で Secret と IAM が管理対象であることを確認
@@ -81,14 +81,14 @@ make plan ENV=dev
 3. `latest` 解決を確認
 
 ```bash
-make access-secret PROJECT=mirai-yoho-dev KEY=NEXT_PUBLIC_FIREBASE_API_KEY
+make access-secret:dev KEY=NEXT_PUBLIC_FIREBASE_API_KEY
 ```
 
 4. 値が空でないことを確認（値そのものは表示しない）
 
 ```bash
-make check-secret-value PROJECT=mirai-yoho-dev KEY=NEXT_PUBLIC_FIREBASE_API_KEY
-make check-public-build-secrets PROJECT=mirai-yoho-dev
+make check-secret-value:dev KEY=NEXT_PUBLIC_FIREBASE_API_KEY
+make check-public-build-secrets:dev
 ```
 
 5. 再ロールアウト

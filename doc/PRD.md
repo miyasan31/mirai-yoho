@@ -264,7 +264,7 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 | Resend | デフォルトドメイン可（`onboarding@resend.dev`） | 独自ドメイン（`noreply@ドメイン`） |
 | Cloud Scheduler | 無効（手動トリガーでテスト） | 有効（深夜 0 時バッチ） |
 | Cloud Run URL | 自動割り当て URL | 独自ドメイン + HTTPS |
-| 環境変数 | `.env.local`（ローカル）/ Secret Manager（GCP） | Secret Manager（GCP） |
+| 環境変数 | `.env.local`（Next.js ローカル起動）/ `.env.dev`（運用コマンド）/ Secret Manager（GCP） | `.env.prod`（運用コマンド）/ Secret Manager（GCP） |
 
 > **Resend 独自ドメイン設定：** DNS への SPF / DKIM / DMARC レコード追加 → Resend ダッシュボードで検証。本番リリース前に必須。
 

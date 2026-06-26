@@ -5,8 +5,12 @@ if not set -q PROJECT
     exit 1
 end
 
-if not test -f .env
-    echo "Error: .env not found in current directory"
+if not set -q ENV_FILE
+    set -gx ENV_FILE .env
+end
+
+if not test -f "$ENV_FILE"
+    echo "Error: $ENV_FILE not found in current directory"
     exit 1
 end
 
@@ -32,7 +36,7 @@ set -l secret_keys \
     LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL \
     INVOICE_REGISTRATION_NUMBER
 
-for raw_line in (string split \n -- (string collect < .env))
+for raw_line in (string split \n -- (string collect < "$ENV_FILE"))
     set -l line (string trim -- $raw_line)
 
     if test -z "$line"
@@ -66,7 +70,7 @@ end
 
 for secret in $secret_keys
     if not set -q $secret
-        echo "Error: environment variable $secret is required (from .env)"
+        echo "Error: environment variable $secret is required (from $ENV_FILE)"
         exit 1
     end
 

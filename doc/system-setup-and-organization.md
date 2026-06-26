@@ -62,11 +62,18 @@ Firebase Authentication ではメール / パスワードと匿名ログイン�
 
 ### 2.1 環境変数を作る
 
-`.env.example` をコピーして `.env.local` を作成し、対象環境の値を設定します。
+`.env.example` をコピーして `.env.local` を作成し、ローカル起動で使う値を設定します。
 
 ```bash
 cp .env.example .env.local
 ```
+
+このリポジトリの env 運用は用途ごとに分かれます。
+
+- Next.js（`pnpm dev`）: Next.js 標準の `.env*` / `.env.development*` を読みます。通常は `.env.local` を使います。
+- Make コマンド: 多くのターゲットは `<command>:dev` / `<command>:prod` で環境を切り替えられます（例: `make setup-batch-worker-secrets:dev`）。`.env.dev` / `.env.prod` を自動で読み、`PROJECT` も `mirai-yoho-dev` / `mirai-yoho-prod` に固定されます。
+- 従来どおり `ENV=<local|dev|prod>` や `PROJECT=...` を明示する書き方も使えます。
+- `.env.dev` / `.env.prod` は Next.js が自動読み込みしません。必要な場合は Make 経由で使います。
 
 ローカルでメール送信を避けたい場合は、`EMAIL_DELIVERY_MODE=log` を設定します。設定しない場合の既定値は `resend` です。
 
@@ -91,7 +98,7 @@ organization_operator_impersonators = [
 Terraform apply 後、リポジトリルートで ADC を設定します。
 
 ```bash
-make auth-adc-organization-operator PROJECT=mirai-yoho-dev
+make auth-adc-organization-operator:dev
 ```
 
 Firestore の初期コレクション作成は行いません。Firestore のコレクションは最初の実データ document が作成された時点で自動的に見えるようになります。Terraform では Firestore database、index、rules を管理し、アプリケーションに不要な `_bootstrap` document は作りません。
@@ -194,28 +201,24 @@ Cloud Scheduler / Worker の詳細は [Cloud Scheduler バッチ運用](cloud-sc
 Terraform apply 後、各 Secret に値を登録します。Secret コンテナだけでは不十分で、`versions/latest` が解決できるように少なくとも 1 つの version が必要です。
 
 ```bash
-make setup-secrets PROJECT=mirai-yoho-dev
+make setup-secrets:dev
 ```
 
-Secret version を `.env` から一括投入する場合は、シェルに応じて次を使います。
+Secret version を環境別 env ファイルから一括投入する場合は、次を使います。
 
 ```bash
-# bash / zsh
-set -a
-source .env
-set +a
-make setup-apphosting-secrets-from-env PROJECT=mirai-yoho-dev
+make setup-apphosting-secrets-from-env:dev
 ```
 
 ```bash
 # fish
-make setup-apphosting-secrets-from-env-fish PROJECT=mirai-yoho-dev
+make setup-apphosting-secrets-from-env-fish:dev
 ```
 
 Cloud Run Job が参照する最小セットだけ先に投入したい場合は、次も使えます。
 
 ```bash
-make setup-batch-worker-secrets PROJECT=mirai-yoho-dev
+make setup-batch-worker-secrets:dev
 ```
 
 App Hosting の変数は `[apphosting.yaml](../apphosting.yaml)` が正です。`NEXT_PUBLIC_*` の 5 項目はビルド時にも必要なため `BUILD` と `RUNTIME` の両方に公開されます。それ以外は Runtime Secret として扱います。
@@ -240,14 +243,14 @@ App Hosting は Terraform の rollout policy により、`dev` では `release/d
 
 ### 4.2 組織と初期管理者を作る
 
-対象環境の `.env.local` を設定し、`organization-operator` サービスアカウントを impersonate した端末で実行します。
+対象環境の env を設定し、`organization-operator` サービスアカウントを impersonate した端末で実行します。`make create-organization:dev` のように `:dev` / `:prod` サフィックスでも実行できます。
 
 ```bash
-make auth-adc-organization-operator PROJECT=mirai-yoho-dev
+make auth-adc-organization-operator:dev
 ```
 
 ```bash
-make create-organization \
+make create-organization:dev \
   ORGANIZATION_ID=tokyo-shibuya \
   ORGANIZATION_NAME="渋谷相談室" \
   ADMIN_EMAIL=admin@example.com
