@@ -22,13 +22,13 @@
 
 ## 1. 概要
 
-本システムは Next.js をベースとしたオンライン相談予約管理プラットフォーム **Arc - 未来予報** である。クライアントはアカウント登録不要（完全匿名）で相談員を選択・空き枠を予約・仮決済し、Zoom URL をメールで受け取ることができる。相談終了後は深夜 0 時のバッチ処理により前日分の本決済が自動実行される。Zoom のブレイクアウトルーム機能で複数クライアントの並行サポートを実現する。
+本システムは Next.js をベースとしたオンライン相談予約管理プラットフォーム **Arc - 未来予報** である。顧客はアカウント登録不要（完全匿名）で相談員を選択・空き枠を予約・仮決済し、Zoom URL をメールで受け取ることができる。相談終了後は深夜 0 時のバッチ処理により前日分の本決済が自動実行される。Zoom のブレイクアウトルーム機能で複数顧客の並行サポートを実現する。
 
 ### 1.1 目的
 
-- クライアントが 24 時間・アカウント不要で相談員を選択しオンライン相談枠を予約できる環境を提供する
+- 顧客が 24 時間・アカウント不要で相談員を選択しオンライン相談枠を予約できる環境を提供する
 - 仮決済 → Zoom URL 発行 → 相談 → 深夜バッチ本決済 の一貫したフローをシステム化する
-- 管理者が CRM 画面でクライアント・相談員・予約・決済を一元管理できる
+- 管理者が CRM 画面で顧客・相談員・予約・決済を一元管理できる
 
 ### 1.2 スコープ外
 
@@ -42,9 +42,9 @@
 
 | エンティティ | 概要 | 認証 | 主な権限 |
 |---|---|---|---|
-| クライアント | 相談を予約・受ける一般ユーザー | なし（完全匿名・メアドのみ） | 予約・仮決済・Zoom URL 受信 |
+| 顧客 | 相談を予約・受ける一般ユーザー | なし（完全匿名・メアドのみ） | 予約・仮決済・Zoom URL 受信 |
 | スーパー管理者 | システム全体を管理する内部ユーザー | Firebase Auth（`super_admin` クレーム） | CRM 全機能・管理者アカウント管理・権限変更・削除系全操作 |
-| オペレーター | 日常的な運用を担当する内部ユーザー | Firebase Auth（`operator` クレーム） | 予約・決済・クライアント情報の閲覧・操作（削除・権限変更不可） |
+| オペレーター | 日常的な運用を担当する内部ユーザー | Firebase Auth（`operator` クレーム） | 予約・決済・顧客情報の閲覧・操作（削除・権限変更不可） |
 | 相談員 | 相談を担当するスタッフ | Firebase Auth（`consultant` クレーム） | 自分の担当予約・スロット確認・相談メモ入力・プロフィール編集 |
 
 ### ロール権限マトリクス
@@ -53,9 +53,9 @@
 |---|---|---|---|
 | 管理者アカウント作成・削除 | ✅ | ❌ | ❌ |
 | 権限ロール変更 | ✅ | ❌ | ❌ |
-| クライアント・相談員の削除 | ✅ | ❌ | ❌ |
+| 顧客・相談員の削除 | ✅ | ❌ | ❌ |
 | 予約・決済操作（本決済・キャンセル） | ✅ | ✅ | ❌ |
-| クライアント情報編集 | ✅ | ✅ | ❌ |
+| 顧客情報編集 | ✅ | ✅ | ❌ |
 | 閲覧系全般（CRM） | ✅ | ✅ | ❌ |
 | 自分の担当予約・スロット確認 | ❌ | ❌ | ✅ |
 | 相談メモ入力 | ✅ | ✅ | ✅ |
@@ -65,7 +65,7 @@
 
 ## 3. 機能要件
 
-### 3.1 クライアント向け画面
+### 3.1 顧客向け画面
 
 #### 3.1.1 予約フロー
 
@@ -83,7 +83,7 @@
 
 #### 3.1.3 キャンセル
 
-- 確認メール内のキャンセルリンクからクライアント自身がキャンセル可能
+- 確認メール内のキャンセルリンクから顧客自身がキャンセル可能
 - 管理者も CRM から手動でキャンセル可能
 - キャンセル可能期限：**相談開始 24 時間前まで**
 - 返金：**全額返金**（Stripe PaymentIntent のキャンセル）
@@ -100,8 +100,8 @@ Firebase Auth（`consultant` クレーム）による認証が必須。
 
 #### 3.2.2 予約詳細・相談メモ
 
-- 予約の全情報表示（クライアント名・日時・Zoom URL）
-- 相談メモの入力・編集（管理者・相談員のみ閲覧可。クライアントには非公開）
+- 予約の全情報表示（顧客名・日時・Zoom URL）
+- 相談メモの入力・編集（管理者・相談員のみ閲覧可。顧客には非公開）
 
 #### 3.2.3 プロフィール編集
 
@@ -115,13 +115,13 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 #### 3.3.1 ダッシュボード
 
 - KPI サマリー：本日の予約数・今週の予約数・本決済待ち件数
-- 直近の予約一覧（クライアント名・相談員・日時・ステータス）
+- 直近の予約一覧（顧客名・相談員・日時・ステータス）
 
-#### 3.3.2 クライアント管理
+#### 3.3.2 顧客管理
 
-- クライアント一覧：検索・ページネーション付き（1 ページ 20 件）
-- クライアント詳細：基本情報・予約履歴・決済履歴
-- クライアント情報の編集・削除（削除はスーパー管理者のみ）
+- 顧客一覧：検索・ページネーション付き（1 ページ 20 件）
+- 顧客詳細：基本情報・予約履歴・決済履歴
+- 顧客情報の編集・削除（削除はスーパー管理者のみ）
 
 #### 3.3.3 相談員管理
 
@@ -159,8 +159,8 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 | Zoom プラン | Pro 以上（ブレイクアウトルーム機能が必要） |
 | API 認証 | Server-to-Server OAuth（クライアント ID / シークレット / アカウント ID） |
 | アカウント構成 | システム用 1 ホストアカウントで全ルームを管理 |
-| クライアントへの URL | メインミーティング URL を発行（ブレイクアウトルーム URL ではない） |
-| 部屋割り | 当日オペレーターが手動でブレイクアウトルームにクライアントを移動 |
+| 顧客への URL | メインミーティング URL を発行（ブレイクアウトルーム URL ではない） |
+| 部屋割り | 当日オペレーターが手動でブレイクアウトルームに顧客を移動 |
 | 相談員の紐づけ | 1 人の相談員が複数部屋に紐づけ可（DB で管理） |
 | 相談員の移動 | 手動オペレーション（Zoom クライアントから直接移動・通知なし） |
 | URL 発行タイミング | Stripe 仮決済完了後に即時生成・Resend でメール送付 |
@@ -181,10 +181,10 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 
 | 項目 | 内容 |
 |---|---|
-| クライアントのキャンセル期限 | 相談開始 24 時間前まで |
+| 顧客のキャンセル期限 | 相談開始 24 時間前まで |
 | 管理者のキャンセル期限 | 相談開始 24 時間前まで、または当日深夜バッチ実行前（no-show 対応） |
 | 返金方針 | 全額返金（Stripe PaymentIntent キャンセル） |
-| キャンセル実行者 | クライアント（確認メール内リンク）または管理者（CRM 手動操作） |
+| キャンセル実行者 | 顧客（確認メール内リンク）または管理者（CRM 手動操作） |
 | 期限超過後 | キャンセル不可（システム的にも期限チェックを実装） |
 | no-show 対応 | バッチ実行前であれば管理者が手動キャンセル可能。それ以外はオペレーションでカバー |
 | Stripe 仮決済との関係 | 仮決済有効期限は最大 7 日。キャンセルポリシーとは独立して管理 |
@@ -193,11 +193,11 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 
 | トリガー | 送信先 | 送信元 | 内容 |
 |---|---|---|---|
-| 予約確定（仮決済完了） | クライアント | `noreply@ドメイン` | 予約番号・日時・Zoom URL・相談員名・相談員写真・キャンセルリンク |
-| 予約確定（仮決済完了） | 相談員 | `noreply@ドメイン` | 担当予約の日時・クライアント名・Zoom URL |
-| 本決済完了（バッチ or 手動） | クライアント | `noreply@ドメイン` | 決済完了・インボイス対応領収書（登録番号・税率・税額） |
+| 予約確定（仮決済完了） | 顧客 | `noreply@ドメイン` | 予約番号・日時・Zoom URL・相談員名・相談員写真・キャンセルリンク |
+| 予約確定（仮決済完了） | 相談員 | `noreply@ドメイン` | 担当予約の日時・顧客名・Zoom URL |
+| 本決済完了（バッチ or 手動） | 顧客 | `noreply@ドメイン` | 決済完了・インボイス対応領収書（登録番号・税率・税額） |
 | バッチ実行完了 | 管理者 | `noreply@ドメイン` | 実行日時・対象件数・エラー件数 |
-| 予約キャンセル | クライアント | `noreply@ドメイン` | キャンセル確認・全額返金の旨 |
+| 予約キャンセル | 顧客 | `noreply@ドメイン` | キャンセル確認・全額返金の旨 |
 | 予約キャンセル | 相談員 | `noreply@ドメイン` | キャンセル発生・対象予約の日時 |
 | 相談員アカウント登録 | 相談員 | `noreply@ドメイン` | ログイン情報・初回パスワード設定リンク |
 
@@ -210,10 +210,10 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 - Firebase Auth カスタムクレームで 3 ロール管理（`super_admin` / `operator` / `consultant`）
 - 管理者・相談員画面は Firebase Auth の ID トークン検証でアクセス制御
 - Stripe Webhook は `stripe-signature` ヘッダーによる署名検証を必須とする
-- Zoom Server-to-Server OAuth の認証情報はサーバーサイドの環境変数のみで管理し、クライアントに露出させない
-- クライアントの個人情報は Firestore Security Rules で管理者のみ読み取り可
+- Zoom Server-to-Server OAuth の認証情報はサーバーサイドの環境変数のみで管理し、顧客に露出させない
+- 顧客の個人情報は Firestore Security Rules で管理者のみ読み取り可
 - 相談員は Firestore Security Rules で自分の担当予約・スロットのみ読み取り可
-- 相談メモ（`consultantMemo`）は管理者・相談員のみ読み取り可（クライアント非公開）
+- 相談メモ（`consultantMemo`）は管理者・相談員のみ読み取り可（顧客非公開）
 
 ### 4.2 パフォーマンス
 
@@ -233,7 +233,7 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 | カテゴリ | 技術 / サービス | 備考 |
 |---|---|---|
 | フロントエンド FW | Next.js（App Router） | |
-| 認証 | Firebase Authentication | 管理者・相談員。クライアントは完全匿名 |
+| 認証 | Firebase Authentication | 管理者・相談員。顧客は完全匿名 |
 | データベース | Firestore（GCP） | Firebase 統一でコスト最適化 |
 | ファイルストレージ | Firebase Storage | 相談員プロフィール写真 |
 | 決済 | Stripe | PaymentIntent manual capture / JPY 固定・税込み / インボイス対応 |
@@ -242,7 +242,7 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 | バッチ処理 | Cloud Scheduler（GCP） | 深夜 0 時の自動本決済 |
 | フォーム | React Hook Form + Valibot | |
 | UI コンポーネント | ParkUI | デザインシステム |
-| カレンダー | react-big-calendar（MIT） | 月 / 週ビュー。クライアント向け & CRM 共通 |
+| カレンダー | react-big-calendar（MIT） | 月 / 週ビュー。顧客向け & CRM 共通 |
 | Lint / Format | Biome | |
 | テスト | Vitest + React Testing Library | unit / component テスト（E2E は除外） |
 | デプロイ | GCP Cloud Run | dev / prod 2 環境 |
@@ -272,7 +272,7 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 
 ## 7. データモデル詳細（Firestore）
 
-### 7.1 `clients`（クライアント）
+### 7.1 `clients`（顧客）
 
 | フィールド名 | 型 | 必須 | 説明 |
 |---|---|---|---|
@@ -328,7 +328,7 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 | フィールド名 | 型 | 必須 | 説明 |
 |---|---|---|---|
 | `id` | `string` | ○ | Firestore 自動生成 ドキュメント ID |
-| `clientId` | `string` | ○ | クライアント ID |
+| `clientId` | `string` | ○ | 顧客 ID |
 | `consultantId` | `string` | ○ | 相談員 ID |
 | `slotId` | `string` | ○ | 予約枠 ID |
 | `startDatetime` | `timestamp` | ○ | 相談開始日時（`slots` から複製） |
@@ -336,8 +336,8 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 | `zoomUrl` | `string` | — | 仮決済完了後に設定される Zoom メインミーティング URL |
 | `zoomRoomId` | `string` | — | 割り当てられたブレイクアウトルーム ID |
 | `stripePaymentIntentId` | `string` | — | Stripe PaymentIntent ID |
-| `consultantContent` | `string` | — | クライアントが入力した相談内容（任意） |
-| `consultantMemo` | `string` | — | 相談員・管理者が入力する相談メモ（クライアント非公開） |
+| `consultantContent` | `string` | — | 顧客が入力した相談内容（任意） |
+| `consultantMemo` | `string` | — | 相談員・管理者が入力する相談メモ（顧客非公開） |
 | `cancelDeadline` | `timestamp` | ○ | キャンセル可能期限（`startDatetime - 24h`） |
 | `createdAt` | `timestamp` | ○ | 予約日時 |
 | `updatedAt` | `timestamp` | ○ | 最終更新日時 |
@@ -362,7 +362,7 @@ pending ──── 仮決済失敗 or タイムアウト ───────
 |---|---|---|---|
 | `id` | `string` | ○ | Firestore 自動生成 ドキュメント ID |
 | `bookingId` | `string` | ○ | 予約 ID |
-| `clientId` | `string` | ○ | クライアント ID（集計用に非正規化） |
+| `clientId` | `string` | ○ | 顧客 ID（集計用に非正規化） |
 | `stripePaymentIntentId` | `string` | ○ | Stripe PaymentIntent ID |
 | `status` | `string` | ○ | `authorized` / `captured` / `cancelled` / `failed` |
 | `amountJPY` | `number` | ○ | 金額（JPY・税込み） |
@@ -383,88 +383,90 @@ pending ──── 仮決済失敗 or タイムアウト ───────
 - **スーパー管理者専用：** `Authorization: Bearer <Firebase ID Token>` を必須。`super_admin` クレーム検証
 - **管理者共通：** `Authorization: Bearer <Firebase ID Token>` を必須。`super_admin` または `operator` クレーム検証
 - **相談員専用：** `Authorization: Bearer <Firebase ID Token>` を必須。`consultant` クレーム検証
-- **クライアント向け：** 認証不要。rate limiting を適用（IP ベース）
+- **顧客向け：** 認証不要。rate limiting を適用（IP ベース）
 - **Webhook：** `stripe-signature` ヘッダーによる署名検証のみ
 - **バッチ：** Cloud Scheduler の OIDC トークンによる署名検証
 
 ### 8.2 エンドポイント一覧
 
-#### `GET /api/consultants`
+> 組織スコープの API は共通で `/api/organizations/[organizationId]` をプレフィックスに持つ。
+
+#### `GET /api/organizations/[organizationId]/consultants`
 
 | 項目 | 内容 |
 |---|---|
 | 認証 | 不要 |
-| レスポンス | `{ consultants: [{ id, name, photoUrl, bio, specialties, displayOrder }] }`（`isActive: true` のみ・`displayOrder` 順） |
+| レスポンス | `{ consultants: [{ consultantId, name, specialties, bio, imageUrl, rank, isActive }] }` |
 
-#### `GET /api/slots`
-
-| 項目 | 内容 |
-|---|---|
-| 認証 | 不要 |
-| クエリパラメータ | `from`: ISO8601 日付（必須）/ `to`: ISO8601 日付（必須）/ `consultantId`: 必須 |
-| レスポンス | `{ slots: [{ id, consultantId, startDatetime, endDatetime, isBooked }] }` |
-
-#### `POST /api/bookings`
+#### `GET /api/organizations/[organizationId]/slots`
 
 | 項目 | 内容 |
 |---|---|
 | 認証 | 不要 |
-| リクエスト Body | `{ slotId, clientName, clientEmail, clientPhone, consultantContent? }` |
-| 処理フロー | ① `clients` 作成<br>② `slots.isBooked` を `true` に更新（Firestore トランザクション）<br>③ `cancelDeadline` を算出（`startDatetime - 24h`）<br>④ Stripe PaymentIntent 作成（`capture_method: manual`）<br>⑤ `bookings` 作成（`status: pending`）<br>⑥ `payments` 作成（`status: authorized`）<br>⑦ Zoom メインミーティング URL 生成<br>⑧ `bookings` を `status: confirmed`・`zoomUrl` 更新<br>⑨ Resend でクライアントに確認メール送信（Zoom URL・相談員名・写真・キャンセルリンク含む）<br>⑩ Resend で相談員に予約通知メール送信 |
-| レスポンス 201 | `{ bookingId, clientSecret, zoomUrl, consultantName, consultantPhotoUrl }` |
+| クエリパラメータ | `consultantId`: 任意 |
+| レスポンス | `{ slots }` または `{ aggregatedSlots }` |
+
+#### `POST /api/organizations/[organizationId]/bookings`
+
+| 項目 | 内容 |
+|---|---|
+| 認証 | 不要 |
+| リクエスト Body | `{ slotId? , startsAt? , endsAt? , customerName, customerEmail, customerPhone, customerBirthDate, consultantContent?, selectionId }` |
+| 処理フロー | ① `clients` 作成<br>② `slots.isBooked` を `true` に更新（Firestore トランザクション）<br>③ `cancelDeadline` を算出（`startDatetime - 24h`）<br>④ Stripe PaymentIntent 作成（`capture_method: manual`）<br>⑤ `bookings` 作成（`status: pending`）<br>⑥ `payments` 作成（`status: authorized`）<br>⑦ Zoom メインミーティング URL 生成<br>⑧ `bookings` を `status: confirmed`・`zoomUrl` 更新<br>⑨ Resend で顧客に確認メール送信（Zoom URL・相談員名・写真・キャンセルリンク含む）<br>⑩ Resend で相談員に予約通知メール送信 |
+| レスポンス 201 | `{ bookingId, bookingActionToken, ... }` |
 | レスポンス 409 | スロット競合（二重予約） |
 | レスポンス 402 | Stripe 決済エラー |
 
-#### `POST /api/bookings/[id]/capture`
+#### `POST /api/organizations/[organizationId]/bookings/[bookingId]/charge`
 
 | 項目 | 内容 |
 |---|---|
 | 認証 | 管理者のみ |
 | 処理フロー | ① Stripe PaymentIntent を capture<br>② `payments` を `status: captured`・`capturedAt`・`captureMethod: manual` 更新<br>③ `bookings` を `status: completed` に更新<br>④ Resend でインボイス対応領収書メール送信 |
-| レスポンス 200 | `{ bookingId, capturedAt }` |
+| レスポンス 200 | `{ success: true }` |
 | レスポンス 400 | 既に capture 済み or キャンセル済み |
 
-#### `POST /api/bookings/[id]/cancel`
+#### `POST /api/organizations/[organizationId]/bookings/[bookingId]/cancel`
 
 | 項目 | 内容 |
 |---|---|
-| 認証 | 管理者（CRM）または クライアント（メールリンクのトークン検証） |
-| キャンセル期限チェック | クライアント：`cancelDeadline` 超過で `403`。管理者：バッチ実行後は `403` |
-| 処理フロー | ① 期限チェック<br>② Stripe PaymentIntent をキャンセル（全額返金）<br>③ `payments` を `status: cancelled`・`cancelledAt` 更新<br>④ `bookings` を `status: cancelled` に更新<br>⑤ `slots.isBooked` を `false` に戻す<br>⑥ Resend でクライアントにキャンセル確認メール送信<br>⑦ Resend で相談員にキャンセル通知メール送信 |
-| レスポンス 200 | `{ bookingId, cancelledAt }` |
+| 認証 | 管理者（CRM）または 顧客（メールリンクのトークン検証） |
+| キャンセル期限チェック | 顧客：`cancelDeadline` 超過で `403`。管理者：バッチ実行後は `403` |
+| 処理フロー | ① 期限チェック<br>② Stripe PaymentIntent をキャンセル（全額返金）<br>③ `payments` を `status: cancelled`・`cancelledAt` 更新<br>④ `bookings` を `status: cancelled` に更新<br>⑤ `slots.isBooked` を `false` に戻す<br>⑥ Resend で顧客にキャンセル確認メール送信<br>⑦ Resend で相談員にキャンセル通知メール送信 |
+| レスポンス 200 | `{ success: true }` |
 | レスポンス 403 | キャンセル期限超過 |
 
-#### `POST /api/batch/capture`
+#### `POST /api/organizations/[organizationId]/batch/charge`
 
 | 項目 | 内容 |
 |---|---|
-| 認証 | Cloud Scheduler OIDC トークン署名検証 |
-| 処理フロー | ① 前日の `confirmed` ステータス予約を取得<br>② 各予約の Stripe PaymentIntent を capture<br>③ `payments` を `status: captured`・`captureMethod: batch` 更新<br>④ `bookings` を `status: completed` に更新<br>⑤ Resend でクライアントに領収書メール送信<br>⑥ Resend で管理者にバッチ実行完了通知メール送信 |
-| レスポンス 200 | `{ executedAt, successCount, errorCount }` |
+| 認証 | Cloud Scheduler OIDC トークン署名検証、または管理者/オペレーター |
+| 処理フロー | ① 前日の `confirmed` ステータス予約を取得<br>② 各予約の Stripe PaymentIntent を capture<br>③ `payments` を `status: captured`・`captureMethod: batch` 更新<br>④ `bookings` を `status: completed` に更新<br>⑤ Resend で顧客に領収書メール送信<br>⑥ Resend で管理者にバッチ実行完了通知メール送信 |
+| レスポンス 200 | `{ chargedCount, completedCount }` |
 
-#### `GET /api/consultant/bookings`
+#### `GET /api/organizations/[organizationId]/consultant/bookings`
 
 | 項目 | 内容 |
 |---|---|
 | 認証 | 相談員のみ |
-| クエリパラメータ | `from`: ISO8601 日付 / `to`: ISO8601 日付 |
+| クエリパラメータ | `page` / `pageSize` / `sortBy` / `sortOrder` |
 | レスポンス | 自分の担当予約一覧 |
 
-#### `PATCH /api/consultant/profile`
+#### `PATCH /api/organizations/[organizationId]/consultant/profile`
 
 | 項目 | 内容 |
 |---|---|
 | 認証 | 相談員のみ（自分のプロフィールのみ更新可） |
-| リクエスト Body | `{ bio?, specialties?, photoUrl?, displayOrder? }` |
-| レスポンス 200 | `{ consultantId, updatedAt }` |
+| リクエスト Body | `{ name, bio?, phone?, imageUrl?, specialties }` |
+| レスポンス 200 | `{ success: true }` |
 
-#### `PATCH /api/bookings/[id]/memo`
+#### `PATCH /api/organizations/[organizationId]/consultant/bookings/[id]/memo`
 
 | 項目 | 内容 |
 |---|---|
-| 認証 | 相談員または管理者 |
-| リクエスト Body | `{ consultantMemo }` |
-| レスポンス 200 | `{ bookingId, updatedAt }` |
+| 認証 | 相談員のみ |
+| リクエスト Body | `{ memo }` |
+| レスポンス 200 | `{ success: true }` |
 
 #### `POST /api/webhooks/stripe`
 
@@ -479,26 +481,32 @@ pending ──── 仮決済失敗 or タイムアウト ───────
 
 | エンドポイント | メソッド | 概要 |
 |---|---|---|
-| `/api/admin/clients` | `GET` | 一覧取得（`q`・`page`・`limit`・`sort` パラメータ対応） |
-| `/api/admin/clients/[id]` | `GET` | 詳細取得（予約履歴・決済履歴含む） |
-| `/api/admin/clients/[id]` | `PATCH` | 部分更新（`name` / `email` / `phone` / `memo`） |
-| `/api/admin/clients/[id]` | `DELETE` | 削除（スーパー管理者のみ） |
-| `/api/admin/consultants` | `GET` | 一覧取得 |
-| `/api/admin/consultants` | `POST` | 新規作成 |
-| `/api/admin/consultants/[id]` | `PATCH` | 部分更新（`name` / `zoomRoomIds` / `isActive`） |
-| `/api/admin/consultants/[id]` | `DELETE` | 論理削除（`isActive: false`、スーパー管理者のみ） |
-| `/api/admin/payments` | `GET` | 一覧取得（`month` / `status` / `q` パラメータ対応） |
-| `/api/admin/bookings` | `GET` | 一覧取得（`from` / `to` / `consultantId` パラメータ対応） |
-| `/api/admin/admins` | `GET` | 管理者一覧取得（スーパー管理者のみ） |
-| `/api/admin/admins` | `POST` | 管理者アカウント作成（スーパー管理者のみ） |
-| `/api/admin/admins/[id]` | `PATCH` | ロール変更（スーパー管理者のみ） |
-| `/api/admin/admins/[id]` | `DELETE` | 管理者アカウント削除（スーパー管理者のみ） |
+| `/api/organizations/[organizationId]/admin/dashboard` | `GET` | ダッシュボード取得 |
+| `/api/organizations/[organizationId]/admin/slots` | `GET` | 空き枠一覧取得 |
+| `/api/organizations/[organizationId]/admin/consultants` | `GET` | 相談員一覧取得（ページング対応） |
+| `/api/organizations/[organizationId]/admin/consultants` | `POST` | 相談員新規作成 |
+| `/api/organizations/[organizationId]/admin/consultants/[id]` | `PATCH` | 相談員更新（`name` / `bio` / `phone` / `specialties` / `zoomRoomIds` / `rankId`） |
+| `/api/organizations/[organizationId]/admin/consultants/[id]` | `DELETE` | 相談員無効化 |
+| `/api/organizations/[organizationId]/admin/settings/booking` | `GET` | 予約設定取得 |
+| `/api/organizations/[organizationId]/admin/settings/booking` | `PATCH` | 予約設定更新 |
+| `/api/organizations/[organizationId]/admin/settings/consultant-ranks` | `GET` | 相談員ランク設定取得 |
+| `/api/organizations/[organizationId]/admin/settings/consultant-ranks` | `PATCH` | 相談員ランク設定更新 |
+| `/api/organizations/[organizationId]/admin/bookings` | `GET` | 予約一覧取得（ページング対応） |
+| `/api/organizations/[organizationId]/admin/payments` | `GET` | 決済一覧取得（ページング対応） |
+| `/api/organizations/[organizationId]/admin/customers` | `GET` | 顧客一覧取得（ページング対応） |
+| `/api/organizations/[organizationId]/admin/users` | `GET` | 組織ユーザー一覧取得 |
+| `/api/organizations/[organizationId]/admin/users/invite` | `POST` | 組織ユーザー招待 |
+| `/api/organizations/[organizationId]/admin/users/[uid]` | `DELETE` | 組織ユーザー削除 |
+| `/api/organizations/[organizationId]/admin/users/[uid]/role` | `PATCH` | 組織ユーザーロール更新 |
+| `/api/organizations/[organizationId]/admin/users/[uid]/display-name` | `PATCH` | 表示名更新 |
+| `/api/organizations/[organizationId]/admin/users/[uid]/resend-invite` | `POST` | 招待メール再送 |
+| `/api/organizations/[organizationId]/admin/users/[uid]/reset-password` | `POST` | パスワードリセットメール送信 |
 
 ---
 
 ## 9. 画面要件（全 22 画面）
 
-### 9.1 クライアント向け（5 画面）
+### 9.1 顧客向け（5 画面）
 
 | # | 画面名 | URL | 主要要件 |
 |---|---|---|---|
@@ -513,7 +521,7 @@ pending ──── 仮決済失敗 or タイムアウト ───────
 | # | 画面名 | URL | 主要要件 |
 |---|---|---|---|
 | 6 | ログイン | `/consultant/login` | Firebase Auth。メール/PW + Google SSO |
-| 7 | 担当予約一覧 | `/consultant/bookings` | 当日・今後の担当予約一覧。日時・クライアント名・Zoom URL 表示 |
+| 7 | 担当予約一覧 | `/consultant/bookings` | 当日・今後の担当予約一覧。日時・顧客名・Zoom URL 表示 |
 | 8 | 予約詳細・メモ | `/consultant/bookings/[id]` | 全情報表示。相談メモの入力・編集 |
 | 9 | プロフィール編集 | `/consultant/profile` | 名前・写真・自己紹介・専門分野の編集。写真は Firebase Storage にアップロード |
 
@@ -525,11 +533,11 @@ pending ──── 仮決済失敗 or タイムアウト ───────
 | 11 | ダッシュボード | `/admin/dashboard` | KPI（本日の予約数・今週・本決済待ち）。直近 10 件の予約一覧 |
 | 12 | 予約一覧 | `/admin/bookings` | react-big-calendar 週/月ビュー。相談員フィルタ。色分け：仮決済済（青）/ 完了（緑）/ キャンセル（グレー） |
 | 13 | 予約詳細 | `/admin/bookings/[id]` | 全情報・相談メモ表示。本決済ボタン（緑、確認ダイアログあり）。キャンセルボタン（赤、期限チェック） |
-| 14 | クライアント一覧 | `/admin/clients` | 検索・ソート・ページネーション（20 件）。行クリックで詳細へ |
-| 15 | クライアント詳細 | `/admin/clients/[id]` | 基本情報・予約履歴・決済履歴。編集・削除（削除はスーパー管理者のみ、確認ダイアログ） |
+| 14 | 顧客一覧 | `/admin/customers` | 検索・ソート・ページネーション（20 件）。行クリックで詳細へ |
+| 15 | 顧客詳細 | `/admin/customers/[id]` | ※現行実装では未提供（`/admin/customers` の一覧のみ提供） |
 | 16 | 相談員管理 | `/admin/consultants` | 相談員一覧 + Zoom ルーム状況パネル。追加・編集・削除 |
 | 17 | 決済一覧 | `/admin/payments` | 当月サマリー（本決済合計・仮決済中・キャンセル）。バッチ実行ログ（実行日時・対象件数・エラー）。フィルタ・検索 |
-| 18 | 権限管理 | `/admin/settings/admins` | 管理者アカウント一覧・作成・削除・ロール変更。スーパー管理者のみアクセス可 |
+| 18 | 権限管理 | `/admin/users` | 組織ユーザー一覧・招待・削除・ロール変更・表示名更新 |
 
 ---
 
@@ -552,7 +560,7 @@ pending ──── 仮決済失敗 or タイムアウト ───────
 | Ver. | 日付 | 変更内容 |
 |---|---|---|
 | 0.1 | 2026-03-22 | 初版作成 |
-| 0.2 | 2026-03-22 | メール: Resend / クライアント: 完全匿名 / カレンダー: react-big-calendar / 決済: JPY 税込 / Zoom 移動通知: なし を確定 |
+| 0.2 | 2026-03-22 | メール: Resend / 顧客: 完全匿名 / カレンダー: react-big-calendar / 決済: JPY 税込 / Zoom 移動通知: なし を確定 |
 | 0.3 | 2026-03-22 | 全 12 画面ワイヤーフレーム・画面要件追記。データモデル詳細化。API 設計詳細化 |
 | 0.4 | 2026-03-22 | キャンセルポリシー / Resend ドメイン / Zoom 構成 / GCP 2 環境設計 / インボイス対応 を確定。未決事項 0 件 |
-| 0.5 | 2026-03-22 | システム名を Arc - 未来予報 に変更。被相談者をクライアントに統一。相談員ログイン追加。管理者 2 ロール制（super_admin / operator）導入。本決済を深夜バッチ自動化。相談員プロフィール公開・クライアントによる相談員選択を追加。Firebase Storage・Cloud Scheduler を技術スタックに追加。全 22 画面に拡張 |
+| 0.5 | 2026-03-22 | システム名を Arc - 未来予報 に変更。被相談者を顧客に統一。相談員ログイン追加。管理者 2 ロール制（super_admin / operator）導入。本決済を深夜バッチ自動化。相談員プロフィール公開・顧客による相談員選択を追加。Firebase Storage・Cloud Scheduler を技術スタックに追加。全 22 画面に拡張 |

@@ -239,7 +239,7 @@ export default function AdminHomePage() {
                     <BookingStatusBadge status={booking.status} />
                   </styled.div>
                   <Text textStyle="sm" color="fg.muted">
-                    クライアント: {booking.customerName}
+                    顧客: {booking.customerName}
                   </Text>
                 </styled.div>
               ))}
@@ -299,7 +299,7 @@ export default function AdminHomePage() {
                     )}
                   </styled.div>
                   <Text textStyle="sm" color="fg.muted">
-                    クライアント: {booking.customerName}
+                    顧客: {booking.customerName}
                   </Text>
                 </styled.div>
               ))}

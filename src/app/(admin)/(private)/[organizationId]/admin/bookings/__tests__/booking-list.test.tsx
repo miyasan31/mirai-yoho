@@ -280,7 +280,7 @@ describe("AdminBookingsPage", () => {
 
     render(<AdminBookingsPage />);
 
-    expect(screen.getByText("クライアント")).toBeInTheDocument();
+    expect(screen.getByText("顧客")).toBeInTheDocument();
     expect(screen.getByText("相談員")).toBeInTheDocument();
     expect(screen.getByText("入室確認")).toBeInTheDocument();
     expect(screen.getByText("未確認")).toBeInTheDocument();

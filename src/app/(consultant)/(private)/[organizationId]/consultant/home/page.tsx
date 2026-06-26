@@ -108,7 +108,7 @@ export default function ConsultantHomePage() {
                 <BookingStatusBadge status={nextBooking.status} />
               </styled.div>
               <Text textStyle="sm" mb="4">
-                クライアント: {nextBooking.customerName}
+                顧客: {nextBooking.customerName}
               </Text>
               <styled.div mb="4">
                 <ConsultantJoinControl
@@ -233,7 +233,7 @@ export default function ConsultantHomePage() {
                   <styled.div display="flex" alignItems="center" gap="2" mt="1">
                     <BookingStatusBadge status={booking.status} />
                     <Text textStyle="sm" color="fg.muted">
-                      クライアント: {booking.customerName}
+                      顧客: {booking.customerName}
                     </Text>
                   </styled.div>
                   <styled.div mt="2">

@@ -41,7 +41,7 @@
 | `[x]` | `POST /api/bookings` — `CreateBookingUseCase` を API Route に繋ぐ | `Claude Code` |
 | `[x]` | `GET /api/consultants` — 相談員一覧エンドポイント | `Claude Code` |
 | `[x]` | `GET /api/slots` — 空き枠一覧エンドポイント | `Claude Code` |
-| `[x]` | クライアント向け 5 画面 UI 実装（相談員一覧 → 予約完了） | `Claude Code` |
+| `[x]` | 顧客向け 5 画面 UI 実装（相談員一覧 → 予約完了） | `Claude Code` |
 | `[x]` | Stripe Payment Element の組み込み（`/booking/payment`） | |
 | `[x]` | Stripe Webhook（`/api/webhooks/stripe`）署名検証・ステータス更新 | `Claude Code` |
 | `[x]` | `POST /api/bookings/[id]/cancel` — `CancelBookingUseCase` | `Claude Code` |

@@ -229,7 +229,7 @@ describe("AdminHomePage", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("直近開始予約")).toBeInTheDocument();
     expect(screen.getByText("要対応決済")).toBeInTheDocument();
-    expect(screen.getAllByText(/クライアント: 山田 太郎/).length).toBe(2);
+    expect(screen.getAllByText(/顧客: 山田 太郎/).length).toBe(2);
     expect(
       screen.getByRole("link", { name: "設定を編集する" }),
     ).toHaveAttribute("href", "/org-test/admin/settings");

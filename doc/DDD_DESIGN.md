@@ -41,10 +41,10 @@
 | 予約 | Booking | `Booking` | キャンセルも含むライフサイクル全体 |
 | 予約枠 | Slot | `Slot` | 相談員が開けた時間枠。`Booking` と 1 対 1 |
 | 相談員 | Consultant | `Consultant` | ≠ Advisor / Staff |
-| クライアント | Client | `Client` | 匿名ユーザー（≠ Customer / User） |
+| 顧客 | Customer | `Customer` | 匿名ユーザー |
 | 仮決済 | Authorization | `Payment`（`status: authorized`） | Stripe `capture_method: manual` |
 | 本決済 | Capture | `Payment.capture()` | バッチ or 手動 |
-| 相談メモ | Consultant memo | `ConsultantMemo` | クライアント非公開の内部メモ |
+| 相談メモ | Consultant memo | `ConsultantMemo` | 顧客非公開の内部メモ |
 | キャンセル期限 | Cancel deadline | `CancelDeadline` | 相談開始 24 時間前 |
 | 予約確定 | Booking confirmed | `BookingConfirmedEvent` | 仮決済完了・Zoom URL 発行済み |
 | バッチ本決済 | Batch capture | `captureMethod: 'batch'` | 深夜 0 時 Cloud Scheduler 実行 |
@@ -58,7 +58,7 @@
 | 予約管理（Booking / Slot） | **コアドメイン** ★ | サービスの競合優位性の源泉。最も手をかける |
 | 決済管理（Payment） | 支援サブドメイン | ビジネス固有だが Stripe に委譲できる部分が大きい |
 | 相談員管理（Consultant） | 支援サブドメイン | プロフィール・スロット管理はドメイン知識を持つが差別化要素ではない |
-| クライアント管理（Client） | 支援サブドメイン | 将来のリピート予約・履歴活用を見越して独立集約として設計 |
+| 顧客管理（Customer） | 支援サブドメイン | 将来のリピート予約・履歴活用を見越して独立集約として設計 |
 | メール通知 | 汎用サブドメイン | Resend に完全委譲。ドメインイベントを受け取るハンドラのみ実装 |
 | 認証 | 汎用サブドメイン | Firebase Auth に完全委譲 |
 
@@ -109,14 +109,14 @@
 | `Slot` | `TimeRange` | `reserve()` `release()` | 予約作成・キャンセル |
 | `Payment` | `Money` `PaymentStatus` `CaptureMethod` | `capture()` `cancel()` | 決済操作 |
 | `Consultant` | `ConsultantProfile` `ZoomRoomId[]` | `updateProfile()` `assignZoomRooms()` `deactivate()` | プロフィール更新・論理削除 |
-| `Client` | —（シンプルなデータ保持） | `updateInfo()` `updateMemo()` | クライアント情報更新 |
+| `Customer` | —（シンプルなデータ保持） | `updateInfo()` `updateMemo()` | 顧客情報更新 |
 
 ### 5.2 Booking 集約詳細
 
 ```
 Booking（集約ルート）
 ├── bookingId: string               ID（Firestore 自動生成）
-├── clientId: ClientId              外部参照（別集約）
+├── customerId: CustomerId          外部参照（別集約）
 ├── consultantId: ConsultantId      外部参照（別集約）
 ├── slotId: SlotId                  外部参照（別集約）
 ├── startDatetime: Date             slots から複製（非正規化）
@@ -124,7 +124,7 @@ Booking（集約ルート）
 ├── cancelDeadline: CancelDeadline  startDatetime - 24h
 ├── zoomUrl?: ZoomUrl               confirm() 後にセット
 ├── consultantMemo: ConsultantMemo  管理者・相談員のみ閲覧可
-├── consultantContent?: string      クライアント入力（任意）
+├── consultantContent?: string      顧客入力（任意）
 ├── stripePaymentIntentId?: string  confirm() 後にセット
 └── _domainEvents: DomainEvent[]    pullDomainEvents() で取り出す
 ```
@@ -159,13 +159,13 @@ Payment（集約ルート）
 ```typescript
 // ✅ 正しい：集約は ID 参照のみ
 class Booking {
-  clientId: string        // Client オブジェクトを直接持たない
+  customerId: string      // Customer オブジェクトを直接持たない
   consultantId: string    // Consultant オブジェクトを直接持たない
 }
 
 // ❌ 誤り：集約内に別集約を持つ
 class Booking {
-  client: Client          // 集約の境界を壊す
+  customer: Customer      // 集約の境界を壊す
   consultant: Consultant  // 同上
 }
 ```
@@ -178,9 +178,9 @@ class Booking {
 
 | イベント名 | 発火元 | 発火タイミング | ハンドラ（通知） |
 |---|---|---|---|
-| `BookingConfirmedEvent` | `Booking.confirm()` | 仮決済完了・Zoom URL セット後 | クライアント確認メール・相談員予約通知メール |
-| `BookingCancelledEvent` | `Booking.cancel()` | キャンセル確定後 | クライアントキャンセル確認メール・相談員キャンセル通知メール |
-| `PaymentCapturedEvent` | `Payment.capture()` | 本決済確定後 | クライアント領収書メール・管理者バッチ完了通知（バッチ時） |
+| `BookingConfirmedEvent` | `Booking.confirm()` | 仮決済完了・Zoom URL セット後 | 顧客確認メール・相談員予約通知メール |
+| `BookingCancelledEvent` | `Booking.cancel()` | キャンセル確定後 | 顧客キャンセル確認メール・相談員キャンセル通知メール |
+| `PaymentCapturedEvent` | `Payment.capture()` | 本決済確定後 | 顧客領収書メール・管理者バッチ完了通知（バッチ時） |
 
 ### 6.2 イベントの流れ
 
@@ -192,7 +192,7 @@ CreateBookingUseCase
   └─ booking.pullDomainEvents() でイベントを取り出す
        └─ onBookingConfirmed(event) を呼ぶ
             └─ ResendEmailService.sendBookingConfirmation(...)
-                  ├─ クライアントへ確認メール（Zoom URL・キャンセルリンク含む）
+                  ├─ 顧客へ確認メール（Zoom URL・キャンセルリンク含む）
                   └─ 相談員へ予約通知メール
 ```
 
@@ -240,7 +240,7 @@ src/
 │   │   └── iConsultantRepository.ts
 │   └── client/
 │       ├── client.ts
-│       └── iClientRepository.ts
+│       └── iCustomerRepository.ts
 │
 ├── application/
 │   └── booking/
@@ -253,7 +253,7 @@ src/
 │   │   ├── firestoreBookingRepository.ts
 │   │   ├── firestoreSlotRepository.ts
 │   │   ├── firestorePaymentRepository.ts
-│   │   ├── firestoreClientRepository.ts
+│   │   ├── firestoreCustomerRepository.ts
 │   │   ├── firestoreConsultantRepository.ts
 │   │   └── firestoreUnitOfWork.ts    ← トランザクション実装
 │   ├── stripe/
@@ -285,7 +285,7 @@ src/
 
 1. SlotRepository.findById(slotId)
 2. slot.reserve(newBookingId)          ← 二重予約・過去日時チェック（DomainError）
-3. Client.create({...})
+3. Customer.create({...})
 4. Booking.create({...})               ← status: pending
 5. StripeService.createPaymentIntent() ← 仮決済
 6. ZoomService.createMeetingUrl()      ← Zoom URL 生成
@@ -370,7 +370,7 @@ Domain 層はインフラ依存がゼロなので、単体テストが容易。�
 | テスト対象 | テスト内容 |
 |---|---|
 | `CancelDeadline` | 期限前・期限後で正しく判定できるか |
-| `Booking.cancel()` | クライアントが期限超過でキャンセルすると `DomainError` を投げるか |
+| `Booking.cancel()` | 顧客が期限超過でキャンセルすると `DomainError` を投げるか |
 | `Slot.reserve()` | 二重予約で `DomainError` を投げるか |
 | `Money.fromTaxIncluded()` | 税額計算が正しいか |
 | `Booking.confirm()` | `BookingConfirmedEvent` が発火されるか |

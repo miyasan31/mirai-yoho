@@ -140,7 +140,7 @@ paths:
                   enum: [customer, admin]
                 token:
                   type: string
-                  description: "クライアントキャンセル時に必須。形式: bookingId.expiresAt.signature"
+                  description: "顧客キャンセル時に必須。形式: bookingId.expiresAt.signature"
       responses:
         "200":
           description: OK
@@ -867,7 +867,7 @@ paths:
   /organizations/{organizationId}/admin/customers:
     get:
       operationId: getAdminCustomers
-      summary: クライアント一覧取得（管理者）
+      summary: 顧客一覧取得（管理者）
       tags: [admin]
       security:
         - bearerAuth: []

@@ -255,7 +255,7 @@ describe("ConsultantBookingsPage", () => {
       expect(screen.getByText("confirmed")).toBeDefined();
       expect(screen.getByText("テストメモ")).toBeDefined();
       expect(screen.getByText("山田 太郎")).toBeDefined();
-      expect(screen.getByText("クライアント")).toBeDefined();
+      expect(screen.getByText("顧客")).toBeDefined();
       expect(screen.getAllByText("入室確認").length).toBeGreaterThanOrEqual(1);
     });
   });

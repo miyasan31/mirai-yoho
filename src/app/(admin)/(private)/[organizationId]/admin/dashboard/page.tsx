@@ -144,7 +144,7 @@ export default function AdminDashboardPage() {
             letterSpacing="wide"
             color="fg.muted"
           >
-            クライアント数
+            顧客数
           </Text>
           <Text textStyle="4xl" fontWeight="bold">
             {dashboard.totalCustomers}

@@ -33,7 +33,7 @@ export default function AdminCustomersPage() {
       <styled.div>
         <styled.div mb="4">
           <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
-            クライアント管理
+            顧客管理
           </Text>
           <Text textStyle="sm" color="fg.muted">
             利用者情報を一覧で確認し、連絡先や登録内容を参照する画面です。
@@ -48,7 +48,7 @@ export default function AdminCustomersPage() {
     <styled.div>
       <styled.div mb="4">
         <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
-          クライアント管理
+          顧客管理
         </Text>
         <Text textStyle="sm" color="fg.muted">
           利用者情報を一覧で確認し、連絡先や登録内容を参照する画面です。
@@ -57,8 +57,8 @@ export default function AdminCustomersPage() {
       {customers.length === 0 ? (
         <EmptyState
           icon={Building2}
-          message="クライアントはいません"
-          hint="クライアントが登録されるとここに表示されます"
+          message="顧客はいません"
+          hint="顧客が登録されるとここに表示されます"
         />
       ) : (
         <>

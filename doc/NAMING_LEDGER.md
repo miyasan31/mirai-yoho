@@ -24,7 +24,7 @@
 |---|---|---|
 | **Firestore（永続化）** | camelCase フィールド、kebab-case コレクション名 | クエリ・インデックスに最適化した保存名 |
 | **Domain（集約）** | camelCase、VO でネスト可能 | ユビキタス言語に沿った内部名 |
-| **API（OpenAPI / JSON）** | camelCase | クライアント向け公開名。計算値・展開オブジェクト可 |
+| **API（OpenAPI / JSON）** | camelCase | 顧客向け公開名。計算値・展開オブジェクト可 |
 
 **原則**: Domain を正とし、Firestore は Domain に合わせる。API は用途に応じて別名を許容するが、**同一概念に複数の別名を持たせない**。
 
@@ -52,7 +52,7 @@
 | 識別子 | 正準名 | 永続化 | 用途 |
 |---|---|---|---|
 | プラン UUID | `pricePlanId` | ○ | マスタ参照・booking スナップショットの主キー |
-| 選択用署名 | `selectionId` | ×（計算値） | 予約フローでクライアントが選択する ID。`name` + `totalJPY` から生成 |
+| 選択用署名 | `selectionId` | ×（計算値） | 予約フローで顧客が選択する ID。`name` + `totalJPY` から生成 |
 | 検索用正規化名 | `normalizedName` | ○（FS のみ） | 重複検索・署名解決用。Domain getter、API 非公開 |
 
 **決定**:
