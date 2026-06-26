@@ -191,10 +191,31 @@ Cloud Scheduler / Worker の詳細は [Cloud Scheduler バッチ運用](cloud-sc
 
 ### 3.4 App Hosting の Secret を登録する
 
-Terraform apply 後、各 Secret に値を登録します。
+Terraform apply 後、各 Secret に値を登録します。Secret コンテナだけでは不十分で、`versions/latest` が解決できるように少なくとも 1 つの version が必要です。
 
 ```bash
 make setup-secrets PROJECT=mirai-yoho-dev
+```
+
+Secret version を `.env` から一括投入する場合は、シェルに応じて次を使います。
+
+```bash
+# bash / zsh
+set -a
+source .env
+set +a
+make setup-apphosting-secrets-from-env PROJECT=mirai-yoho-dev
+```
+
+```bash
+# fish
+make setup-apphosting-secrets-from-env-fish PROJECT=mirai-yoho-dev
+```
+
+Cloud Run Job が参照する最小セットだけ先に投入したい場合は、次も使えます。
+
+```bash
+make setup-batch-worker-secrets PROJECT=mirai-yoho-dev
 ```
 
 App Hosting の変数は `[apphosting.yaml](../apphosting.yaml)` が正です。`NEXT_PUBLIC_*` の 5 項目はビルド時にも必要なため `BUILD` と `RUNTIME` の両方に公開されます。それ以外は Runtime Secret として扱います。
