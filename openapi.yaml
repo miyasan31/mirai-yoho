@@ -893,10 +893,10 @@ paths:
                   pagination:
                     $ref: "#/components/schemas/PaginationMeta"
 
-  /organizations/{organizationId}/admin/users:
+  /organizations/{organizationId}/admin/accounts:
     get:
-      operationId: getAdminUsers
-      summary: 組織ユーザー一覧取得（管理者・オペレーター）
+      operationId: getAdminAccounts
+      summary: 組織アカウント一覧取得（管理者・オペレーター）
       tags: [admin]
       security:
         - bearerAuth: []
@@ -913,19 +913,19 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [users, pagination]
+                required: [accounts, pagination]
                 properties:
-                  users:
+                  accounts:
                     type: array
                     items:
-                      $ref: "#/components/schemas/AdminUser"
+                      $ref: "#/components/schemas/AdminAccount"
                   pagination:
                     $ref: "#/components/schemas/PaginationMeta"
 
-  /organizations/{organizationId}/admin/users/invite:
+  /organizations/{organizationId}/admin/accounts/invite:
     post:
-      operationId: inviteUser
-      summary: 組織ユーザー招待（管理者・オペレーター・相談員）
+      operationId: inviteAccount
+      summary: 組織アカウント招待（管理者・オペレーター・相談員）
       tags: [admin]
       security:
         - bearerAuth: []
@@ -961,10 +961,10 @@ paths:
                   uid:
                     type: string
 
-  /organizations/{organizationId}/admin/users/{uid}:
+  /organizations/{organizationId}/admin/accounts/{uid}:
     delete:
-      operationId: deleteAdminUser
-      summary: 組織ユーザー削除
+      operationId: deleteAdminAccount
+      summary: 組織アカウント削除
       tags: [admin]
       security:
         - bearerAuth: []
@@ -975,10 +975,10 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/users/{uid}/role:
+  /organizations/{organizationId}/admin/accounts/{uid}/role:
     patch:
-      operationId: updateUserRole
-      summary: 組織ユーザーロール更新
+      operationId: updateAccountRole
+      summary: 組織アカウントロール更新
       tags: [admin]
       security:
         - bearerAuth: []
@@ -1000,10 +1000,10 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/users/{uid}/display-name:
+  /organizations/{organizationId}/admin/accounts/{uid}/display-name:
     patch:
-      operationId: updateUserDisplayName
-      summary: 組織ユーザー表示名更新（管理者、またはオペレーター本人）
+      operationId: updateAccountDisplayName
+      summary: 組織アカウント表示名更新（管理者、またはオペレーター本人）
       tags: [admin]
       security:
         - bearerAuth: []
@@ -1024,9 +1024,9 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/users/{uid}/resend-invite:
+  /organizations/{organizationId}/admin/accounts/{uid}/resend-invite:
     post:
-      operationId: resendUserInvite
+      operationId: resendAccountInvite
       summary: 招待メール再送（管理者・オペレーター）
       tags: [admin]
       security:
@@ -1038,9 +1038,9 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/users/{uid}/reset-password:
+  /organizations/{organizationId}/admin/accounts/{uid}/reset-password:
     post:
-      operationId: resetUserPassword
+      operationId: resetAccountPassword
       summary: パスワードリセットメール送信（管理者・オペレーター）
       tags: [admin]
       security:
@@ -1123,7 +1123,7 @@ components:
       scheme: bearer
 
   schemas:
-    AdminUser:
+    AdminAccount:
       type: object
       required: [uid, email, name, role, status, createdAt, updatedAt]
       properties:

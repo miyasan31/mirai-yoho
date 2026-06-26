@@ -2,14 +2,14 @@ import type { UserRole } from "@/infrastructure/auth/auth-types";
 
 export type AdminActorRole = UserRole | null;
 
-export type AdminPanelUserStatus = "pending" | "registered";
+export type AdminPanelAccountStatus = "pending" | "registered";
 
-export function canManageAdminUsers(actorRole: AdminActorRole): boolean {
+export function canManageAdminAccounts(actorRole: AdminActorRole): boolean {
   return actorRole === "admin" || actorRole === "operator";
 }
 
-export function canInviteAdminUsers(actorRole: AdminActorRole): boolean {
-  return canManageAdminUsers(actorRole);
+export function canInviteAdminAccounts(actorRole: AdminActorRole): boolean {
+  return canManageAdminAccounts(actorRole);
 }
 
 export function canEditDisplayName(
@@ -26,25 +26,25 @@ export function canEditDisplayName(
 
 export function canEditRole(
   actorRole: AdminActorRole,
-  targetStatus: AdminPanelUserStatus,
+  targetStatus: AdminPanelAccountStatus,
 ): boolean {
   return actorRole === "admin" && targetStatus !== "pending";
 }
 
 export function canResendInvite(
   actorRole: AdminActorRole,
-  targetStatus: AdminPanelUserStatus,
+  targetStatus: AdminPanelAccountStatus,
 ): boolean {
-  return canManageAdminUsers(actorRole) && targetStatus === "pending";
+  return canManageAdminAccounts(actorRole) && targetStatus === "pending";
 }
 
 export function canResetPassword(
   actorRole: AdminActorRole,
-  targetStatus: AdminPanelUserStatus,
+  targetStatus: AdminPanelAccountStatus,
 ): boolean {
-  return canManageAdminUsers(actorRole) && targetStatus !== "pending";
+  return canManageAdminAccounts(actorRole) && targetStatus !== "pending";
 }
 
-export function canDeleteAdminUser(actorRole: AdminActorRole): boolean {
+export function canDeleteAdminAccount(actorRole: AdminActorRole): boolean {
   return actorRole === "admin";
 }

@@ -1,20 +1,20 @@
 import {
-  canDeleteAdminUser,
+  canDeleteAdminAccount,
   canEditDisplayName,
   canEditRole,
-  canInviteAdminUsers,
-  canManageAdminUsers,
+  canInviteAdminAccounts,
+  canManageAdminAccounts,
   canResendInvite,
   canResetPassword,
-} from "../user-permissions";
+} from "../account-permissions";
 
-describe("user permissions", () => {
-  it("allows admin and operator to access user management and invite", () => {
-    expect(canManageAdminUsers("admin")).toBe(true);
-    expect(canManageAdminUsers("operator")).toBe(true);
-    expect(canManageAdminUsers(null)).toBe(false);
-    expect(canInviteAdminUsers("admin")).toBe(true);
-    expect(canInviteAdminUsers("operator")).toBe(true);
+describe("account permissions", () => {
+  it("allows admin and operator to access account management and invite", () => {
+    expect(canManageAdminAccounts("admin")).toBe(true);
+    expect(canManageAdminAccounts("operator")).toBe(true);
+    expect(canManageAdminAccounts(null)).toBe(false);
+    expect(canInviteAdminAccounts("admin")).toBe(true);
+    expect(canInviteAdminAccounts("operator")).toBe(true);
   });
 
   it("allows operator display name edit only for self", () => {
@@ -31,11 +31,11 @@ describe("user permissions", () => {
     expect(canEditRole("admin", "registered")).toBe(true);
     expect(canEditRole("admin", "pending")).toBe(false);
     expect(canEditRole("operator", "registered")).toBe(false);
-    expect(canDeleteAdminUser("admin")).toBe(true);
-    expect(canDeleteAdminUser("operator")).toBe(false);
+    expect(canDeleteAdminAccount("admin")).toBe(true);
+    expect(canDeleteAdminAccount("operator")).toBe(false);
   });
 
-  it("allows resend invite only for pending users and reset password only for registered users", () => {
+  it("allows resend invite only for pending accounts and reset password only for registered accounts", () => {
     expect(canResendInvite("admin", "pending")).toBe(true);
     expect(canResendInvite("operator", "pending")).toBe(true);
     expect(canResendInvite("operator", "registered")).toBe(false);

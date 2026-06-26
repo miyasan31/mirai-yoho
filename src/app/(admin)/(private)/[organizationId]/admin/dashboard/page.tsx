@@ -29,7 +29,7 @@ export default function AdminDashboardPage() {
             ダッシュボード
           </Text>
           <Text textStyle="sm" color="fg.muted">
-            予約・売上・ユーザー状況など、運用状況の全体を確認する画面です。
+            予約・売上・アカウント状況など、運用状況の全体を確認する画面です。
           </Text>
         </styled.div>
         <styled.div
@@ -72,7 +72,7 @@ export default function AdminDashboardPage() {
           ダッシュボード
         </Text>
         <Text textStyle="sm" color="fg.muted">
-          予約・売上・ユーザー状況など、運用状況の全体を確認する画面です。
+          予約・売上・アカウント状況など、運用状況の全体を確認する画面です。
         </Text>
       </styled.div>
       <styled.div

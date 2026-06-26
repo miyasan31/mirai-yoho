@@ -2,7 +2,7 @@ import * as v from "valibot";
 
 const inviteRoleSchema = v.picklist(["admin", "operator"] as const);
 
-export const userInviteFormSchema = v.object({
+export const accountInviteFormSchema = v.object({
   email: v.pipe(
     v.string(),
     v.trim(),
@@ -17,4 +17,6 @@ export const userInviteFormSchema = v.object({
   role: inviteRoleSchema,
 });
 
-export type UserInviteFormValues = v.InferOutput<typeof userInviteFormSchema>;
+export type AccountInviteFormValues = v.InferOutput<
+  typeof accountInviteFormSchema
+>;

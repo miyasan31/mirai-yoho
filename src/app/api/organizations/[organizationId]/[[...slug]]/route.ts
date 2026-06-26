@@ -1091,7 +1091,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (
       segments.length === 2 &&
       segments[0] === "admin" &&
-      segments[1] === "users"
+      segments[1] === "accounts"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
       const listQueryParams = parseListQueryParams(
@@ -1113,7 +1113,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         getAdminOrOperatorDisplayNameMap(memberUids),
       ]);
 
-      const users = memberships.map((membership) => {
+      const accounts = memberships.map((membership) => {
         const userRecord = userByUid.get(membership.uid) ?? null;
         const name = nameByUid.get(membership.uid) ?? "";
         const createdAtDate = membership.createdAt?.toDate() ?? new Date(0);
@@ -1129,10 +1129,16 @@ export async function GET(request: NextRequest, context: RouteContext) {
           updatedAt: updatedAtDate.toISOString(),
         };
       });
-      const sortedUsers = sortByTimestampDesc(users, listQueryParams.sortBy);
-      const { items, pagination } = paginateArray(sortedUsers, listQueryParams);
+      const sortedAccounts = sortByTimestampDesc(
+        accounts,
+        listQueryParams.sortBy,
+      );
+      const { items, pagination } = paginateArray(
+        sortedAccounts,
+        listQueryParams,
+      );
 
-      return noStoreJson({ users: items, pagination });
+      return noStoreJson({ accounts: items, pagination });
     }
 
     if (
@@ -1740,7 +1746,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (
       segments.length === 3 &&
       segments[0] === "admin" &&
-      segments[1] === "users" &&
+      segments[1] === "accounts" &&
       segments[2] === "invite"
     ) {
       const actorMembership = requireOrganizationRole(
@@ -1830,7 +1836,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         passwordResetLink,
       });
 
-      console.info("Admin user invited", {
+      console.info("Admin account invited", {
         category: "security-audit",
         endpoint: postErrorContext.endpoint,
         organizationId,
@@ -1847,7 +1853,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (
       segments.length === 4 &&
       segments[0] === "admin" &&
-      segments[1] === "users" &&
+      segments[1] === "accounts" &&
       segments[3] === "resend-invite"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
@@ -1871,7 +1877,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
-          "ユーザーにメールアドレスがありません",
+          "アカウントにメールアドレスがありません",
         );
       }
 
@@ -1887,7 +1893,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
     if (
       segments.length === 4 &&
       segments[0] === "admin" &&
-      segments[1] === "users" &&
+      segments[1] === "accounts" &&
       segments[3] === "reset-password"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
@@ -1910,7 +1916,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
-          "ユーザーにメールアドレスがありません",
+          "アカウントにメールアドレスがありません",
         );
       }
 
@@ -2351,7 +2357,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (
       segments.length === 4 &&
       segments[0] === "admin" &&
-      segments[1] === "users" &&
+      segments[1] === "accounts" &&
       segments[3] === "display-name"
     ) {
       const actorMembership = requireOrganizationRole(
@@ -2405,7 +2411,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     if (
       segments.length === 4 &&
       segments[0] === "admin" &&
-      segments[1] === "users" &&
+      segments[1] === "accounts" &&
       segments[3] === "role"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin");
@@ -2619,7 +2625,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     if (
       segments.length === 3 &&
       segments[0] === "admin" &&
-      segments[1] === "users"
+      segments[1] === "accounts"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin");
       const membershipId = getOrganizationMembershipDocId(

@@ -52,7 +52,7 @@ describe("AdminLayout", () => {
     vi.clearAllMocks();
   });
 
-  it("shows user management nav item for operator", () => {
+  it("shows account management nav item for operator", () => {
     mockUseAuth.mockReturnValue({
       user: { email: "operator@example.com" },
       role: "operator",
@@ -75,7 +75,7 @@ describe("AdminLayout", () => {
       </AdminLayout>,
     );
 
-    expect(screen.getByText("ユーザー管理")).toBeInTheDocument();
+    expect(screen.getByText("アカウント管理")).toBeInTheDocument();
     expect(screen.getByText("ホーム")).toBeInTheDocument();
     expect(screen.getByText("ダッシュボード（集計）")).toBeInTheDocument();
   });

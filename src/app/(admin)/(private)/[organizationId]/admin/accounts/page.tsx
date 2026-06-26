@@ -17,7 +17,7 @@ import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { EmptyState } from "@/components/empty-state";
 import { ListControls } from "@/components/list-controls";
-import { UserStatusBadge } from "@/components/status-badge";
+import { AccountStatusBadge } from "@/components/status-badge";
 import { TableSkeleton } from "@/components/table-skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,39 +31,39 @@ import { Text } from "@/components/ui/text";
 import { toaster } from "@/components/ui/toast";
 import { Tooltip } from "@/components/ui/tooltip";
 import {
-  useAdminUsers,
-  useAdminUsersQueryKey,
-  useDeleteAdminUser,
-  useInviteUser,
-  useResendUserInvite,
-  useResetUserPassword,
-  useUpdateUserDisplayName,
-  useUpdateUserRole,
-} from "@/hooks/use-admin-users";
+  useAdminAccounts,
+  useAdminAccountsQueryKey,
+  useDeleteAdminAccount,
+  useInviteAccount,
+  useResendAccountInvite,
+  useResetAccountPassword,
+  useUpdateAccountDisplayName,
+  useUpdateAccountRole,
+} from "@/hooks/use-admin-accounts";
 import { useAuth } from "@/hooks/use-auth";
 import { useListQueryParams } from "@/hooks/use-list-query-params";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import {
-  type UserEditDisplayNameFormValues,
-  userEditDisplayNameFormSchema,
-} from "./user-edit-display-name-form-schema";
+  type AccountEditDisplayNameFormValues,
+  accountEditDisplayNameFormSchema,
+} from "./account-edit-display-name-form-schema";
 import {
-  type UserEditRoleFormValues,
-  userEditRoleFormSchema,
-} from "./user-edit-role-form-schema";
+  type AccountEditRoleFormValues,
+  accountEditRoleFormSchema,
+} from "./account-edit-role-form-schema";
 import {
-  type UserInviteFormValues,
-  userInviteFormSchema,
-} from "./user-invite-form-schema";
+  type AccountInviteFormValues,
+  accountInviteFormSchema,
+} from "./account-invite-form-schema";
 import {
-  canDeleteAdminUser,
+  canDeleteAdminAccount,
   canEditDisplayName,
   canEditRole,
-  canInviteAdminUsers,
-  canManageAdminUsers,
+  canInviteAdminAccounts,
+  canManageAdminAccounts,
   canResendInvite,
   canResetPassword,
-} from "./user-permissions";
+} from "./account-permissions";
 
 const inviteRoleCollection = createListCollection({
   items: [
@@ -89,19 +89,19 @@ function isAdminPanelUserRole(role: string): role is "admin" | "operator" {
   return role === "admin" || role === "operator";
 }
 
-export default function AdminUsersPage() {
+export default function AdminAccountsPage() {
   const { organizationId } = useOrganizationRouting();
   const resolvedOrganizationId = organizationId ?? "";
   const { role, user } = useAuth();
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
     useListQueryParams();
-  const { data, isLoading } = useAdminUsers({
+  const { data, isLoading } = useAdminAccounts({
     page,
     pageSize,
     sortBy,
     sortOrder: "desc",
   });
-  const queryKey = useAdminUsersQueryKey();
+  const queryKey = useAdminAccountsQueryKey();
   const queryCustomer = useQueryClient();
 
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -112,8 +112,8 @@ export default function AdminUsersPage() {
     watch: watchInvite,
     reset: resetInviteForm,
     formState: { errors: inviteErrors },
-  } = useForm<UserInviteFormValues>({
-    resolver: valibotResolver(userInviteFormSchema),
+  } = useForm<AccountInviteFormValues>({
+    resolver: valibotResolver(accountInviteFormSchema),
     defaultValues: {
       email: "",
       name: "",
@@ -121,7 +121,7 @@ export default function AdminUsersPage() {
     },
   });
   const inviteRole = watchInvite("role");
-  const inviteUser = useInviteUser();
+  const inviteAccount = useInviteAccount();
 
   const [editRoleOpen, setEditRoleOpen] = useState(false);
   const [editRoleUid, setEditRoleUid] = useState("");
@@ -130,14 +130,14 @@ export default function AdminUsersPage() {
     setValue: setEditRoleValue,
     watch: watchEditRole,
     reset: resetEditRoleForm,
-  } = useForm<UserEditRoleFormValues>({
-    resolver: valibotResolver(userEditRoleFormSchema),
+  } = useForm<AccountEditRoleFormValues>({
+    resolver: valibotResolver(accountEditRoleFormSchema),
     defaultValues: {
       role: "operator",
     },
   });
   const editRoleValue = watchEditRole("role");
-  const updateUserRole = useUpdateUserRole();
+  const updateAccountRole = useUpdateAccountRole();
   const [editDisplayNameOpen, setEditDisplayNameOpen] = useState(false);
   const [editDisplayNameUid, setEditDisplayNameUid] = useState("");
   const {
@@ -145,34 +145,34 @@ export default function AdminUsersPage() {
     handleSubmit: handleEditDisplayNameSubmit,
     reset: resetEditDisplayNameForm,
     formState: { errors: editDisplayNameErrors },
-  } = useForm<UserEditDisplayNameFormValues>({
-    resolver: valibotResolver(userEditDisplayNameFormSchema),
+  } = useForm<AccountEditDisplayNameFormValues>({
+    resolver: valibotResolver(accountEditDisplayNameFormSchema),
     defaultValues: {
       name: "",
     },
   });
-  const updateUserDisplayName = useUpdateUserDisplayName();
+  const updateAccountDisplayName = useUpdateAccountDisplayName();
 
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteUid, setDeleteUid] = useState("");
   const [deleteEmail, setDeleteEmail] = useState("");
-  const deleteAdminUser = useDeleteAdminUser();
+  const deleteAdminAccount = useDeleteAdminAccount();
 
-  const resendUserInvite = useResendUserInvite();
-  const resetUserPassword = useResetUserPassword();
+  const resendAccountInvite = useResendAccountInvite();
+  const resetAccountPassword = useResetAccountPassword();
 
-  const users = (data?.data?.users ?? []).filter((user) =>
-    isAdminPanelUserRole(user.role),
+  const accounts = (data?.data?.accounts ?? []).filter((account) =>
+    isAdminPanelUserRole(account.role),
   );
   const pagination = data?.data?.pagination ?? {
     page,
     pageSize,
-    total: users.length,
+    total: accounts.length,
     totalPages: 1,
   };
   const currentUid = user?.uid;
 
-  if (!organizationId || !canManageAdminUsers(role)) {
+  if (!organizationId || !canManageAdminAccounts(role)) {
     return <Text>権限がありません</Text>;
   }
 
@@ -181,9 +181,9 @@ export default function AdminUsersPage() {
       queryKey,
     });
 
-  const onInvite = async (values: UserInviteFormValues) => {
+  const onInvite = async (values: AccountInviteFormValues) => {
     try {
-      await inviteUser.mutateAsync({
+      await inviteAccount.mutateAsync({
         organizationId: resolvedOrganizationId,
         data: {
           email: values.email,
@@ -203,9 +203,9 @@ export default function AdminUsersPage() {
     }
   };
 
-  const onEditRole = async (values: UserEditRoleFormValues) => {
+  const onEditRole = async (values: AccountEditRoleFormValues) => {
     try {
-      await updateUserRole.mutateAsync({
+      await updateAccountRole.mutateAsync({
         organizationId: resolvedOrganizationId,
         uid: editRoleUid,
         data: { role: values.role },
@@ -221,9 +221,11 @@ export default function AdminUsersPage() {
     }
   };
 
-  const onEditDisplayName = async (values: UserEditDisplayNameFormValues) => {
+  const onEditDisplayName = async (
+    values: AccountEditDisplayNameFormValues,
+  ) => {
     try {
-      await updateUserDisplayName.mutateAsync({
+      await updateAccountDisplayName.mutateAsync({
         organizationId: resolvedOrganizationId,
         uid: editDisplayNameUid,
         data: { name: values.name },
@@ -241,7 +243,7 @@ export default function AdminUsersPage() {
 
   const handleResendInvite = async (uid: string, email: string) => {
     try {
-      await resendUserInvite.mutateAsync({
+      await resendAccountInvite.mutateAsync({
         organizationId: resolvedOrganizationId,
         uid,
       });
@@ -256,7 +258,7 @@ export default function AdminUsersPage() {
 
   const handleResetPassword = async (uid: string, email: string) => {
     try {
-      await resetUserPassword.mutateAsync({
+      await resetAccountPassword.mutateAsync({
         organizationId: resolvedOrganizationId,
         uid,
       });
@@ -271,7 +273,7 @@ export default function AdminUsersPage() {
 
   const handleDelete = async () => {
     try {
-      await deleteAdminUser.mutateAsync({
+      await deleteAdminAccount.mutateAsync({
         organizationId: resolvedOrganizationId,
         uid: deleteUid,
       });
@@ -296,14 +298,14 @@ export default function AdminUsersPage() {
       >
         <styled.div>
           <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
-            ユーザー管理
+            アカウント管理
           </Text>
           <Text textStyle="sm" color="fg.muted">
             管理者とオペレーターの招待・アカウント管理を行う画面です。
           </Text>
         </styled.div>
 
-        {canInviteAdminUsers(role) && (
+        {canInviteAdminAccounts(role) && (
           <Dialog.Root
             open={inviteOpen}
             onOpenChange={(e) => {
@@ -316,7 +318,7 @@ export default function AdminUsersPage() {
             <Dialog.Trigger asChild>
               <Button>
                 <UserPlus size={16} />
-                ユーザー招待
+                アカウント招待
               </Button>
             </Dialog.Trigger>
             <Dialog.Backdrop />
@@ -324,7 +326,7 @@ export default function AdminUsersPage() {
               <Dialog.Content asChild>
                 <styled.form onSubmit={handleInviteSubmit(onInvite)}>
                   <Dialog.Header>
-                    <Dialog.Title>ユーザー招待</Dialog.Title>
+                    <Dialog.Title>アカウント招待</Dialog.Title>
                     <Dialog.Description>
                       メールアドレス・表示名・ロールを入力してください
                     </Dialog.Description>
@@ -354,7 +356,7 @@ export default function AdminUsersPage() {
                       onValueChange={(details) =>
                         setInviteValue(
                           "role",
-                          details.value[0] as UserInviteFormValues["role"],
+                          details.value[0] as AccountInviteFormValues["role"],
                         )
                       }
                     >
@@ -383,7 +385,7 @@ export default function AdminUsersPage() {
                     </Dialog.CloseTrigger>
                     <Button
                       type="submit"
-                      loading={inviteUser.isPending}
+                      loading={inviteAccount.isPending}
                       loadingText="送信中..."
                     >
                       招待メール送信
@@ -398,11 +400,11 @@ export default function AdminUsersPage() {
 
       {isLoading ? (
         <TableSkeleton columns={5} rows={5} />
-      ) : users.length === 0 ? (
+      ) : accounts.length === 0 ? (
         <EmptyState
           icon={Users}
-          message="ユーザーはいません"
-          hint="ユーザー招待ボタンから招待できます"
+          message="アカウントはありません"
+          hint="アカウント招待ボタンから招待できます"
         />
       ) : (
         <>
@@ -417,7 +419,7 @@ export default function AdminUsersPage() {
               </Table.Row>
             </Table.Head>
             <Table.Body>
-              {users.map((adminUser) => (
+              {accounts.map((adminUser) => (
                 <Table.Row
                   key={adminUser.uid}
                   bg={currentUid === adminUser.uid ? "blue.50" : undefined}
@@ -442,7 +444,7 @@ export default function AdminUsersPage() {
                             variant="subtle"
                             size="sm"
                             colorPalette="blue"
-                            aria-label="現在ログイン中のユーザー"
+                            aria-label="現在ログイン中のアカウント"
                           >
                             あなた
                           </Badge>
@@ -454,7 +456,7 @@ export default function AdminUsersPage() {
                     {ROLE_LABELS[adminUser.role] ?? adminUser.role}
                   </Table.Cell>
                   <Table.Cell>
-                    <UserStatusBadge status={adminUser.status} />
+                    <AccountStatusBadge status={adminUser.status} />
                   </Table.Cell>
                   <Table.Cell>
                     <styled.div display="flex" gap="1">
@@ -484,7 +486,7 @@ export default function AdminUsersPage() {
                               setEditRoleUid(adminUser.uid);
                               setEditRoleValue(
                                 "role",
-                                adminUser.role as UserEditRoleFormValues["role"],
+                                adminUser.role as AccountEditRoleFormValues["role"],
                               );
                               setEditRoleOpen(true);
                             }}
@@ -502,8 +504,9 @@ export default function AdminUsersPage() {
                               handleResendInvite(adminUser.uid, adminUser.email)
                             }
                             loading={
-                              resendUserInvite.isPending &&
-                              resendUserInvite.variables?.uid === adminUser.uid
+                              resendAccountInvite.isPending &&
+                              resendAccountInvite.variables?.uid ===
+                                adminUser.uid
                             }
                           >
                             <Mail size={16} />
@@ -522,15 +525,16 @@ export default function AdminUsersPage() {
                               )
                             }
                             loading={
-                              resetUserPassword.isPending &&
-                              resetUserPassword.variables?.uid === adminUser.uid
+                              resetAccountPassword.isPending &&
+                              resetAccountPassword.variables?.uid ===
+                                adminUser.uid
                             }
                           >
                             <RotateCcwKey size={16} />
                           </IconButton>
                         </Tooltip>
                       )}
-                      {canDeleteAdminUser(role) && (
+                      {canDeleteAdminAccount(role) && (
                         <Tooltip content="削除">
                           <IconButton
                             variant="subtle"
@@ -589,7 +593,7 @@ export default function AdminUsersPage() {
                   onValueChange={(details) =>
                     setEditRoleValue(
                       "role",
-                      details.value[0] as UserEditRoleFormValues["role"],
+                      details.value[0] as AccountEditRoleFormValues["role"],
                     )
                   }
                 >
@@ -618,7 +622,7 @@ export default function AdminUsersPage() {
                 </Dialog.CloseTrigger>
                 <Button
                   type="submit"
-                  loading={updateUserRole.isPending}
+                  loading={updateAccountRole.isPending}
                   loadingText="変更中..."
                 >
                   変更する
@@ -665,7 +669,7 @@ export default function AdminUsersPage() {
                 </Dialog.CloseTrigger>
                 <Button
                   type="submit"
-                  loading={updateUserDisplayName.isPending}
+                  loading={updateAccountDisplayName.isPending}
                   loadingText="変更中..."
                 >
                   変更する
@@ -685,7 +689,7 @@ export default function AdminUsersPage() {
         <Dialog.Positioner>
           <Dialog.Content>
             <Dialog.Header>
-              <Dialog.Title>ユーザー削除</Dialog.Title>
+              <Dialog.Title>アカウント削除</Dialog.Title>
             </Dialog.Header>
             <Dialog.Body>
               <Text>
@@ -702,7 +706,7 @@ export default function AdminUsersPage() {
               <Button
                 colorPalette="red"
                 onClick={handleDelete}
-                loading={deleteAdminUser.isPending}
+                loading={deleteAdminAccount.isPending}
                 loadingText="削除中..."
               >
                 削除する

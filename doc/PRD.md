@@ -7,7 +7,7 @@
 ## 目次
 
 1. [概要](#1-概要)
-2. [ユーザーエンティティ](#2-ユーザーエンティティ)
+2. [アカウントエンティティ](#2-アカウントエンティティ)
 3. [機能要件](#3-機能要件)
 4. [非機能要件](#4-非機能要件)
 5. [技術スタック](#5-技術スタック全確定)
@@ -38,13 +38,13 @@
 
 ---
 
-## 2. ユーザーエンティティ
+## 2. アカウントエンティティ
 
 | エンティティ | 概要 | 認証 | 主な権限 |
 |---|---|---|---|
-| 顧客 | 相談を予約・受ける一般ユーザー | なし（完全匿名・メアドのみ） | 予約・仮決済・Zoom URL 受信 |
-| スーパー管理者 | システム全体を管理する内部ユーザー | Firebase Auth（`super_admin` クレーム） | CRM 全機能・管理者アカウント管理・権限変更・削除系全操作 |
-| オペレーター | 日常的な運用を担当する内部ユーザー | Firebase Auth（`operator` クレーム） | 予約・決済・顧客情報の閲覧・操作（削除・権限変更不可） |
+| 顧客 | 相談を予約・受ける一般利用者 | なし（完全匿名・メアドのみ） | 予約・仮決済・Zoom URL 受信 |
+| スーパー管理者 | システム全体を管理する内部アカウント | Firebase Auth（`super_admin` クレーム） | CRM 全機能・管理者アカウント管理・権限変更・削除系全操作 |
+| オペレーター | 日常的な運用を担当する内部アカウント | Firebase Auth（`operator` クレーム） | 予約・決済・顧客情報の閲覧・操作（削除・権限変更不可） |
 | 相談員 | 相談を担当するスタッフ | Firebase Auth（`consultant` クレーム） | 自分の担当予約・スロット確認・相談メモ入力・プロフィール編集 |
 
 ### ロール権限マトリクス
@@ -175,7 +175,7 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 | ③' 本決済（手動） | 管理者が任意のタイミングで実行（例外対応用） | 同上 | `PaymentIntent capture` |
 | ④ Webhook 受信 | 決済状態変化時 | Firestore のステータスを自動更新 | Stripe Webhook（署名検証必須） |
 
-> **料金設定：** 全ユーザー一律固定価格。JPY・税込み表示。金額は Stripe の設定値で管理する。
+> **料金設定：** 全利用者一律固定価格。JPY・税込み表示。金額は Stripe の設定値で管理する。
 
 ### 3.6 キャンセルポリシー
 
@@ -494,13 +494,13 @@ pending ──── 仮決済失敗 or タイムアウト ───────
 | `/api/organizations/[organizationId]/admin/bookings` | `GET` | 予約一覧取得（ページング対応） |
 | `/api/organizations/[organizationId]/admin/payments` | `GET` | 決済一覧取得（ページング対応） |
 | `/api/organizations/[organizationId]/admin/customers` | `GET` | 顧客一覧取得（ページング対応） |
-| `/api/organizations/[organizationId]/admin/users` | `GET` | 組織ユーザー一覧取得 |
-| `/api/organizations/[organizationId]/admin/users/invite` | `POST` | 組織ユーザー招待 |
-| `/api/organizations/[organizationId]/admin/users/[uid]` | `DELETE` | 組織ユーザー削除 |
-| `/api/organizations/[organizationId]/admin/users/[uid]/role` | `PATCH` | 組織ユーザーロール更新 |
-| `/api/organizations/[organizationId]/admin/users/[uid]/display-name` | `PATCH` | 表示名更新 |
-| `/api/organizations/[organizationId]/admin/users/[uid]/resend-invite` | `POST` | 招待メール再送 |
-| `/api/organizations/[organizationId]/admin/users/[uid]/reset-password` | `POST` | パスワードリセットメール送信 |
+| `/api/organizations/[organizationId]/admin/accounts` | `GET` | 組織アカウント一覧取得 |
+| `/api/organizations/[organizationId]/admin/accounts/invite` | `POST` | 組織アカウント招待 |
+| `/api/organizations/[organizationId]/admin/accounts/[uid]` | `DELETE` | 組織アカウント削除 |
+| `/api/organizations/[organizationId]/admin/accounts/[uid]/role` | `PATCH` | 組織アカウントロール更新 |
+| `/api/organizations/[organizationId]/admin/accounts/[uid]/display-name` | `PATCH` | 表示名更新 |
+| `/api/organizations/[organizationId]/admin/accounts/[uid]/resend-invite` | `POST` | 招待メール再送 |
+| `/api/organizations/[organizationId]/admin/accounts/[uid]/reset-password` | `POST` | パスワードリセットメール送信 |
 
 ---
 
@@ -537,7 +537,7 @@ pending ──── 仮決済失敗 or タイムアウト ───────
 | 15 | 顧客詳細 | `/admin/customers/[id]` | ※現行実装では未提供（`/admin/customers` の一覧のみ提供） |
 | 16 | 相談員管理 | `/admin/consultants` | 相談員一覧 + Zoom ルーム状況パネル。追加・編集・削除 |
 | 17 | 決済一覧 | `/admin/payments` | 当月サマリー（本決済合計・仮決済中・キャンセル）。バッチ実行ログ（実行日時・対象件数・エラー）。フィルタ・検索 |
-| 18 | 権限管理 | `/admin/users` | 組織ユーザー一覧・招待・削除・ロール変更・表示名更新 |
+| 18 | アカウント管理 | `/admin/accounts` | 組織アカウント一覧・招待・削除・ロール変更・表示名更新 |
 
 ---
 

@@ -21,8 +21,8 @@ import { Text } from "@/components/ui/text";
 import { toaster } from "@/components/ui/toast";
 import { Tooltip } from "@/components/ui/tooltip";
 import { getGetAdminConsultantsQueryKey } from "@/generated/api/admin/admin";
+import { useInviteAccount } from "@/hooks/use-admin-accounts";
 import { useAdminConsultants } from "@/hooks/use-admin-consultants";
-import { useInviteUser } from "@/hooks/use-admin-users";
 import { useAuth } from "@/hooks/use-auth";
 import { useListQueryParams } from "@/hooks/use-list-query-params";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
@@ -43,7 +43,7 @@ export default function AdminConsultantsPage() {
     sortBy,
     sortOrder: "desc",
   });
-  const inviteUser = useInviteUser();
+  const inviteAccount = useInviteAccount();
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const {
@@ -74,7 +74,7 @@ export default function AdminConsultantsPage() {
       return;
     }
     try {
-      await inviteUser.mutateAsync({
+      await inviteAccount.mutateAsync({
         organizationId,
         data: {
           email: values.email,
@@ -195,7 +195,7 @@ export default function AdminConsultantsPage() {
                     </Dialog.CloseTrigger>
                     <Button
                       type="submit"
-                      loading={inviteUser.isPending}
+                      loading={inviteAccount.isPending}
                       loadingText="送信中..."
                     >
                       招待メール送信

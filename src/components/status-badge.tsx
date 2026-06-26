@@ -49,14 +49,16 @@ export function PaymentStatusBadge({ status }: { status: string }) {
   );
 }
 
-const USER_STATUS_MAP: Record<string, { label: string; colorPalette: string }> =
-  {
-    pending: { label: "招待中", colorPalette: "yellow" },
-    registered: { label: "登録済み", colorPalette: "green" },
-  };
+const ACCOUNT_STATUS_MAP: Record<
+  string,
+  { label: string; colorPalette: string }
+> = {
+  pending: { label: "招待中", colorPalette: "yellow" },
+  registered: { label: "登録済み", colorPalette: "green" },
+};
 
-export function UserStatusBadge({ status }: { status: string }) {
-  const config = USER_STATUS_MAP[status] ?? {
+export function AccountStatusBadge({ status }: { status: string }) {
+  const config = ACCOUNT_STATUS_MAP[status] ?? {
     label: status,
     colorPalette: "gray",
   };

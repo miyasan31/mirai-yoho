@@ -79,6 +79,7 @@
 | コレクション名 | kebab-case（Firestore）、TS 定数は camelCase（`FIRESTORE_COLLECTIONS`） |
 | 通貨 | `*JPY` サフィックス（例: `totalJPY`, `amountJPY`） |
 | 顧客参照 | **`customer*` に統一**。API / Domain / FS すべて `client*` 禁止（§3.2, §6.3-A 合意） |
+| アカウント参照 | 管理画面文言は **`アカウント`** を使用（`ユーザー管理` ではなく `アカウント管理`） |
 | ドキュメント ID | エンティティ ID 単体を原則。複合 ID は `{organizationId}_{entityId}` 形式 |
 | null / omit | optional フィールドは Repository 層で方針統一（booking/payment: `null`、customer: omit） |
 | 真偽値 | 状態は `is*` プレフィックス（例: `isActive`, `isAvailable`, `isClosed`）。意味反転の別名は持たない |
@@ -258,7 +259,7 @@
 | プロパティ | Firestore（現状） | 正準名 | 判定 |
 |---|---|---|---|
 | コレクション | `organization-memberships` | `organization-memberships` | 維持 |
-| ユーザー ID | `uid` | `uid` | 維持 |
+| アカウント ID | `uid` | `uid` | 維持 |
 | 組織 ID | `organizationId` | `organizationId` | 維持 |
 | ロール | `role` | `role` | 維持 |
 | ステータス | `active` / `invited` / `disabled` | **同名（API も統一）** | **合意: FS 値に API 統一** |
@@ -272,12 +273,12 @@
 - **Repository 化**（`OrganizationMembershipRepository` + `OrganizationMembershipDoc`）
 
 **連鎖影響**
-- `openapi.yaml` AdminUser.status enum 変更
+- `openapi.yaml` AdminAccount.status enum 変更（`pending` / `registered`）
 - `load-auth-context.ts` の name 取得元変更
-- AdminUser API の `displayName` → **`name`** にリネーム
+- AdminAccount API の `displayName` → **`name`** にリネーム
 - ~~`user-preferences`~~ 廃止（§3.10）
 
-**根拠**: `load-auth-context.ts`, `route.ts`, `openapi.yaml` (AdminUser), `auth-types.ts`
+**根拠**: `load-auth-context.ts`, `route.ts`, `openapi.yaml` (AdminAccount), `auth-types.ts`
 
 ---
 
@@ -444,7 +445,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 | API `pricePlanSelectionId` → `selectionId` | `openapi.yaml`, route, 公開予約 UI, Orval |
 | CreateBooking から `clientBirthdate` 削除 | `openapi.yaml`, route, 予約フォーム |
 | `customers.memo` → `note` | customer repository, openapi, 管理 UI |
-| AdminUser `displayName` → `name`、status enum 統一 | openapi, route, admin UI |
+| AdminAccount `displayName` → `name`、status enum 統一 | openapi, route, admin UI |
 | `organizations.organizationName` → `name` | auth-types, layouts, load-auth-context |
 
 ### 4.2 優先度: 中（アーキテクチャ整備）
