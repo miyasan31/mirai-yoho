@@ -26,6 +26,13 @@ locals {
     "serviceAccount:${data.google_project.current.number}@cloudbuild.gserviceaccount.com",
     "serviceAccount:service-${data.google_project.current.number}@gcp-sa-firebaseapphosting.iam.gserviceaccount.com",
   ])
+
+  app_hosting_secret_viewer_members = toset(concat(
+    [
+      "serviceAccount:${var.app_hosting_compute_service_account_email}",
+    ],
+    tolist(local.app_hosting_build_secret_accessor_members),
+  ))
 }
 
 data "google_project" "current" {
@@ -265,5 +272,20 @@ resource "google_secret_manager_secret_iam_member" "app_hosting_build_can_read_s
   project   = var.project_id
   secret_id = google_secret_manager_secret.app_hosting[each.value.secret_id].secret_id
   role      = "roles/secretmanager.secretAccessor"
+  member    = each.value.member
+}
+
+resource "google_secret_manager_secret_iam_member" "app_hosting_can_view_secret_versions" {
+  for_each = {
+    for pair in setproduct(local.app_hosting_secret_ids, local.app_hosting_secret_viewer_members) :
+    "${pair[0]}:${pair[1]}" => {
+      secret_id = pair[0]
+      member    = pair[1]
+    }
+  }
+
+  project   = var.project_id
+  secret_id = google_secret_manager_secret.app_hosting[each.value.secret_id].secret_id
+  role      = "roles/secretmanager.viewer"
   member    = each.value.member
 }
