@@ -1,6 +1,6 @@
 export type UserRole = "admin" | "operator" | "consultant";
 
-export interface OrganizationMembership {
+export interface OrganizationAccount {
   organizationId: string;
   name: string;
   role: UserRole;
@@ -10,7 +10,7 @@ export interface OrganizationMembership {
 
 export interface AuthUser {
   uid: string;
-  memberships: OrganizationMembership[];
+  accounts: OrganizationAccount[];
   currentOrganizationId: string | null;
   currentDisplayName: string | null;
 }

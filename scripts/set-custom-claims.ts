@@ -8,7 +8,7 @@
  *   npx tsx scripts/set-custom-claims.ts abc123 admin
  *
  * Note:
- *   組織ロールは Firestore の organization-memberships で管理します。
+ *   組織ロールは Firestore の organization-accounts で管理します。
  *   このスクリプトは role claim 互換が必要な場合だけ利用してください。
  */
 

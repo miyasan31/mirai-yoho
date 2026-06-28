@@ -161,7 +161,7 @@ describe("late arrival alert route", () => {
   it("executes the batch for an admin manually", async () => {
     mocks.verifyAuth.mockResolvedValue({
       uid: "admin-1",
-      memberships: [],
+      accounts: [],
       currentOrganizationId: "org-1",
       currentDisplayName: "Admin",
     });

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { setLastOrganizationId } from "@/infrastructure/auth/load-auth-context";
-import { getOrganizationMembership } from "@/infrastructure/auth/require-organization-role";
+import { getOrganizationAccount } from "@/infrastructure/auth/require-organization-role";
 import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
 import { PATCH } from "../organization/route";
 
@@ -19,7 +19,7 @@ vi.mock("@/infrastructure/auth/verify-auth", () => ({
 }));
 
 vi.mock("@/infrastructure/auth/require-organization-role", () => ({
-  getOrganizationMembership: vi.fn(),
+  getOrganizationAccount: vi.fn(),
 }));
 
 vi.mock("@/infrastructure/auth/load-auth-context", () => ({
@@ -30,11 +30,11 @@ describe("PATCH /api/auth/organization", () => {
   it("returns no-store for success response", async () => {
     vi.mocked(verifyAuth).mockResolvedValueOnce({
       uid: "uid-1",
-      memberships: [],
+      accounts: [],
       currentOrganizationId: "org-1",
       currentDisplayName: "User",
     });
-    vi.mocked(getOrganizationMembership).mockReturnValueOnce({
+    vi.mocked(getOrganizationAccount).mockReturnValueOnce({
       role: "admin",
       organizationId: "org-1",
       name: "テスト組織",

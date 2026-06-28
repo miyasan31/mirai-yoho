@@ -1,18 +1,17 @@
 import type {
   AuthUser,
-  OrganizationMembership,
+  OrganizationAccount,
   UserRole,
 } from "@/infrastructure/auth/auth-types";
 import { AuthError } from "@/infrastructure/auth/verify-auth";
 
-export function getOrganizationMembership(
+export function getOrganizationAccount(
   authUser: AuthUser,
   organizationId: string,
-): OrganizationMembership | undefined {
-  return authUser.memberships.find(
-    (membership) =>
-      membership.organizationId === organizationId &&
-      membership.status === "active",
+): OrganizationAccount | undefined {
+  return authUser.accounts.find(
+    (account) =>
+      account.organizationId === organizationId && account.status === "active",
   );
 }
 
@@ -20,10 +19,10 @@ export function requireOrganizationRole(
   authUser: AuthUser,
   organizationId: string,
   ...allowedRoles: UserRole[]
-): OrganizationMembership {
-  const membership = getOrganizationMembership(authUser, organizationId);
+): OrganizationAccount {
+  const account = getOrganizationAccount(authUser, organizationId);
 
-  if (!membership) {
+  if (!account) {
     throw new AuthError(
       403,
       "FORBIDDEN",
@@ -31,13 +30,13 @@ export function requireOrganizationRole(
     );
   }
 
-  if (!allowedRoles.includes(membership.role)) {
+  if (!allowedRoles.includes(account.role)) {
     throw new AuthError(
       403,
       "FORBIDDEN",
-      `Role '${membership.role}' is not allowed. Required: ${allowedRoles.join(", ")}`,
+      `Role '${account.role}' is not allowed. Required: ${allowedRoles.join(", ")}`,
     );
   }
 
-  return membership;
+  return account;
 }

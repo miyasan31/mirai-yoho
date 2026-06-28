@@ -262,7 +262,7 @@ make create-organization:dev \
 
 1. `organizations/{organizationId}` に組織名と作成・更新時刻を保存する。
 2. `ADMIN_EMAIL` の Firebase Auth ユーザーを取得する。存在しない場合はランダムな一時パスワードで作成する。
-3. `organization-memberships/{organizationId}_{uid}` に `admin` ロールを保存する。未ログインのユーザーは `invited`、ログイン済みのユーザーは `active` になる。
+3. `organization-accounts/{organizationId}_{uid}` に `admin` ロールを保存する。未ログインのユーザーは `invited`、ログイン済みのユーザーは `active` になる。
 4. `user-preferences/{uid}` の `lastOrganizationId` を新組織に設定する。
 5. `organization-settings/{organizationId}` に初期設定を作成する。相談員選択は有効、初期ランクは `standard`（表示名: `標準`）である。
 6. Firebase Auth のパスワード再設定リンクを出力する。新規ユーザーの場合は一時パスワードも標準出力に出る。
@@ -271,11 +271,11 @@ make create-organization:dev \
 
 ### 4.3 初回ログイン後の状態
 
-認証済み API 呼び出しのたびに、対象ユーザーの `invited` membership は `active` に切り替わります。ログイン後に `/api/auth/me` で組織とロールを確認できます。
+認証済み API 呼び出しのたびに、対象ユーザーの `invited` account は `active` に切り替わります。ログイン後に `/api/auth/me` で組織とロールを確認できます。
 
-組織ごとの認可は、Firebase カスタムクレームではなく Firestore の `organization-memberships` を参照します。通常の組織運用で `make set-claims` を実行する必要はありません。このコマンドは旧来の互換用途に限ります。
+組織ごとの認可は、Firebase カスタムクレームではなく Firestore の `organization-accounts` を参照します。通常の組織運用で `make set-claims` を実行する必要はありません。このコマンドは旧来の互換用途に限ります。
 
-初期管理者は、組織の管理画面から admin / operator / consultant を招待できます。招待時は Firebase Auth ユーザー、membership、必要に応じて consultant レコードが作られ、Resend によりパスワード再設定リンクを含む招待メールが送信されます。
+初期管理者は、組織の管理画面から admin / operator / consultant を招待できます。招待時は Firebase Auth ユーザー、account、必要に応じて consultant レコードが作られ、Resend によりパスワード再設定リンクを含む招待メールが送信されます。
 
 ### 4.4 定期バッチを有効にする
 
@@ -309,9 +309,9 @@ make apply ENV=dev
 
 ## 5. 作成後の確認チェックリスト
 
-- [ ] `organizations`、`organization-memberships`、`organization-settings`、`user-preferences` に想定したドキュメントがある。
+- [ ] `organizations`、`organization-accounts`、`organization-settings`、`user-preferences` に想定したドキュメントがある。
 - [ ] 初期管理者がパスワードを設定し、ログイン後に対象組織へアクセスできる。
-- [ ] `organization-memberships/{organizationId}_{uid}` が `role: admin`、初回認証後に `status: active` になっている。
+- [ ] `organization-accounts/{organizationId}_{uid}` が `role: admin`、初回認証後に `status: active` になっている。
 - [ ] 管理画面で営業時間、料金範囲、相談員ランクなどを組織要件に合わせて設定した。
 - [ ] 公開 URL の `/<organizationId>/consultants` と `/<organizationId>/booking` が正しい組織として表示される。
 - [ ] Scheduler を利用する場合、`organization_ids` への追加と Terraform apply が完了し、3 種類のジョブがある。
@@ -322,7 +322,7 @@ make apply ENV=dev
 
 | 症状                                            | 確認・対処                                                                                                           |
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
-| `User has no assigned role`                   | organization 作成時のメールアドレスとログインした Firebase Auth ユーザーが同じか、membership の `status` が `active` / `invited` かを確認する。     |
+| `User has no assigned role`                   | organization 作成時のメールアドレスとログインした Firebase Auth ユーザーが同じか、account の `status` が `active` / `invited` かを確認する。     |
 | `Organization '<id>' already exists`          | 既存組織の上書きはできない。ID を確認し、既存データを利用するか別 ID を選ぶ。                                                                      |
 | `No value for required variable worker_image` | `make plan` / `make apply` の前に `TF_VAR_worker_image` を設定する。                                                     |
 | App Hosting で Secret を読めない                    | Secret の存在・値・App Hosting 実行サービスアカウントの参照権限を確認し、再ロールアウトする。詳細は [Secret 運用手順](firebase-app-hosting-secrets.md) を参照。 |

@@ -9,7 +9,7 @@ export async function GET(request: Request) {
     return withNoStore(
       NextResponse.json({
         uid: authUser.uid,
-        memberships: authUser.memberships,
+        accounts: authUser.accounts,
         currentOrganizationId: authUser.currentOrganizationId,
         currentDisplayName: authUser.currentDisplayName,
       }),
