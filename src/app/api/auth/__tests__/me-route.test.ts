@@ -20,7 +20,7 @@ describe("GET /api/auth/me", () => {
   it("returns no-store for success response", async () => {
     vi.mocked(verifyAuth).mockResolvedValueOnce({
       uid: "uid-1",
-      memberships: [],
+      accounts: [],
       currentOrganizationId: "org-1",
       currentDisplayName: "User",
     });

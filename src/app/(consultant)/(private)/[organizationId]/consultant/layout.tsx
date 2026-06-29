@@ -35,7 +35,7 @@ export default function ConsultantLayout({
   const {
     user,
     role,
-    memberships,
+    accounts,
     currentOrganizationId,
     currentDisplayName,
     isLoading,
@@ -103,9 +103,9 @@ export default function ConsultantLayout({
         icon: item.icon,
       }))}
       organizationSwitcher={{
-        items: memberships.map((membership) => ({
-          label: membership.name,
-          value: membership.organizationId,
+        items: accounts.map((account) => ({
+          label: account.name,
+          value: account.organizationId,
         })),
         value: currentOrganizationId,
         onChange: async (nextOrganizationId) => {

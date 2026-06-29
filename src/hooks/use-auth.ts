@@ -16,7 +16,7 @@ import {
   useState,
 } from "react";
 import type {
-  OrganizationMembership,
+  OrganizationAccount,
   UserRole,
 } from "@/infrastructure/auth/auth-types";
 import { auth } from "@/lib/firebase";
@@ -24,7 +24,7 @@ import { auth } from "@/lib/firebase";
 export interface AuthState {
   user: User | null;
   token: string | null;
-  memberships: OrganizationMembership[];
+  accounts: OrganizationAccount[];
   currentOrganizationId: string | null;
   currentDisplayName: string | null;
   currentRole: UserRole | null;
@@ -47,7 +47,7 @@ export const AuthContext = createContext<AuthState | null>(null);
 export function useAuthState(): AuthState {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [memberships, setMemberships] = useState<OrganizationMembership[]>([]);
+  const [accounts, setAccounts] = useState<OrganizationAccount[]>([]);
   const [currentOrganizationId, setCurrentOrganizationIdState] = useState<
     string | null
   >(null);
@@ -60,11 +60,11 @@ export function useAuthState(): AuthState {
     if (!nextUser) {
       setUser(null);
       setToken(null);
-      setMemberships([]);
+      setAccounts([]);
       setCurrentOrganizationIdState(null);
       setCurrentDisplayName(null);
       return {
-        memberships: [],
+        accounts: [],
         currentOrganizationId: null,
         currentDisplayName: null,
       };
@@ -102,12 +102,12 @@ export function useAuthState(): AuthState {
     }
 
     const data = (await response.json()) as {
-      memberships: OrganizationMembership[];
+      accounts: OrganizationAccount[];
       currentOrganizationId: string | null;
       currentDisplayName: string | null;
     };
 
-    setMemberships(data.memberships);
+    setAccounts(data.accounts);
     setCurrentOrganizationIdState(data.currentOrganizationId);
     setCurrentDisplayName(data.currentDisplayName);
     return data;
@@ -130,9 +130,8 @@ export function useAuthState(): AuthState {
       );
       const data = await syncAuthContext(credential.user);
       const currentRole =
-        data.memberships.find(
-          (membership) =>
-            membership.organizationId === data.currentOrganizationId,
+        data.accounts.find(
+          (account) => account.organizationId === data.currentOrganizationId,
         )?.role ?? null;
 
       return {
@@ -192,15 +191,14 @@ export function useAuthState(): AuthState {
   }, []);
 
   const currentRole =
-    memberships.find(
-      (membership) => membership.organizationId === currentOrganizationId,
-    )?.role ?? null;
+    accounts.find((account) => account.organizationId === currentOrganizationId)
+      ?.role ?? null;
 
   return useMemo(
     () => ({
       user,
       token,
-      memberships,
+      accounts,
       currentOrganizationId,
       currentDisplayName,
       currentRole,
@@ -214,7 +212,7 @@ export function useAuthState(): AuthState {
     [
       user,
       token,
-      memberships,
+      accounts,
       currentOrganizationId,
       currentDisplayName,
       currentRole,

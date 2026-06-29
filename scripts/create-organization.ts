@@ -6,7 +6,7 @@ import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore
 import { app, db } from "../src/infrastructure/firestore/firestore-customer";
 
 const ORGANIZATION_COLLECTION = FIRESTORE_COLLECTIONS.organizations;
-const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
+const ACCOUNT_COLLECTION = FIRESTORE_COLLECTIONS.organizationAccounts;
 const SETTINGS_COLLECTION = FIRESTORE_COLLECTIONS.organizationSettings;
 
 async function main() {
@@ -41,7 +41,7 @@ async function main() {
   }
 
   const now = Timestamp.now();
-  const membershipId = `${organizationId}_${userRecord.uid}`;
+  const accountId = `${organizationId}_${userRecord.uid}`;
   const defaultConsultantRanks = createDefaultConsultantRanks();
 
   await db.collection(ORGANIZATION_COLLECTION).doc(organizationId).set({
@@ -52,8 +52,8 @@ async function main() {
   });
 
   await db
-    .collection(MEMBERSHIP_COLLECTION)
-    .doc(membershipId)
+    .collection(ACCOUNT_COLLECTION)
+    .doc(accountId)
     .set({
       uid: userRecord.uid,
       organizationId,

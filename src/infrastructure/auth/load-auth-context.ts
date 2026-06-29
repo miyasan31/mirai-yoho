@@ -1,16 +1,16 @@
 import { Timestamp } from "firebase-admin/firestore";
 import type {
   AuthUser,
-  OrganizationMembership,
+  OrganizationAccount,
   UserRole,
 } from "@/infrastructure/auth/auth-types";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 import { db } from "@/infrastructure/firestore/firestore-customer";
 
-const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
+const ACCOUNT_COLLECTION = FIRESTORE_COLLECTIONS.organizationAccounts;
 const ORGANIZATION_COLLECTION = FIRESTORE_COLLECTIONS.organizations;
 
-interface OrganizationMembershipDoc {
+interface OrganizationAccountDoc {
   uid: string;
   organizationId: string;
   role: UserRole;
@@ -33,16 +33,16 @@ function toIsoString(value: Timestamp | Date | string): string {
   return value;
 }
 
-export function getOrganizationMembershipDocId(
+export function getOrganizationAccountDocId(
   organizationId: string,
   uid: string,
 ): string {
   return `${organizationId}_${uid}`;
 }
 
-export async function activateInvitedMemberships(uid: string): Promise<void> {
+export async function activateInvitedAccounts(uid: string): Promise<void> {
   const invitedSnapshot = await db
-    .collection(MEMBERSHIP_COLLECTION)
+    .collection(ACCOUNT_COLLECTION)
     .where("uid", "==", uid)
     .where("status", "==", "invited")
     .get();
@@ -63,23 +63,23 @@ export async function activateInvitedMemberships(uid: string): Promise<void> {
 }
 
 export async function loadAuthUser(uid: string): Promise<AuthUser> {
-  const membershipSnapshot = await db
-    .collection(MEMBERSHIP_COLLECTION)
+  const accountSnapshot = await db
+    .collection(ACCOUNT_COLLECTION)
     .where("uid", "==", uid)
     .where("status", "==", "active")
     .get();
 
-  const membershipDocs = membershipSnapshot.docs.map(
-    (doc) => doc.data() as OrganizationMembershipDoc,
+  const accountDocs = accountSnapshot.docs.map(
+    (doc) => doc.data() as OrganizationAccountDoc,
   );
-  membershipDocs.sort(
+  accountDocs.sort(
     (left, right) =>
       new Date(toIsoString(left.createdAt)).getTime() -
       new Date(toIsoString(right.createdAt)).getTime(),
   );
 
   const organizationIds = [
-    ...new Set(membershipDocs.map((doc) => doc.organizationId)),
+    ...new Set(accountDocs.map((doc) => doc.organizationId)),
   ];
   const organizationDocs = await Promise.all(
     organizationIds.map((organizationId) =>
@@ -94,7 +94,7 @@ export async function loadAuthUser(uid: string): Promise<AuthUser> {
     nameById.set(organization.organizationId, organization.name);
   }
 
-  const memberships: OrganizationMembership[] = membershipDocs.map((doc) => ({
+  const accounts: OrganizationAccount[] = accountDocs.map((doc) => ({
     organizationId: doc.organizationId,
     name: nameById.get(doc.organizationId) ?? doc.organizationId,
     role: doc.role,
@@ -102,11 +102,11 @@ export async function loadAuthUser(uid: string): Promise<AuthUser> {
     createdAt: toIsoString(doc.createdAt),
   }));
 
-  const currentOrganizationId = memberships[0]?.organizationId ?? null;
+  const currentOrganizationId = accounts[0]?.organizationId ?? null;
 
   return {
     uid,
-    memberships,
+    accounts,
     currentOrganizationId,
     currentDisplayName: null,
   };
@@ -123,5 +123,5 @@ export async function setUserDisplayName(
   _uid: string,
   _name: string,
 ): Promise<void> {
-  // 表示名は membership.name で管理する
+  // 表示名は account.name で管理する
 }

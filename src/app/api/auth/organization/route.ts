@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { setLastOrganizationId } from "@/infrastructure/auth/load-auth-context";
-import { getOrganizationMembership } from "@/infrastructure/auth/require-organization-role";
+import { getOrganizationAccount } from "@/infrastructure/auth/require-organization-role";
 import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
 import { withNoStore } from "../../cache-control";
 
@@ -18,7 +18,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    if (!getOrganizationMembership(authUser, body.organizationId)) {
+    if (!getOrganizationAccount(authUser, body.organizationId)) {
       throw new AuthError(
         403,
         "FORBIDDEN",

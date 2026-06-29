@@ -46,7 +46,7 @@ export default function AdminLayout({
   const {
     user,
     role,
-    memberships,
+    accounts,
     currentOrganizationId,
     currentDisplayName,
     isLoading,
@@ -115,9 +115,9 @@ export default function AdminLayout({
       title="管理メニュー"
       navItems={visibleItems}
       organizationSwitcher={{
-        items: memberships.map((membership) => ({
-          label: membership.name,
-          value: membership.organizationId,
+        items: accounts.map((account) => ({
+          label: account.name,
+          value: account.organizationId,
         })),
         value: currentOrganizationId,
         onChange: async (nextOrganizationId) => {

@@ -6,14 +6,13 @@ export function requireRole(
   ...allowedRoles: UserRole[]
 ): void {
   const role =
-    authUser.memberships.find(
-      (membership) =>
-        membership.organizationId === authUser.currentOrganizationId &&
-        membership.status === "active",
+    authUser.accounts.find(
+      (account) =>
+        account.organizationId === authUser.currentOrganizationId &&
+        account.status === "active",
     )?.role ??
-    authUser.memberships.find((membership) =>
-      allowedRoles.includes(membership.role),
-    )?.role;
+    authUser.accounts.find((account) => allowedRoles.includes(account.role))
+      ?.role;
 
   if (!role) {
     throw new AuthError(

@@ -68,7 +68,7 @@ describe("ConsultantLayout", () => {
     mockUseAuth.mockReturnValue({
       user: { email: "consultant@example.com" },
       role: "consultant",
-      memberships: [
+      accounts: [
         {
           name: "Org Test",
           organizationId: "org-test",
@@ -107,7 +107,7 @@ describe("ConsultantLayout", () => {
     mockUseAuth.mockReturnValue({
       user: { email: "consultant@example.com" },
       role: "consultant",
-      memberships: [
+      accounts: [
         {
           name: "Org Test",
           organizationId: "org-test",

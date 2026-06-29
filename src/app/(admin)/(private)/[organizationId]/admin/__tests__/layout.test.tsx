@@ -56,7 +56,7 @@ describe("AdminLayout", () => {
     mockUseAuth.mockReturnValue({
       user: { email: "operator@example.com" },
       role: "operator",
-      memberships: [
+      accounts: [
         {
           name: "Org Test",
           organizationId: "org-test",

@@ -1,6 +1,6 @@
 import type { AuthUser } from "@/infrastructure/auth/auth-types";
 import {
-  activateInvitedMemberships,
+  activateInvitedAccounts,
   loadAuthUser,
 } from "@/infrastructure/auth/load-auth-context";
 import { verifyIdToken } from "@/infrastructure/firebase/firebase-auth-admin";
@@ -22,10 +22,10 @@ export async function verifyAuth(request: Request): Promise<AuthUser> {
   } catch {
     throw new AuthError(401, "UNAUTHORIZED", "Invalid or expired token");
   }
-  await activateInvitedMemberships(decoded.uid);
+  await activateInvitedAccounts(decoded.uid);
   const authUser = await loadAuthUser(decoded.uid);
 
-  if (authUser.memberships.length === 0) {
+  if (authUser.accounts.length === 0) {
     throw new AuthError(403, "NO_ROLE", "User has no assigned role");
   }
 

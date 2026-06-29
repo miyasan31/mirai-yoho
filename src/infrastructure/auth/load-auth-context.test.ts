@@ -1,4 +1,4 @@
-import { activateInvitedMemberships } from "@/infrastructure/auth/load-auth-context";
+import { activateInvitedAccounts } from "@/infrastructure/auth/load-auth-context";
 
 const {
   mockGet,
@@ -38,12 +38,12 @@ vi.mock("@/infrastructure/firestore/firestore-customer", () => ({
   },
 }));
 
-describe("activateInvitedMemberships", () => {
+describe("activateInvitedAccounts", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("promotes all invited memberships to active regardless of role", async () => {
+  it("promotes all invited accounts to active regardless of role", async () => {
     const docs = [
       { ref: { id: "org-1_u1_admin" }, data: () => ({ role: "admin" }) },
       { ref: { id: "org-1_u1_operator" }, data: () => ({ role: "operator" }) },
@@ -57,9 +57,9 @@ describe("activateInvitedMemberships", () => {
       docs,
     });
 
-    await activateInvitedMemberships("u1");
+    await activateInvitedAccounts("u1");
 
-    expect(mockCollection).toHaveBeenCalledWith("organization-memberships");
+    expect(mockCollection).toHaveBeenCalledWith("organization-accounts");
     expect(mockWhereUid).toHaveBeenCalledWith("uid", "==", "u1");
     expect(mockWhereStatus).toHaveBeenCalledWith("status", "==", "invited");
     expect(mockBatch).toHaveBeenCalledTimes(1);
@@ -76,13 +76,13 @@ describe("activateInvitedMemberships", () => {
     expect(mockBatchCommit).toHaveBeenCalledTimes(1);
   });
 
-  it("does nothing when no invited memberships exist", async () => {
+  it("does nothing when no invited accounts exist", async () => {
     mockGet.mockResolvedValueOnce({
       empty: true,
       docs: [],
     });
 
-    await activateInvitedMemberships("u2");
+    await activateInvitedAccounts("u2");
 
     expect(mockBatch).not.toHaveBeenCalled();
     expect(mockBatchUpdate).not.toHaveBeenCalled();

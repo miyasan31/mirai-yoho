@@ -1,9 +1,9 @@
 import { type AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
 
-const { mockVerifyIdToken, mockActivateInvitedMemberships, mockLoadAuthUser } =
+const { mockVerifyIdToken, mockActivateInvitedAccounts, mockLoadAuthUser } =
   vi.hoisted(() => ({
     mockVerifyIdToken: vi.fn(),
-    mockActivateInvitedMemberships: vi.fn(),
+    mockActivateInvitedAccounts: vi.fn(),
     mockLoadAuthUser: vi.fn(),
   }));
 
@@ -12,7 +12,7 @@ vi.mock("@/infrastructure/firebase/firebase-auth-admin", () => ({
 }));
 
 vi.mock("@/infrastructure/auth/load-auth-context", () => ({
-  activateInvitedMemberships: mockActivateInvitedMemberships,
+  activateInvitedAccounts: mockActivateInvitedAccounts,
   loadAuthUser: mockLoadAuthUser,
 }));
 
@@ -21,11 +21,11 @@ describe("verifyAuth", () => {
     vi.clearAllMocks();
   });
 
-  it("activates invited memberships before loading auth user", async () => {
+  it("activates invited accounts before loading auth user", async () => {
     mockVerifyIdToken.mockResolvedValueOnce({ uid: "user-1" });
     mockLoadAuthUser.mockResolvedValueOnce({
       uid: "user-1",
-      memberships: [
+      accounts: [
         {
           organizationId: "org-1",
           name: "Org 1",
@@ -47,10 +47,10 @@ describe("verifyAuth", () => {
     await verifyAuth(request);
 
     expect(mockVerifyIdToken).toHaveBeenCalledWith("test-token");
-    expect(mockActivateInvitedMemberships).toHaveBeenCalledWith("user-1");
+    expect(mockActivateInvitedAccounts).toHaveBeenCalledWith("user-1");
     expect(mockLoadAuthUser).toHaveBeenCalledWith("user-1");
     expect(
-      mockActivateInvitedMemberships.mock.invocationCallOrder[0],
+      mockActivateInvitedAccounts.mock.invocationCallOrder[0],
     ).toBeLessThan(mockLoadAuthUser.mock.invocationCallOrder[0]);
   });
 
@@ -61,7 +61,7 @@ describe("verifyAuth", () => {
       mockVerifyIdToken.mockResolvedValueOnce({ uid: `user-${role}` });
       mockLoadAuthUser.mockResolvedValueOnce({
         uid: `user-${role}`,
-        memberships: [
+        accounts: [
           {
             organizationId: "org-1",
             name: "Org 1",
@@ -83,17 +83,15 @@ describe("verifyAuth", () => {
       await expect(verifyAuth(request)).resolves.toMatchObject({
         uid: `user-${role}`,
       });
-      expect(mockActivateInvitedMemberships).toHaveBeenCalledWith(
-        `user-${role}`,
-      );
+      expect(mockActivateInvitedAccounts).toHaveBeenCalledWith(`user-${role}`);
     }
   });
 
-  it("throws NO_ROLE when memberships are still empty", async () => {
+  it("throws NO_ROLE when accounts are still empty", async () => {
     mockVerifyIdToken.mockResolvedValueOnce({ uid: "user-2" });
     mockLoadAuthUser.mockResolvedValueOnce({
       uid: "user-2",
-      memberships: [],
+      accounts: [],
       currentOrganizationId: null,
       currentDisplayName: null,
     });
@@ -108,6 +106,6 @@ describe("verifyAuth", () => {
       code: "NO_ROLE",
       statusCode: 403,
     } satisfies Partial<AuthError>);
-    expect(mockActivateInvitedMemberships).toHaveBeenCalledWith("user-2");
+    expect(mockActivateInvitedAccounts).toHaveBeenCalledWith("user-2");
   });
 });

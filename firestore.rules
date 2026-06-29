@@ -5,26 +5,26 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    function membershipDocPath(organizationId) {
-      return /databases/$(database)/documents/organization-memberships/$(organizationId + "_" + request.auth.uid);
+    function accountDocPath(organizationId) {
+      return /databases/$(database)/documents/organization-accounts/$(organizationId + "_" + request.auth.uid);
     }
 
-    function membershipExists(organizationId) {
-      return isAuthenticated() && exists(membershipDocPath(organizationId));
+    function accountExists(organizationId) {
+      return isAuthenticated() && exists(accountDocPath(organizationId));
     }
 
-    function membershipData(organizationId) {
-      return get(membershipDocPath(organizationId)).data;
+    function accountData(organizationId) {
+      return get(accountDocPath(organizationId)).data;
     }
 
     function isActiveMember(organizationId) {
-      return membershipExists(organizationId)
-        && membershipData(organizationId).status == 'active';
+      return accountExists(organizationId)
+        && accountData(organizationId).status == 'active';
     }
 
     function hasOrganizationRole(organizationId, roles) {
       return isActiveMember(organizationId)
-        && membershipData(organizationId).role in roles;
+        && accountData(organizationId).role in roles;
     }
 
     function isOrganizationAdmin(organizationId) {
@@ -44,7 +44,7 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    match /organization-memberships/{membershipId} {
+    match /organization-accounts/{accountId} {
       allow read: if isAuthenticated()
         && (
           resource.data.uid == request.auth.uid

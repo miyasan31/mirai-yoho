@@ -21,7 +21,7 @@ import { isValidSlotRange } from "@/domain/slot/slot-availability";
 import { TimeRange } from "@/domain/slot/time-range";
 import type { UserRole } from "@/infrastructure/auth/auth-types";
 import {
-  getOrganizationMembershipDocId,
+  getOrganizationAccountDocId,
   setUserDisplayName,
 } from "@/infrastructure/auth/load-auth-context";
 import { requireOrganizationRole } from "@/infrastructure/auth/require-organization-role";
@@ -71,7 +71,7 @@ import {
 import { logUnexpectedPostError, mapApiError } from "./api-error-mapper";
 import { validateCustomerBirthdate } from "./booking-birthdate-validation";
 
-const MEMBERSHIP_COLLECTION = FIRESTORE_COLLECTIONS.organizationMemberships;
+const ACCOUNT_COLLECTION = FIRESTORE_COLLECTIONS.organizationAccounts;
 const FIRESTORE_IN_QUERY_CHUNK_SIZE = 10;
 const BATCH_CHARGE_COOLDOWN_MS = 60 * 1000;
 const BATCH_CONSULTATION_REMINDER_COOLDOWN_MS = 60 * 1000;
@@ -436,9 +436,9 @@ function getBatchConsultationReminderRateLimitState(organizationId: string): {
   };
 }
 
-async function listOrganizationMemberships(organizationId: string) {
+async function listOrganizationAccounts(organizationId: string) {
   const snapshot = await db
-    .collection(MEMBERSHIP_COLLECTION)
+    .collection(ACCOUNT_COLLECTION)
     .where("organizationId", "==", organizationId)
     .get();
 
@@ -455,7 +455,7 @@ async function listOrganizationMemberships(organizationId: string) {
   }));
 }
 
-async function getOrganizationMembership(
+async function getOrganizationAccount(
   organizationId: string,
   uid: string,
 ): Promise<{
@@ -464,8 +464,8 @@ async function getOrganizationMembership(
   role: UserRole;
   status: string;
 } | null> {
-  const docId = getOrganizationMembershipDocId(organizationId, uid);
-  const doc = await db.collection(MEMBERSHIP_COLLECTION).doc(docId).get();
+  const docId = getOrganizationAccountDocId(organizationId, uid);
+  const doc = await db.collection(ACCOUNT_COLLECTION).doc(docId).get();
   if (!doc.exists) return null;
   return doc.data() as {
     uid: string;
@@ -485,7 +485,7 @@ async function getAdminOrOperatorDisplayNameMap(
   const snapshots = await Promise.all(
     chunkArray(uniqueUids, FIRESTORE_IN_QUERY_CHUNK_SIZE).map((uidChunk) =>
       db
-        .collection(MEMBERSHIP_COLLECTION)
+        .collection(ACCOUNT_COLLECTION)
         .where("uid", "in", uidChunk)
         .where("status", "==", "active")
         .get(),
@@ -548,7 +548,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[1] === "slots"
     ) {
       const authUser = await verifyAuth(request);
-      const membership = requireOrganizationRole(
+      const account = requireOrganizationRole(
         authUser,
         organizationId,
         "admin",
@@ -559,7 +559,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       const requestedConsultantId =
         request.nextUrl.searchParams.get("consultantId");
       const consultantId =
-        membership.role === "consultant" ? authUser.uid : requestedConsultantId;
+        account.role === "consultant" ? authUser.uid : requestedConsultantId;
       const repository = createSlotRepository();
       const settings =
         (await createOrganizationSettingsRepository().findByOrganizationId(
@@ -1104,27 +1104,27 @@ export async function GET(request: NextRequest, context: RouteContext) {
           "page must be >= 1, pageSize must be one of 20/50/100, and sortBy must be createdAt or updatedAt",
         );
       }
-      const memberships = (
-        await listOrganizationMemberships(organizationId)
-      ).filter((membership) => isAdminPanelUserRole(membership.role));
-      const memberUids = memberships.map((membership) => membership.uid);
+      const organizationAccounts = (
+        await listOrganizationAccounts(organizationId)
+      ).filter((account) => isAdminPanelUserRole(account.role));
+      const accountUids = organizationAccounts.map((account) => account.uid);
       const [userByUid, nameByUid] = await Promise.all([
-        getUsersByUids(memberUids),
-        getAdminOrOperatorDisplayNameMap(memberUids),
+        getUsersByUids(accountUids),
+        getAdminOrOperatorDisplayNameMap(accountUids),
       ]);
 
-      const accounts = memberships.map((membership) => {
-        const userRecord = userByUid.get(membership.uid) ?? null;
-        const name = nameByUid.get(membership.uid) ?? "";
-        const createdAtDate = membership.createdAt?.toDate() ?? new Date(0);
-        const updatedAtDate = membership.updatedAt?.toDate() ?? createdAtDate;
+      const accounts = organizationAccounts.map((account) => {
+        const userRecord = userByUid.get(account.uid) ?? null;
+        const name = nameByUid.get(account.uid) ?? "";
+        const createdAtDate = account.createdAt?.toDate() ?? new Date(0);
+        const updatedAtDate = account.updatedAt?.toDate() ?? createdAtDate;
 
         return {
-          uid: membership.uid,
+          uid: account.uid,
           email: userRecord?.email ?? "",
           name: name || userRecord?.email || "",
-          role: membership.role,
-          status: membership.status === "active" ? "registered" : "pending",
+          role: account.role,
+          status: account.status === "active" ? "registered" : "pending",
           createdAt: createdAtDate.toISOString(),
           updatedAt: updatedAtDate.toISOString(),
         };
@@ -1564,7 +1564,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     if (segments.length === 1 && segments[0] === "slots") {
       const authUser = await verifyAuth(request);
-      const membership = requireOrganizationRole(
+      const account = requireOrganizationRole(
         authUser,
         organizationId,
         "admin",
@@ -1582,7 +1582,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         );
       }
 
-      if (membership.role === "consultant" && authUser.uid !== consultantId) {
+      if (account.role === "consultant" && authUser.uid !== consultantId) {
         return jsonError(
           403,
           "FORBIDDEN",
@@ -1749,7 +1749,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       segments[1] === "accounts" &&
       segments[2] === "invite"
     ) {
-      const actorMembership = requireOrganizationRole(
+      const actorAccount = requireOrganizationRole(
         authUser,
         organizationId,
         "admin",
@@ -1786,10 +1786,10 @@ export async function POST(request: NextRequest, context: RouteContext) {
         userRecord = await getUser(uid);
       }
 
-      const membershipId = getOrganizationMembershipDocId(organizationId, uid);
+      const accountId = getOrganizationAccountDocId(organizationId, uid);
       await db
-        .collection(MEMBERSHIP_COLLECTION)
-        .doc(membershipId)
+        .collection(ACCOUNT_COLLECTION)
+        .doc(accountId)
         .set(
           {
             uid,
@@ -1841,7 +1841,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
         endpoint: postErrorContext.endpoint,
         organizationId,
         actorUid: authUser.uid,
-        actorRole: actorMembership.role,
+        actorRole: actorAccount.role,
         targetEmail: email,
         targetRole: role,
         invitedAt: new Date().toISOString(),
@@ -1858,14 +1858,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
     ) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
       const userRecord = await getUser(segments[2]);
-      const membership = await getOrganizationMembership(
-        organizationId,
-        segments[2],
-      );
-      if (!membership) {
-        return jsonError(404, "NOT_FOUND", "Membership not found");
+      const account = await getOrganizationAccount(organizationId, segments[2]);
+      if (!account) {
+        return jsonError(404, "NOT_FOUND", "Account not found");
       }
-      if (!isAdminPanelUserRole(membership.role)) {
+      if (!isAdminPanelUserRole(account.role)) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
@@ -1883,7 +1880,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
       await new ResendEmailService().sendInvitation({
         email: userRecord.email,
-        role: membership.role,
+        role: account.role,
         passwordResetLink: await generatePasswordResetLink(userRecord.email),
       });
 
@@ -1897,14 +1894,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
       segments[3] === "reset-password"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin", "operator");
-      const membership = await getOrganizationMembership(
-        organizationId,
-        segments[2],
-      );
-      if (!membership) {
-        return jsonError(404, "NOT_FOUND", "Membership not found");
+      const account = await getOrganizationAccount(organizationId, segments[2]);
+      if (!account) {
+        return jsonError(404, "NOT_FOUND", "Account not found");
       }
-      if (!isAdminPanelUserRole(membership.role)) {
+      if (!isAdminPanelUserRole(account.role)) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
@@ -2360,22 +2354,19 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       segments[1] === "accounts" &&
       segments[3] === "display-name"
     ) {
-      const actorMembership = requireOrganizationRole(
+      const actorAccount = requireOrganizationRole(
         authUser,
         organizationId,
         "admin",
         "operator",
       );
       const body = await request.json();
-      const membership = await getOrganizationMembership(
-        organizationId,
-        segments[2],
-      );
+      const account = await getOrganizationAccount(organizationId, segments[2]);
 
-      if (!membership) {
-        return jsonError(404, "NOT_FOUND", "Membership not found");
+      if (!account) {
+        return jsonError(404, "NOT_FOUND", "Account not found");
       }
-      if (membership.role === "consultant") {
+      if (account.role === "consultant") {
         return jsonError(
           400,
           "VALIDATION_ERROR",
@@ -2384,7 +2375,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       }
       if (
         !canUpdateDisplayNameTarget(
-          actorMembership.role,
+          actorAccount.role,
           authUser.uid,
           segments[2],
         )
@@ -2423,14 +2414,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
           "role must be one of: admin, operator",
         );
       }
-      const membership = await getOrganizationMembership(
-        organizationId,
-        segments[2],
-      );
-      if (!membership) {
-        return jsonError(404, "NOT_FOUND", "Membership not found");
+      const account = await getOrganizationAccount(organizationId, segments[2]);
+      if (!account) {
+        return jsonError(404, "NOT_FOUND", "Account not found");
       }
-      if (!isAdminPanelUserRole(membership.role)) {
+      if (!isAdminPanelUserRole(account.role)) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
@@ -2438,11 +2426,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         );
       }
       const activeAdminCount = (
-        await listOrganizationMemberships(organizationId)
+        await listOrganizationAccounts(organizationId)
       ).filter(
-        (organizationMembership) =>
-          organizationMembership.role === "admin" &&
-          organizationMembership.status === "active",
+        (organizationAccount) =>
+          organizationAccount.role === "admin" &&
+          organizationAccount.status === "active",
       ).length;
 
       if (
@@ -2460,11 +2448,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         );
       }
 
-      const membershipId = getOrganizationMembershipDocId(
+      const accountId = getOrganizationAccountDocId(
         organizationId,
         segments[2],
       );
-      await db.collection(MEMBERSHIP_COLLECTION).doc(membershipId).set(
+      await db.collection(ACCOUNT_COLLECTION).doc(accountId).set(
         {
           role: body.role,
           updatedAt: new Date(),
@@ -2561,7 +2549,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     const authUser = await verifyAuth(request);
 
     if (segments.length === 2 && segments[0] === "slots") {
-      const membership = requireOrganizationRole(
+      const account = requireOrganizationRole(
         authUser,
         organizationId,
         "admin",
@@ -2575,7 +2563,7 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
         return jsonError(404, "NOT_FOUND", "Slot not found");
       }
       if (
-        membership.role === "consultant" &&
+        account.role === "consultant" &&
         slot.getConsultantId() !== authUser.uid
       ) {
         return jsonError(
@@ -2628,21 +2616,18 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       segments[1] === "accounts"
     ) {
       requireOrganizationRole(authUser, organizationId, "admin");
-      const membershipId = getOrganizationMembershipDocId(
+      const accountId = getOrganizationAccountDocId(
         organizationId,
         segments[2],
       );
-      const membership = await getOrganizationMembership(
-        organizationId,
-        segments[2],
-      );
-      if (!membership) {
-        return jsonError(404, "NOT_FOUND", "Membership not found");
+      const account = await getOrganizationAccount(organizationId, segments[2]);
+      if (!account) {
+        return jsonError(404, "NOT_FOUND", "Account not found");
       }
       const deletionTargetValidation = validateAdminUserDeletionTarget(
         authUser.uid,
         segments[2],
-        membership.role,
+        account.role,
       );
       if (!deletionTargetValidation.isAllowed) {
         return jsonError(
@@ -2651,30 +2636,28 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
           deletionTargetValidation.message ?? "Invalid user delete target",
         );
       }
-      const membershipDocRef = db
-        .collection(MEMBERSHIP_COLLECTION)
-        .doc(membershipId);
-      const membershipDoc = await membershipDocRef.get();
-      const membershipData = membershipDoc.data();
-      if (!membershipData) {
-        return jsonError(404, "NOT_FOUND", "Membership not found");
+      const accountDocRef = db.collection(ACCOUNT_COLLECTION).doc(accountId);
+      const accountDoc = await accountDocRef.get();
+      const accountData = accountDoc.data();
+      if (!accountData) {
+        return jsonError(404, "NOT_FOUND", "Account not found");
       }
 
       await deleteAdminUserWithAuthCleanup({
         uid: segments[2],
-        membershipData,
-        countMembershipsByUid: async (uid) => {
-          const memberships = await db
-            .collection(MEMBERSHIP_COLLECTION)
+        accountData,
+        countAccountsByUid: async (uid) => {
+          const accounts = await db
+            .collection(ACCOUNT_COLLECTION)
             .where("uid", "==", uid)
             .get();
-          return memberships.size;
+          return accounts.size;
         },
-        deleteMembership: async () => {
-          await membershipDocRef.delete();
+        deleteAccount: async () => {
+          await accountDocRef.delete();
         },
-        restoreMembership: async (restorableMembershipData) => {
-          await membershipDocRef.set(restorableMembershipData);
+        restoreAccount: async (restorableAccountData) => {
+          await accountDocRef.set(restorableAccountData);
         },
         deleteAuthUser: deleteUser,
       });

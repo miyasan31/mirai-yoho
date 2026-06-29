@@ -65,12 +65,12 @@
 | コレクション | 現状 | 方針 |
 |---|---|---|
 | `organizations` | route / auth で直接アクセス | **Repository 化**し `OrganizationDoc` を定義 |
-| `organization-memberships` | route / auth で直接アクセス | **Repository 化**し enum 変換を集約 |
+| `organization-accounts` | route / auth で直接アクセス | **Repository 化**し enum 変換を集約 |
 | ~~`user-preferences`~~ | 廃止 | **`lastOrganizationId` はクライアント側のみ** |
 
 **決定**: 直接 Firestore アクセスは廃止し、`*Repository` + `*Doc` 型に集約する。
 
-**membership status**: FS / Domain / API すべて **`active` / `invited` / `disabled`** で統一（§3.5 合意）。Mapper による `registered` / `pending` 変換は廃止。
+**account status**: FS / Domain / API すべて **`active` / `invited` / `disabled`** で統一（§3.5 合意）。Mapper による `registered` / `pending` 変換は廃止。
 
 ### 1.5 その他の横断規則
 
@@ -94,7 +94,7 @@
 | 2 | `clients` | `customers` | **リネーム** | `customerId` |
 | 3 | `consultant-price-plans` | `price-plans` | **リネーム** | `pricePlanId` |
 | 4 | `consultants` | `consultants` | 維持 | `{organizationId}_{consultantId}` |
-| 5 | `organization-memberships` | `organization-memberships` | 維持 | `{organizationId}_{uid}` |
+| 5 | `organization-accounts` | `organization-accounts` | 維持 | `{organizationId}_{uid}` |
 | 6 | `organization-settings` | `organization-settings` | 維持 | `organizationId` |
 | 7 | `organizations` | `organizations` | 維持 | `organizationId` |
 | 8 | `payments` | `payments` | 維持 | `paymentId` |
@@ -227,7 +227,7 @@
 
 **Doc ID**: `{organizationId}_{consultantId}`（維持）
 
-**複合 ID の理由**: `consultantId` = Firebase Auth `uid` のため、同一ユーザーが複数 org の相談員になると Doc ID が衝突する。`organization-memberships` と同様の複合キーで回避している。
+**複合 ID の理由**: `consultantId` = Firebase Auth `uid` のため、同一ユーザーが複数 org の相談員になると Doc ID が衝突する。`organization-accounts` と同様の複合キーで回避している。
 
 | プロパティ | Firestore（現状） | 正準名 | 判定 |
 |---|---|---|---|
@@ -252,25 +252,25 @@
 
 ---
 
-### 3.5 `organization-memberships` ✅ 合意済み（2026-06-26）
+### 3.5 `organization-accounts` ✅ 合意済み（2026-06-26）
 
 **Doc ID**: `{organizationId}_{uid}`（維持）
 
 | プロパティ | Firestore（現状） | 正準名 | 判定 |
 |---|---|---|---|
-| コレクション | `organization-memberships` | `organization-memberships` | 維持 |
+| コレクション | `organization-accounts` | `organization-accounts` | 維持 |
 | アカウント ID | `uid` | `uid` | 維持 |
 | 組織 ID | `organizationId` | `organizationId` | 維持 |
 | ロール | `role` | `role` | 維持 |
 | ステータス | `active` / `invited` / `disabled` | **同名（API も統一）** | **合意: FS 値に API 統一** |
-| 表示名 | `user-preferences` 参照 | **`name`（membership へ移動）** | **移動 + consultants と統一** |
+| 表示名 | `user-preferences` 参照 | **`name`（account へ移動）** | **移動 + consultants と統一** |
 | 作成/更新 | `createdAt`, `updatedAt` | 同名 | 維持 |
 
 **合意サマリー**
 - コレクション名・複合 Doc ID は維持
 - API の `registered`/`pending` を廃止し、FS と同じ **`active`/`invited`/`disabled`** に統一
-- **`name`** を `user-preferences` から **membership ドキュメントへ移動**（consultants と統一）
-- **Repository 化**（`OrganizationMembershipRepository` + `OrganizationMembershipDoc`）
+- **`name`** を `user-preferences` から **account ドキュメントへ移動**（consultants と統一）
+- **Repository 化**（`OrganizationAccountRepository` + `OrganizationAccountDoc`）
 
 **連鎖影響**
 - `openapi.yaml` AdminAccount.status enum 変更（`pending` / `registered`）
@@ -326,7 +326,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 | コレクション | `organizations` | `organizations` | 維持 |
 | 組織 ID | `organizationId`（Doc ID と重複） | `organizationId` | 維持 |
 | 組織名（FS） | `name` | `name` | 維持 |
-| 組織名（membership/API join） | `organizationName` | **`name`** | **リネーム** |
+| 組織名（account/API join） | `organizationName` | **`name`** | **リネーム** |
 | 作成/更新 | `createdAt`, `updatedAt` | 同名 | 維持 |
 
 **合意サマリー**
@@ -334,7 +334,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 - API の `organizationName` → **`name`** に統一
 - **Repository 化**（`OrganizationRepository` + `OrganizationDoc`）
 
-**連鎖影響**: `auth-types.ts` OrganizationMembership、`load-auth-context.ts`、admin/consultant layout
+**連鎖影響**: `auth-types.ts` OrganizationAccount、`load-auth-context.ts`、admin/consultant layout
 
 **根拠**: `load-auth-context.ts`, `scripts/create-organization.ts`
 
@@ -396,7 +396,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 | 項目 | 現状 | 正準 | 判定 |
 |---|---|---|---|
 | コレクション | `user-preferences` | **廃止** | 削除 |
-| `displayName` | user-preferences | **organization-memberships.name** | 移動済み（§3.5） |
+| `displayName` | user-preferences | **organization-accounts.name** | 移動済み（§3.5） |
 | `lastOrganizationId` | user-preferences | **クライアント側のみ**（localStorage 等） | FS から削除 |
 
 **合意サマリー**
@@ -453,7 +453,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 | 変更 | 影響ファイル |
 |---|---|
 | `organizations` Repository 化 | 新規 repository, `load-auth-context.ts`, `route.ts`, scripts |
-| `organization-memberships` Repository 化 + `name` 追加 | 新規 repository, auth, route, scripts |
+| `organization-accounts` Repository 化 + `name` 追加 | 新規 repository, auth, route, scripts |
 | **`user-preferences` 廃止** | `load-auth-context.ts`, `create-organization.ts`, `POST /api/auth/organization`, クライアント localStorage 化 |
 | `organization-settings` に `createdAt`/`updatedAt` 追加 | repository, scripts |
 | `consultants.displayName` → `name`、API `rank` → `rankId` | domain, repository, openapi, route |
@@ -488,7 +488,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 | 2 | `clients` → `customers` | ✅ | ✅ | ✅ | **合意済み** |
 | 3 | `consultant-price-plans` → `price-plans` | ✅ | ✅ | ✅ | **合意済み** |
 | 4 | `consultants` | ✅ | ✅ | ✅ | **合意済み** |
-| 5 | `organization-memberships` | ✅ | ✅ | ✅ | **合意済み** |
+| 5 | `organization-accounts` | ✅ | ✅ | ✅ | **合意済み** |
 | 6 | `organization-settings` | ✅ | ✅ | ✅ | **合意済み** |
 | 7 | `organizations` | ✅ | ✅ | ✅ | **合意済み** |
 | 8 | `payments` | ✅ | ✅ | ✅ | **合意済み** |
@@ -511,7 +511,7 @@ export const FIRESTORE_COLLECTIONS = {
   customers: "customers",           // was: clients
   pricePlans: "price-plans",        // was: consultant-price-plans
   consultants: "consultants",
-  organizationMemberships: "organization-memberships",
+  organizationAccounts: "organization-accounts",
   organizationSettings: "organization-settings",
   organizations: "organizations",
   payments: "payments",
@@ -528,7 +528,7 @@ export const FIRESTORE_COLLECTIONS = {
 1. **データ移行 PR**: コレクションリネーム（customers, price-plans, zoom-sessions）+ フィールド移行
 2. **slots PR**: `startsAt`/`endsAt` + `isAvailable` + インデックス更新
 3. **API 整合 PR**: 名称統一（`customer*`, `startsAt`/`endsAt`, `joinUrl`, `selectionId`, `consultationContent` 等）+ `pnpm generate`
-4. **Repository 化 PR**: organizations / organization-memberships
+4. **Repository 化 PR**: organizations / organization-accounts
 5. **user-preferences 廃止 PR**: クライアント localStorage 化 + サーバー側削除
 6. **DDD_DESIGN.md 更新**: Client → Customer、用語表の整合
 
@@ -547,7 +547,7 @@ export const FIRESTORE_COLLECTIONS = {
 | エンティティ ID | `{entity}Id` 形式（`bookingId`, `slotId`, `paymentId` 等） |
 | 通貨 | `*JPY` サフィックス統一 |
 | 監査フィールド | 原則 `createdAt` / `updatedAt` を使用（例外: `zoom-sessions` は `createdAt` のみ） |
-| 表示名 | `name` に統一（organizations / consultants / memberships / customers） |
+| 表示名 | `name` に統一（organizations / consultants / accounts / customers） |
 | 参加 URL | `joinUrl` に統一（bookings / zoom-sessions） |
 | 区間端点 | **`startsAt` / `endsAt`** + フル datetime（bookings / slots / API） |
 | カレンダー日 | **`*Date`** + `YYYY-MM-DD` 文字列（`sessionDate`, `birthDate`, 休業日） |
@@ -578,7 +578,7 @@ export const FIRESTORE_COLLECTIONS = {
 
 | パターン | コレクション |
 |---|---|
-| `organization-*` プレフィックス | `organizations`, `organization-memberships`, `organization-settings` |
+| `organization-*` プレフィックス | `organizations`, `organization-accounts`, `organization-settings` |
 | エンティティ単体名 | `bookings`, `customers`, `consultants`, `payments`, `slots`, `price-plans`, `zoom-sessions` |
 
 **現状**: 意図的な混在。org スコープの設定・所属は `organization-*`、業務エンティティは単体名。  
@@ -636,7 +636,7 @@ export const FIRESTORE_COLLECTIONS = {
 |---|---|
 | §1.2 日付4分類 ↔ §3.x 各コレクション | 一致（`*Date`/`startsAt`/`endsAt`/`*At`/`*Time`） |
 | Customer 統一 | §1.5 / §3.2 / §6.3-A / §4.1 で一貫 |
-| membership status | §1.4 / §3.5 一致（`active`/`invited`/`disabled`） |
+| account status | §1.4 / §3.5 一致（`active`/`invited`/`disabled`） |
 | joinUrl | §3.1 / §3.11 / §6.1 一致 |
 | 外部キー | `organizationId` 全コレクション、`customerId` 3コレクション、`consultantId` 4コレクション |
 
