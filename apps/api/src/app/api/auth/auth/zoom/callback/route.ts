@@ -1,0 +1,45 @@
+import { NextResponse } from "next/server";
+import { envServer } from "@/config/env.server";
+import { verifyZoomOAuthState } from "@/infrastructure/auth/zoom-oauth-state";
+import { createConnectZoomAccountUseCase } from "@/infrastructure/container";
+
+const FAILURE_PATH = "/mypage/zoom?status=error";
+const SUCCESS_PATH = "/mypage/zoom?status=connected";
+
+function redirect(path: string, base: string) {
+  const url = new URL(path, base);
+  return NextResponse.redirect(url);
+}
+
+export async function GET(request: Request) {
+  const requestUrl = new URL(request.url);
+  const code = requestUrl.searchParams.get("code");
+  const state = requestUrl.searchParams.get("state");
+  const error = requestUrl.searchParams.get("error");
+
+  if (error || !code || !state) {
+    return redirect(`${FAILURE_PATH}&reason=missing_params`, envServer.appUrl);
+  }
+
+  let authUid: string;
+  try {
+    const verified = verifyZoomOAuthState({
+      state,
+      secret: envServer.zoomOAuthStateSecret,
+    });
+    authUid = verified.authUid;
+  } catch {
+    return redirect(`${FAILURE_PATH}&reason=invalid_state`, envServer.appUrl);
+  }
+
+  try {
+    await createConnectZoomAccountUseCase().execute({
+      authUid,
+      code,
+      redirectUri: envServer.zoomUserOAuthRedirectUri,
+    });
+    return redirect(SUCCESS_PATH, envServer.appUrl);
+  } catch {
+    return redirect(`${FAILURE_PATH}&reason=exchange_failed`, envServer.appUrl);
+  }
+}

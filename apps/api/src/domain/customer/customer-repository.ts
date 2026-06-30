@@ -7,6 +7,12 @@ export interface ICustomerRepository {
   ): Promise<Customer | null>;
   findByIds(organizationId: string, customerIds: string[]): Promise<Customer[]>;
   findByEmail(organizationId: string, email: string): Promise<Customer | null>;
+  findByEmailAcrossOrganizations(email: string): Promise<Customer[]>;
+  findByUserId(userId: string): Promise<Customer[]>;
+  findByUserIdAndOrganizationId(
+    userId: string,
+    organizationId: string,
+  ): Promise<Customer | null>;
   findAll(organizationId: string): Promise<Customer[]>;
   save(customer: Customer): Promise<void>;
 }

@@ -6,6 +6,10 @@ export interface IBookingRepository {
     organizationId: string,
     consultantId: string,
   ): Promise<Booking[]>;
+  findByCustomerId(
+    organizationId: string,
+    customerId: string,
+  ): Promise<Booking[]>;
   findByStatus(organizationId: string, status: string): Promise<Booking[]>;
   findConsultationReminderTargets(
     organizationId: string,

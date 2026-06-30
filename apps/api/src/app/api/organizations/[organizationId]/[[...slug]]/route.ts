@@ -40,6 +40,7 @@ import {
 import { requireOrganizationRole } from "@/infrastructure/auth/require-organization-role";
 import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
 import { verifyCloudSchedulerAuth } from "@/infrastructure/auth/verify-cloud-scheduler-auth";
+import { verifyCustomerAuth } from "@/infrastructure/auth/verify-customer-auth";
 import {
   createBatchChargeUseCase,
   createBookingRepository,
@@ -58,6 +59,7 @@ import {
   createSetupPaymentUseCase,
   createSlotRepository,
   createUpdateConsultantPricePlanUseCase,
+  createUserRepository,
 } from "@/infrastructure/container";
 import {
   createUser,
@@ -1492,6 +1494,26 @@ export async function POST(request: NextRequest, context: RouteContext) {
     postErrorContext.segments = segments;
 
     if (segments.length === 1 && segments[0] === "bookings") {
+      let authContext: { authUid: string };
+      try {
+        authContext = await verifyCustomerAuth(request);
+      } catch (error) {
+        if (error instanceof AuthError) {
+          return jsonError(error.statusCode, error.code, error.message);
+        }
+        throw error;
+      }
+      const customerUser = await createUserRepository().findByAuthUid(
+        authContext.authUid,
+      );
+      if (!customerUser || !customerUser.isActive()) {
+        return jsonError(
+          401,
+          "CUSTOMER_NOT_SIGNED_UP",
+          "Customer has not signed up or is withdrawn",
+        );
+      }
+
       const body = await request.json();
       const {
         slotId,
@@ -1532,6 +1554,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const useCase = createCreateBookingUseCase();
       const result = await useCase.execute({
         organizationId,
+        userId: customerUser.getUserId(),
         slotId: typeof slotId === "string" ? slotId : undefined,
         startsAt: typeof startsAt === "string" ? new Date(startsAt) : undefined,
         endsAt: typeof endsAt === "string" ? new Date(endsAt) : undefined,

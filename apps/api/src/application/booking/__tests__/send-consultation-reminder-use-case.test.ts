@@ -104,6 +104,15 @@ class InMemoryBookingRepository implements IBookingRepository {
     );
   }
 
+  async findByCustomerId(
+    _organizationId: string,
+    customerId: string,
+  ): Promise<Booking[]> {
+    return this.bookings.filter(
+      (booking) => booking.getCustomerId() === customerId,
+    );
+  }
+
   async findByStatus(
     _organizationId: string,
     status: string,
@@ -171,6 +180,27 @@ class InMemoryCustomerRepository implements ICustomerRepository {
 
   async findAll(_organizationId: string): Promise<Customer[]> {
     return this.customers;
+  }
+
+  async findByEmailAcrossOrganizations(email: string): Promise<Customer[]> {
+    return this.customers.filter((customer) => customer.getEmail() === email);
+  }
+
+  async findByUserId(userId: string): Promise<Customer[]> {
+    return this.customers.filter((customer) => customer.getUserId() === userId);
+  }
+
+  async findByUserIdAndOrganizationId(
+    userId: string,
+    organizationId: string,
+  ): Promise<Customer | null> {
+    return (
+      this.customers.find(
+        (customer) =>
+          customer.getUserId() === userId &&
+          customer.getOrganizationId() === organizationId,
+      ) ?? null
+    );
   }
 
   async save(_customer: Customer): Promise<void> {}

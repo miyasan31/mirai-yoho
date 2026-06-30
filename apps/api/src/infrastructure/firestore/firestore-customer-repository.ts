@@ -17,6 +17,8 @@ interface CustomerDoc {
   phone: string;
   birthDate?: string;
   note?: string;
+  userId?: string;
+  withdrawnAt?: Timestamp | Date;
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;
 }
@@ -37,6 +39,8 @@ function toDomain(doc: CustomerDoc): Customer {
     phone: doc.phone,
     birthDate: doc.birthDate,
     note: doc.note,
+    userId: doc.userId,
+    withdrawnAt: toDate(doc.withdrawnAt) ?? undefined,
     createdAt,
     updatedAt: toDate(doc.updatedAt) ?? createdAt,
   });
@@ -44,6 +48,8 @@ function toDomain(doc: CustomerDoc): Customer {
 
 function toFirestore(customer: Customer): CustomerDoc {
   const note = customer.getNote();
+  const userId = customer.getUserId();
+  const withdrawnAt = customer.getWithdrawnAt();
   return {
     organizationId: customer.getOrganizationId(),
     customerId: customer.getCustomerId(),
@@ -52,6 +58,8 @@ function toFirestore(customer: Customer): CustomerDoc {
     phone: customer.getPhone(),
     ...(customer.getBirthDate() ? { birthDate: customer.getBirthDate() } : {}),
     ...(note !== undefined ? { note } : {}),
+    ...(userId !== undefined ? { userId } : {}),
+    ...(withdrawnAt ? { withdrawnAt } : {}),
     createdAt: customer.getCreatedAt(),
     updatedAt: customer.getUpdatedAt(),
   };
@@ -125,5 +133,35 @@ export class FirestoreCustomerRepository implements ICustomerRepository {
     return uniqueCustomerIds
       .map((customerId) => customerById.get(customerId))
       .filter((customer): customer is Customer => customer !== undefined);
+  }
+
+  async findByEmailAcrossOrganizations(email: string): Promise<Customer[]> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("email", "==", email)
+      .get();
+    return snapshot.docs.map((doc) => toDomain(doc.data() as CustomerDoc));
+  }
+
+  async findByUserId(userId: string): Promise<Customer[]> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("userId", "==", userId)
+      .get();
+    return snapshot.docs.map((doc) => toDomain(doc.data() as CustomerDoc));
+  }
+
+  async findByUserIdAndOrganizationId(
+    userId: string,
+    organizationId: string,
+  ): Promise<Customer | null> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("userId", "==", userId)
+      .where("organizationId", "==", organizationId)
+      .limit(1)
+      .get();
+    if (snapshot.empty) return null;
+    return toDomain(snapshot.docs[0].data() as CustomerDoc);
   }
 }

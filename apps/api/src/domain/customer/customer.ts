@@ -1,4 +1,5 @@
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
+import { DomainError } from "@/domain/shared/domain-error";
 
 interface CustomerCreateProps {
   organizationId: string;
@@ -7,6 +8,7 @@ interface CustomerCreateProps {
   email: string;
   phone: string;
   birthDate: string;
+  userId?: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -15,6 +17,7 @@ interface CustomerProps
   extends Omit<CustomerCreateProps, "birthDate" | "createdAt" | "updatedAt"> {
   birthDate?: string;
   note?: string;
+  withdrawnAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -28,6 +31,8 @@ export class Customer extends AggregateRoot {
     private phone: string,
     private birthDate: string | undefined,
     private note: string | undefined,
+    private userId: string | undefined,
+    private withdrawnAt: Date | undefined,
     private readonly createdAt: Date,
     private updatedAt: Date,
   ) {
@@ -44,6 +49,8 @@ export class Customer extends AggregateRoot {
       props.phone,
       props.birthDate,
       undefined,
+      props.userId,
+      undefined,
       props.createdAt ?? now,
       props.updatedAt ?? now,
     );
@@ -59,6 +66,8 @@ export class Customer extends AggregateRoot {
       props.phone,
       props.birthDate,
       props.note,
+      props.userId,
+      props.withdrawnAt,
       createdAt,
       props.updatedAt ?? createdAt,
     );
@@ -82,12 +91,41 @@ export class Customer extends AggregateRoot {
     this.updatedAt = new Date();
   }
 
+  linkUser(userId: string): void {
+    if (this.userId && this.userId !== userId) {
+      throw new DomainError(
+        "CUSTOMER_USER_MISMATCH",
+        "Customer is already linked to a different user",
+      );
+    }
+    this.userId = userId;
+    this.updatedAt = new Date();
+  }
+
+  mask(now: Date): void {
+    this.name = "（退会済み）";
+    this.email = "";
+    this.phone = "";
+    this.birthDate = undefined;
+    this.note = undefined;
+    this.withdrawnAt = now;
+    this.updatedAt = now;
+  }
+
+  isWithdrawn(): boolean {
+    return this.withdrawnAt !== undefined;
+  }
+
   getCustomerId(): string {
     return this.customerId;
   }
 
   getOrganizationId(): string {
     return this.organizationId;
+  }
+
+  getUserId(): string | undefined {
+    return this.userId;
   }
 
   getName(): string {
@@ -108,6 +146,10 @@ export class Customer extends AggregateRoot {
 
   getNote(): string | undefined {
     return this.note;
+  }
+
+  getWithdrawnAt(): Date | undefined {
+    return this.withdrawnAt;
   }
 
   getCreatedAt(): Date {
