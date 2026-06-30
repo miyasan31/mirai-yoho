@@ -94,6 +94,18 @@ variable "app_hosting_location" {
   type        = string
 }
 
+variable "app_hosting_custom_domain" {
+  description = "Custom domain associated with the Firebase App Hosting backend. Set to null to skip custom domain management."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.app_hosting_custom_domain == null || can(regex("^[a-z0-9][a-z0-9.-]*[a-z0-9]$", var.app_hosting_custom_domain))
+    error_message = "app_hosting_custom_domain must be a valid lowercase domain name, or null."
+  }
+}
+
 variable "developer_connect_connection_id" {
   description = "Developer Connect GitHub connection ID used by App Hosting."
   type        = string

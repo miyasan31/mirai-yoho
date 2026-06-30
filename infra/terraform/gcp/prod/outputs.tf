@@ -22,3 +22,18 @@ output "github_workload_identity_provider" {
   description = "Workload Identity Provider resource name for GitHub Actions."
   value       = module.iam.github_workload_identity_provider
 }
+
+output "app_hosting_custom_domain_dns_records_to_add" {
+  description = "DNS records to add in Xserver DNS for Firebase App Hosting custom domain setup."
+  value       = module.firebase.app_hosting_custom_domain_dns_records_to_add
+}
+
+output "app_hosting_custom_domain_dns_records_to_remove" {
+  description = "DNS records to remove from Xserver DNS for Firebase App Hosting custom domain setup."
+  value       = module.firebase.app_hosting_custom_domain_dns_records_to_remove
+}
+
+output "app_hosting_custom_domain_status" {
+  description = "Firebase App Hosting custom domain status, including DNS issues and certificate state."
+  value       = module.firebase.app_hosting_custom_domain_status
+}
