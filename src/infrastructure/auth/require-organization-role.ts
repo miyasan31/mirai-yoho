@@ -1,7 +1,6 @@
 import type {
   AuthUser,
   OrganizationAccount,
-  UserRole,
 } from "@/infrastructure/auth/auth-types";
 import { AuthError } from "@/infrastructure/auth/verify-auth";
 
@@ -18,7 +17,7 @@ export function getOrganizationAccount(
 export function requireOrganizationRole(
   authUser: AuthUser,
   organizationId: string,
-  ...allowedRoles: UserRole[]
+  ...allowedRoles: string[]
 ): OrganizationAccount {
   const account = getOrganizationAccount(authUser, organizationId);
 

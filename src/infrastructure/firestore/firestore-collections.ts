@@ -4,6 +4,7 @@ export const FIRESTORE_COLLECTIONS = {
   pricePlans: "price-plans",
   consultants: "consultants",
   organizationAccounts: "organization-accounts",
+  organizationRoles: "organization-roles",
   organizationSettings: "organization-settings",
   organizations: "organizations",
   payments: "payments",

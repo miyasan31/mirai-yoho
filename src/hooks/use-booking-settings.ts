@@ -20,22 +20,24 @@ export function usePublicBookingSettings() {
 }
 
 export function useAdminBookingSettings() {
-  const { token } = useAuth();
+  const { token, hasPermission } = useAuth();
   const { organizationId } = useOrganizationRouting();
   return useGetAdminBookingSettings(organizationId ?? "", {
     query: {
-      enabled: !!token && !!organizationId,
+      enabled:
+        !!token && !!organizationId && hasPermission("admin.settings.read"),
       staleTime: QUERY_STALE_TIME.normal,
     },
   });
 }
 
 export function useAdminConsultantRanks() {
-  const { token } = useAuth();
+  const { token, hasPermission } = useAuth();
   const { organizationId } = useOrganizationRouting();
   return useGetAdminConsultantRanks(organizationId ?? "", {
     query: {
-      enabled: !!token && !!organizationId,
+      enabled:
+        !!token && !!organizationId && hasPermission("admin.settings.read"),
       staleTime: QUERY_STALE_TIME.normal,
     },
   });

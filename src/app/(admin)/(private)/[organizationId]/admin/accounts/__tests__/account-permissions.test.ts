@@ -27,12 +27,12 @@ describe("account permissions", () => {
     );
   });
 
-  it("limits role change and delete to admin", () => {
+  it("limits role change to admin and leaves delete status checks to permissions", () => {
     expect(canEditRole("admin", "registered")).toBe(true);
     expect(canEditRole("admin", "pending")).toBe(false);
     expect(canEditRole("operator", "registered")).toBe(false);
     expect(canDeleteAdminAccount("admin")).toBe(true);
-    expect(canDeleteAdminAccount("operator")).toBe(false);
+    expect(canDeleteAdminAccount("operator")).toBe(true);
   });
 
   it("allows resend invite only for pending accounts and reset password only for registered accounts", () => {

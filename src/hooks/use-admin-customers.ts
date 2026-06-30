@@ -8,12 +8,16 @@ export function useAdminCustomers(
   params?: GetAdminCustomersParams,
   options?: { enabled?: boolean },
 ) {
-  const { token } = useAuth();
+  const { token, hasPermission } = useAuth();
   const { organizationId } = useOrganizationRouting();
   const enabled = options?.enabled ?? true;
   return useGetAdminCustomers(organizationId ?? "", params, {
     query: {
-      enabled: !!token && !!organizationId && enabled,
+      enabled:
+        !!token &&
+        !!organizationId &&
+        enabled &&
+        hasPermission("admin.customers.read"),
       staleTime: QUERY_STALE_TIME.normal,
     },
   });

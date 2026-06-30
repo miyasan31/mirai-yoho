@@ -9,6 +9,15 @@ import { UpdateProfileUseCase } from "@/application/consultant/update-profile-us
 import { toConsultantPricePlanOutput } from "@/application/consultant-price-plan/create-consultant-price-plan-use-case";
 import { AppError } from "@/application/shared/app-error";
 import { envServer } from "@/config/env.server";
+import {
+  type AuthorizationPermission,
+  parsePermissions,
+  SYSTEM_ADMIN_ONLY_PERMISSION_SET,
+} from "@/domain/authorization/authorization-permission";
+import {
+  OrganizationRole,
+  SYSTEM_ADMIN_ROLE_ID,
+} from "@/domain/authorization/organization-role";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import { createPricePlanSelectionId } from "@/domain/consultant-price-plan/consultant-price-plan";
@@ -19,11 +28,14 @@ import { DomainError } from "@/domain/shared/domain-error";
 import { Slot } from "@/domain/slot/slot";
 import { isValidSlotRange } from "@/domain/slot/slot-availability";
 import { TimeRange } from "@/domain/slot/time-range";
-import type { UserRole } from "@/infrastructure/auth/auth-types";
 import {
   getOrganizationAccountDocId,
   setUserDisplayName,
 } from "@/infrastructure/auth/load-auth-context";
+import {
+  requireOrganizationPermission,
+  requireSystemAdminRole,
+} from "@/infrastructure/auth/require-organization-permission";
 import { requireOrganizationRole } from "@/infrastructure/auth/require-organization-role";
 import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
 import { verifyCloudSchedulerAuth } from "@/infrastructure/auth/verify-cloud-scheduler-auth";
@@ -38,6 +50,7 @@ import {
   createCreateConsultantPricePlanUseCase,
   createCustomerRepository,
   createNotifyLateConsultantArrivalUseCase,
+  createOrganizationRoleRepository,
   createOrganizationSettingsRepository,
   createPaymentRepository,
   createSendConsultationReminderUseCase,
@@ -149,7 +162,11 @@ async function authorizeBatchExecution(
   }
 
   const authUser = await verifyAuth(request);
-  requireOrganizationRole(authUser, organizationId, "admin", "operator");
+  requireOrganizationPermission(
+    authUser,
+    organizationId,
+    "admin.payments.charge",
+  );
   return { type: "user", principal: authUser.uid };
 }
 
@@ -337,12 +354,60 @@ function sortByTimestampDesc<
   return sorted;
 }
 
-function isUserRole(role: unknown): role is UserRole {
-  return role === "admin" || role === "operator" || role === "consultant";
+function toOrganizationRoleResponse(role: OrganizationRole, assignedCount = 0) {
+  return {
+    roleId: role.getRoleId(),
+    name: role.getName(),
+    description: role.getDescription(),
+    permissions: role.getPermissions(),
+    isSystem: role.getIsSystem(),
+    assignedCount,
+    createdAt: role.getCreatedAt().toISOString(),
+    updatedAt: role.getUpdatedAt().toISOString(),
+  };
 }
 
-function isAdminPanelUserRole(role: unknown): role is "admin" | "operator" {
-  return role === "admin" || role === "operator";
+function isValidCustomRoleId(roleId: string): boolean {
+  return /^[a-z][a-z0-9-]{1,62}$/.test(roleId);
+}
+
+function parseOrganizationRoleBody(body: unknown): {
+  roleId?: string;
+  name: string;
+  description: string;
+  permissions: AuthorizationPermission[];
+} | null {
+  if (!body || typeof body !== "object") return null;
+  const payload = body as {
+    roleId?: unknown;
+    name?: unknown;
+    description?: unknown;
+    permissions?: unknown;
+  };
+  if (typeof payload.name !== "string" || payload.name.trim().length === 0) {
+    return null;
+  }
+  const permissions = parsePermissions(payload.permissions);
+  if (!permissions) return null;
+  if (
+    permissions.some((permission) =>
+      SYSTEM_ADMIN_ONLY_PERMISSION_SET.has(permission),
+    )
+  ) {
+    return null;
+  }
+  return {
+    roleId:
+      typeof payload.roleId === "string" ? payload.roleId.trim() : undefined,
+    name: payload.name.trim(),
+    description:
+      typeof payload.description === "string" ? payload.description.trim() : "",
+    permissions,
+  };
+}
+
+function isAdminPanelUserRole(role: unknown): role is string {
+  return typeof role === "string" && role !== "consultant";
 }
 
 function isFirestoreFailedPrecondition(error: unknown): boolean {
@@ -447,7 +512,7 @@ async function listOrganizationAccounts(organizationId: string) {
     ...(doc.data() as {
       uid: string;
       organizationId: string;
-      role: UserRole;
+      role: string;
       status: string;
       createdAt?: Timestamp;
       updatedAt?: Timestamp;
@@ -461,7 +526,7 @@ async function getOrganizationAccount(
 ): Promise<{
   uid: string;
   organizationId: string;
-  role: UserRole;
+  role: string;
   status: string;
 } | null> {
   const docId = getOrganizationAccountDocId(organizationId, uid);
@@ -470,7 +535,7 @@ async function getOrganizationAccount(
   return doc.data() as {
     uid: string;
     organizationId: string;
-    role: UserRole;
+    role: string;
     status: string;
   };
 }
@@ -548,13 +613,25 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[1] === "slots"
     ) {
       const authUser = await verifyAuth(request);
-      const account = requireOrganizationRole(
-        authUser,
-        organizationId,
-        "admin",
-        "operator",
-        "consultant",
+      const account = authUser.accounts.find(
+        (candidate) =>
+          candidate.organizationId === organizationId &&
+          candidate.status === "active",
       );
+      if (!account) {
+        throw new AuthError(
+          403,
+          "FORBIDDEN",
+          `User does not belong to organization '${organizationId}'`,
+        );
+      }
+      if (account.role !== "consultant") {
+        requireOrganizationPermission(
+          authUser,
+          organizationId,
+          "admin.slots.read",
+        );
+      }
 
       const requestedConsultantId =
         request.nextUrl.searchParams.get("consultantId");
@@ -808,7 +885,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[0] === "admin" &&
       segments[1] === "dashboard"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.dashboard.read",
+      );
       const [bookings, payments, customers, consultants] = await Promise.all([
         createBookingRepository().findAll(organizationId),
         createPaymentRepository().findAll(organizationId),
@@ -849,7 +930,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[0] === "admin" &&
       segments[1] === "bookings"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.bookings.read",
+      );
       const listQueryParams = parseListQueryParams(
         request.nextUrl.searchParams,
       );
@@ -915,7 +1000,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[0] === "admin" &&
       segments[1] === "consultants"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.consultants.read",
+      );
       const listQueryParams = parseListQueryParams(
         request.nextUrl.searchParams,
       );
@@ -975,7 +1064,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[0] === "admin" &&
       segments[1] === "customers"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.customers.read",
+      );
       const listQueryParams = parseListQueryParams(
         request.nextUrl.searchParams,
       );
@@ -1015,7 +1108,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[0] === "admin" &&
       segments[1] === "payments"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.payments.read",
+      );
       const listQueryParams = parseListQueryParams(
         request.nextUrl.searchParams,
       );
@@ -1062,7 +1159,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[1] === "settings" &&
       segments[2] === "booking"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.settings.read",
+      );
       const settings =
         await createOrganizationSettingsRepository().findByOrganizationId(
           organizationId,
@@ -1078,7 +1179,11 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments[1] === "settings" &&
       segments[2] === "consultant-ranks"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.settings.read",
+      );
       const settings =
         await createOrganizationSettingsRepository().findByOrganizationId(
           organizationId,
@@ -1091,9 +1196,52 @@ export async function GET(request: NextRequest, context: RouteContext) {
     if (
       segments.length === 2 &&
       segments[0] === "admin" &&
+      segments[1] === "roles"
+    ) {
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.roles.read",
+      );
+      const [roles, accounts] = await Promise.all([
+        createOrganizationRoleRepository().findByOrganizationId(organizationId),
+        listOrganizationAccounts(organizationId),
+      ]);
+      const assignedCountByRole = new Map<string, number>();
+      for (const account of accounts) {
+        if (account.role === "consultant") continue;
+        assignedCountByRole.set(
+          account.role,
+          (assignedCountByRole.get(account.role) ?? 0) + 1,
+        );
+      }
+
+      return noStoreJson({
+        roles: roles
+          .map((role) =>
+            toOrganizationRoleResponse(
+              role,
+              assignedCountByRole.get(role.getRoleId()) ?? 0,
+            ),
+          )
+          .sort((left, right) => {
+            if (left.roleId === SYSTEM_ADMIN_ROLE_ID) return -1;
+            if (right.roleId === SYSTEM_ADMIN_ROLE_ID) return 1;
+            return left.name.localeCompare(right.name, "ja");
+          }),
+      });
+    }
+
+    if (
+      segments.length === 2 &&
+      segments[0] === "admin" &&
       segments[1] === "accounts"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.accounts.read",
+      );
       const listQueryParams = parseListQueryParams(
         request.nextUrl.searchParams,
       );
@@ -1108,10 +1256,14 @@ export async function GET(request: NextRequest, context: RouteContext) {
         await listOrganizationAccounts(organizationId)
       ).filter((account) => isAdminPanelUserRole(account.role));
       const accountUids = organizationAccounts.map((account) => account.uid);
-      const [userByUid, nameByUid] = await Promise.all([
+      const [userByUid, nameByUid, roles] = await Promise.all([
         getUsersByUids(accountUids),
         getAdminOrOperatorDisplayNameMap(accountUids),
+        createOrganizationRoleRepository().findByOrganizationId(organizationId),
       ]);
+      const roleNameById = new Map(
+        roles.map((role) => [role.getRoleId(), role.getName()] as const),
+      );
 
       const accounts = organizationAccounts.map((account) => {
         const userRecord = userByUid.get(account.uid) ?? null;
@@ -1124,6 +1276,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           email: userRecord?.email ?? "",
           name: name || userRecord?.email || "",
           role: account.role,
+          roleName: roleNameById.get(account.role) ?? account.role,
           status: account.status === "active" ? "registered" : "pending",
           createdAt: createdAtDate.toISOString(),
           updatedAt: updatedAtDate.toISOString(),
@@ -1507,7 +1660,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
         }
       } else {
         const authUser = await verifyAuth(request);
-        requireOrganizationRole(authUser, organizationId, "admin", "operator");
+        requireOrganizationPermission(
+          authUser,
+          organizationId,
+          "admin.bookings.cancel",
+        );
       }
 
       await createCancelBookingUseCase().execute({
@@ -1525,7 +1682,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
       segments[2] === "charge"
     ) {
       const authUser = await verifyAuth(request);
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.payments.charge",
+      );
 
       const body = await request.json();
       if (body.method !== "manual") {
@@ -1564,13 +1725,25 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
     if (segments.length === 1 && segments[0] === "slots") {
       const authUser = await verifyAuth(request);
-      const account = requireOrganizationRole(
-        authUser,
-        organizationId,
-        "admin",
-        "operator",
-        "consultant",
+      const account = authUser.accounts.find(
+        (candidate) =>
+          candidate.organizationId === organizationId &&
+          candidate.status === "active",
       );
+      if (!account) {
+        throw new AuthError(
+          403,
+          "FORBIDDEN",
+          `User does not belong to organization '${organizationId}'`,
+        );
+      }
+      if (account.role !== "consultant") {
+        requireOrganizationPermission(
+          authUser,
+          organizationId,
+          "admin.slots.manage",
+        );
+      }
 
       const body = await request.json();
       const { consultantId, startsAt, endsAt } = body;
@@ -1703,7 +1876,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
       segments[0] === "admin" &&
       segments[1] === "consultants"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.consultants.manage",
+      );
       const body = await request.json();
       const { consultantId, name, bio, specialties, phone, zoomRoomIds } = body;
       if (!consultantId || !name) {
@@ -1714,7 +1891,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
         );
       }
       if (body.rankId !== undefined) {
-        requireOrganizationRole(authUser, organizationId, "admin");
+        requireOrganizationPermission(
+          authUser,
+          organizationId,
+          "admin.consultants.rank.manage",
+        );
       }
 
       const settings =
@@ -1749,24 +1930,25 @@ export async function POST(request: NextRequest, context: RouteContext) {
       segments[1] === "accounts" &&
       segments[2] === "invite"
     ) {
-      const actorAccount = requireOrganizationRole(
-        authUser,
-        organizationId,
-        "admin",
-        "operator",
-      );
+      const actorAccount = requireSystemAdminRole(authUser, organizationId);
       const body = await request.json();
       const { email, role, name, phone } = body;
 
       if (!email || typeof email !== "string") {
         return jsonError(400, "VALIDATION_ERROR", "email is required");
       }
-      if (!isUserRole(role)) {
-        return jsonError(
-          400,
-          "VALIDATION_ERROR",
-          "role must be one of: admin, operator, consultant",
+      if (typeof role !== "string" || role.trim().length === 0) {
+        return jsonError(400, "VALIDATION_ERROR", "role is required");
+      }
+      const normalizedRole = role.trim();
+      if (normalizedRole !== "consultant") {
+        const roleEntity = await createOrganizationRoleRepository().findById(
+          organizationId,
+          normalizedRole,
         );
+        if (!roleEntity) {
+          return jsonError(400, "VALIDATION_ERROR", "role is invalid");
+        }
       }
       if (!name || typeof name !== "string") {
         return jsonError(400, "VALIDATION_ERROR", "name is required");
@@ -1794,7 +1976,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           {
             uid,
             organizationId,
-            role,
+            role: normalizedRole,
             status: userRecord.metadata.lastSignInTime ? "active" : "invited",
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -1802,7 +1984,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           { merge: true },
         );
 
-      if (role === "consultant") {
+      if (normalizedRole === "consultant") {
         const repo = createConsultantRepository();
         const existing = await repo.findById(organizationId, uid);
         if (!existing) {
@@ -1832,7 +2014,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       const passwordResetLink = await generatePasswordResetLink(email);
       await new ResendEmailService().sendInvitation({
         email,
-        role,
+        role: normalizedRole,
         passwordResetLink,
       });
 
@@ -1843,11 +2025,51 @@ export async function POST(request: NextRequest, context: RouteContext) {
         actorUid: authUser.uid,
         actorRole: actorAccount.role,
         targetEmail: email,
-        targetRole: role,
+        targetRole: normalizedRole,
         invitedAt: new Date().toISOString(),
       });
 
       return NextResponse.json({ uid }, { status: 201 });
+    }
+
+    if (
+      segments.length === 2 &&
+      segments[0] === "admin" &&
+      segments[1] === "roles"
+    ) {
+      requireSystemAdminRole(authUser, organizationId);
+      const body = await request.json();
+      const parsed = parseOrganizationRoleBody(body);
+      if (!parsed?.roleId || !isValidCustomRoleId(parsed.roleId)) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "roleId must be kebab-case and 2-63 characters",
+        );
+      }
+      if (
+        parsed.roleId === "consultant" ||
+        parsed.roleId === SYSTEM_ADMIN_ROLE_ID
+      ) {
+        return jsonError(400, "VALIDATION_ERROR", "roleId is reserved");
+      }
+      const repository = createOrganizationRoleRepository();
+      const existing = await repository.findById(organizationId, parsed.roleId);
+      if (existing) {
+        return jsonError(409, "ROLE_ALREADY_EXISTS", "Role already exists");
+      }
+      const role = OrganizationRole.create({
+        organizationId,
+        roleId: parsed.roleId,
+        name: parsed.name,
+        description: parsed.description,
+        permissions: parsed.permissions,
+        isSystem: false,
+      });
+      await repository.save(role);
+      return NextResponse.json(toOrganizationRoleResponse(role), {
+        status: 201,
+      });
     }
 
     if (
@@ -1856,7 +2078,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
       segments[1] === "accounts" &&
       segments[3] === "resend-invite"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.accounts.invite.resend",
+      );
       const userRecord = await getUser(segments[2]);
       const account = await getOrganizationAccount(organizationId, segments[2]);
       if (!account) {
@@ -1893,7 +2119,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
       segments[1] === "accounts" &&
       segments[3] === "reset-password"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.accounts.password-reset",
+      );
       const account = await getOrganizationAccount(organizationId, segments[2]);
       if (!account) {
         return jsonError(404, "NOT_FOUND", "Account not found");
@@ -2178,7 +2408,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       segments[1] === "settings" &&
       segments[2] === "consultant-ranks"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.consultants.rank.manage",
+      );
       const body = await request.json();
       const parsed = parseConsultantRanksBody(body);
       if (!parsed) {
@@ -2219,7 +2453,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       segments[1] === "settings" &&
       segments[2] === "booking"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.settings.manage",
+      );
       const body = await request.json();
       if (typeof body.consultantSelectionEnabled !== "boolean") {
         return jsonError(
@@ -2276,7 +2514,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       segments[0] === "admin" &&
       segments[1] === "consultants"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.consultants.manage",
+      );
       const consultantId = segments[2];
       const body = await request.json();
       const repo = createConsultantRepository();
@@ -2302,7 +2544,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       }
 
       if (body.rankId !== undefined) {
-        requireOrganizationRole(authUser, organizationId, "admin");
+        requireOrganizationPermission(
+          authUser,
+          organizationId,
+          "admin.consultants.rank.manage",
+        );
         const settings =
           (await createOrganizationSettingsRepository().findByOrganizationId(
             organizationId,
@@ -2354,11 +2600,10 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       segments[1] === "accounts" &&
       segments[3] === "display-name"
     ) {
-      const actorAccount = requireOrganizationRole(
+      const actorAccount = requireOrganizationPermission(
         authUser,
         organizationId,
-        "admin",
-        "operator",
+        "admin.accounts.display-name.manage",
       );
       const body = await request.json();
       const account = await getOrganizationAccount(organizationId, segments[2]);
@@ -2405,14 +2650,18 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       segments[1] === "accounts" &&
       segments[3] === "role"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin");
+      requireSystemAdminRole(authUser, organizationId);
       const body = await request.json();
-      if (!isAdminPanelUserRole(body.role)) {
-        return jsonError(
-          400,
-          "VALIDATION_ERROR",
-          "role must be one of: admin, operator",
-        );
+      if (typeof body.role !== "string" || body.role.trim().length === 0) {
+        return jsonError(400, "VALIDATION_ERROR", "role is required");
+      }
+      const nextRole = body.role.trim();
+      const nextRoleEntity = await createOrganizationRoleRepository().findById(
+        organizationId,
+        nextRole,
+      );
+      if (!nextRoleEntity) {
+        return jsonError(400, "VALIDATION_ERROR", "role is invalid");
       }
       const account = await getOrganizationAccount(organizationId, segments[2]);
       if (!account) {
@@ -2437,7 +2686,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         isLastAdminSelfDemotion({
           actorUid: authUser.uid,
           targetUid: segments[2],
-          nextRole: body.role,
+          nextRole,
           activeAdminCount,
         })
       ) {
@@ -2454,13 +2703,46 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
       await db.collection(ACCOUNT_COLLECTION).doc(accountId).set(
         {
-          role: body.role,
+          role: nextRole,
           updatedAt: new Date(),
         },
         { merge: true },
       );
 
       return NextResponse.json({ success: true });
+    }
+
+    if (
+      segments.length === 3 &&
+      segments[0] === "admin" &&
+      segments[1] === "roles"
+    ) {
+      requireSystemAdminRole(authUser, organizationId);
+      const roleId = segments[2];
+      if (roleId === SYSTEM_ADMIN_ROLE_ID) {
+        return jsonError(
+          400,
+          "SYSTEM_ROLE_IMMUTABLE",
+          "Built-in admin role cannot be edited",
+        );
+      }
+      const body = await request.json();
+      const parsed = parseOrganizationRoleBody(body);
+      if (!parsed) {
+        return jsonError(400, "VALIDATION_ERROR", "Invalid role payload");
+      }
+      const repository = createOrganizationRoleRepository();
+      const role = await repository.findById(organizationId, roleId);
+      if (!role) {
+        return jsonError(404, "NOT_FOUND", "Role not found");
+      }
+      role.update({
+        name: parsed.name,
+        description: parsed.description,
+        permissions: parsed.permissions,
+      });
+      await repository.save(role);
+      return NextResponse.json(toOrganizationRoleResponse(role));
     }
 
     if (
@@ -2549,13 +2831,25 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
     const authUser = await verifyAuth(request);
 
     if (segments.length === 2 && segments[0] === "slots") {
-      const account = requireOrganizationRole(
-        authUser,
-        organizationId,
-        "admin",
-        "operator",
-        "consultant",
+      const account = authUser.accounts.find(
+        (candidate) =>
+          candidate.organizationId === organizationId &&
+          candidate.status === "active",
       );
+      if (!account) {
+        throw new AuthError(
+          403,
+          "FORBIDDEN",
+          `User does not belong to organization '${organizationId}'`,
+        );
+      }
+      if (account.role !== "consultant") {
+        requireOrganizationPermission(
+          authUser,
+          organizationId,
+          "admin.slots.manage",
+        );
+      }
       const slotId = segments[1];
       const repo = createSlotRepository();
       const slot = await repo.findById(organizationId, slotId);
@@ -2581,7 +2875,11 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       segments[0] === "admin" &&
       segments[1] === "consultants"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin", "operator");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.consultants.manage",
+      );
       const repo = createConsultantRepository();
       const consultant = await repo.findById(organizationId, segments[2]);
       if (!consultant) {
@@ -2615,7 +2913,11 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
       segments[0] === "admin" &&
       segments[1] === "accounts"
     ) {
-      requireOrganizationRole(authUser, organizationId, "admin");
+      requireOrganizationPermission(
+        authUser,
+        organizationId,
+        "admin.accounts.delete",
+      );
       const accountId = getOrganizationAccountDocId(
         organizationId,
         segments[2],
@@ -2662,6 +2964,39 @@ export async function DELETE(request: NextRequest, context: RouteContext) {
         deleteAuthUser: deleteUser,
       });
 
+      return NextResponse.json({ success: true });
+    }
+
+    if (
+      segments.length === 3 &&
+      segments[0] === "admin" &&
+      segments[1] === "roles"
+    ) {
+      requireSystemAdminRole(authUser, organizationId);
+      const roleId = segments[2];
+      const repository = createOrganizationRoleRepository();
+      const role = await repository.findById(organizationId, roleId);
+      if (!role) {
+        return jsonError(404, "NOT_FOUND", "Role not found");
+      }
+      if (role.getIsSystem()) {
+        return jsonError(
+          400,
+          "SYSTEM_ROLE_IMMUTABLE",
+          "System role cannot be deleted",
+        );
+      }
+      const assignedAccounts = (
+        await listOrganizationAccounts(organizationId)
+      ).filter((account) => account.role === roleId);
+      if (assignedAccounts.length > 0) {
+        return jsonError(
+          409,
+          "ROLE_IN_USE",
+          "このロールはアカウントに割り当てられているため削除できません",
+        );
+      }
+      await repository.delete(organizationId, roleId);
       return NextResponse.json({ success: true });
     }
 

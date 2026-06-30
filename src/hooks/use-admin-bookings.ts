@@ -5,11 +5,12 @@ import { useAuth } from "@/hooks/use-auth";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export function useAdminBookings(params?: GetAdminBookingsParams) {
-  const { token } = useAuth();
+  const { token, hasPermission } = useAuth();
   const { organizationId } = useOrganizationRouting();
   return useGetAdminBookings(organizationId ?? "", params, {
     query: {
-      enabled: !!token && !!organizationId,
+      enabled:
+        !!token && !!organizationId && hasPermission("admin.bookings.read"),
       staleTime: QUERY_STALE_TIME.short,
     },
   });

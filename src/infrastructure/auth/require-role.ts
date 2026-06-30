@@ -11,10 +11,11 @@ export function requireRole(
         account.organizationId === authUser.currentOrganizationId &&
         account.status === "active",
     )?.role ??
-    authUser.accounts.find((account) => allowedRoles.includes(account.role))
-      ?.role;
+    authUser.accounts.find((account) =>
+      allowedRoles.includes(account.role as UserRole),
+    )?.role;
 
-  if (!role) {
+  if (!role || !allowedRoles.includes(role as UserRole)) {
     throw new AuthError(
       403,
       "FORBIDDEN",

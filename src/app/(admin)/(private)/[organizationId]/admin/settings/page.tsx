@@ -31,9 +31,12 @@ export default function AdminSettingsPage() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { role } = useAuth();
+  const { hasPermission } = useAuth();
   const { data, isLoading } = useAdminBookingSettings();
-  const isReadOnly = role === "operator";
+  const isReadOnly = !hasPermission("admin.settings.manage");
+  const canManageConsultantRanks = hasPermission(
+    "admin.consultants.rank.manage",
+  );
   const [currentTab, setCurrentTab] = useState<SettingsTab>("booking");
   const [initialized, setInitialized] = useState(false);
   const [consultantSelectionEnabled, setConsultantSelectionEnabled] =
@@ -81,7 +84,7 @@ export default function AdminSettingsPage() {
         </Text>
         {isReadOnly && (
           <Text textStyle="sm" color="fg.muted" mt="2">
-            オペレーター権限では設定を編集できません。閲覧のみ可能です。
+            このロールでは設定を編集できません。閲覧のみ可能です。
           </Text>
         )}
       </styled.div>
@@ -134,7 +137,7 @@ export default function AdminSettingsPage() {
         <Tabs.Content value="consultant-ranks">
           <ConsultantRanksSettingsTab
             organizationId={organizationId ?? undefined}
-            isReadOnly={isReadOnly}
+            isReadOnly={!canManageConsultantRanks}
           />
         </Tabs.Content>
         <Tabs.Content value="price">

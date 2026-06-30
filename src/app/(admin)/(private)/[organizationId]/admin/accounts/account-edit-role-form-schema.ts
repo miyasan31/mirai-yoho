@@ -1,9 +1,11 @@
 import * as v from "valibot";
 
-const editRoleSchema = v.picklist(["admin", "operator"] as const);
-
 export const accountEditRoleFormSchema = v.object({
-  role: editRoleSchema,
+  role: v.pipe(
+    v.string(),
+    v.trim(),
+    v.minLength(1, "ロールを選択してください"),
+  ),
 });
 
 export type AccountEditRoleFormValues = v.InferOutput<

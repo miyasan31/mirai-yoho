@@ -1,7 +1,5 @@
-import type { UserRole } from "@/infrastructure/auth/auth-types";
-
 export function canUpdateDisplayNameTarget(
-  actorRole: UserRole,
+  actorRole: string,
   actorUid: string,
   targetUid: string,
 ): boolean {
@@ -9,18 +7,22 @@ export function canUpdateDisplayNameTarget(
     return true;
   }
 
-  return actorRole === "operator" && actorUid === targetUid;
+  if (actorRole === "operator") {
+    return actorUid === targetUid;
+  }
+
+  return true;
 }
 
 export function isLastAdminSelfDemotion(params: {
   actorUid: string;
   targetUid: string;
-  nextRole: "admin" | "operator";
+  nextRole: string;
   activeAdminCount: number;
 }): boolean {
   return (
     params.actorUid === params.targetUid &&
-    params.nextRole === "operator" &&
+    params.nextRole !== "admin" &&
     params.activeAdminCount <= 1
   );
 }
@@ -28,7 +30,7 @@ export function isLastAdminSelfDemotion(params: {
 export function validateAdminUserDeletionTarget(
   actorUid: string,
   targetUid: string,
-  targetRole: UserRole,
+  targetRole: string,
 ): { isAllowed: boolean; message?: string } {
   if (actorUid === targetUid) {
     return {

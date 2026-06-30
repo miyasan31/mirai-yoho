@@ -922,6 +922,94 @@ paths:
                   pagination:
                     $ref: "#/components/schemas/PaginationMeta"
 
+  /organizations/{organizationId}/admin/roles:
+    get:
+      operationId: getAdminRoles
+      summary: 組織ロール一覧取得
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [roles]
+                properties:
+                  roles:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/OrganizationRole"
+    post:
+      operationId: createAdminRole
+      summary: 組織ロール作成
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationRoleInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationRole"
+
+  /organizations/{organizationId}/admin/roles/{roleId}:
+    patch:
+      operationId: updateAdminRole
+      summary: 組織ロール更新
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationRoleUpdateInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/OrganizationRole"
+    delete:
+      operationId: deleteAdminRole
+      summary: 組織ロール削除
+      tags: [admin]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: roleId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+
   /organizations/{organizationId}/admin/accounts/invite:
     post:
       operationId: inviteAccount
@@ -948,7 +1036,6 @@ paths:
                   type: string
                 role:
                   type: string
-                  enum: [admin, operator, consultant]
       responses:
         "201":
           description: Created
@@ -995,7 +1082,6 @@ paths:
               properties:
                 role:
                   type: string
-                  enum: [admin, operator]
       responses:
         "200":
           description: OK
@@ -1125,7 +1211,7 @@ components:
   schemas:
     AdminAccount:
       type: object
-      required: [uid, email, name, role, status, createdAt, updatedAt]
+      required: [uid, email, name, role, roleName, status, createdAt, updatedAt]
       properties:
         uid:
           type: string
@@ -1136,7 +1222,8 @@ components:
           type: string
         role:
           type: string
-          enum: [admin, operator]
+        roleName:
+          type: string
         status:
           type: string
           enum: [pending, registered]
@@ -1146,6 +1233,86 @@ components:
         updatedAt:
           type: string
           format: date-time
+
+    AuthorizationPermission:
+      type: string
+      enum:
+        - admin.dashboard.read
+        - admin.bookings.read
+        - admin.bookings.cancel
+        - admin.payments.read
+        - admin.payments.charge
+        - admin.customers.read
+        - admin.consultants.read
+        - admin.consultants.manage
+        - admin.consultants.rank.manage
+        - admin.slots.read
+        - admin.slots.manage
+        - admin.settings.read
+        - admin.settings.manage
+        - admin.accounts.read
+        - admin.accounts.invite
+        - admin.accounts.display-name.manage
+        - admin.accounts.role.manage
+        - admin.accounts.delete
+        - admin.accounts.invite.resend
+        - admin.accounts.password-reset
+        - admin.roles.read
+        - admin.roles.manage
+
+    OrganizationRole:
+      type: object
+      required:
+        [roleId, name, description, permissions, isSystem, assignedCount, createdAt, updatedAt]
+      properties:
+        roleId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuthorizationPermission"
+        isSystem:
+          type: boolean
+        assignedCount:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    OrganizationRoleInput:
+      type: object
+      required: [roleId, name, permissions]
+      properties:
+        roleId:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuthorizationPermission"
+
+    OrganizationRoleUpdateInput:
+      type: object
+      required: [name, permissions]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuthorizationPermission"
 
     Consultant:
       type: object

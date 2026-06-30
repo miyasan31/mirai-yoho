@@ -40,6 +40,7 @@ import {
   useUpdateAccountDisplayName,
   useUpdateAccountRole,
 } from "@/hooks/use-admin-accounts";
+import { useAdminRoles, useAdminRolesQueryKey } from "@/hooks/use-admin-roles";
 import { useAuth } from "@/hooks/use-auth";
 import { useListQueryParams } from "@/hooks/use-list-query-params";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
@@ -58,26 +59,9 @@ import {
 import {
   canDeleteAdminAccount,
   canEditDisplayName,
-  canEditRole,
-  canInviteAdminAccounts,
-  canManageAdminAccounts,
   canResendInvite,
   canResetPassword,
 } from "./account-permissions";
-
-const inviteRoleCollection = createListCollection({
-  items: [
-    { label: "管理者", value: "admin" },
-    { label: "オペレーター", value: "operator" },
-  ],
-});
-
-const editRoleCollection = createListCollection({
-  items: [
-    { label: "管理者", value: "admin" },
-    { label: "オペレーター", value: "operator" },
-  ],
-});
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "管理者",
@@ -85,14 +69,10 @@ const ROLE_LABELS: Record<string, string> = {
   consultant: "相談員",
 };
 
-function isAdminPanelUserRole(role: string): role is "admin" | "operator" {
-  return role === "admin" || role === "operator";
-}
-
 export default function AdminAccountsPage() {
   const { organizationId } = useOrganizationRouting();
   const resolvedOrganizationId = organizationId ?? "";
-  const { role, user } = useAuth();
+  const { role, user, hasPermission, refreshAuthContext } = useAuth();
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
     useListQueryParams();
   const { data, isLoading } = useAdminAccounts({
@@ -101,8 +81,17 @@ export default function AdminAccountsPage() {
     sortBy,
     sortOrder: "desc",
   });
+  const { data: roleData } = useAdminRoles();
   const queryKey = useAdminAccountsQueryKey();
+  const rolesQueryKey = useAdminRolesQueryKey();
   const queryCustomer = useQueryClient();
+  const roles = roleData?.data?.roles ?? [];
+  const roleCollection = createListCollection({
+    items: roles.map((item) => ({
+      label: item.name,
+      value: item.roleId,
+    })),
+  });
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const {
@@ -117,7 +106,7 @@ export default function AdminAccountsPage() {
     defaultValues: {
       email: "",
       name: "",
-      role: "operator",
+      role: roles.find((item) => item.roleId !== "admin")?.roleId ?? "operator",
     },
   });
   const inviteRole = watchInvite("role");
@@ -161,8 +150,8 @@ export default function AdminAccountsPage() {
   const resendAccountInvite = useResendAccountInvite();
   const resetAccountPassword = useResetAccountPassword();
 
-  const accounts = (data?.data?.accounts ?? []).filter((account) =>
-    isAdminPanelUserRole(account.role),
+  const accounts = (data?.data?.accounts ?? []).filter(
+    (account) => account.role !== "consultant",
   );
   const pagination = data?.data?.pagination ?? {
     page,
@@ -172,14 +161,16 @@ export default function AdminAccountsPage() {
   };
   const currentUid = user?.uid;
 
-  if (!organizationId || !canManageAdminAccounts(role)) {
+  if (!organizationId || !hasPermission("admin.accounts.read")) {
     return <Text>権限がありません</Text>;
   }
 
-  const invalidate = () =>
-    queryCustomer.invalidateQueries({
-      queryKey,
-    });
+  const invalidate = async () => {
+    await Promise.all([
+      queryCustomer.invalidateQueries({ queryKey }),
+      queryCustomer.invalidateQueries({ queryKey: rolesQueryKey }),
+    ]);
+  };
 
   const onInvite = async (values: AccountInviteFormValues) => {
     try {
@@ -216,6 +207,7 @@ export default function AdminAccountsPage() {
       });
       setEditRoleOpen(false);
       await invalidate();
+      await refreshAuthContext();
     } catch {
       // custom-fetch.ts がエラー Toast を自動表示
     }
@@ -283,6 +275,7 @@ export default function AdminAccountsPage() {
       });
       setDeleteOpen(false);
       await invalidate();
+      await refreshAuthContext();
     } catch {
       // custom-fetch.ts がエラー Toast を自動表示
     }
@@ -305,7 +298,7 @@ export default function AdminAccountsPage() {
           </Text>
         </styled.div>
 
-        {canInviteAdminAccounts(role) && (
+        {role === "admin" && (
           <Dialog.Root
             open={inviteOpen}
             onOpenChange={(e) => {
@@ -351,7 +344,7 @@ export default function AdminAccountsPage() {
                       )}
                     </Field.Root>
                     <Select.Root
-                      collection={inviteRoleCollection}
+                      collection={roleCollection}
                       value={[inviteRole]}
                       onValueChange={(details) =>
                         setInviteValue(
@@ -369,7 +362,7 @@ export default function AdminAccountsPage() {
                       </Select.Control>
                       <Select.Positioner>
                         <Select.Content>
-                          {inviteRoleCollection.items.map((item) => (
+                          {roleCollection.items.map((item) => (
                             <Select.Item key={item.value} item={item}>
                               <Select.ItemText>{item.label}</Select.ItemText>
                               <Select.ItemIndicator />
@@ -453,31 +446,34 @@ export default function AdminAccountsPage() {
                     </styled.div>
                   </Table.Cell>
                   <Table.Cell>
-                    {ROLE_LABELS[adminUser.role] ?? adminUser.role}
+                    {adminUser.roleName ??
+                      ROLE_LABELS[adminUser.role] ??
+                      adminUser.role}
                   </Table.Cell>
                   <Table.Cell>
                     <AccountStatusBadge status={adminUser.status} />
                   </Table.Cell>
                   <Table.Cell>
                     <styled.div display="flex" gap="1">
-                      {canEditDisplayName(role, user?.uid, adminUser.uid) && (
-                        <Tooltip content="表示名変更">
-                          <IconButton
-                            variant="subtle"
-                            size="sm"
-                            onClick={() => {
-                              setEditDisplayNameUid(adminUser.uid);
-                              resetEditDisplayNameForm({
-                                name: adminUser.name || adminUser.email || "",
-                              });
-                              setEditDisplayNameOpen(true);
-                            }}
-                          >
-                            <Contact size={16} />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {canEditRole(role, adminUser.status) && (
+                      {hasPermission("admin.accounts.display-name.manage") &&
+                        canEditDisplayName(role, user?.uid, adminUser.uid) && (
+                          <Tooltip content="表示名変更">
+                            <IconButton
+                              variant="subtle"
+                              size="sm"
+                              onClick={() => {
+                                setEditDisplayNameUid(adminUser.uid);
+                                resetEditDisplayNameForm({
+                                  name: adminUser.name || adminUser.email || "",
+                                });
+                                setEditDisplayNameOpen(true);
+                              }}
+                            >
+                              <Contact size={16} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      {role === "admin" && adminUser.status !== "pending" && (
                         <Tooltip content="ロール変更">
                           <IconButton
                             variant="subtle"
@@ -495,61 +491,67 @@ export default function AdminAccountsPage() {
                           </IconButton>
                         </Tooltip>
                       )}
-                      {canResendInvite(role, adminUser.status) && (
-                        <Tooltip content="招待メール再送">
-                          <IconButton
-                            variant="subtle"
-                            size="sm"
-                            onClick={() =>
-                              handleResendInvite(adminUser.uid, adminUser.email)
-                            }
-                            loading={
-                              resendAccountInvite.isPending &&
-                              resendAccountInvite.variables?.uid ===
-                                adminUser.uid
-                            }
-                          >
-                            <Mail size={16} />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {canResetPassword(role, adminUser.status) && (
-                        <Tooltip content="パスワードリセット">
-                          <IconButton
-                            variant="subtle"
-                            size="sm"
-                            onClick={() =>
-                              handleResetPassword(
-                                adminUser.uid,
-                                adminUser.email,
-                              )
-                            }
-                            loading={
-                              resetAccountPassword.isPending &&
-                              resetAccountPassword.variables?.uid ===
-                                adminUser.uid
-                            }
-                          >
-                            <RotateCcwKey size={16} />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {canDeleteAdminAccount(role) && (
-                        <Tooltip content="削除">
-                          <IconButton
-                            variant="subtle"
-                            size="sm"
-                            colorPalette="red"
-                            onClick={() => {
-                              setDeleteUid(adminUser.uid);
-                              setDeleteEmail(adminUser.email);
-                              setDeleteOpen(true);
-                            }}
-                          >
-                            <Trash2 size={16} />
-                          </IconButton>
-                        </Tooltip>
-                      )}
+                      {hasPermission("admin.accounts.invite.resend") &&
+                        canResendInvite(role, adminUser.status) && (
+                          <Tooltip content="招待メール再送">
+                            <IconButton
+                              variant="subtle"
+                              size="sm"
+                              onClick={() =>
+                                handleResendInvite(
+                                  adminUser.uid,
+                                  adminUser.email,
+                                )
+                              }
+                              loading={
+                                resendAccountInvite.isPending &&
+                                resendAccountInvite.variables?.uid ===
+                                  adminUser.uid
+                              }
+                            >
+                              <Mail size={16} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      {hasPermission("admin.accounts.password-reset") &&
+                        canResetPassword(role, adminUser.status) && (
+                          <Tooltip content="パスワードリセット">
+                            <IconButton
+                              variant="subtle"
+                              size="sm"
+                              onClick={() =>
+                                handleResetPassword(
+                                  adminUser.uid,
+                                  adminUser.email,
+                                )
+                              }
+                              loading={
+                                resetAccountPassword.isPending &&
+                                resetAccountPassword.variables?.uid ===
+                                  adminUser.uid
+                              }
+                            >
+                              <RotateCcwKey size={16} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      {hasPermission("admin.accounts.delete") &&
+                        canDeleteAdminAccount(role) && (
+                          <Tooltip content="削除">
+                            <IconButton
+                              variant="subtle"
+                              size="sm"
+                              colorPalette="red"
+                              onClick={() => {
+                                setDeleteUid(adminUser.uid);
+                                setDeleteEmail(adminUser.email);
+                                setDeleteOpen(true);
+                              }}
+                            >
+                              <Trash2 size={16} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
                     </styled.div>
                   </Table.Cell>
                 </Table.Row>
@@ -588,7 +590,7 @@ export default function AdminAccountsPage() {
               </Dialog.Header>
               <Dialog.Body>
                 <Select.Root
-                  collection={editRoleCollection}
+                  collection={roleCollection}
                   value={[editRoleValue]}
                   onValueChange={(details) =>
                     setEditRoleValue(
@@ -606,7 +608,7 @@ export default function AdminAccountsPage() {
                   </Select.Control>
                   <Select.Positioner>
                     <Select.Content>
-                      {editRoleCollection.items.map((item) => (
+                      {roleCollection.items.map((item) => (
                         <Select.Item key={item.value} item={item}>
                           <Select.ItemText>{item.label}</Select.ItemText>
                           <Select.ItemIndicator />

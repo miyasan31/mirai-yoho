@@ -31,7 +31,8 @@ function formatDatetime(value: string): string {
 
 export default function AdminHomePage() {
   const { buildPath } = useOrganizationRouting();
-  const { role } = useAuth();
+  const { hasPermission } = useAuth();
+  const canManageSettings = hasPermission("admin.settings.manage");
   const bookingsQuery = useAdminBookings({
     page: 1,
     pageSize: 100,
@@ -173,7 +174,7 @@ export default function AdminHomePage() {
           <Text textStyle="3xl" fontWeight="bold" mb="3">
             {viewModel.todo.memoMissingCount}
           </Text>
-          {role === "admin" ? (
+          {canManageSettings ? (
             <Button size="sm" variant="outline" asChild>
               <Link href={buildPath("/admin/settings")}>設定を編集する</Link>
             </Button>
@@ -183,7 +184,7 @@ export default function AdminHomePage() {
                 設定を編集する
               </Button>
               <Text textStyle="xs" color="fg.muted" mt="2">
-                オペレーターは設定の閲覧のみ可能です。
+                このロールでは設定の閲覧のみ可能です。
               </Text>
             </>
           )}

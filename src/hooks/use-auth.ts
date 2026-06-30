@@ -15,10 +15,8 @@ import {
   useMemo,
   useState,
 } from "react";
-import type {
-  OrganizationAccount,
-  UserRole,
-} from "@/infrastructure/auth/auth-types";
+import type { AuthorizationPermission } from "@/domain/authorization/authorization-permission";
+import type { OrganizationAccount } from "@/infrastructure/auth/auth-types";
 import { auth } from "@/lib/firebase";
 
 export interface AuthState {
@@ -27,18 +25,22 @@ export interface AuthState {
   accounts: OrganizationAccount[];
   currentOrganizationId: string | null;
   currentDisplayName: string | null;
-  currentRole: UserRole | null;
-  role: UserRole | null;
+  currentRole: string | null;
+  role: string | null;
+  permissions: AuthorizationPermission[];
+  hasPermission: (permission: AuthorizationPermission) => boolean;
+  hasAnyPermission: (permissions: AuthorizationPermission[]) => boolean;
   isLoading: boolean;
   signIn: (
     email: string,
     password: string,
   ) => Promise<{
     currentOrganizationId: string | null;
-    currentRole: UserRole | null;
+    currentRole: string | null;
   }>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
   setCurrentOrganizationId: (organizationId: string) => Promise<void>;
+  refreshAuthContext: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -166,6 +168,10 @@ export function useAuthState(): AuthState {
     [user, token],
   );
 
+  const refreshAuthContext = useCallback(async () => {
+    await syncAuthContext(user);
+  }, [syncAuthContext, user]);
+
   const signOut = useCallback(async () => {
     await firebaseSignOut(auth);
   }, []);
@@ -193,6 +199,19 @@ export function useAuthState(): AuthState {
   const currentRole =
     accounts.find((account) => account.organizationId === currentOrganizationId)
       ?.role ?? null;
+  const permissions =
+    accounts.find((account) => account.organizationId === currentOrganizationId)
+      ?.permissions ?? [];
+
+  const hasPermission = useCallback(
+    (permission: AuthorizationPermission) => permissions.includes(permission),
+    [permissions],
+  );
+  const hasAnyPermission = useCallback(
+    (targetPermissions: AuthorizationPermission[]) =>
+      targetPermissions.some((permission) => permissions.includes(permission)),
+    [permissions],
+  );
 
   return useMemo(
     () => ({
@@ -203,10 +222,14 @@ export function useAuthState(): AuthState {
       currentDisplayName,
       currentRole,
       role: currentRole,
+      permissions,
+      hasPermission,
+      hasAnyPermission,
       isLoading,
       signIn,
       sendPasswordResetEmail,
       setCurrentOrganizationId,
+      refreshAuthContext,
       signOut,
     }),
     [
@@ -216,10 +239,14 @@ export function useAuthState(): AuthState {
       currentOrganizationId,
       currentDisplayName,
       currentRole,
+      permissions,
+      hasPermission,
+      hasAnyPermission,
       isLoading,
       signIn,
       sendPasswordResetEmail,
       setCurrentOrganizationId,
+      refreshAuthContext,
       signOut,
     ],
   );

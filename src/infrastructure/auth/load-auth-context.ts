@@ -1,11 +1,12 @@
 import { Timestamp } from "firebase-admin/firestore";
+import type { AuthorizationPermission } from "@/domain/authorization/authorization-permission";
 import type {
   AuthUser,
   OrganizationAccount,
-  UserRole,
 } from "@/infrastructure/auth/auth-types";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 import { db } from "@/infrastructure/firestore/firestore-customer";
+import { FirestoreOrganizationRoleRepository } from "@/infrastructure/firestore/firestore-organization-role-repository";
 
 const ACCOUNT_COLLECTION = FIRESTORE_COLLECTIONS.organizationAccounts;
 const ORGANIZATION_COLLECTION = FIRESTORE_COLLECTIONS.organizations;
@@ -13,7 +14,7 @@ const ORGANIZATION_COLLECTION = FIRESTORE_COLLECTIONS.organizations;
 interface OrganizationAccountDoc {
   uid: string;
   organizationId: string;
-  role: UserRole;
+  role: string;
   status: "active" | "invited" | "disabled";
   createdAt: Timestamp;
 }
@@ -94,10 +95,36 @@ export async function loadAuthUser(uid: string): Promise<AuthUser> {
     nameById.set(organization.organizationId, organization.name);
   }
 
+  const roleRepository = new FirestoreOrganizationRoleRepository();
+  const roleByOrganizationAndRole = new Map<
+    string,
+    { name: string; permissions: AuthorizationPermission[] }
+  >();
+  const rolesByOrganization = await Promise.all(
+    organizationIds.map(async (organizationId) => ({
+      organizationId,
+      roles: await roleRepository.findByOrganizationId(organizationId),
+    })),
+  );
+  for (const { organizationId, roles } of rolesByOrganization) {
+    for (const role of roles) {
+      roleByOrganizationAndRole.set(`${organizationId}_${role.getRoleId()}`, {
+        name: role.getName(),
+        permissions: role.getPermissions(),
+      });
+    }
+  }
+
   const accounts: OrganizationAccount[] = accountDocs.map((doc) => ({
     organizationId: doc.organizationId,
     name: nameById.get(doc.organizationId) ?? doc.organizationId,
     role: doc.role,
+    roleName:
+      roleByOrganizationAndRole.get(`${doc.organizationId}_${doc.role}`)
+        ?.name ?? doc.role,
+    permissions:
+      roleByOrganizationAndRole.get(`${doc.organizationId}_${doc.role}`)
+        ?.permissions ?? [],
     status: doc.status,
     createdAt: toIsoString(doc.createdAt),
   }));

@@ -1,11 +1,9 @@
-import type { UserRole } from "@/infrastructure/auth/auth-types";
-
-export type AdminActorRole = UserRole | null;
+export type AdminActorRole = string | null;
 
 export type AdminPanelAccountStatus = "pending" | "registered";
 
 export function canManageAdminAccounts(actorRole: AdminActorRole): boolean {
-  return actorRole === "admin" || actorRole === "operator";
+  return !!actorRole && actorRole !== "consultant";
 }
 
 export function canInviteAdminAccounts(actorRole: AdminActorRole): boolean {
@@ -21,7 +19,11 @@ export function canEditDisplayName(
     return true;
   }
 
-  return actorRole === "operator" && !!actorUid && actorUid === targetUid;
+  if (actorRole === "operator") {
+    return !!actorUid && actorUid === targetUid;
+  }
+
+  return true;
 }
 
 export function canEditRole(
@@ -46,5 +48,5 @@ export function canResetPassword(
 }
 
 export function canDeleteAdminAccount(actorRole: AdminActorRole): boolean {
-  return actorRole === "admin";
+  return canManageAdminAccounts(actorRole);
 }
