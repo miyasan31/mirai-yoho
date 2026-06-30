@@ -81,6 +81,7 @@ module "firebase" {
   firebase_web_app_display_name                = var.firebase_web_app_display_name
   app_hosting_backend_id                       = var.app_hosting_backend_id
   app_hosting_location                         = var.app_hosting_location
+  app_hosting_custom_domain                    = var.app_hosting_custom_domain
   developer_connect_connection_id              = var.developer_connect_connection_id
   developer_connect_repository_link_id         = var.developer_connect_repository_link_id
   developer_connect_oauth_token_secret_version = var.developer_connect_oauth_token_secret_version

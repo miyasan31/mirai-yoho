@@ -33,6 +33,43 @@ locals {
     ],
     tolist(local.app_hosting_build_secret_accessor_members),
   ))
+
+  app_hosting_custom_domain_required_dns_updates = try(
+    google_firebase_app_hosting_domain.custom[0].custom_domain_status[0].required_dns_updates,
+    [],
+  )
+
+  app_hosting_custom_domain_dns_records_to_add = flatten([
+    for update in local.app_hosting_custom_domain_required_dns_updates : [
+      for desired in update.desired : [
+        for record in desired.records : {
+          domain_name    = record.domain_name
+          xserver_name   = trimsuffix(record.domain_name, ".")
+          type           = record.type
+          value          = record.rdata
+          action         = record.required_action
+          relevant_state = record.relevant_state
+        }
+        if record.required_action == "ADD"
+      ]
+    ]
+  ])
+
+  app_hosting_custom_domain_dns_records_to_remove = flatten([
+    for update in local.app_hosting_custom_domain_required_dns_updates : [
+      for discovered in update.discovered : [
+        for record in discovered.records : {
+          domain_name    = record.domain_name
+          xserver_name   = trimsuffix(record.domain_name, ".")
+          type           = record.type
+          value          = record.rdata
+          action         = record.required_action
+          relevant_state = record.relevant_state
+        }
+        if record.required_action == "REMOVE"
+      ]
+    ]
+  ])
 }
 
 data "google_project" "current" {
@@ -235,6 +272,19 @@ resource "google_firebase_app_hosting_traffic" "app" {
     codebase_branch = var.project_id == "mirai-yoho-dev" ? "release/dev" : "release/prod"
     disabled        = false
   }
+
+  depends_on = [google_firebase_app_hosting_backend.app]
+}
+
+resource "google_firebase_app_hosting_domain" "custom" {
+  count = var.app_hosting_custom_domain == null ? 0 : 1
+
+  provider        = google-beta
+  project         = var.project_id
+  location        = var.app_hosting_location
+  backend         = google_firebase_app_hosting_backend.app.backend_id
+  domain_id       = var.app_hosting_custom_domain
+  deletion_policy = "PREVENT"
 
   depends_on = [google_firebase_app_hosting_backend.app]
 }
