@@ -59,7 +59,7 @@ const PERMISSION_GROUPS: Array<{
       "admin.customers.read",
       "admin.consultants.read",
       "admin.consultants.manage",
-      "admin.consultants.rank.manage",
+      "admin.consultants.status.manage",
     ],
   },
   {

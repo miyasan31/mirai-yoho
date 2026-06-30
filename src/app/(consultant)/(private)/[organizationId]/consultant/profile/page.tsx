@@ -250,11 +250,11 @@ export default function ConsultantProfilePage() {
           gap="4"
         >
           <Field.Root>
-            <Field.Label>ランク</Field.Label>
+            <Field.Label>ステータス</Field.Label>
             <Input
-              value={data?.data.rank?.name ?? ""}
+              value={data?.data.status?.name ?? ""}
               readOnly
-              aria-label="現在のランク"
+              aria-label="現在のステータス"
             />
           </Field.Root>
           <Field.Root required invalid={!!errors.name}>

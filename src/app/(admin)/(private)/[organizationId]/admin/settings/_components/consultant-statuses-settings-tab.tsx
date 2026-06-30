@@ -11,36 +11,40 @@ import { Input } from "@/components/ui/input";
 import { Text } from "@/components/ui/text";
 import { toaster } from "@/components/ui/toast";
 import {
-  useAdminConsultantRanks,
-  useUpdateAdminConsultantRanks,
+  useAdminConsultantStatuses,
+  useUpdateAdminConsultantStatuses,
 } from "@/hooks/use-booking-settings";
 
-export type ConsultantRankFormValues = {
-  consultantRanks: Array<{ rankId: string; name: string }>;
-  defaultConsultantRankId: string;
+export type ConsultantStatusFormValues = {
+  consultantStatuses: Array<{ statusId: string; name: string }>;
+  defaultConsultantStatusId: string;
 };
 
-type ConsultantRanksSettingsTabProps = {
-  register: UseFormRegister<ConsultantRankFormValues>;
-  fields: FieldArrayWithId<ConsultantRankFormValues, "consultantRanks", "id">[];
-  ranks: ConsultantRankFormValues["consultantRanks"];
-  defaultRankId: string;
+type ConsultantStatusesSettingsTabProps = {
+  register: UseFormRegister<ConsultantStatusFormValues>;
+  fields: FieldArrayWithId<
+    ConsultantStatusFormValues,
+    "consultantStatuses",
+    "id"
+  >[];
+  statuses: ConsultantStatusFormValues["consultantStatuses"];
+  defaultStatusId: string;
   isLoading: boolean;
   isPending: boolean;
   isReadOnly: boolean;
   isInitialized: boolean;
   onSubmit: FormEventHandler<HTMLFormElement>;
-  onSelectDefault: (rankId: string) => void;
+  onSelectDefault: (statusId: string) => void;
   onMove: (from: number, to: number) => void;
   onRemove: (index: number) => void;
   onAdd: () => void;
 };
 
-function ConsultantRanksSettingsTabView({
+function ConsultantStatusesSettingsTabView({
   register,
   fields,
-  ranks,
-  defaultRankId,
+  statuses,
+  defaultStatusId,
   isLoading,
   isPending,
   isReadOnly,
@@ -50,7 +54,7 @@ function ConsultantRanksSettingsTabView({
   onMove,
   onRemove,
   onAdd,
-}: ConsultantRanksSettingsTabProps) {
+}: ConsultantStatusesSettingsTabProps) {
   const isDisabled = isLoading || isPending || isReadOnly;
 
   return (
@@ -62,15 +66,15 @@ function ConsultantRanksSettingsTabView({
     >
       <styled.div>
         <Text as="h2" textStyle="lg" fontWeight="semibold" mb="1">
-          相談員ランク設定
+          相談員ステータス設定
         </Text>
         <Text color="fg.muted" textStyle="sm">
-          上にあるランクほど重要度が高く表示されます。
+          上にあるステータスほど重要度が高く表示されます。
         </Text>
       </styled.div>
       <styled.div display="grid" gap="2">
         {fields.map((field, index) => {
-          const rank = ranks[index] ?? field;
+          const status = statuses[index] ?? field;
           return (
             <styled.div
               key={field.id}
@@ -81,7 +85,7 @@ function ConsultantRanksSettingsTabView({
             >
               <input
                 type="hidden"
-                {...register(`consultantRanks.${index}.rankId`)}
+                {...register(`consultantStatuses.${index}.statusId`)}
               />
               <styled.label
                 display="flex"
@@ -91,16 +95,16 @@ function ConsultantRanksSettingsTabView({
               >
                 <input
                   type="radio"
-                  value={rank.rankId}
-                  checked={defaultRankId === rank.rankId}
+                  value={status.statusId}
+                  checked={defaultStatusId === status.statusId}
                   disabled={isDisabled}
-                  onChange={() => onSelectDefault(rank.rankId)}
-                  aria-label={`${rank.name || "未入力"}をデフォルトランクにする`}
+                  onChange={() => onSelectDefault(status.statusId)}
+                  aria-label={`${status.name || "未入力"}をデフォルトステータスにする`}
                 />
               </styled.label>
               <Input
-                {...register(`consultantRanks.${index}.name`)}
-                aria-label={`ランク名 ${index + 1}`}
+                {...register(`consultantStatuses.${index}.name`)}
+                aria-label={`ステータス名 ${index + 1}`}
                 disabled={isDisabled}
               />
               <styled.div display="flex" gap="1">
@@ -147,7 +151,7 @@ function ConsultantRanksSettingsTabView({
           disabled={fields.length >= 5 || isDisabled}
           onClick={onAdd}
         >
-          ランクを追加
+          ステータスを追加
         </Button>
         <Button
           type="submit"
@@ -162,94 +166,103 @@ function ConsultantRanksSettingsTabView({
   );
 }
 
-type ConsultantRanksSettingsTabContainerProps = {
+type ConsultantStatusesSettingsTabContainerProps = {
   organizationId: string | undefined;
   isReadOnly: boolean;
 };
 
-export function ConsultantRanksSettingsTab({
+export function ConsultantStatusesSettingsTab({
   organizationId,
   isReadOnly,
-}: ConsultantRanksSettingsTabContainerProps) {
-  const { data, isLoading } = useAdminConsultantRanks();
-  const updateConsultantRanks = useUpdateAdminConsultantRanks();
-  const form = useForm<ConsultantRankFormValues>({
+}: ConsultantStatusesSettingsTabContainerProps) {
+  const { data, isLoading } = useAdminConsultantStatuses();
+  const updateConsultantStatuses = useUpdateAdminConsultantStatuses();
+  const form = useForm<ConsultantStatusFormValues>({
     defaultValues: {
-      consultantRanks: [{ rankId: "standard", name: "標準" }],
-      defaultConsultantRankId: "standard",
+      consultantStatuses: [{ statusId: "standard", name: "標準" }],
+      defaultConsultantStatusId: "standard",
     },
   });
   const { reset } = form;
   const [initialized, setInitialized] = useState(false);
   const fieldArray = useFieldArray({
     control: form.control,
-    name: "consultantRanks",
+    name: "consultantStatuses",
   });
-  const ranks = form.watch("consultantRanks");
-  const defaultRankId = form.watch("defaultConsultantRankId");
+  const statuses = form.watch("consultantStatuses");
+  const defaultStatusId = form.watch("defaultConsultantStatusId");
   useEffect(() => {
     if (initialized || !data?.data) return;
     reset({
-      consultantRanks: data.data.consultantRanks,
-      defaultConsultantRankId: data.data.defaultConsultantRankId,
+      consultantStatuses: data.data.consultantStatuses,
+      defaultConsultantStatusId: data.data.defaultConsultantStatusId,
     });
     setInitialized(true);
   }, [data, initialized, reset]);
-  const save = async (values: ConsultantRankFormValues) => {
+  const save = async (values: ConsultantStatusFormValues) => {
     if (!organizationId || isReadOnly) return;
-    const consultantRanks = values.consultantRanks.map((rank) => ({
-      rankId: rank.rankId,
-      name: rank.name.trim(),
+    const consultantStatuses = values.consultantStatuses.map((status) => ({
+      statusId: status.statusId,
+      name: status.name.trim(),
     }));
-    if (consultantRanks.some((rank) => !rank.name)) {
-      toaster.create({ type: "error", title: "ランク名を入力してください" });
+    if (consultantStatuses.some((status) => !status.name)) {
+      toaster.create({
+        type: "error",
+        title: "ステータス名を入力してください",
+      });
       return;
     }
     if (
-      !new Set(consultantRanks.map((rank) => rank.rankId)).has(
-        values.defaultConsultantRankId,
+      !new Set(consultantStatuses.map((status) => status.statusId)).has(
+        values.defaultConsultantStatusId,
       )
     ) {
       toaster.create({
         type: "error",
-        title: "デフォルトランクを選択してください",
+        title: "デフォルトステータスを選択してください",
       });
       return;
     }
-    await updateConsultantRanks.mutateAsync({
+    await updateConsultantStatuses.mutateAsync({
       organizationId,
       data: {
-        consultantRanks,
-        defaultConsultantRankId: values.defaultConsultantRankId,
+        consultantStatuses,
+        defaultConsultantStatusId: values.defaultConsultantStatusId,
       },
     });
   };
   const remove = (index: number) => {
-    const removing = ranks[index];
-    const nextRanks = ranks.filter((_, rankIndex) => rankIndex !== index);
+    const removing = statuses[index];
+    const nextStatuses = statuses.filter(
+      (_, statusIndex) => statusIndex !== index,
+    );
     fieldArray.remove(index);
-    if (removing?.rankId === defaultRankId && nextRanks[0]?.rankId)
-      form.setValue("defaultConsultantRankId", nextRanks[0].rankId, {
+    if (removing?.statusId === defaultStatusId && nextStatuses[0]?.statusId)
+      form.setValue("defaultConsultantStatusId", nextStatuses[0].statusId, {
         shouldDirty: true,
       });
   };
   return (
-    <ConsultantRanksSettingsTabView
+    <ConsultantStatusesSettingsTabView
       register={form.register}
       fields={fieldArray.fields}
-      ranks={ranks}
-      defaultRankId={defaultRankId}
+      statuses={statuses}
+      defaultStatusId={defaultStatusId}
       isLoading={isLoading}
-      isPending={updateConsultantRanks.isPending}
+      isPending={updateConsultantStatuses.isPending}
       isReadOnly={isReadOnly}
       isInitialized={initialized}
       onSubmit={form.handleSubmit(save)}
-      onSelectDefault={(rankId) =>
-        form.setValue("defaultConsultantRankId", rankId, { shouldDirty: true })
+      onSelectDefault={(statusId) =>
+        form.setValue("defaultConsultantStatusId", statusId, {
+          shouldDirty: true,
+        })
       }
       onMove={fieldArray.move}
       onRemove={remove}
-      onAdd={() => fieldArray.append({ rankId: crypto.randomUUID(), name: "" })}
+      onAdd={() =>
+        fieldArray.append({ statusId: crypto.randomUUID(), name: "" })
+      }
     />
   );
 }

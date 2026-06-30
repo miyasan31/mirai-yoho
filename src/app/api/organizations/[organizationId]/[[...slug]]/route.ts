@@ -23,7 +23,7 @@ import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import { createPricePlanSelectionId } from "@/domain/consultant-price-plan/consultant-price-plan";
 import { BusinessHours } from "@/domain/organization-settings/business-hours";
-import type { ConsultantRankProps } from "@/domain/organization-settings/consultant-rank";
+import type { ConsultantStatusProps } from "@/domain/organization-settings/consultant-status";
 import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
 import { DomainError } from "@/domain/shared/domain-error";
 import { Slot } from "@/domain/slot/slot";
@@ -211,58 +211,58 @@ function toPublicPricePlanResponse(params: { name: string; totalJPY: number }) {
   };
 }
 
-function toConsultantRanksResponse(settings: OrganizationSettings) {
+function toConsultantStatusesResponse(settings: OrganizationSettings) {
   return {
-    consultantRanks: settings.getConsultantRanks(),
-    defaultConsultantRankId: settings.getDefaultConsultantRankId(),
+    consultantStatuses: settings.getConsultantStatuses(),
+    defaultConsultantStatusId: settings.getDefaultConsultantStatusId(),
   };
 }
 
-function resolveConsultantRank(
+function resolveConsultantStatus(
   settings: OrganizationSettings,
-  rankId: string,
-): ConsultantRankProps {
+  statusId: string,
+): ConsultantStatusProps {
   return (
-    settings.findConsultantRank(rankId) ??
-    settings.findConsultantRank(settings.getDefaultConsultantRankId()) ??
-    settings.getConsultantRanks()[0]
+    settings.findConsultantStatus(statusId) ??
+    settings.findConsultantStatus(settings.getDefaultConsultantStatusId()) ??
+    settings.getConsultantStatuses()[0]
   );
 }
 
-function toConsultantRankResponse(rank: ConsultantRankProps) {
+function toConsultantStatusResponse(status: ConsultantStatusProps) {
   return {
-    rankId: rank.rankId,
-    name: rank.name,
+    statusId: status.statusId,
+    name: status.name,
   };
 }
 
-function parseConsultantRanksBody(
+function parseConsultantStatusesBody(
   body: unknown,
-): { ranks: ConsultantRankProps[]; defaultRankId: string } | null {
+): { statuses: ConsultantStatusProps[]; defaultStatusId: string } | null {
   if (!body || typeof body !== "object") return null;
   const payload = body as {
-    consultantRanks?: unknown;
-    defaultConsultantRankId?: unknown;
+    consultantStatuses?: unknown;
+    defaultConsultantStatusId?: unknown;
   };
   if (
-    !Array.isArray(payload.consultantRanks) ||
-    typeof payload.defaultConsultantRankId !== "string"
+    !Array.isArray(payload.consultantStatuses) ||
+    typeof payload.defaultConsultantStatusId !== "string"
   ) {
     return null;
   }
-  const ranks = payload.consultantRanks.map((rank) => {
-    if (!rank || typeof rank !== "object") {
-      return { rankId: "", name: "" };
+  const statuses = payload.consultantStatuses.map((status) => {
+    if (!status || typeof status !== "object") {
+      return { statusId: "", name: "" };
     }
-    const source = rank as { rankId?: unknown; name?: unknown };
+    const source = status as { statusId?: unknown; name?: unknown };
     return {
-      rankId: typeof source.rankId === "string" ? source.rankId : "",
+      statusId: typeof source.statusId === "string" ? source.statusId : "",
       name: typeof source.name === "string" ? source.name : "",
     };
   });
   return {
-    ranks,
-    defaultRankId: payload.defaultConsultantRankId,
+    statuses,
+    defaultStatusId: payload.defaultConsultantStatusId,
   };
 }
 
@@ -582,14 +582,17 @@ async function handleGetPublicConsultants(organizationId: string) {
   return withNoStore(
     NextResponse.json({
       consultants: consultants.map((c) => {
-        const rank = resolveConsultantRank(resolvedSettings, c.getRankId());
+        const status = resolveConsultantStatus(
+          resolvedSettings,
+          c.getStatusId(),
+        );
         return {
           consultantId: c.getConsultantId(),
           name: c.getProfile().getDisplayName(),
           specialties: [...c.getProfile().getSpecialties()],
           bio: c.getProfile().getBio(),
           imageUrl: c.getProfile().getImageUrl(),
-          rank: toConsultantRankResponse(rank),
+          status: toConsultantStatusResponse(status),
           isActive: c.getIsActive(),
         };
       }),
@@ -1040,8 +1043,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
           imageUrl: c.getProfile().getImageUrl(),
           specialties: [...c.getProfile().getSpecialties()],
           zoomRoomIds: c.getZoomRoomIds(),
-          rank: toConsultantRankResponse(
-            resolveConsultantRank(resolvedSettings, c.getRankId()),
+          status: toConsultantStatusResponse(
+            resolveConsultantStatus(resolvedSettings, c.getStatusId()),
           ),
           isActive: c.getIsActive(),
           createdAt: c.getCreatedAt().toISOString(),
@@ -1178,7 +1181,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
       segments.length === 3 &&
       segments[0] === "admin" &&
       segments[1] === "settings" &&
-      segments[2] === "consultant-ranks"
+      segments[2] === "consultant-statuses"
     ) {
       requireOrganizationPermission(
         authUser,
@@ -1191,7 +1194,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         );
       const resolvedSettings =
         settings ?? OrganizationSettings.createDefault(organizationId);
-      return noStoreJson(toConsultantRanksResponse(resolvedSettings));
+      return noStoreJson(toConsultantStatusesResponse(resolvedSettings));
     }
 
     if (
@@ -1430,9 +1433,9 @@ export async function GET(request: NextRequest, context: RouteContext) {
           (await createOrganizationSettingsRepository().findByOrganizationId(
             organizationId,
           )) ?? OrganizationSettings.createDefault(organizationId);
-        const rank = resolveConsultantRank(
+        const status = resolveConsultantStatus(
           settings,
-          settings.getDefaultConsultantRankId(),
+          settings.getDefaultConsultantStatusId(),
         );
         return noStoreJson({
           consultantId: authUser.uid,
@@ -1441,7 +1444,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
           phone: "",
           specialties: [],
           zoomRoomIds: [],
-          rank: toConsultantRankResponse(rank),
+          status: toConsultantStatusResponse(status),
           isActive: true,
         });
       }
@@ -1451,7 +1454,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
           organizationId,
         )) ?? OrganizationSettings.createDefault(organizationId);
       const profile = consultant.getProfile();
-      const rank = resolveConsultantRank(settings, consultant.getRankId());
+      const status = resolveConsultantStatus(
+        settings,
+        consultant.getStatusId(),
+      );
       return noStoreJson({
         consultantId: consultant.getConsultantId(),
         name: profile.getDisplayName(),
@@ -1460,7 +1466,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
         imageUrl: profile.getImageUrl(),
         specialties: [...profile.getSpecialties()],
         zoomRoomIds: consultant.getZoomRoomIds(),
-        rank: toConsultantRankResponse(rank),
+        status: toConsultantStatusResponse(status),
         isActive: consultant.getIsActive(),
       });
     }
@@ -1891,11 +1897,11 @@ export async function POST(request: NextRequest, context: RouteContext) {
           "consultantId and name are required",
         );
       }
-      if (body.rankId !== undefined) {
+      if (body.statusId !== undefined) {
         requireOrganizationPermission(
           authUser,
           organizationId,
-          "admin.consultants.rank.manage",
+          "admin.consultants.status.manage",
         );
       }
 
@@ -1903,9 +1909,12 @@ export async function POST(request: NextRequest, context: RouteContext) {
         (await createOrganizationSettingsRepository().findByOrganizationId(
           organizationId,
         )) ?? OrganizationSettings.createDefault(organizationId);
-      const rankId = body.rankId ?? settings.getDefaultConsultantRankId();
-      if (typeof rankId !== "string" || !settings.findConsultantRank(rankId)) {
-        return jsonError(400, "VALIDATION_ERROR", "rankId is invalid");
+      const statusId = body.statusId ?? settings.getDefaultConsultantStatusId();
+      if (
+        typeof statusId !== "string" ||
+        !settings.findConsultantStatus(statusId)
+      ) {
+        return jsonError(400, "VALIDATION_ERROR", "statusId is invalid");
       }
 
       const consultant = Consultant.create({
@@ -1918,7 +1927,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
           phone ?? "",
         ),
         zoomRoomIds: zoomRoomIds ?? [],
-        rankId,
+        statusId,
       });
 
       await createConsultantRepository().save(consultant);
@@ -2004,7 +2013,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
                 typeof phone === "string" ? phone.trim() : "",
               ),
               zoomRoomIds: [],
-              rankId: settings.getDefaultConsultantRankId(),
+              statusId: settings.getDefaultConsultantStatusId(),
             }),
           );
         }
@@ -2407,20 +2416,20 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       segments.length === 3 &&
       segments[0] === "admin" &&
       segments[1] === "settings" &&
-      segments[2] === "consultant-ranks"
+      segments[2] === "consultant-statuses"
     ) {
       requireOrganizationPermission(
         authUser,
         organizationId,
-        "admin.consultants.rank.manage",
+        "admin.consultants.status.manage",
       );
       const body = await request.json();
-      const parsed = parseConsultantRanksBody(body);
+      const parsed = parseConsultantStatusesBody(body);
       if (!parsed) {
         return jsonError(
           400,
           "VALIDATION_ERROR",
-          "consultantRanks and defaultConsultantRankId are required",
+          "consultantStatuses and defaultConsultantStatusId are required",
         );
       }
 
@@ -2428,24 +2437,27 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       const settings =
         (await settingsRepository.findByOrganizationId(organizationId)) ??
         OrganizationSettings.createDefault(organizationId);
-      settings.updateConsultantRanks(parsed.ranks, parsed.defaultRankId);
+      settings.updateConsultantStatuses(
+        parsed.statuses,
+        parsed.defaultStatusId,
+      );
       await settingsRepository.save(settings);
 
-      const rankIds = new Set(
-        settings.getConsultantRanks().map((rank) => rank.rankId),
+      const statusIds = new Set(
+        settings.getConsultantStatuses().map((status) => status.statusId),
       );
       const consultantRepository = createConsultantRepository();
       const consultants = await consultantRepository.findAll(organizationId);
       await Promise.all(
         consultants
-          .filter((consultant) => !rankIds.has(consultant.getRankId()))
+          .filter((consultant) => !statusIds.has(consultant.getStatusId()))
           .map((consultant) => {
-            consultant.changeRank(settings.getDefaultConsultantRankId());
+            consultant.changeStatus(settings.getDefaultConsultantStatusId());
             return consultantRepository.save(consultant);
           }),
       );
 
-      return NextResponse.json(toConsultantRanksResponse(settings));
+      return NextResponse.json(toConsultantStatusesResponse(settings));
     }
 
     if (
@@ -2544,23 +2556,23 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         consultant.assignZoomRooms(body.zoomRoomIds);
       }
 
-      if (body.rankId !== undefined) {
+      if (body.statusId !== undefined) {
         requireOrganizationPermission(
           authUser,
           organizationId,
-          "admin.consultants.rank.manage",
+          "admin.consultants.status.manage",
         );
         const settings =
           (await createOrganizationSettingsRepository().findByOrganizationId(
             organizationId,
           )) ?? OrganizationSettings.createDefault(organizationId);
         if (
-          typeof body.rankId !== "string" ||
-          !settings.findConsultantRank(body.rankId)
+          typeof body.statusId !== "string" ||
+          !settings.findConsultantStatus(body.statusId)
         ) {
-          return jsonError(400, "VALIDATION_ERROR", "rankId is invalid");
+          return jsonError(400, "VALIDATION_ERROR", "statusId is invalid");
         }
-        consultant.changeRank(body.rankId);
+        consultant.changeStatus(body.statusId);
       }
 
       await repo.save(consultant);

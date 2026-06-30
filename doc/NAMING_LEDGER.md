@@ -239,7 +239,7 @@
 | 電話 | `phone` | `phone` | 維持 |
 | 画像 URL | `imageUrl` | `imageUrl` | 維持 |
 | Zoom ルーム | `zoomRoomIds` | `zoomRoomIds` | 維持 |
-| ランク | `rankId` / API `rank` オブジェクト | **`rankId`** | **API も rankId のみ** |
+| ステータス（旧称: ランク） | `statusId` / API `status` オブジェクト | **`statusId`** | **API も statusId のみ。UI 表示・内部識別子ともに `status` に統一** |
 | 有効フラグ | `isActive` | `isActive` | 維持 |
 | 作成/更新 | `createdAt`, `updatedAt` | 同名 | 維持 |
 
@@ -292,8 +292,8 @@
 | 組織 ID | `organizationId` | 維持 |
 | 相談員選択可否 | `consultantSelectionEnabled` | 維持 |
 | 営業時間 | `businessHours`（ネスト維持） | 維持 |
-| 相談員ランク | `consultantRanks` | 維持 |
-| デフォルトランク ID | `defaultConsultantRankId` | 維持 |
+| 相談員ステータス（旧称: ランク） | `consultantStatuses` | **`consultantRanks` → `consultantStatuses` にリネーム（マイグレーション要）** |
+| デフォルトステータス ID（旧称: ランク） | `defaultConsultantStatusId` | **`defaultConsultantRankId` → `defaultConsultantStatusId` にリネーム** |
 | 料金プラン範囲 | `pricePlanRange`（ネスト維持） | 維持 |
 | 作成/更新 | `createdAt`, `updatedAt` | **Repository に追加** |
 
@@ -304,7 +304,7 @@ businessHours
   weekly[]: { dayOfWeek, isClosed, timeWindows[]: { startTime, endTime } }
   includePublicHolidays
   exceptions[]: { startDate, endDate, isClosed, timeWindows[] }
-consultantRanks[]: { rankId, name }
+consultantStatuses[]: { statusId, name }
 pricePlanRange: { minTotalJPY, maxTotalJPY }
 ```
 

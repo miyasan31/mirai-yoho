@@ -11,17 +11,21 @@ import { useAdminBookingSettings } from "@/hooks/use-booking-settings";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import { BookingSettingsTab } from "./_components/booking-settings-tab";
 import { BusinessHoursSettingsTab } from "./_components/business-hours-settings-tab";
-import { ConsultantRanksSettingsTab } from "./_components/consultant-ranks-settings-tab";
+import { ConsultantStatusesSettingsTab } from "./_components/consultant-statuses-settings-tab";
 import { PricePlanRangeSettingsTab } from "./_components/price-plan-range-settings-tab";
 import type { PricePlanRange } from "./_components/settings-types";
 
-type SettingsTab = "booking" | "business-hours" | "consultant-ranks" | "price";
+type SettingsTab =
+  | "booking"
+  | "business-hours"
+  | "consultant-statuses"
+  | "price";
 
 function isSettingsTab(value: string | null): value is SettingsTab {
   return (
     value === "booking" ||
     value === "business-hours" ||
-    value === "consultant-ranks" ||
+    value === "consultant-statuses" ||
     value === "price"
   );
 }
@@ -34,8 +38,8 @@ export default function AdminSettingsPage() {
   const { hasPermission } = useAuth();
   const { data, isLoading } = useAdminBookingSettings();
   const isReadOnly = !hasPermission("admin.settings.manage");
-  const canManageConsultantRanks = hasPermission(
-    "admin.consultants.rank.manage",
+  const canManageConsultantStatuses = hasPermission(
+    "admin.consultants.status.manage",
   );
   const [currentTab, setCurrentTab] = useState<SettingsTab>("booking");
   const [initialized, setInitialized] = useState(false);
@@ -102,7 +106,9 @@ export default function AdminSettingsPage() {
           <Tabs.Trigger value="business-hours" disabled={isLoading}>
             営業時間
           </Tabs.Trigger>
-          <Tabs.Trigger value="consultant-ranks">相談員ランク</Tabs.Trigger>
+          <Tabs.Trigger value="consultant-statuses">
+            相談員ステータス
+          </Tabs.Trigger>
           <Tabs.Trigger value="price" disabled={isLoading}>
             料金
           </Tabs.Trigger>
@@ -134,10 +140,10 @@ export default function AdminSettingsPage() {
             />
           )}
         </Tabs.Content>
-        <Tabs.Content value="consultant-ranks">
-          <ConsultantRanksSettingsTab
+        <Tabs.Content value="consultant-statuses">
+          <ConsultantStatusesSettingsTab
             organizationId={organizationId ?? undefined}
-            isReadOnly={!canManageConsultantRanks}
+            isReadOnly={!canManageConsultantStatuses}
           />
         </Tabs.Content>
         <Tabs.Content value="price">

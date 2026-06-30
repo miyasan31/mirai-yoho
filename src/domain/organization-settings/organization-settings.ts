@@ -3,10 +3,10 @@ import {
   type BusinessHoursProps,
 } from "@/domain/organization-settings/business-hours";
 import {
-  type ConsultantRankProps,
-  createDefaultConsultantRanks,
-  validateConsultantRanks,
-} from "@/domain/organization-settings/consultant-rank";
+  type ConsultantStatusProps,
+  createDefaultConsultantStatuses,
+  validateConsultantStatuses,
+} from "@/domain/organization-settings/consultant-status";
 import {
   PricePlanRange,
   type PricePlanRangeProps,
@@ -16,8 +16,8 @@ export interface OrganizationSettingsProps {
   organizationId: string;
   consultantSelectionEnabled: boolean;
   businessHours: BusinessHoursProps;
-  consultantRanks?: ConsultantRankProps[];
-  defaultConsultantRankId?: string;
+  consultantStatuses?: ConsultantStatusProps[];
+  defaultConsultantStatusId?: string;
   pricePlanRange?: PricePlanRangeProps;
 }
 
@@ -26,20 +26,22 @@ export class OrganizationSettings {
     private readonly organizationId: string,
     private consultantSelectionEnabled: boolean,
     private businessHours: BusinessHours,
-    private consultantRanks: ConsultantRankProps[],
-    private defaultConsultantRankId: string,
+    private consultantStatuses: ConsultantStatusProps[],
+    private defaultConsultantStatusId: string,
     private pricePlanRange: PricePlanRange,
   ) {}
 
   static create(props: OrganizationSettingsProps): OrganizationSettings {
-    const ranks = props.consultantRanks ?? createDefaultConsultantRanks();
-    const defaultRankId = props.defaultConsultantRankId ?? ranks[0].rankId;
+    const statuses =
+      props.consultantStatuses ?? createDefaultConsultantStatuses();
+    const defaultStatusId =
+      props.defaultConsultantStatusId ?? statuses[0].statusId;
     return new OrganizationSettings(
       props.organizationId,
       props.consultantSelectionEnabled,
       BusinessHours.create(props.businessHours),
-      validateConsultantRanks(ranks, defaultRankId),
-      defaultRankId,
+      validateConsultantStatuses(statuses, defaultStatusId),
+      defaultStatusId,
       PricePlanRange.create(
         props.pricePlanRange ?? PricePlanRange.createDefault().toJSON(),
       ),
@@ -47,14 +49,16 @@ export class OrganizationSettings {
   }
 
   static reconstruct(props: OrganizationSettingsProps): OrganizationSettings {
-    const ranks = props.consultantRanks ?? createDefaultConsultantRanks();
-    const defaultRankId = props.defaultConsultantRankId ?? ranks[0].rankId;
+    const statuses =
+      props.consultantStatuses ?? createDefaultConsultantStatuses();
+    const defaultStatusId =
+      props.defaultConsultantStatusId ?? statuses[0].statusId;
     return new OrganizationSettings(
       props.organizationId,
       props.consultantSelectionEnabled,
       BusinessHours.reconstruct(props.businessHours),
-      validateConsultantRanks(ranks, defaultRankId),
-      defaultRankId,
+      validateConsultantStatuses(statuses, defaultStatusId),
+      defaultStatusId,
       PricePlanRange.reconstruct(
         props.pricePlanRange ?? PricePlanRange.createDefault().toJSON(),
       ),
@@ -62,13 +66,13 @@ export class OrganizationSettings {
   }
 
   static createDefault(organizationId: string): OrganizationSettings {
-    const ranks = createDefaultConsultantRanks();
+    const statuses = createDefaultConsultantStatuses();
     return new OrganizationSettings(
       organizationId,
       true,
       BusinessHours.createDefault(),
-      ranks,
-      ranks[0].rankId,
+      statuses,
+      statuses[0].statusId,
       PricePlanRange.createDefault(),
     );
   }
@@ -81,12 +85,15 @@ export class OrganizationSettings {
     this.businessHours = BusinessHours.create(businessHours);
   }
 
-  updateConsultantRanks(
-    ranks: ConsultantRankProps[],
-    defaultRankId: string,
+  updateConsultantStatuses(
+    statuses: ConsultantStatusProps[],
+    defaultStatusId: string,
   ): void {
-    this.consultantRanks = validateConsultantRanks(ranks, defaultRankId);
-    this.defaultConsultantRankId = defaultRankId;
+    this.consultantStatuses = validateConsultantStatuses(
+      statuses,
+      defaultStatusId,
+    );
+    this.defaultConsultantStatusId = defaultStatusId;
   }
 
   updatePricePlanRange(pricePlanRange: PricePlanRangeProps): void {
@@ -105,16 +112,19 @@ export class OrganizationSettings {
     return BusinessHours.reconstruct(this.businessHours.toJSON());
   }
 
-  getConsultantRanks(): ConsultantRankProps[] {
-    return this.consultantRanks.map((rank) => ({ ...rank }));
+  getConsultantStatuses(): ConsultantStatusProps[] {
+    return this.consultantStatuses.map((status) => ({ ...status }));
   }
 
-  getDefaultConsultantRankId(): string {
-    return this.defaultConsultantRankId;
+  getDefaultConsultantStatusId(): string {
+    return this.defaultConsultantStatusId;
   }
 
-  findConsultantRank(rankId: string): ConsultantRankProps | null {
-    return this.consultantRanks.find((rank) => rank.rankId === rankId) ?? null;
+  findConsultantStatus(statusId: string): ConsultantStatusProps | null {
+    return (
+      this.consultantStatuses.find((status) => status.statusId === statusId) ??
+      null
+    );
   }
 
   getPricePlanRange(): PricePlanRange {

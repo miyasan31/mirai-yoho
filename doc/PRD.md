@@ -396,7 +396,7 @@ pending ──── 仮決済失敗 or タイムアウト ───────
 | 項目 | 内容 |
 |---|---|
 | 認証 | 不要 |
-| レスポンス | `{ consultants: [{ consultantId, name, specialties, bio, imageUrl, rank, isActive }] }` |
+| レスポンス | `{ consultants: [{ consultantId, name, specialties, bio, imageUrl, status, isActive }] }` |
 
 #### `GET /api/organizations/[organizationId]/slots`
 
@@ -485,12 +485,12 @@ pending ──── 仮決済失敗 or タイムアウト ───────
 | `/api/organizations/[organizationId]/admin/slots` | `GET` | 空き枠一覧取得 |
 | `/api/organizations/[organizationId]/admin/consultants` | `GET` | 相談員一覧取得（ページング対応） |
 | `/api/organizations/[organizationId]/admin/consultants` | `POST` | 相談員新規作成 |
-| `/api/organizations/[organizationId]/admin/consultants/[id]` | `PATCH` | 相談員更新（`name` / `bio` / `phone` / `specialties` / `zoomRoomIds` / `rankId`） |
+| `/api/organizations/[organizationId]/admin/consultants/[id]` | `PATCH` | 相談員更新（`name` / `bio` / `phone` / `specialties` / `zoomRoomIds` / `statusId`） |
 | `/api/organizations/[organizationId]/admin/consultants/[id]` | `DELETE` | 相談員無効化 |
 | `/api/organizations/[organizationId]/admin/settings/booking` | `GET` | 予約設定取得 |
 | `/api/organizations/[organizationId]/admin/settings/booking` | `PATCH` | 予約設定更新 |
-| `/api/organizations/[organizationId]/admin/settings/consultant-ranks` | `GET` | 相談員ランク設定取得 |
-| `/api/organizations/[organizationId]/admin/settings/consultant-ranks` | `PATCH` | 相談員ランク設定更新 |
+| `/api/organizations/[organizationId]/admin/settings/consultant-statuses` | `GET` | 相談員ステータス設定取得 |
+| `/api/organizations/[organizationId]/admin/settings/consultant-statuses` | `PATCH` | 相談員ステータス設定更新 |
 | `/api/organizations/[organizationId]/admin/bookings` | `GET` | 予約一覧取得（ページング対応） |
 | `/api/organizations/[organizationId]/admin/payments` | `GET` | 決済一覧取得（ページング対応） |
 | `/api/organizations/[organizationId]/admin/customers` | `GET` | 顧客一覧取得（ページング対応） |

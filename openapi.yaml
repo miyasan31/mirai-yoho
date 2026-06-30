@@ -678,7 +678,7 @@ paths:
                   type: array
                   items:
                     type: string
-                rankId:
+                statusId:
                   type: string
       responses:
         "201":
@@ -715,7 +715,7 @@ paths:
                   type: array
                   items:
                     type: string
-                rankId:
+                statusId:
                   type: string
       responses:
         "200":
@@ -767,10 +767,10 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/settings/consultant-ranks:
+  /organizations/{organizationId}/admin/settings/consultant-statuses:
     get:
-      operationId: getAdminConsultantRanks
-      summary: 相談員ランク設定取得（管理者・オペレーター）
+      operationId: getAdminConsultantStatuses
+      summary: 相談員ステータス設定取得（管理者・オペレーター）
       tags: [admin]
       security:
         - bearerAuth: []
@@ -782,10 +782,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConsultantRankSettings"
+                $ref: "#/components/schemas/ConsultantStatusSettings"
     patch:
-      operationId: updateAdminConsultantRanks
-      summary: 相談員ランク設定更新（管理者のみ）
+      operationId: updateAdminConsultantStatuses
+      summary: 相談員ステータス設定更新（管理者のみ）
       tags: [admin]
       security:
         - bearerAuth: []
@@ -796,7 +796,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/ConsultantRankSettings"
+              $ref: "#/components/schemas/ConsultantStatusSettings"
       responses:
         "200":
           description: OK
@@ -1245,7 +1245,7 @@ components:
         - admin.customers.read
         - admin.consultants.read
         - admin.consultants.manage
-        - admin.consultants.rank.manage
+        - admin.consultants.status.manage
         - admin.slots.read
         - admin.slots.manage
         - admin.settings.read
@@ -1316,7 +1316,7 @@ components:
 
     Consultant:
       type: object
-      required: [consultantId, name, specialties, rank, isActive]
+      required: [consultantId, name, specialties, status, isActive]
       properties:
         consultantId:
           type: string
@@ -1330,15 +1330,15 @@ components:
           type: string
         imageUrl:
           type: string
-        rank:
-          $ref: "#/components/schemas/ConsultantRank"
+        status:
+          $ref: "#/components/schemas/ConsultantStatus"
         isActive:
           type: boolean
 
     ConsultantDetail:
       type: object
       required:
-        [consultantId, name, specialties, rank, isActive, createdAt, updatedAt]
+        [consultantId, name, specialties, status, isActive, createdAt, updatedAt]
       properties:
         consultantId:
           type: string
@@ -1360,8 +1360,8 @@ components:
           type: array
           items:
             type: string
-        rank:
-          $ref: "#/components/schemas/ConsultantRank"
+        status:
+          $ref: "#/components/schemas/ConsultantStatus"
         isActive:
           type: boolean
         createdAt:
@@ -1373,7 +1373,7 @@ components:
 
     ConsultantProfile:
       type: object
-      required: [consultantId, name, specialties, rank, isActive]
+      required: [consultantId, name, specialties, status, isActive]
       properties:
         consultantId:
           type: string
@@ -1393,31 +1393,31 @@ components:
           type: array
           items:
             type: string
-        rank:
-          $ref: "#/components/schemas/ConsultantRank"
+        status:
+          $ref: "#/components/schemas/ConsultantStatus"
         isActive:
           type: boolean
 
-    ConsultantRank:
+    ConsultantStatus:
       type: object
-      required: [rankId, name]
+      required: [statusId, name]
       properties:
-        rankId:
+        statusId:
           type: string
         name:
           type: string
 
-    ConsultantRankSettings:
+    ConsultantStatusSettings:
       type: object
-      required: [consultantRanks, defaultConsultantRankId]
+      required: [consultantStatuses, defaultConsultantStatusId]
       properties:
-        consultantRanks:
+        consultantStatuses:
           type: array
           minItems: 1
           maxItems: 5
           items:
-            $ref: "#/components/schemas/ConsultantRank"
-        defaultConsultantRankId:
+            $ref: "#/components/schemas/ConsultantStatus"
+        defaultConsultantStatusId:
           type: string
 
     AvatarUploadUrlResponse:

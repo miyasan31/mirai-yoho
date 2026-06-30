@@ -1,5 +1,5 @@
 import { BusinessHours } from "@/domain/organization-settings/business-hours";
-import type { ConsultantRankProps } from "@/domain/organization-settings/consultant-rank";
+import type { ConsultantStatusProps } from "@/domain/organization-settings/consultant-status";
 import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
 import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
 import { PricePlanRange } from "@/domain/organization-settings/price-plan-range";
@@ -12,8 +12,8 @@ interface OrganizationSettingsDoc {
   organizationId: string;
   consultantSelectionEnabled: boolean;
   businessHours?: ReturnType<BusinessHours["toJSON"]>;
-  consultantRanks?: ConsultantRankProps[];
-  defaultConsultantRankId?: string;
+  consultantStatuses?: ConsultantStatusProps[];
+  defaultConsultantStatusId?: string;
   pricePlanRange?: ReturnType<PricePlanRange["toJSON"]>;
 }
 
@@ -22,8 +22,8 @@ function toDomain(doc: OrganizationSettingsDoc): OrganizationSettings {
     organizationId: doc.organizationId,
     consultantSelectionEnabled: doc.consultantSelectionEnabled,
     businessHours: doc.businessHours ?? BusinessHours.createDefault().toJSON(),
-    consultantRanks: doc.consultantRanks,
-    defaultConsultantRankId: doc.defaultConsultantRankId,
+    consultantStatuses: doc.consultantStatuses,
+    defaultConsultantStatusId: doc.defaultConsultantStatusId,
     pricePlanRange:
       doc.pricePlanRange ?? PricePlanRange.createDefault().toJSON(),
   });
@@ -34,8 +34,8 @@ function toFirestore(settings: OrganizationSettings): OrganizationSettingsDoc {
     organizationId: settings.getOrganizationId(),
     consultantSelectionEnabled: settings.getConsultantSelectionEnabled(),
     businessHours: settings.getBusinessHours().toJSON(),
-    consultantRanks: settings.getConsultantRanks(),
-    defaultConsultantRankId: settings.getDefaultConsultantRankId(),
+    consultantStatuses: settings.getConsultantStatuses(),
+    defaultConsultantStatusId: settings.getDefaultConsultantStatusId(),
     pricePlanRange: settings.getPricePlanRange().toJSON(),
   };
 }

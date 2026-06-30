@@ -226,8 +226,8 @@ export default function AdminConsultantsPage() {
                 <Table.Header>メールアドレス</Table.Header>
                 <Table.Header>電話番号</Table.Header>
                 <Table.Header>専門分野</Table.Header>
-                <Table.Header>ランク</Table.Header>
                 <Table.Header>ステータス</Table.Header>
+                <Table.Header>有効/無効</Table.Header>
                 <Table.Header>操作</Table.Header>
               </Table.Row>
             </Table.Head>
@@ -238,7 +238,7 @@ export default function AdminConsultantsPage() {
                   <Table.Cell>{c.email}</Table.Cell>
                   <Table.Cell>{c.phone || "-"}</Table.Cell>
                   <Table.Cell>{c.specialties.join(", ")}</Table.Cell>
-                  <Table.Cell>{c.rank.name}</Table.Cell>
+                  <Table.Cell>{c.status.name}</Table.Cell>
                   <Table.Cell>
                     <ActiveStatusBadge isActive={c.isActive} />
                   </Table.Cell>

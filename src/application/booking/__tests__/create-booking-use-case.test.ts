@@ -37,7 +37,7 @@ function createConsultant(consultantId: string, name: string) {
     consultantId,
     profile: ConsultantProfile.create(name, "", []),
     zoomRoomIds: [],
-    rankId: "standard",
+    statusId: "standard",
   });
 }
 

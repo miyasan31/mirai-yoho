@@ -199,7 +199,7 @@ export default function ConsultantsPage() {
                 </Text>
                 <styled.div>
                   <Badge variant="subtle" size="sm">
-                    {consultant.rank?.name ?? ""}
+                    {consultant.status?.name ?? ""}
                   </Badge>
                 </styled.div>
                 {consultant.imageUrl ? (

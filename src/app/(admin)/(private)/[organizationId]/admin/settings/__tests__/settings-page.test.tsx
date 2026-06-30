@@ -111,14 +111,14 @@ vi.mock("@/hooks/use-booking-settings", () => ({
     },
     isLoading: false,
   }),
-  useAdminConsultantRanks: () => ({
+  useAdminConsultantStatuses: () => ({
     data: {
       data: {
-        consultantRanks: [
-          { rankId: "premium", name: "プレミアム" },
-          { rankId: "standard", name: "標準" },
+        consultantStatuses: [
+          { statusId: "premium", name: "プレミアム" },
+          { statusId: "standard", name: "標準" },
         ],
-        defaultConsultantRankId: "standard",
+        defaultConsultantStatusId: "standard",
       },
     },
     isLoading: false,
@@ -127,7 +127,7 @@ vi.mock("@/hooks/use-booking-settings", () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
   }),
-  useUpdateAdminConsultantRanks: () => ({
+  useUpdateAdminConsultantStatuses: () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
   }),
@@ -199,18 +199,18 @@ describe("AdminSettingsPage", () => {
     expect(currentTabParam).toBe("business-hours");
   });
 
-  it("shows consultant rank settings", async () => {
+  it("shows consultant status settings", async () => {
     const user = userEvent.setup();
     render(<AdminSettingsPage />);
 
-    await user.click(screen.getByRole("tab", { name: "相談員ランク" }));
-    const panel = screen.getByRole("tabpanel", { name: "相談員ランク" });
+    await user.click(screen.getByRole("tab", { name: "相談員ステータス" }));
+    const panel = screen.getByRole("tabpanel", { name: "相談員ステータス" });
 
     expect(within(panel).getByDisplayValue("プレミアム")).toBeInTheDocument();
     expect(within(panel).getByDisplayValue("標準")).toBeInTheDocument();
 
     expect(
-      within(panel).getByRole("button", { name: "ランクを追加" }),
+      within(panel).getByRole("button", { name: "ステータスを追加" }),
     ).toBeInTheDocument();
   });
 
