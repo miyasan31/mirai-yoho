@@ -1,12 +1,15 @@
 import crypto from "node:crypto";
 import { getAuth } from "firebase-admin/auth";
 import { Timestamp } from "firebase-admin/firestore";
+import { OrganizationRole } from "../src/domain/authorization/organization-role";
 import { createDefaultConsultantRanks } from "../src/domain/organization-settings/consultant-rank";
 import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore-collections";
 import { app, db } from "../src/infrastructure/firestore/firestore-customer";
+import { getOrganizationRoleDocId } from "../src/infrastructure/firestore/firestore-organization-role-repository";
 
 const ORGANIZATION_COLLECTION = FIRESTORE_COLLECTIONS.organizations;
 const ACCOUNT_COLLECTION = FIRESTORE_COLLECTIONS.organizationAccounts;
+const ROLE_COLLECTION = FIRESTORE_COLLECTIONS.organizationRoles;
 const SETTINGS_COLLECTION = FIRESTORE_COLLECTIONS.organizationSettings;
 
 async function main() {
@@ -62,6 +65,25 @@ async function main() {
       createdAt: now,
       updatedAt: now,
     });
+
+  const systemRoles = [
+    OrganizationRole.createSystemAdmin(organizationId),
+    OrganizationRole.createSystemOperator(organizationId),
+  ];
+  for (const role of systemRoles) {
+    await db
+      .collection(ROLE_COLLECTION)
+      .doc(getOrganizationRoleDocId(organizationId, role.getRoleId()))
+      .set({
+        organizationId: role.getOrganizationId(),
+        roleId: role.getRoleId(),
+        name: role.getName(),
+        description: role.getDescription(),
+        isSystem: role.getIsSystem(),
+        createdAt: now,
+        updatedAt: now,
+      });
+  }
 
   await db.collection(SETTINGS_COLLECTION).doc(organizationId).set(
     {

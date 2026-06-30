@@ -1,9 +1,13 @@
+import type { AuthorizationPermission } from "@/domain/authorization/authorization-permission";
+
 export type UserRole = "admin" | "operator" | "consultant";
 
 export interface OrganizationAccount {
   organizationId: string;
   name: string;
-  role: UserRole;
+  role: string;
+  roleName: string;
+  permissions: AuthorizationPermission[];
   status: "active" | "invited" | "disabled";
   createdAt: string;
 }

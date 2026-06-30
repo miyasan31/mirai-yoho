@@ -18,22 +18,64 @@ import {
   SidebarLayout,
   SidebarLayoutSkeleton,
 } from "@/components/sidebar-layout";
+import type { AuthorizationPermission } from "@/domain/authorization/authorization-permission";
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
-const NAV_ITEMS: Array<Omit<NavItem, "href"> & { path: string }> = [
-  { path: "/admin/home", label: "ホーム", icon: House },
+const NAV_ITEMS: Array<
+  Omit<NavItem, "href"> & {
+    path: string;
+    permissions: AuthorizationPermission[];
+  }
+> = [
+  {
+    path: "/admin/home",
+    label: "ホーム",
+    icon: House,
+    permissions: ["admin.dashboard.read"],
+  },
   {
     path: "/admin/dashboard",
     label: "ダッシュボード（集計）",
     icon: LayoutDashboard,
+    permissions: ["admin.dashboard.read"],
   },
-  { path: "/admin/bookings", label: "予約管理", icon: CalendarDays },
-  { path: "/admin/payments", label: "決済管理", icon: CreditCard },
-  { path: "/admin/customers", label: "顧客管理", icon: UserStar },
-  { path: "/admin/consultants", label: "相談員管理", icon: UserRoundSearch },
-  { path: "/admin/accounts", label: "アカウント管理", icon: UserLock },
-  { path: "/admin/settings", label: "設定", icon: Settings },
+  {
+    path: "/admin/bookings",
+    label: "予約管理",
+    icon: CalendarDays,
+    permissions: ["admin.bookings.read"],
+  },
+  {
+    path: "/admin/payments",
+    label: "決済管理",
+    icon: CreditCard,
+    permissions: ["admin.payments.read"],
+  },
+  {
+    path: "/admin/customers",
+    label: "顧客管理",
+    icon: UserStar,
+    permissions: ["admin.customers.read"],
+  },
+  {
+    path: "/admin/consultants",
+    label: "相談員管理",
+    icon: UserRoundSearch,
+    permissions: ["admin.consultants.read"],
+  },
+  {
+    path: "/admin/accounts",
+    label: "アカウント管理",
+    icon: UserLock,
+    permissions: ["admin.accounts.read"],
+  },
+  {
+    path: "/admin/settings",
+    label: "設定",
+    icon: Settings,
+    permissions: ["admin.settings.read"],
+  },
 ];
 
 export default function AdminLayout({
@@ -45,7 +87,7 @@ export default function AdminLayout({
 }) {
   const {
     user,
-    role,
+    hasAnyPermission,
     accounts,
     currentOrganizationId,
     currentDisplayName,
@@ -76,10 +118,17 @@ export default function AdminLayout({
       return;
     }
 
-    if (role !== "admin" && role !== "operator") {
+    if (!hasAnyPermission(NAV_ITEMS.flatMap((item) => item.permissions))) {
       router.replace("/404");
     }
-  }, [currentOrganizationId, isLoading, organizationId, role, router, user]);
+  }, [
+    currentOrganizationId,
+    hasAnyPermission,
+    isLoading,
+    organizationId,
+    router,
+    user,
+  ]);
 
   useEffect(() => {
     const handleUnauthorized = () => {
@@ -95,18 +144,21 @@ export default function AdminLayout({
   const visibleItems = useMemo(
     () =>
       NAV_ITEMS.map((item) => ({
+        ...item,
         href: buildPath(item.path),
-        label: item.label,
-        icon: item.icon,
-      })),
-    [buildPath],
+      })).filter((item) => hasAnyPermission(item.permissions)),
+    [buildPath, hasAnyPermission],
   );
 
   if (isLoading) {
     return <SidebarLayoutSkeleton navItemCount={NAV_ITEMS.length} />;
   }
 
-  if (!user || !organizationId || (role !== "admin" && role !== "operator")) {
+  if (
+    !user ||
+    !organizationId ||
+    !hasAnyPermission(NAV_ITEMS.flatMap((item) => item.permissions))
+  ) {
     return null;
   }
 

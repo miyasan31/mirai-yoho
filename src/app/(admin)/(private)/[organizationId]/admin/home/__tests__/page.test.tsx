@@ -121,7 +121,11 @@ describe("AdminHomePage", () => {
     const plus1h = new Date(now.getTime() + 60 * 60 * 1000).toISOString();
     const plus2h = new Date(now.getTime() + 2 * 60 * 60 * 1000).toISOString();
 
-    mockUseAuth.mockReturnValue({ role: "admin" });
+    mockUseAuth.mockReturnValue({
+      role: "admin",
+      hasPermission: (permission: string) =>
+        permission === "admin.settings.manage",
+    });
     mockUseAdminBookings.mockReturnValue({
       data: {
         data: {
@@ -241,7 +245,10 @@ describe("AdminHomePage", () => {
   });
 
   it("operator は設定編集アクションを実行できない", () => {
-    mockUseAuth.mockReturnValue({ role: "operator" });
+    mockUseAuth.mockReturnValue({
+      role: "operator",
+      hasPermission: () => false,
+    });
     mockUseAdminBookings.mockReturnValue({
       data: { data: { bookings: [] } },
       isLoading: false,
@@ -263,12 +270,16 @@ describe("AdminHomePage", () => {
     const button = screen.getByRole("button", { name: "設定を編集する" });
     expect(button).toBeDisabled();
     expect(
-      screen.getByText("オペレーターは設定の閲覧のみ可能です。"),
+      screen.getByText("このロールでは設定の閲覧のみ可能です。"),
     ).toBeInTheDocument();
   });
 
   it("読み込み中はスケルトンを表示する", () => {
-    mockUseAuth.mockReturnValue({ role: "admin" });
+    mockUseAuth.mockReturnValue({
+      role: "admin",
+      hasPermission: (permission: string) =>
+        permission === "admin.settings.manage",
+    });
     mockUseAdminBookings.mockReturnValue({ isLoading: true });
     mockUseAdminPayments.mockReturnValue({ isLoading: false });
     mockUseAdminCustomers.mockReturnValue({ isLoading: false });

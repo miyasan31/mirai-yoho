@@ -14,6 +14,7 @@ import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore
 import { FirestoreConsultantPricePlanRepository } from "@/infrastructure/firestore/firestore-consultant-price-plan-repository";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
 import { FirestoreCustomerRepository } from "@/infrastructure/firestore/firestore-customer-repository";
+import { FirestoreOrganizationRoleRepository } from "@/infrastructure/firestore/firestore-organization-role-repository";
 import { FirestoreOrganizationSettingsRepository } from "@/infrastructure/firestore/firestore-organization-settings-repository";
 import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore-payment-repository";
 import { FirestoreSlotRepository } from "@/infrastructure/firestore/firestore-slot-repository";
@@ -42,6 +43,10 @@ export function createBookingRepository() {
 
 export function createOrganizationSettingsRepository() {
   return new FirestoreOrganizationSettingsRepository();
+}
+
+export function createOrganizationRoleRepository() {
+  return new FirestoreOrganizationRoleRepository();
 }
 
 export function createCreateBookingUseCase() {

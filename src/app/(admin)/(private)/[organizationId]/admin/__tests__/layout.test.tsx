@@ -56,6 +56,14 @@ describe("AdminLayout", () => {
     mockUseAuth.mockReturnValue({
       user: { email: "operator@example.com" },
       role: "operator",
+      hasAnyPermission: (permissions: string[]) =>
+        permissions.some((permission) =>
+          [
+            "admin.dashboard.read",
+            "admin.accounts.read",
+            "admin.bookings.read",
+          ].includes(permission),
+        ),
       accounts: [
         {
           name: "Org Test",

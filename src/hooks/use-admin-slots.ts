@@ -5,12 +5,14 @@ import {
 } from "@/generated/api/admin/admin";
 import type { GetAdminSlotsParams } from "@/generated/schemas";
 import { QUERY_STALE_TIME } from "@/hooks/query-cache-policy";
+import { useAuth } from "@/hooks/use-auth";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export function useGetAdminSlots(
   params?: GetAdminSlotsParams,
   options?: Record<string, unknown>,
 ) {
+  const { hasPermission, role } = useAuth();
   const { organizationId } = useOrganizationRouting();
   return useGeneratedGetAdminSlots<
     GetAdminSlotsQueryResult,
@@ -25,7 +27,8 @@ export function useGetAdminSlots(
       enabled:
         ((options?.query as { enabled?: boolean } | undefined)?.enabled ??
           true) &&
-        Boolean(organizationId),
+        Boolean(organizationId) &&
+        (role === "consultant" || hasPermission("admin.slots.read")),
     },
   });
 }

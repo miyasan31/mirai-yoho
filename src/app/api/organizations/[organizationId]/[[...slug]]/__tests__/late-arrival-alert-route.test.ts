@@ -17,6 +17,7 @@ const mocks = vi.hoisted(() => {
     AuthError: MockAuthError,
     execute: vi.fn(),
     createNotifyLateConsultantArrivalUseCase: vi.fn(),
+    requireOrganizationPermission: vi.fn(),
     requireOrganizationRole: vi.fn(),
     verifyAuth: vi.fn(),
     verifyCloudSchedulerAuth: vi.fn(),
@@ -41,6 +42,7 @@ vi.mock("@/infrastructure/container", () => ({
   createCreateBookingUseCase: vi.fn(),
   createNotifyLateConsultantArrivalUseCase:
     mocks.createNotifyLateConsultantArrivalUseCase,
+  createOrganizationRoleRepository: vi.fn(),
   createOrganizationSettingsRepository: vi.fn(),
   createPaymentRepository: vi.fn(),
   createSetupPaymentUseCase: vi.fn(),
@@ -80,6 +82,10 @@ vi.mock("@/infrastructure/auth/verify-auth", () => ({
 
 vi.mock("@/infrastructure/auth/require-organization-role", () => ({
   requireOrganizationRole: mocks.requireOrganizationRole,
+}));
+
+vi.mock("@/infrastructure/auth/require-organization-permission", () => ({
+  requireOrganizationPermission: mocks.requireOrganizationPermission,
 }));
 
 import { POST } from "../route";
@@ -172,11 +178,10 @@ describe("late arrival alert route", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(mocks.requireOrganizationRole).toHaveBeenCalledWith(
+    expect(mocks.requireOrganizationPermission).toHaveBeenCalledWith(
       expect.objectContaining({ uid: "admin-1" }),
       "org-1",
-      "admin",
-      "operator",
+      "admin.payments.charge",
     );
     expect(mocks.execute).toHaveBeenCalledTimes(1);
   });
