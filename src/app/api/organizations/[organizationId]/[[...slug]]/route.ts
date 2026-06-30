@@ -15,6 +15,7 @@ import {
   SYSTEM_ADMIN_ONLY_PERMISSION_SET,
 } from "@/domain/authorization/authorization-permission";
 import {
+  isSystemOrganizationRoleId,
   OrganizationRole,
   SYSTEM_ADMIN_ROLE_ID,
 } from "@/domain/authorization/organization-role";
@@ -2049,7 +2050,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
       }
       if (
         parsed.roleId === "consultant" ||
-        parsed.roleId === SYSTEM_ADMIN_ROLE_ID
+        isSystemOrganizationRoleId(parsed.roleId)
       ) {
         return jsonError(400, "VALIDATION_ERROR", "roleId is reserved");
       }
@@ -2719,13 +2720,6 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     ) {
       requireSystemAdminRole(authUser, organizationId);
       const roleId = segments[2];
-      if (roleId === SYSTEM_ADMIN_ROLE_ID) {
-        return jsonError(
-          400,
-          "SYSTEM_ROLE_IMMUTABLE",
-          "Built-in admin role cannot be edited",
-        );
-      }
       const body = await request.json();
       const parsed = parseOrganizationRoleBody(body);
       if (!parsed) {
@@ -2735,6 +2729,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       const role = await repository.findById(organizationId, roleId);
       if (!role) {
         return jsonError(404, "NOT_FOUND", "Role not found");
+      }
+      if (role.getIsSystem()) {
+        return jsonError(
+          400,
+          "SYSTEM_ROLE_IMMUTABLE",
+          "System role cannot be edited",
+        );
       }
       role.update({
         name: parsed.name,

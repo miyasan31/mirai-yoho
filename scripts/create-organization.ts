@@ -79,7 +79,6 @@ async function main() {
         roleId: role.getRoleId(),
         name: role.getName(),
         description: role.getDescription(),
-        permissions: role.getPermissions(),
         isSystem: role.getIsSystem(),
         createdAt: now,
         updatedAt: now,

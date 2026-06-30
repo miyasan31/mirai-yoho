@@ -6,7 +6,6 @@ import {
   House,
   LayoutDashboard,
   Settings,
-  ShieldCheck,
   UserLock,
   UserRoundSearch,
   UserStar,
@@ -70,12 +69,6 @@ const NAV_ITEMS: Array<
     label: "アカウント管理",
     icon: UserLock,
     permissions: ["admin.accounts.read"],
-  },
-  {
-    path: "/admin/roles",
-    label: "権限管理",
-    icon: ShieldCheck,
-    permissions: ["admin.roles.read"],
   },
   {
     path: "/admin/settings",

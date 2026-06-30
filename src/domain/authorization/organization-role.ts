@@ -140,3 +140,20 @@ export class OrganizationRole {
     return this.updatedAt;
   }
 }
+
+export function createSystemOrganizationRole(
+  organizationId: string,
+  roleId: string,
+): OrganizationRole | null {
+  if (roleId === SYSTEM_ADMIN_ROLE_ID) {
+    return OrganizationRole.createSystemAdmin(organizationId);
+  }
+  if (roleId === SYSTEM_OPERATOR_ROLE_ID) {
+    return OrganizationRole.createSystemOperator(organizationId);
+  }
+  return null;
+}
+
+export function isSystemOrganizationRoleId(roleId: string): boolean {
+  return roleId === SYSTEM_ADMIN_ROLE_ID || roleId === SYSTEM_OPERATOR_ROLE_ID;
+}

@@ -1,3 +1,4 @@
+import { FieldValue } from "firebase-admin/firestore";
 import { OrganizationRole } from "../src/domain/authorization/organization-role";
 import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore-collections";
 import { db } from "../src/infrastructure/firestore/firestore-customer";
@@ -11,14 +12,27 @@ async function saveIfMissing(role: OrganizationRole): Promise<boolean> {
     .collection(ROLE_COLLECTION)
     .doc(getOrganizationRoleDocId(role.getOrganizationId(), role.getRoleId()));
   const existing = await ref.get();
-  if (existing.exists) return false;
+  if (existing.exists) {
+    await ref.set(
+      {
+        organizationId: role.getOrganizationId(),
+        roleId: role.getRoleId(),
+        name: role.getName(),
+        description: role.getDescription(),
+        permissions: FieldValue.delete(),
+        isSystem: role.getIsSystem(),
+        updatedAt: new Date(),
+      },
+      { merge: true },
+    );
+    return false;
+  }
 
   await ref.set({
     organizationId: role.getOrganizationId(),
     roleId: role.getRoleId(),
     name: role.getName(),
     description: role.getDescription(),
-    permissions: role.getPermissions(),
     isSystem: role.getIsSystem(),
     createdAt: new Date(),
     updatedAt: new Date(),
