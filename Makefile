@@ -1,8 +1,7 @@
-.PHONY: set-claims create-organization seed-slots delete-slots
+.PHONY: create-organization seed-slots delete-slots
 .PHONY: auth-adc-organization-operator setup-secrets setup-secret
 .PHONY: setup-apphosting-secrets-from-env setup-apphosting-secrets-from-env-fish setup-batch-worker-secrets
 .PHONY: list-apphosting-backends describe-secret access-secret check-secret-value check-public-build-secrets
-.PHONY: set-claims\:dev set-claims\:prod
 .PHONY: auth-adc-organization-operator\:dev auth-adc-organization-operator\:prod
 .PHONY: create-organization\:dev create-organization\:prod
 .PHONY: seed-slots\:dev seed-slots\:prod
@@ -26,17 +25,6 @@ PROJECT_PROD = mirai-yoho-prod
 # ============================================================
 # Scripts（引数が必要なコマンド）
 # ============================================================
-
-# Usage: make set-claims UID=<uid> ROLE=<role> [ENV=<local|dev|prod>]
-# Usage: make set-claims:dev UID=<uid> ROLE=<role>
-# Usage: make set-claims:prod UID=<uid> ROLE=<role>
-# Example: make set-claims UID=abc123 ROLE=admin ENV=dev
-set-claims:
-	@test "$(ENV)" = "local" || test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be one of local, dev, prod" && exit 1)
-	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
-	@test -n "$(UID)" || (echo "Error: UID is required. Usage: make set-claims UID=<uid> ROLE=<role>" && exit 1)
-	@test -n "$(ROLE)" || (echo "Error: ROLE is required. Usage: make set-claims UID=<uid> ROLE=<role>" && exit 1)
-	pnpm dlx tsx --env-file=$(ENV_FILE) scripts/set-custom-claims.ts $(UID) $(ROLE)
 
 # Usage: make auth-adc-organization-operator PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
 # Usage: make auth-adc-organization-operator:dev
@@ -253,12 +241,6 @@ check-public-build-secrets:
 # ============================================================
 # Environment aliases (dev / prod)
 # ============================================================
-
-set-claims\:dev:
-	$(MAKE) set-claims ENV=dev UID=$(UID) ROLE=$(ROLE)
-
-set-claims\:prod:
-	$(MAKE) set-claims ENV=prod UID=$(UID) ROLE=$(ROLE)
 
 auth-adc-organization-operator\:dev:
 	$(MAKE) auth-adc-organization-operator PROJECT=$(PROJECT_DEV)

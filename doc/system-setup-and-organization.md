@@ -273,7 +273,7 @@ make create-organization:dev \
 
 認証済み API 呼び出しのたびに、対象ユーザーの `invited` account は `active` に切り替わります。ログイン後に `/api/auth/me` で組織とロールを確認できます。
 
-組織ごとの認可は、Firebase カスタムクレームではなく Firestore の `organization-accounts` を参照します。通常の組織運用で `make set-claims` を実行する必要はありません。このコマンドは旧来の互換用途に限ります。
+組織ごとの認可は、Firebase カスタムクレームではなく Firestore の `organization-accounts` を参照します。通常の組織運用ではカスタムクレームの手動設定は不要です。
 
 初期管理者は、組織の管理画面から admin / operator / consultant を招待できます。招待時は Firebase Auth ユーザー、account、必要に応じて consultant レコードが作られ、Resend によりパスワード再設定リンクを含む招待メールが送信されます。
 
