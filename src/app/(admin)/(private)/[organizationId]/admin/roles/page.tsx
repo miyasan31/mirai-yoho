@@ -376,7 +376,7 @@ export default function AdminRolesPage() {
                     <Text fontWeight="bold">{item.name}</Text>
                     {item.isSystem && (
                       <Badge variant="subtle" size="sm" colorPalette="blue">
-                        組み込み
+                        デフォルトロール
                       </Badge>
                     )}
                   </styled.div>
