@@ -9,7 +9,7 @@ export const consultantFormSchema = v.object({
   bio: v.optional(v.string()),
   phone: v.optional(v.pipe(v.string(), v.trim())),
   specialties: v.optional(v.string()),
-  rankId: v.pipe(v.string(), v.minLength(1, "ランクを選択してください")),
+  statusId: v.pipe(v.string(), v.minLength(1, "ステータスを選択してください")),
 });
 
 export type ConsultantFormValues = v.InferOutput<typeof consultantFormSchema>;

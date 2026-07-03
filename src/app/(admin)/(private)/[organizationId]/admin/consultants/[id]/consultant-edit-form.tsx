@@ -18,7 +18,7 @@ import {
   useDeleteAdminConsultant,
   useUpdateAdminConsultant,
 } from "@/hooks/use-admin-consultants";
-import { useAdminConsultantRanks } from "@/hooks/use-booking-settings";
+import { useAdminConsultantStatuses } from "@/hooks/use-booking-settings";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import {
   type ConsultantFormValues,
@@ -51,7 +51,7 @@ export function ConsultantEditForm({
       bio: "",
       phone: "",
       specialties: "",
-      rankId: "",
+      statusId: "",
     },
   });
 
@@ -61,12 +61,12 @@ export function ConsultantEditForm({
     sortBy: "createdAt",
     sortOrder: "desc",
   });
-  const { data: rankData, isLoading: isLoadingRanks } =
-    useAdminConsultantRanks();
+  const { data: statusData, isLoading: isLoadingStatuses } =
+    useAdminConsultantStatuses();
   const updateConsultant = useUpdateAdminConsultant();
   const deleteConsultant = useDeleteAdminConsultant();
   const consultants = data?.data?.consultants ?? [];
-  const ranks = rankData?.data?.consultantRanks ?? [];
+  const statuses = statusData?.data?.consultantStatuses ?? [];
   const consultant = consultants.find(
     (item: { consultantId: string }) => item.consultantId === consultantId,
   );
@@ -78,7 +78,7 @@ export function ConsultantEditForm({
         bio: consultant.bio ?? "",
         phone: consultant.phone ?? "",
         specialties: (consultant.specialties ?? []).join(", "),
-        rankId: consultant.rank.rankId,
+        statusId: consultant.status.statusId,
       });
     }
   }, [consultant, reset]);
@@ -112,7 +112,7 @@ export function ConsultantEditForm({
             .split(",")
             .map((s) => s.trim())
             .filter(Boolean),
-          rankId: values.rankId,
+          statusId: values.statusId,
         },
       });
       await invalidateConsultants();
@@ -135,7 +135,7 @@ export function ConsultantEditForm({
     }
   };
 
-  if (isLoading || isLoadingRanks) {
+  if (isLoading || isLoadingStatuses) {
     return (
       <styled.div display="flex" flexDir="column" gap="4">
         <styled.div>
@@ -187,25 +187,25 @@ export function ConsultantEditForm({
         <Field.Label>専門分野（カンマ区切り）</Field.Label>
         <Input id="specialties" type="text" {...register("specialties")} />
       </Field.Root>
-      <Field.Root required invalid={!!errors.rankId}>
-        <Field.Label>ランク</Field.Label>
+      <Field.Root required invalid={!!errors.statusId}>
+        <Field.Label>ステータス</Field.Label>
         <styled.select
-          id="rankId"
+          id="statusId"
           minH="10"
           rounded="l2"
           border="1px solid"
           borderColor="border"
           px="3"
-          {...register("rankId")}
+          {...register("statusId")}
         >
-          {ranks.map((rank) => (
-            <option key={rank.rankId} value={rank.rankId}>
-              {rank.name}
+          {statuses.map((status) => (
+            <option key={status.statusId} value={status.statusId}>
+              {status.name}
             </option>
           ))}
         </styled.select>
-        {errors.rankId && (
-          <Field.ErrorText>{errors.rankId.message}</Field.ErrorText>
+        {errors.statusId && (
+          <Field.ErrorText>{errors.statusId.message}</Field.ErrorText>
         )}
       </Field.Root>
       {error && <Text color="fg.error">{error}</Text>}

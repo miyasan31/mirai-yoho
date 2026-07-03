@@ -3,7 +3,7 @@ import type { Consultant } from "@/domain/consultant/consultant";
 import { Consultant as ConsultantEntity } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
-import { DEFAULT_CONSULTANT_RANK_ID } from "@/domain/organization-settings/consultant-rank";
+import { DEFAULT_CONSULTANT_STATUS_ID } from "@/domain/organization-settings/consultant-status";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 import { db } from "@/infrastructure/firestore/firestore-customer";
 
@@ -18,7 +18,7 @@ interface ConsultantDoc {
   phone?: string;
   imageUrl?: string;
   zoomRoomIds: string[];
-  rankId?: string;
+  statusId?: string;
   isActive: boolean;
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;
@@ -43,7 +43,7 @@ function toDomain(doc: ConsultantDoc): Consultant {
       doc.imageUrl,
     ),
     zoomRoomIds: doc.zoomRoomIds,
-    rankId: doc.rankId ?? DEFAULT_CONSULTANT_RANK_ID,
+    statusId: doc.statusId ?? DEFAULT_CONSULTANT_STATUS_ID,
     isActive: doc.isActive,
     createdAt,
     updatedAt: toDate(doc.updatedAt) ?? createdAt,
@@ -61,7 +61,7 @@ function toFirestore(consultant: Consultant): ConsultantDoc {
     phone: profile.getPhone(),
     imageUrl: profile.getImageUrl(),
     zoomRoomIds: consultant.getZoomRoomIds(),
-    rankId: consultant.getRankId(),
+    statusId: consultant.getStatusId(),
     isActive: consultant.getIsActive(),
     createdAt: consultant.getCreatedAt(),
     updatedAt: consultant.getUpdatedAt(),

@@ -264,7 +264,7 @@ make create-organization:dev \
 2. `ADMIN_EMAIL` の Firebase Auth ユーザーを取得する。存在しない場合はランダムな一時パスワードで作成する。
 3. `organization-accounts/{organizationId}_{uid}` に `admin` ロールを保存する。未ログインのユーザーは `invited`、ログイン済みのユーザーは `active` になる。
 4. `user-preferences/{uid}` の `lastOrganizationId` を新組織に設定する。
-5. `organization-settings/{organizationId}` に初期設定を作成する。相談員選択は有効、初期ランクは `standard`（表示名: `標準`）である。
+5. `organization-settings/{organizationId}` に初期設定を作成する。相談員選択は有効、初期ステータスは `standard`（表示名: `標準`）である。
 6. Firebase Auth のパスワード再設定リンクを出力する。新規ユーザーの場合は一時パスワードも標準出力に出る。
 
 出力されるパスワード再設定リンクと一時パスワードは認証情報です。運用記録に残さず、安全な経路で初期管理者に渡してください。初期管理者はリンクからパスワードを設定します。
@@ -312,7 +312,7 @@ make apply ENV=dev
 - [ ] `organizations`、`organization-accounts`、`organization-settings`、`user-preferences` に想定したドキュメントがある。
 - [ ] 初期管理者がパスワードを設定し、ログイン後に対象組織へアクセスできる。
 - [ ] `organization-accounts/{organizationId}_{uid}` が `role: admin`、初回認証後に `status: active` になっている。
-- [ ] 管理画面で営業時間、料金範囲、相談員ランクなどを組織要件に合わせて設定した。
+- [ ] 管理画面で営業時間、料金範囲、相談員ステータスなどを組織要件に合わせて設定した。
 - [ ] 公開 URL の `/<organizationId>/consultants` と `/<organizationId>/booking` が正しい組織として表示される。
 - [ ] Scheduler を利用する場合、`organization_ids` への追加と Terraform apply が完了し、3 種類のジョブがある。
 - [ ] Secret の値が空でなく、App Hosting の重複 Environment variables がない。

@@ -1,7 +1,7 @@
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
-import { DEFAULT_CONSULTANT_RANK_ID } from "@/domain/organization-settings/consultant-rank";
+import { DEFAULT_CONSULTANT_STATUS_ID } from "@/domain/organization-settings/consultant-status";
 
 interface UpdateProfileInput {
   organizationId: string;
@@ -38,7 +38,7 @@ export class UpdateProfileUseCase {
         consultantId: input.consultantId,
         profile,
         zoomRoomIds: [],
-        rankId: DEFAULT_CONSULTANT_RANK_ID,
+        statusId: DEFAULT_CONSULTANT_STATUS_ID,
       });
     }
 

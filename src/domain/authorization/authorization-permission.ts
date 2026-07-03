@@ -7,7 +7,7 @@ export const AUTHORIZATION_PERMISSIONS = [
   "admin.customers.read",
   "admin.consultants.read",
   "admin.consultants.manage",
-  "admin.consultants.rank.manage",
+  "admin.consultants.status.manage",
   "admin.slots.read",
   "admin.slots.manage",
   "admin.settings.read",
@@ -38,7 +38,7 @@ export const AUTHORIZATION_PERMISSION_LABELS: Record<
   "admin.customers.read": "顧客閲覧",
   "admin.consultants.read": "相談員閲覧",
   "admin.consultants.manage": "相談員管理",
-  "admin.consultants.rank.manage": "相談員ランク管理",
+  "admin.consultants.status.manage": "相談員ステータス管理",
   "admin.slots.read": "予約枠閲覧",
   "admin.slots.manage": "予約枠管理",
   "admin.settings.read": "設定閲覧",
@@ -66,7 +66,7 @@ export const PERMISSION_DEPENDENCIES: Partial<
   "admin.bookings.cancel": ["admin.bookings.read"],
   "admin.payments.charge": ["admin.payments.read"],
   "admin.consultants.manage": ["admin.consultants.read"],
-  "admin.consultants.rank.manage": [
+  "admin.consultants.status.manage": [
     "admin.consultants.read",
     "admin.settings.read",
   ],

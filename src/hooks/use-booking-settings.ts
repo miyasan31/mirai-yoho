@@ -1,8 +1,8 @@
 import {
   useGetAdminBookingSettings,
-  useGetAdminConsultantRanks,
+  useGetAdminConsultantStatuses,
   useUpdateAdminBookingSettings,
-  useUpdateAdminConsultantRanks,
+  useUpdateAdminConsultantStatuses,
 } from "@/generated/api/admin/admin";
 import { useGetPublicSettings } from "@/generated/api/settings/settings";
 import { QUERY_STALE_TIME } from "@/hooks/query-cache-policy";
@@ -31,10 +31,10 @@ export function useAdminBookingSettings() {
   });
 }
 
-export function useAdminConsultantRanks() {
+export function useAdminConsultantStatuses() {
   const { token, hasPermission } = useAuth();
   const { organizationId } = useOrganizationRouting();
-  return useGetAdminConsultantRanks(organizationId ?? "", {
+  return useGetAdminConsultantStatuses(organizationId ?? "", {
     query: {
       enabled:
         !!token && !!organizationId && hasPermission("admin.settings.read"),
@@ -43,4 +43,4 @@ export function useAdminConsultantRanks() {
   });
 }
 
-export { useUpdateAdminBookingSettings, useUpdateAdminConsultantRanks };
+export { useUpdateAdminBookingSettings, useUpdateAdminConsultantStatuses };

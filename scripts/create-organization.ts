@@ -2,7 +2,7 @@ import crypto from "node:crypto";
 import { getAuth } from "firebase-admin/auth";
 import { Timestamp } from "firebase-admin/firestore";
 import { OrganizationRole } from "../src/domain/authorization/organization-role";
-import { createDefaultConsultantRanks } from "../src/domain/organization-settings/consultant-rank";
+import { createDefaultConsultantStatuses } from "../src/domain/organization-settings/consultant-status";
 import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore-collections";
 import { app, db } from "../src/infrastructure/firestore/firestore-customer";
 import { getOrganizationRoleDocId } from "../src/infrastructure/firestore/firestore-organization-role-repository";
@@ -45,7 +45,7 @@ async function main() {
 
   const now = Timestamp.now();
   const accountId = `${organizationId}_${userRecord.uid}`;
-  const defaultConsultantRanks = createDefaultConsultantRanks();
+  const defaultConsultantStatuses = createDefaultConsultantStatuses();
 
   await db.collection(ORGANIZATION_COLLECTION).doc(organizationId).set({
     organizationId,
@@ -89,8 +89,8 @@ async function main() {
     {
       organizationId,
       consultantSelectionEnabled: true,
-      consultantRanks: defaultConsultantRanks,
-      defaultConsultantRankId: defaultConsultantRanks[0].rankId,
+      consultantStatuses: defaultConsultantStatuses,
+      defaultConsultantStatusId: defaultConsultantStatuses[0].statusId,
       createdAt: now,
       updatedAt: now,
     },
