@@ -70,7 +70,7 @@ export default function MypageLayout({ children }: { children: ReactNode }) {
           })}
         </styled.nav>
         <styled.div mt="4" display={{ base: "none", md: "block" }}>
-          <Button variant="ghost" size="sm" onClick={handleSignOut}>
+          <Button variant="plain" size="sm" onClick={handleSignOut}>
             <LogOut size={16} />
             ログアウト
           </Button>
