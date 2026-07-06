@@ -52,6 +52,7 @@ function toDomain(doc: ConsultantDoc): Consultant {
 
 function toFirestore(consultant: Consultant): ConsultantDoc {
   const profile = consultant.getProfile();
+  const imageUrl = profile.getImageUrl();
   return {
     organizationId: consultant.getOrganizationId(),
     consultantId: consultant.getConsultantId(),
@@ -59,7 +60,7 @@ function toFirestore(consultant: Consultant): ConsultantDoc {
     bio: profile.getBio(),
     specialties: [...profile.getSpecialties()],
     phone: profile.getPhone(),
-    imageUrl: profile.getImageUrl(),
+    ...(imageUrl !== undefined && { imageUrl }),
     zoomRoomIds: consultant.getZoomRoomIds(),
     statusId: consultant.getStatusId(),
     isActive: consultant.getIsActive(),
