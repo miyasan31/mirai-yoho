@@ -17,6 +17,7 @@ interface OrganizationAccountDoc {
   role: string;
   status: "active" | "invited" | "disabled";
   createdAt: Timestamp;
+  name?: string;
 }
 
 interface OrganizationDoc {
@@ -130,12 +131,15 @@ export async function loadAuthUser(uid: string): Promise<AuthUser> {
   }));
 
   const currentOrganizationId = accounts[0]?.organizationId ?? null;
+  const currentAccountDoc = accountDocs.find(
+    (doc) => doc.organizationId === currentOrganizationId,
+  );
 
   return {
     uid,
     accounts,
     currentOrganizationId,
-    currentDisplayName: null,
+    currentDisplayName: currentAccountDoc?.name ?? null,
   };
 }
 
@@ -147,8 +151,13 @@ export async function setLastOrganizationId(
 }
 
 export async function setUserDisplayName(
-  _uid: string,
-  _name: string,
+  organizationId: string,
+  uid: string,
+  name: string,
 ): Promise<void> {
-  // 表示名は account.name で管理する
+  const docId = getOrganizationAccountDocId(organizationId, uid);
+  await db
+    .collection(ACCOUNT_COLLECTION)
+    .doc(docId)
+    .set({ name, updatedAt: new Date() }, { merge: true });
 }
