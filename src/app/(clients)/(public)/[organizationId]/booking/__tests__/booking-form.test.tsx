@@ -385,6 +385,11 @@ describe("BookingPage", () => {
     mockSearchParams.set("startsAt", startsAt);
     mockSearchParams.set("endsAt", endsAt);
 
+    // 予約締切（開始15分前）を過ぎないよう、現在時刻を開始前に固定する
+    // shouldAdvanceTime で時計を実時間進行させ、userEvent / waitFor を動作させる
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    vi.setSystemTime(new Date("2026-07-01T09:00:00.000Z"));
+
     const user = userEvent.setup();
     render(<BookingPage />);
 

@@ -74,7 +74,6 @@ import { app, db } from "@/infrastructure/firestore/firestore-customer";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
 import { HmacBookingActionTokenService } from "@/infrastructure/token/booking-action-token-service";
 import { HmacCancelTokenService } from "@/infrastructure/token/cancel-token-service";
-import { chunkArray } from "@/lib/chunk-array";
 import { withNoStore, withPublicShortCache } from "../../../cache-control";
 import { deleteAdminUserWithAuthCleanup } from "./admin-user-deletion";
 import {
@@ -86,7 +85,6 @@ import { logUnexpectedPostError, mapApiError } from "./api-error-mapper";
 import { validateCustomerBirthdate } from "./booking-birthdate-validation";
 
 const ACCOUNT_COLLECTION = FIRESTORE_COLLECTIONS.organizationAccounts;
-const FIRESTORE_IN_QUERY_CHUNK_SIZE = 10;
 const BATCH_CHARGE_COOLDOWN_MS = 60 * 1000;
 const BATCH_CONSULTATION_REMINDER_COOLDOWN_MS = 60 * 1000;
 const BOOKING_ACTION_TOKEN_TTL_MS = 30 * 60 * 1000;
@@ -515,6 +513,7 @@ async function listOrganizationAccounts(organizationId: string) {
       organizationId: string;
       role: string;
       status: string;
+      name?: string;
       createdAt?: Timestamp;
       updatedAt?: Timestamp;
     }),
@@ -539,35 +538,6 @@ async function getOrganizationAccount(
     role: string;
     status: string;
   };
-}
-
-async function getAdminOrOperatorDisplayNameMap(
-  uids: string[],
-): Promise<Map<string, string>> {
-  const uniqueUids = [...new Set(uids)];
-  const nameByUid = new Map<string, string>();
-  if (uniqueUids.length === 0) return nameByUid;
-
-  const snapshots = await Promise.all(
-    chunkArray(uniqueUids, FIRESTORE_IN_QUERY_CHUNK_SIZE).map((uidChunk) =>
-      db
-        .collection(ACCOUNT_COLLECTION)
-        .where("uid", "in", uidChunk)
-        .where("status", "==", "active")
-        .get(),
-    ),
-  );
-
-  for (const snapshot of snapshots) {
-    for (const doc of snapshot.docs) {
-      const data = doc.data() as { uid: string; name?: string };
-      if (!data.name) continue;
-      if (nameByUid.has(data.uid)) continue;
-      nameByUid.set(data.uid, data.name);
-    }
-  }
-
-  return nameByUid;
 }
 
 async function handleGetPublicConsultants(organizationId: string) {
@@ -1260,9 +1230,8 @@ export async function GET(request: NextRequest, context: RouteContext) {
         await listOrganizationAccounts(organizationId)
       ).filter((account) => isAdminPanelUserRole(account.role));
       const accountUids = organizationAccounts.map((account) => account.uid);
-      const [userByUid, nameByUid, roles] = await Promise.all([
+      const [userByUid, roles] = await Promise.all([
         getUsersByUids(accountUids),
-        getAdminOrOperatorDisplayNameMap(accountUids),
         createOrganizationRoleRepository().findByOrganizationId(organizationId),
       ]);
       const roleNameById = new Map(
@@ -1271,7 +1240,7 @@ export async function GET(request: NextRequest, context: RouteContext) {
 
       const accounts = organizationAccounts.map((account) => {
         const userRecord = userByUid.get(account.uid) ?? null;
-        const name = nameByUid.get(account.uid) ?? "";
+        const name = account.name ?? "";
         const createdAtDate = account.createdAt?.toDate() ?? new Date(0);
         const updatedAtDate = account.updatedAt?.toDate() ?? createdAtDate;
 
@@ -1987,6 +1956,7 @@ export async function POST(request: NextRequest, context: RouteContext) {
             uid,
             organizationId,
             role: normalizedRole,
+            name: normalizedDisplayName,
             status: userRecord.metadata.lastSignInTime ? "active" : "invited",
             createdAt: new Date(),
             updatedAt: new Date(),
@@ -2017,8 +1987,6 @@ export async function POST(request: NextRequest, context: RouteContext) {
             }),
           );
         }
-      } else {
-        await setUserDisplayName(uid, normalizedDisplayName);
       }
 
       const passwordResetLink = await generatePasswordResetLink(email);
@@ -2653,7 +2621,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
         return jsonError(400, "VALIDATION_ERROR", "name must not be empty");
       }
 
-      await setUserDisplayName(segments[2], normalizedDisplayName);
+      await setUserDisplayName(
+        organizationId,
+        segments[2],
+        normalizedDisplayName,
+      );
       return NextResponse.json({ success: true });
     }
 
