@@ -376,9 +376,14 @@ describe("BookingPage", () => {
         bookingActionToken: "booking-action-token-2",
       },
     });
+    // カットオフ判定は実時間に依存するため、常に未来になる枠を動的に生成する
+    const startsAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    const endsAt = new Date(
+      Date.now() + 24 * 60 * 60 * 1000 + 30 * 60 * 1000,
+    ).toISOString();
     mockSearchParams.delete("slotId");
-    mockSearchParams.set("startsAt", "2026-07-01T10:00:00.000Z");
-    mockSearchParams.set("endsAt", "2026-07-01T10:30:00.000Z");
+    mockSearchParams.set("startsAt", startsAt);
+    mockSearchParams.set("endsAt", endsAt);
 
     const user = userEvent.setup();
     render(<BookingPage />);
@@ -400,8 +405,8 @@ describe("BookingPage", () => {
         organizationId: "org-test",
         data: expect.objectContaining({
           slotId: undefined,
-          startsAt: "2026-07-01T10:00:00.000Z",
-          endsAt: "2026-07-01T10:30:00.000Z",
+          startsAt,
+          endsAt,
           customerName: "自動割当太郎",
           customerEmail: "auto@example.com",
           customerPhone: "080-0000-0000",
