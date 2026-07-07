@@ -61,6 +61,6 @@
 
 ## 開発メモ
 
-- ローカルは `pnpm dev:api`（:3000）+ `pnpm dev:user`（:5173）+ `pnpm dev:console`（:5174）。API 側 `.env.local` の `CORS_ALLOWED_ORIGINS` に両 SPA のオリジンを入れる。
+- ローカルは `pnpm dev`（3 サービス同時起動）または `pnpm dev:api`（:3000）/ `pnpm dev:user`（:3010）/ `pnpm dev:console`（:3020）。API 側 `.env.local` の `CORS_ALLOWED_ORIGINS` に両 SPA のオリジンを入れる。
 - Panda CSS のテーマは `packages/ui/panda.preset.ts` に集約。各アプリの `panda.config.ts` が preset を読み込み、自アプリ + `packages/ui/src` を include して styled-system を生成する。
 - `styled-system` は各パッケージ内で codegen される生成物（gitignore 済み）。`pnpm generate` で再生成。

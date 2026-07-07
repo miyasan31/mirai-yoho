@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "prepare": "husky && pnpm -r --if-present run generate",
+    "dev": "pnpm -r --parallel run dev",
     "dev:api": "pnpm --filter @mirai-yoho/api dev",
     "dev:user": "pnpm --filter @mirai-yoho/user dev",
     "dev:console": "pnpm --filter @mirai-yoho/console dev",

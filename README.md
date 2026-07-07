@@ -25,9 +25,10 @@
 ```bash
 pnpm install          # 依存インストール（orval / panda codegen も自動実行）
 
+pnpm dev              # 3 サービスを同時起動
 pnpm dev:api          # API サーバー (http://localhost:3000)
-pnpm dev:user         # 顧客向け SPA (http://localhost:5173)
-pnpm dev:console      # コンソール SPA (http://localhost:5174)
+pnpm dev:user         # 顧客向け SPA (http://localhost:3010)
+pnpm dev:console      # コンソール SPA (http://localhost:3020)
 ```
 
 各アプリの環境変数は `apps/*/.env.example` を参照して `.env.local`（api）/ `.env`（user, console）を用意してください。
