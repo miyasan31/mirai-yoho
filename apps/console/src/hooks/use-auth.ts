@@ -58,7 +58,9 @@ export function useAuthState(): AuthState {
   const [isLoading, setIsLoading] = useState(true);
 
   const syncAuthContext = useCallback(async (nextUser: User | null) => {
-    if (!nextUser) {
+    // 匿名ユーザーは顧客向け認証（use-customer-auth）の対象であり、
+    // 組織アカウントを持たないため組織認証コンテキストでは未認証として扱う
+    if (!nextUser || nextUser.isAnonymous) {
       setUser(null);
       setToken(null);
       setAccounts([]);
@@ -116,8 +118,13 @@ export function useAuthState(): AuthState {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      await syncAuthContext(firebaseUser);
-      setIsLoading(false);
+      try {
+        await syncAuthContext(firebaseUser);
+      } catch (error) {
+        console.error("Failed to sync auth context:", error);
+      } finally {
+        setIsLoading(false);
+      }
     });
     return unsubscribe;
   }, [syncAuthContext]);

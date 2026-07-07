@@ -51,7 +51,7 @@ export default function ProfilePage() {
         await signupOrLink({
           displayName: values.displayName,
           birthDate: values.birthDate,
-          primaryEmail: values.primaryEmail,
+          primaryEmail: values.primaryEmail || undefined,
         });
       } else {
         const response = await fetch("/api/customer/me", {

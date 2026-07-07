@@ -42,15 +42,17 @@
 アプリ名: `Mirai Yoho`（開発: `Mirai Yoho Dev`）。ユーザーの同意画面に表示されるため、本番はサービス名そのままにする。
 
 1. [Zoom App Marketplace](https://marketplace.zoom.us/) → Develop → Build App → **General App**（管理タイプは **User-managed**）
-2. Basic Information → OAuth Redirect URL にコールバック URL を登録
-   - ローカル: `http://localhost:3000/api/auth/zoom/callback`
+2. Basic Information → OAuth Redirect URL にコールバック URL を登録（OAuth Allow Lists にも同じ URL を追加）
+   - ローカル: `http://127.0.0.1:3000/api/auth/zoom/callback`
+     - Zoom は HTTPS 必須。ローカルテストの例外は `http://127.0.0.1` / `http://[::1]` のみで、`http://localhost` は登録できない
+     - このため `.env.local` の `ZOOM_USER_OAUTH_REDIRECT_URI` も `127.0.0.1` で設定する（`NEXT_PUBLIC_APP_URL` は `localhost` のままでよい。コールバック後は `NEXT_PUBLIC_APP_URL` にリダイレクトで戻る）
    - 本番: `https://<本番ドメイン>/api/auth/zoom/callback`
 3. Scopes に `user:read` を追加
 4. App Credentials から以下を取得
    - `ZOOM_USER_OAUTH_CLIENT_ID`
    - `ZOOM_USER_OAUTH_CLIENT_SECRET`
 
-`ZOOM_USER_OAUTH_REDIRECT_URI` は任意。未設定なら `NEXT_PUBLIC_APP_URL + /api/auth/zoom/callback` が使われる。いずれの場合も Zoom アプリ側に登録した Redirect URL と完全一致していないと認可エラーになる。
+`ZOOM_USER_OAUTH_REDIRECT_URI` は任意。未設定なら `NEXT_PUBLIC_APP_URL + /api/auth/zoom/callback` が使われる（ローカルは `NEXT_PUBLIC_APP_URL` が `localhost` のため、上記の理由で明示設定が必要）。いずれの場合も Zoom アプリ側に登録した Redirect URL と完全一致していないと認可エラー（4700: 無効なリダイレクト）になる。
 
 ## その他の外部サービス
 

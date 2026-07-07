@@ -3,10 +3,17 @@ import { renderHook, waitFor } from "@testing-library/react";
 
 const mockSendPasswordResetEmail = vi.fn();
 
+type MockAuthUser = {
+  isAnonymous: boolean;
+  getIdTokenResult: () => Promise<{ token: string }>;
+} | null;
+
+let authStateUser: MockAuthUser = null;
+
 vi.mock("firebase/auth", () => ({
   signOut: vi.fn(),
-  onAuthStateChanged: vi.fn((_auth, callback: (user: null) => void) => {
-    callback(null);
+  onAuthStateChanged: vi.fn((_auth, callback: (user: MockAuthUser) => void) => {
+    callback(authStateUser);
     return vi.fn();
   }),
   sendPasswordResetEmail: (...args: unknown[]) =>
@@ -19,6 +26,34 @@ vi.mock("@/lib/firebase", () => ({
 }));
 
 import { useAuthState } from "@/hooks/use-auth";
+
+describe("useAuthState anonymous user", () => {
+  afterEach(() => {
+    authStateUser = null;
+    vi.clearAllMocks();
+    vi.unstubAllGlobals();
+  });
+
+  it("treats anonymous users as signed out without calling /api/auth/me", async () => {
+    const mockFetch = vi.fn();
+    vi.stubGlobal("fetch", mockFetch);
+    authStateUser = {
+      isAnonymous: true,
+      getIdTokenResult: vi.fn().mockResolvedValue({ token: "anon-token" }),
+    };
+
+    const { result } = renderHook(() => useAuthState());
+
+    await waitFor(() => {
+      expect(result.current.isLoading).toBe(false);
+    });
+
+    expect(mockFetch).not.toHaveBeenCalled();
+    expect(result.current.user).toBeNull();
+    expect(result.current.accounts).toEqual([]);
+    expect(result.current.currentOrganizationId).toBeNull();
+  });
+});
 
 describe("useAuthState password reset", () => {
   afterEach(() => {

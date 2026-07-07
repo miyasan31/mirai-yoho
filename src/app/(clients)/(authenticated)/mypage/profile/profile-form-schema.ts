@@ -19,8 +19,16 @@ export const profileFormSchema = v.object({
     v.trim(),
     v.minLength(1, "名前を入力してください"),
   ),
+  // 任意項目のため空文字を許容する（フォームの初期値は "" で undefined にならない）
   primaryEmail: v.optional(
-    v.pipe(v.string(), v.trim(), v.email("メールアドレスの形式が不正です")),
+    v.pipe(
+      v.string(),
+      v.trim(),
+      v.check(
+        (value) => value === "" || v.EMAIL_REGEX.test(value),
+        "メールアドレスの形式が不正です",
+      ),
+    ),
   ),
   birthDate: v.pipe(
     v.string(),
