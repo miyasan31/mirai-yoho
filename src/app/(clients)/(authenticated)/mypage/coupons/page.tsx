@@ -56,8 +56,9 @@ export default function CouponsPage() {
       <Text as="h1" textStyle="2xl" fontWeight="bold">
         クーポン
       </Text>
-      {error && <Text color="fg.error">{error}</Text>}
-      {coupons === null ? (
+      {error ? (
+        <Text color="fg.error">{error}</Text>
+      ) : coupons === null ? (
         <Spinner />
       ) : coupons.length === 0 ? (
         <Text color="fg.muted">受け取り済みのクーポンはありません。</Text>

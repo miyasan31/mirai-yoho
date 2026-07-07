@@ -65,12 +65,16 @@ export class FirestoreUserCouponRepository implements IUserCouponRepository {
   }
 
   async findByUserId(userId: string): Promise<UserCoupon[]> {
+    // orderBy を組み合わせると複合インデックスが必要になるため、メモリ内でソートする
     const snapshot = await db
       .collection(COLLECTION)
       .where("userId", "==", userId)
-      .orderBy("receivedAt", "desc")
       .get();
-    return snapshot.docs.map((doc) => toDomain(doc.data() as UserCouponDoc));
+    return snapshot.docs
+      .map((doc) => toDomain(doc.data() as UserCouponDoc))
+      .sort(
+        (a, b) => b.getReceivedAt().getTime() - a.getReceivedAt().getTime(),
+      );
   }
 
   async findRedeemableByUserId(
