@@ -1,0 +1,28 @@
+{
+  "name": "@mirai-yoho/api-client",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./custom-fetch": "./src/custom-fetch.ts",
+    "./schemas": "./src/generated/schemas/index.ts",
+    "./api/*": "./src/generated/api/*.ts"
+  },
+  "scripts": {
+    "generate": "orval",
+    "tsc": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.95.2",
+    "react": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.95.2",
+    "jsdom": "^29.0.1",
+    "orval": "^8.5.3",
+    "react": "19.2.4",
+    "typescript": "^5",
+    "vitest": "^4.1.1"
+  }
+}

@@ -45,7 +45,7 @@ create-organization:
 	@test -n "$(ORGANIZATION_ID)" || (echo "Error: ORGANIZATION_ID is required. Usage: make create-organization ORGANIZATION_ID=<id> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email>" && exit 1)
 	@test -n "$(ORGANIZATION_NAME)" || (echo "Error: ORGANIZATION_NAME is required. Usage: make create-organization ORGANIZATION_ID=<id> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email>" && exit 1)
 	@test -n "$(ADMIN_EMAIL)" || (echo "Error: ADMIN_EMAIL is required. Usage: make create-organization ORGANIZATION_ID=<id> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email>" && exit 1)
-	pnpm dlx tsx --env-file=$(ENV_FILE) scripts/create-organization.ts $(ORGANIZATION_ID) "$(ORGANIZATION_NAME)" $(ADMIN_EMAIL)
+	pnpm dlx tsx --env-file=$(ENV_FILE) apps/api/scripts/create-organization.ts $(ORGANIZATION_ID) "$(ORGANIZATION_NAME)" $(ADMIN_EMAIL)
 
 # Usage: make create-default-organization-roles ORGANIZATION_ID=<organizationId> [ENV=<local|dev|prod>]
 # Usage: make create-default-organization-roles:dev ORGANIZATION_ID=<id>
@@ -55,7 +55,7 @@ create-default-organization-roles:
 	@test "$(ENV)" = "local" || test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be one of local, dev, prod" && exit 1)
 	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
 	@test -n "$(ORGANIZATION_ID)" || (echo "Error: ORGANIZATION_ID is required. Usage: make create-default-organization-roles ORGANIZATION_ID=<id>" && exit 1)
-	pnpm dlx tsx --env-file=$(ENV_FILE) scripts/create-default-organization-roles.ts $(ORGANIZATION_ID)
+	pnpm dlx tsx --env-file=$(ENV_FILE) apps/api/scripts/create-default-organization-roles.ts $(ORGANIZATION_ID)
 
 # Usage: make seed-slots ORGANIZATION_ID=<organizationId> CONSULTANT_ID=<consultantId> [ENV=<local|dev|prod>]
 # Usage: make seed-slots:dev ORGANIZATION_ID=<id> CONSULTANT_ID=<id>
@@ -66,7 +66,7 @@ seed-slots:
 	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
 	@test -n "$(ORGANIZATION_ID)" || (echo "Error: ORGANIZATION_ID is required. Usage: make seed-slots ORGANIZATION_ID=<id> CONSULTANT_ID=<id>" && exit 1)
 	@test -n "$(CONSULTANT_ID)" || (echo "Error: CONSULTANT_ID is required. Usage: make seed-slots ORGANIZATION_ID=<id> CONSULTANT_ID=<id>" && exit 1)
-	pnpm dlx tsx --env-file=$(ENV_FILE) scripts/seed-slots.ts $(ORGANIZATION_ID) $(CONSULTANT_ID)
+	pnpm dlx tsx --env-file=$(ENV_FILE) apps/api/scripts/seed-slots.ts $(ORGANIZATION_ID) $(CONSULTANT_ID)
 
 # Usage: make delete-slots [ENV=<local|dev|prod>]
 # Usage: make delete-slots:dev
@@ -74,7 +74,7 @@ seed-slots:
 delete-slots:
 	@test "$(ENV)" = "local" || test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be one of local, dev, prod" && exit 1)
 	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
-	pnpm dlx tsx --env-file=$(ENV_FILE) scripts/delete-slots.ts
+	pnpm dlx tsx --env-file=$(ENV_FILE) apps/api/scripts/delete-slots.ts
 
 # ============================================================
 # Firebase App Hosting セットアップ
@@ -82,11 +82,9 @@ delete-slots:
 
 # apphosting.yaml と同じキーセット
 APPHOSTING_SECRET_KEYS = \
-	NEXT_PUBLIC_FIREBASE_API_KEY \
-	NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN \
-	NEXT_PUBLIC_FIREBASE_PROJECT_ID \
-	NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY \
-	NEXT_PUBLIC_APP_URL \
+	API_URL \
+	CONSOLE_APP_URL \
+	CORS_ALLOWED_ORIGINS \
 	STRIPE_SECRET_KEY \
 	STRIPE_WEBHOOK_SECRET \
 	ZOOM_ACCOUNT_ID \
@@ -103,12 +101,9 @@ APPHOSTING_SECRET_KEYS = \
 	LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL \
 	INVOICE_REGISTRATION_NUMBER
 
-PUBLIC_BUILD_SECRET_KEYS = \
-	NEXT_PUBLIC_FIREBASE_API_KEY \
-	NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN \
-	NEXT_PUBLIC_FIREBASE_PROJECT_ID \
-	NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY \
-	NEXT_PUBLIC_APP_URL
+# SPA（apps/user, apps/console）のビルド用公開値は GitHub Actions の vars で管理する。
+# App Hosting のビルド時 secret は不要になった。
+PUBLIC_BUILD_SECRET_KEYS =
 
 BATCH_WORKER_SECRET_KEYS = \
 	FIREBASE_CLIENT_EMAIL \
@@ -118,7 +113,7 @@ BATCH_WORKER_SECRET_KEYS = \
 	RESEND_FROM_EMAIL \
 	STRIPE_SECRET_KEY \
 	LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL \
-	NEXT_PUBLIC_APP_URL
+	CONSOLE_APP_URL
 
 # Usage: make setup-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
 # Usage: make setup-secrets:dev
@@ -166,7 +161,7 @@ setup-apphosting-secrets-from-env-fish:
 	@test "$(ENV)" = "local" || test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be one of local, dev, prod" && exit 1)
 	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
 	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-apphosting-secrets-from-env-fish PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
-	PROJECT="$(PROJECT)" ENV_FILE="$(ENV_FILE)" fish scripts/setup-apphosting-secrets-from-env.fish
+	PROJECT="$(PROJECT)" ENV_FILE="$(ENV_FILE)" fish apps/api/scripts/setup-apphosting-secrets-from-env.fish
 
 # Usage: make setup-batch-worker-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod> [ENV=<local|dev|prod>]
 # Usage: make setup-batch-worker-secrets:dev
@@ -236,7 +231,7 @@ check-secret-value:
 # Usage: make check-public-build-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
 # Usage: make check-public-build-secrets:dev
 # Usage: make check-public-build-secrets:prod
-# NEXT_PUBLIC_* 系の build 用 secret が空でないかを一括確認
+# build 用 secret が空でないかを一括確認（現在は対象なし）
 check-public-build-secrets:
 	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make check-public-build-secrets PROJECT=<project>" && exit 1)
 	@for secret in $(PUBLIC_BUILD_SECRET_KEYS); do \

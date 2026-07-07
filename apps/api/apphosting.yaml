@@ -1,0 +1,65 @@
+runConfig:
+  concurrency: 80
+  cpu: 1
+  memoryMiB: 512
+  minInstances: 0
+  maxInstances: 4
+
+env:
+  # API サーバー自身の URL（Cloud Scheduler の OIDC audience 検証に使用）
+  - variable: API_URL
+    secret: API_URL
+    availability:
+      - RUNTIME
+  # コンソール SPA の URL（通知内のリンク生成に使用）
+  - variable: CONSOLE_APP_URL
+    secret: CONSOLE_APP_URL
+    availability:
+      - RUNTIME
+  # CORS で許可するオリジン（カンマ区切り。user / console SPA のオリジン）
+  - variable: CORS_ALLOWED_ORIGINS
+    secret: CORS_ALLOWED_ORIGINS
+    availability:
+      - RUNTIME
+
+  # Runtime secrets（Cloud Secret Manager 参照）
+  - variable: STRIPE_SECRET_KEY
+    secret: STRIPE_SECRET_KEY
+  - variable: STRIPE_WEBHOOK_SECRET
+    secret: STRIPE_WEBHOOK_SECRET
+  - variable: ZOOM_ACCOUNT_ID
+    secret: ZOOM_ACCOUNT_ID
+  - variable: ZOOM_CLIENT_ID
+    secret: ZOOM_CLIENT_ID
+  - variable: ZOOM_CLIENT_SECRET
+    secret: ZOOM_CLIENT_SECRET
+  - variable: ZOOM_HOST_USER_ID
+    secret: ZOOM_HOST_USER_ID
+  - variable: RESEND_API_KEY
+    secret: RESEND_API_KEY
+  - variable: FIREBASE_CLIENT_EMAIL
+    secret: FIREBASE_CLIENT_EMAIL
+  - variable: FIREBASE_PRIVATE_KEY
+    secret: FIREBASE_PRIVATE_KEY
+  - variable: CANCEL_TOKEN_SECRET
+    secret: CANCEL_TOKEN_SECRET
+  - variable: LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL
+    secret: LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL
+
+  # Runtime secrets（運用値も Secret Manager で管理）
+  - variable: RESEND_FROM_EMAIL
+    secret: RESEND_FROM_EMAIL
+    availability:
+      - RUNTIME
+  - variable: FIREBASE_PROJECT_ID
+    secret: FIREBASE_PROJECT_ID
+    availability:
+      - RUNTIME
+  - variable: FIREBASE_STORAGE_BUCKET
+    secret: FIREBASE_STORAGE_BUCKET
+    availability:
+      - RUNTIME
+  - variable: INVOICE_REGISTRATION_NUMBER
+    secret: INVOICE_REGISTRATION_NUMBER
+    availability:
+      - RUNTIME

@@ -1,0 +1,46 @@
+{
+  "name": "@mirai-yoho/user",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "generate": "panda codegen && tsr generate",
+    "tsc": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.2.2",
+    "@mirai-yoho/api-client": "workspace:*",
+    "@mirai-yoho/shared": "workspace:*",
+    "@mirai-yoho/ui": "workspace:*",
+    "@stripe/react-stripe-js": "^5.6.1",
+    "@stripe/stripe-js": "^8.11.0",
+    "@tanstack/react-query": "^5.95.2",
+    "@tanstack/react-router": "^1.132.0",
+    "date-fns": "^4.1.0",
+    "lucide-react": "^1.0.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-hook-form": "^7.72.0",
+    "valibot": "^1.3.1"
+  },
+  "devDependencies": {
+    "@pandacss/dev": "^1.9.1",
+    "@tanstack/router-cli": "^1.132.0",
+    "@tanstack/router-plugin": "^1.132.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5.0.0",
+    "jsdom": "^29.0.1",
+    "typescript": "^5",
+    "vite": "^7.3.0",
+    "vitest": "^4.1.1"
+  }
+}

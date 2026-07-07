@@ -1,0 +1,256 @@
+import { valibotResolver } from "@hookform/resolvers/valibot";
+import { getGetAdminConsultantsQueryKey } from "@mirai-yoho/api-client/api/admin/admin";
+import { Button } from "@mirai-yoho/ui/components/ui/button";
+import * as Dialog from "@mirai-yoho/ui/components/ui/dialog";
+import * as Field from "@mirai-yoho/ui/components/ui/field";
+import { Input } from "@mirai-yoho/ui/components/ui/input";
+import { Skeleton } from "@mirai-yoho/ui/components/ui/skeleton";
+import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { Textarea } from "@mirai-yoho/ui/components/ui/textarea";
+import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useForm } from "react-hook-form";
+import { styled } from "styled-system/jsx";
+import {
+  useAdminConsultants,
+  useDeleteAdminConsultant,
+  useUpdateAdminConsultant,
+} from "@/hooks/use-admin-consultants";
+import { useAdminConsultantStatuses } from "@/hooks/use-booking-settings";
+import { useOrganizationRouting } from "@/hooks/use-organization-routing";
+import {
+  type ConsultantFormValues,
+  consultantFormSchema,
+} from "./consultant-form-schema";
+
+type ConsultantEditFormProps = {
+  consultantId: string;
+  onCompleted: () => void;
+  onNotFound: () => void;
+};
+
+export function ConsultantEditForm({
+  consultantId,
+  onCompleted,
+  onNotFound,
+}: ConsultantEditFormProps) {
+  const { organizationId } = useOrganizationRouting();
+  const queryCustomer = useQueryClient();
+  const [error, setError] = useState("");
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<ConsultantFormValues>({
+    resolver: valibotResolver(consultantFormSchema),
+    defaultValues: {
+      name: "",
+      bio: "",
+      phone: "",
+      specialties: "",
+      statusId: "",
+    },
+  });
+
+  const { data, isLoading } = useAdminConsultants({
+    page: 1,
+    pageSize: 100,
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  });
+  const { data: statusData, isLoading: isLoadingStatuses } =
+    useAdminConsultantStatuses();
+  const updateConsultant = useUpdateAdminConsultant();
+  const deleteConsultant = useDeleteAdminConsultant();
+  const consultants = data?.data?.consultants ?? [];
+  const statuses = statusData?.data?.consultantStatuses ?? [];
+  const consultant = consultants.find(
+    (item: { consultantId: string }) => item.consultantId === consultantId,
+  );
+
+  useEffect(() => {
+    if (consultant) {
+      reset({
+        name: consultant.name ?? "",
+        bio: consultant.bio ?? "",
+        phone: consultant.phone ?? "",
+        specialties: (consultant.specialties ?? []).join(", "),
+        statusId: consultant.status.statusId,
+      });
+    }
+  }, [consultant, reset]);
+
+  useEffect(() => {
+    if (!isLoading && data && !consultant) {
+      onNotFound();
+    }
+  }, [consultant, data, isLoading, onNotFound]);
+
+  const invalidateConsultants = async () => {
+    if (!organizationId) {
+      return;
+    }
+    await queryCustomer.invalidateQueries({
+      queryKey: getGetAdminConsultantsQueryKey(organizationId),
+    });
+  };
+
+  const onSubmit = async (values: ConsultantFormValues) => {
+    setError("");
+    try {
+      await updateConsultant.mutateAsync({
+        organizationId: organizationId ?? "",
+        id: consultantId,
+        data: {
+          name: values.name,
+          bio: values.bio?.trim() ?? "",
+          phone: values.phone?.trim() ?? "",
+          specialties: (values.specialties ?? "")
+            .split(",")
+            .map((s) => s.trim())
+            .filter(Boolean),
+          statusId: values.statusId,
+        },
+      });
+      await invalidateConsultants();
+      onCompleted();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "保存に失敗しました");
+    }
+  };
+
+  const handleDeactivate = async () => {
+    try {
+      await deleteConsultant.mutateAsync({
+        organizationId: organizationId ?? "",
+        id: consultantId,
+      });
+      await invalidateConsultants();
+      onCompleted();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "無効化に失敗しました");
+    }
+  };
+
+  if (isLoading || isLoadingStatuses) {
+    return (
+      <styled.div display="flex" flexDir="column" gap="4">
+        <styled.div>
+          <Skeleton height="4" width="80px" mb="2" />
+          <Skeleton height="10" rounded="l2" />
+        </styled.div>
+        <styled.div>
+          <Skeleton height="4" width="80px" mb="2" />
+          <Skeleton height="24" rounded="l2" />
+        </styled.div>
+        <styled.div>
+          <Skeleton height="4" width="120px" mb="2" />
+          <Skeleton height="10" rounded="l2" />
+        </styled.div>
+        <styled.div display="flex" gap="2">
+          <Skeleton height="10" width="80px" rounded="l2" />
+          <Skeleton height="10" width="80px" rounded="l2" />
+        </styled.div>
+      </styled.div>
+    );
+  }
+
+  return (
+    <styled.form
+      onSubmit={handleSubmit(onSubmit)}
+      display="flex"
+      flexDir="column"
+      gap="4"
+    >
+      <Field.Root invalid={!!errors.name}>
+        <Field.Label>表示名</Field.Label>
+        <Input id="name" type="text" {...register("name")} />
+        {errors.name && (
+          <Field.ErrorText>{errors.name.message}</Field.ErrorText>
+        )}
+      </Field.Root>
+      <Field.Root>
+        <Field.Label>自己紹介</Field.Label>
+        <Textarea id="bio" {...register("bio")} rows={4} />
+      </Field.Root>
+      <Field.Root invalid={!!errors.phone}>
+        <Field.Label>電話番号</Field.Label>
+        <Input id="phone" type="tel" {...register("phone")} />
+        {errors.phone && (
+          <Field.ErrorText>{errors.phone.message}</Field.ErrorText>
+        )}
+      </Field.Root>
+      <Field.Root>
+        <Field.Label>専門分野（カンマ区切り）</Field.Label>
+        <Input id="specialties" type="text" {...register("specialties")} />
+      </Field.Root>
+      <Field.Root required invalid={!!errors.statusId}>
+        <Field.Label>ステータス</Field.Label>
+        <styled.select
+          id="statusId"
+          minH="10"
+          rounded="l2"
+          border="1px solid"
+          borderColor="border"
+          px="3"
+          {...register("statusId")}
+        >
+          {statuses.map((status) => (
+            <option key={status.statusId} value={status.statusId}>
+              {status.name}
+            </option>
+          ))}
+        </styled.select>
+        {errors.statusId && (
+          <Field.ErrorText>{errors.statusId.message}</Field.ErrorText>
+        )}
+      </Field.Root>
+      {error && <Text color="fg.error">{error}</Text>}
+      <styled.div display="flex" gap="2">
+        <Button
+          type="submit"
+          loading={updateConsultant.isPending}
+          loadingText="保存中..."
+        >
+          保存
+        </Button>
+        <Dialog.Root>
+          <Dialog.Trigger asChild>
+            <Button type="button" variant="outline" colorPalette="red">
+              無効化
+            </Button>
+          </Dialog.Trigger>
+          <Dialog.Backdrop />
+          <Dialog.Positioner>
+            <Dialog.Content>
+              <Dialog.Header>
+                <Dialog.Title>相談員の無効化</Dialog.Title>
+              </Dialog.Header>
+              <Dialog.Body>
+                <Dialog.Description>
+                  この相談員を無効にしますか？この操作は取り消せます。
+                </Dialog.Description>
+              </Dialog.Body>
+              <Dialog.Footer>
+                <styled.div display="flex" gap="2" justifyContent="flex-end">
+                  <Dialog.CloseTrigger asChild>
+                    <Button variant="outline">キャンセル</Button>
+                  </Dialog.CloseTrigger>
+                  <Button
+                    colorPalette="red"
+                    onClick={handleDeactivate}
+                    loading={deleteConsultant.isPending}
+                    loadingText="処理中..."
+                  >
+                    無効化する
+                  </Button>
+                </styled.div>
+              </Dialog.Footer>
+            </Dialog.Content>
+          </Dialog.Positioner>
+        </Dialog.Root>
+      </styled.div>
+    </styled.form>
+  );
+}

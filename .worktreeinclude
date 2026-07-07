@@ -9,7 +9,7 @@
 # 対象は「本流リポジトリには存在するが gitignore で worktree に引き継がれない」
 # ローカル設定ファイル群。node_modules / styled-system は巨大・生成物のため
 # 対象にせず、SessionStart フック (.agents/scripts/setup-worktree.sh) の
-# pnpm install で用意する (prepare 内で panda:build が走り styled-system も生成)。
+# pnpm install で用意する (prepare 内で pnpm generate が走り styled-system / API クライアントも生成)。
 
 # ローカル開発用の秘密値 (APIキー等)。pnpm loadenv のカスケードで読まれる。
 # .env は追跡ファイルなので自動で入る。

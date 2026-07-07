@@ -1,0 +1,19 @@
+{
+  "name": "@mirai-yoho/shared",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./customer-birthdate": "./src/customer-birthdate.ts",
+    "./domain-error": "./src/domain-error.ts",
+    "./business-hours": "./src/business-hours.ts",
+    "./slot-availability": "./src/slot-availability.ts",
+    "./authorization-permission": "./src/authorization-permission.ts"
+  },
+  "scripts": {
+    "tsc": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5"
+  }
+}

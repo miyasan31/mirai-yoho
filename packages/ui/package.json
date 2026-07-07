@@ -1,0 +1,32 @@
+{
+  "name": "@mirai-yoho/ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./preset": "./panda.preset.ts",
+    "./components/*": "./src/components/*.tsx",
+    "./components/ui": "./src/components/ui/index.ts",
+    "./components/ui/*": "./src/components/ui/*.tsx"
+  },
+  "scripts": {
+    "generate": "panda codegen",
+    "tsc": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ark-ui/react": "^5.34.1",
+    "lucide-react": "^1.0.1"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@pandacss/dev": "^1.9.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "typescript": "^5"
+  }
+}
