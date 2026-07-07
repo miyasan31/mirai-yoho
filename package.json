@@ -28,5 +28,6 @@
     "*.{ts,tsx,js,jsx,json,css}": [
       "biome check --write --no-errors-on-unmatched"
     ]
-  }
+  },
+  "packageManager": "pnpm@10.32.1"
 }
