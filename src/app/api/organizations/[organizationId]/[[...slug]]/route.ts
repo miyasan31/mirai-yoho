@@ -1942,6 +1942,19 @@ export async function POST(request: NextRequest, context: RouteContext) {
 
       if (userRecord) {
         uid = userRecord.uid;
+        // 同一組織に既にアカウントがある場合は招待失敗。
+        // 別組織にのみ存在する場合はこの組織への所属を追加する（後続の set で作成）
+        const existingAccount = await getOrganizationAccount(
+          organizationId,
+          uid,
+        );
+        if (existingAccount) {
+          return jsonError(
+            409,
+            "ACCOUNT_ALREADY_EXISTS",
+            "このメールアドレスは既にこの組織に登録されています",
+          );
+        }
       } else {
         uid = await createUser(email, crypto.randomUUID());
         userRecord = await getUser(uid);
