@@ -35,22 +35,22 @@
 - `apps/user`: `VITE_API_URL`, `VITE_STRIPE_PUBLISHABLE_KEY`, `VITE_CONSOLE_APP_URL`
 - `apps/console`: `VITE_API_URL`, `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`
 
+## Terraform が管理するもの（release ブランチ push で自動 apply）
+
+- App Hosting backend の `root_directory = "/apps/api"`（モノレポ対応）
+- Secret Manager の新シークレット `API_URL` / `CONSOLE_APP_URL` / `CORS_ALLOWED_ORIGINS`（作成と IAM。**値の投入は手動**: `make setup-secrets`）
+- SPA 用 Firebase Hosting サイト `{project}-user` / `{project}-console`（`.firebaserc` の targets と一致）
+- batch worker の `CONSOLE_APP_URL` シークレット参照
+- github-deployer の Hosting デプロイ権限（既存の `roles/firebase.admin` でカバー）
+
 ## リリース前に必要な運用作業（コード外）
 
-1. **Secret Manager**: `API_URL` / `CONSOLE_APP_URL` / `CORS_ALLOWED_ORIGINS` を dev/prod 両方に作成（`make setup-secrets`）。旧 `NEXT_PUBLIC_*` シークレットはリリース後に削除可。
-2. **App Hosting backend の rootDir 変更**: 既存 backend の root directory を `apps/api` に変更する（Firebase コンソール → App Hosting → backend 設定）。
-3. **Firebase Hosting サイト作成**（dev/prod 各プロジェクト）:
-   ```bash
-   firebase hosting:sites:create mirai-yoho-dev-user --project mirai-yoho-dev
-   firebase hosting:sites:create mirai-yoho-dev-console --project mirai-yoho-dev
-   # prod も同様
-   ```
-   サイト名は `.firebaserc` の targets と一致させる。
-4. **カスタムドメイン**: Hosting 各サイトに `{hoge}.miraiyohou.com` / `console.miraiyohou.com` を、App Hosting backend に `api.miraiyohou.com` を割り当て、DNS を設定。
-5. **GitHub Environments（dev / prod）の vars 追加**: `API_URL`, `CONSOLE_APP_URL`, `STRIPE_PUBLISHABLE_KEY`, `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`（`GCP_PROJECT_NUMBER` は既存）。
-6. **github-deployer SA へ Hosting デプロイ権限付与**: `roles/firebasehosting.admin` を dev/prod プロジェクトで付与。
-7. **Firebase Auth の Authorized domains** に `console.miraiyohou.com` を追加。
-8. **Stripe / Zoom などの Webhook URL** は API ドメイン（api.miraiyohou.com）に変わるため、ドメイン切替時に Stripe ダッシュボードの webhook endpoint を更新。
+1. **Secret Manager へ値を投入**: Terraform apply 後、`make setup-secrets`（または `make setup-apphosting-secrets-from-env-fish:{dev,prod}`）で `API_URL` / `CONSOLE_APP_URL` / `CORS_ALLOWED_ORIGINS` を含む全キーに値を設定してから App Hosting のロールアウトを実行する。
+2. **GitHub Environments（dev / prod）の vars 追加**: `API_URL`, `CONSOLE_APP_URL`, `STRIPE_PUBLISHABLE_KEY`, `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`（`GCP_PROJECT_NUMBER` は既存）。deploy-hosting.yml のビルドが参照する。
+3. **カスタムドメイン**: Hosting 各サイトに `{hoge}.miraiyohou.com` / `console.miraiyohou.com` を、App Hosting backend に `api.miraiyohou.com` を割り当て、DNS を設定。
+4. **Firebase Auth の Authorized domains** に `console.miraiyohou.com` を追加。
+5. **Stripe / Zoom などの Webhook URL** は API ドメイン（api.miraiyohou.com）に変わるため、ドメイン切替時に Stripe ダッシュボードの webhook endpoint を更新。
+6. **移行完了後のクリーンアップ**: 旧 `NEXT_PUBLIC_*` シークレットを `terraform state rm` + 手動削除（deletion_protection のため Terraform では消せない）。
 
 ## デプロイフロー
 
