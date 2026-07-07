@@ -1,0 +1,20 @@
+{
+  "projects": {
+    "dev": "mirai-yoho-dev",
+    "prod": "mirai-yoho-prod"
+  },
+  "targets": {
+    "mirai-yoho-dev": {
+      "hosting": {
+        "user": ["mirai-yoho-dev-user"],
+        "console": ["mirai-yoho-dev-console"]
+      }
+    },
+    "mirai-yoho-prod": {
+      "hosting": {
+        "user": ["mirai-yoho-prod-user"],
+        "console": ["mirai-yoho-prod-console"]
+      }
+    }
+  }
+}

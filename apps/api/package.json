@@ -1,0 +1,32 @@
+{
+  "name": "@mirai-yoho/api",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "rm -rf .next && next dev",
+    "build": "next build",
+    "start": "next start",
+    "tsc": "tsc --noEmit",
+    "tsc:test": "tsc --noEmit -p tsconfig.test.json",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@mirai-yoho/shared": "workspace:*",
+    "firebase-admin": "^13.7.0",
+    "google-auth-library": "^10.6.2",
+    "next": "16.2.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "resend": "^6.9.4",
+    "stripe": "^20.4.1",
+    "tsx": "^4.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5",
+    "vitest": "^4.1.1"
+  }
+}

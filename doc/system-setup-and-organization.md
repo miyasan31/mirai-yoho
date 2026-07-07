@@ -38,7 +38,7 @@ mise install
 pnpm install
 ```
 
-`pnpm install` 時には Panda CSS と Orval の生成処理も実行されます。生成物の `src/generated/api/` と `src/generated/schemas/` は手で変更しません。
+`pnpm install` 時には Panda CSS と Orval の生成処理も実行されます。生成物の `packages/api-client/src/generated/` は手で変更しません。
 
 ### Firebase / 外部サービスで用意するもの
 

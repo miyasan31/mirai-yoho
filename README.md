@@ -1,42 +1,46 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Arc - 未来予報
+
+オンライン相談・予約サービス。pnpm workspace によるモノレポ構成です。
+
+## 構成
+
+| パッケージ | 役割 | デプロイ先 |
+| --- | --- | --- |
+| `apps/user` | 顧客向け予約 SPA（Vite + TanStack Router、認証なし） | Firebase Hosting（{hoge}.miraiyohou.com） |
+| `apps/console` | 管理者・相談員向けコンソール SPA（Vite + TanStack Router） | Firebase Hosting（console.miraiyohou.com） |
+| `apps/api` | API サーバー（Next.js Route Handlers + DDD 4層） + batch worker | Firebase App Hosting（api.miraiyohou.com）+ Cloud Run Job |
+| `packages/api-client` | OpenAPI（openapi.yaml）+ Orval 生成の React Query hooks | - |
+| `packages/ui` | Panda CSS preset + Park UI / Ark UI ベースの共有 UI | - |
+| `packages/shared` | フロントと API で共有する純粋ロジック | - |
 
 ## 運用ドキュメント
 
 - [システム環境構築・組織作成ガイド](doc/system-setup-and-organization.md)
 - [Firebase App Hosting Secret 運用手順](doc/firebase-app-hosting-secrets.md)
 - [Cloud Scheduler バッチ運用](doc/cloud-scheduler.md)
+- [SPA 分割アーキテクチャと移行手順](doc/spa-split.md)
 
 ## Getting Started
 
-First, run the development server:
-
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install          # 依存インストール（orval / panda codegen も自動実行）
+
+pnpm dev:api          # API サーバー (http://localhost:3000)
+pnpm dev:user         # 顧客向け SPA (http://localhost:5173)
+pnpm dev:console      # コンソール SPA (http://localhost:5174)
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+各アプリの環境変数は `apps/*/.env.example` を参照して `.env.local`（api）/ `.env`（user, console）を用意してください。
+API サーバーの `CORS_ALLOWED_ORIGINS` に SPA のオリジンを含める必要があります。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## よく使うコマンド
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+pnpm build            # 全パッケージのビルド
+pnpm tsc              # 全パッケージの型チェック
+pnpm test             # 全パッケージのテスト
+pnpm lint / lint:fix  # Biome
+pnpm generate         # Orval（API クライアント）+ Panda codegen の再生成
+```
 
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+API エンドポイントを追加・変更したら `packages/api-client/openapi.yaml` を更新して `pnpm generate` を実行してください。

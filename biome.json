@@ -10,11 +10,12 @@
     "includes": [
       "**",
       "!node_modules",
-      "!.next",
-      "!dist",
-      "!build",
-      "!src/generated/api",
-      "!src/generated/schemas"
+      "!**/.next",
+      "!**/dist",
+      "!**/build",
+      "!**/styled-system",
+      "!**/routeTree.gen.ts",
+      "!packages/api-client/src/generated"
     ]
   },
   "formatter": {

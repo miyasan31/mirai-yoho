@@ -1,0 +1,7 @@
+# リポジトリルートをビルドコンテキストとして実行する:
+#   gcloud builds submit --config=apps/api/cloudbuild.worker.yaml ...
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: ["build", "-f", "apps/api/Dockerfile.worker", "-t", "${_IMAGE}", "."]
+images:
+  - "${_IMAGE}"

@@ -1,0 +1,10 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "styled-system/*": ["./styled-system/*"]
+    }
+  },
+  "include": ["src", "styled-system", "panda.preset.ts", "panda.config.ts"]
+}
