@@ -35,12 +35,12 @@ function NotFound() {
             <Link to="/">トップへ戻る</Link>
           </Button>
           <Button asChild variant="outline">
-            <a href={`${envClient.consoleAppUrl}/admin/login`}>
+            <a href={`${envClient.adminAppUrl}/admin/login`}>
               管理者ログインへ
             </a>
           </Button>
           <Button asChild variant="outline">
-            <a href={`${envClient.consoleAppUrl}/consultant/login`}>
+            <a href={`${envClient.consultantAppUrl}/consultant/login`}>
               相談員ログインへ
             </a>
           </Button>

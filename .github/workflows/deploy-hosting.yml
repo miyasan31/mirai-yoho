@@ -26,10 +26,18 @@ jobs:
         run: pnpm --filter @mirai-yoho/user run build
         env:
           VITE_API_URL: ${{ vars.API_URL }}
-          VITE_CONSOLE_APP_URL: ${{ vars.CONSOLE_APP_URL }}
+          VITE_ADMIN_APP_URL: ${{ vars.ADMIN_APP_URL }}
+          VITE_CONSULTANT_APP_URL: ${{ vars.CONSULTANT_APP_URL }}
           VITE_STRIPE_PUBLISHABLE_KEY: ${{ vars.STRIPE_PUBLISHABLE_KEY }}
-      - name: Build console SPA
-        run: pnpm --filter @mirai-yoho/console run build
+      - name: Build admin SPA
+        run: pnpm --filter @mirai-yoho/admin run build
+        env:
+          VITE_API_URL: ${{ vars.API_URL }}
+          VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.FIREBASE_PROJECT_ID }}
+      - name: Build consultant SPA
+        run: pnpm --filter @mirai-yoho/consultant run build
         env:
           VITE_API_URL: ${{ vars.API_URL }}
           VITE_FIREBASE_API_KEY: ${{ vars.FIREBASE_API_KEY }}
@@ -42,6 +50,6 @@ jobs:
       - name: Deploy to Firebase Hosting
         run: |
           pnpm dlx firebase-tools deploy \
-            --only hosting:user,hosting:console \
+            --only hosting:user,hosting:admin,hosting:consultant \
             --project "$PROJECT_ID" \
             --non-interactive

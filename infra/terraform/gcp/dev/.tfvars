@@ -12,6 +12,9 @@ firebase_storage_bucket_name = "mirai-yoho-dev.firebasestorage.app"
 firebase_storage_location    = "US-EAST1"
 firebase_storage_cors_origins = [
   "http://localhost:3000",
+  "https://admin.dev.console.miraiyohou.com",
+  "https://consultant.dev.console.miraiyohou.com",
+  # 旧コンソール。カットオーバー完了後に削除。
   "https://dev.console.miraiyohou.com",
 ]
 
@@ -26,6 +29,9 @@ developer_connect_oauth_token_secret_version = "projects/mirai-yoho-dev/secrets/
 github_app_installation_id                   = "121530488"
 
 authorized_domains = [
+  "admin.dev.console.miraiyohou.com",
+  "consultant.dev.console.miraiyohou.com",
+  # 旧コンソール。カットオーバー完了後に削除。
   "dev.console.miraiyohou.com",
   "localhost",
   "mirai-yoho--mirai-yoho-dev.asia-east1.hosted.app",
