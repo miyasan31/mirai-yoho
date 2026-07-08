@@ -1,9 +1,11 @@
+import { createListCollection } from "@ark-ui/react/select";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { getGetAdminConsultantsQueryKey } from "@mirai-yoho/api-client/api/admin/admin";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Dialog from "@mirai-yoho/ui/components/ui/dialog";
 import * as Field from "@mirai-yoho/ui/components/ui/field";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
+import * as Select from "@mirai-yoho/ui/components/ui/select";
 import { Skeleton } from "@mirai-yoho/ui/components/ui/skeleton";
 import { Textarea } from "@mirai-yoho/ui/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
@@ -39,6 +41,8 @@ export function ConsultantEditForm({
     register,
     handleSubmit,
     reset,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<ConsultantFormValues>({
     resolver: valibotResolver(consultantFormSchema),
@@ -63,6 +67,13 @@ export function ConsultantEditForm({
   const deleteConsultant = useDeleteAdminConsultant();
   const consultants = data?.data?.consultants ?? [];
   const statuses = statusData?.data?.consultantStatuses ?? [];
+  const statusCollection = createListCollection({
+    items: statuses.map((status) => ({
+      label: status.name,
+      value: status.statusId,
+    })),
+  });
+  const statusId = watch("statusId");
   const consultant = consultants.find(
     (item: { consultantId: string }) => item.consultantId === consultantId,
   );
@@ -183,22 +194,33 @@ export function ConsultantEditForm({
         <Input id="specialties" type="text" {...register("specialties")} />
       </Field.Root>
       <Field.Root required invalid={!!errors.statusId}>
-        <Field.Label>ステータス</Field.Label>
-        <styled.select
-          id="statusId"
-          minH="10"
-          rounded="l2"
-          border="1px solid"
-          borderColor="border"
-          px="3"
-          {...register("statusId")}
+        <Select.Root
+          collection={statusCollection}
+          value={statusId ? [statusId] : []}
+          onValueChange={(details) =>
+            setValue("statusId", details.value[0] ?? "", {
+              shouldValidate: true,
+            })
+          }
         >
-          {statuses.map((status) => (
-            <option key={status.statusId} value={status.statusId}>
-              {status.name}
-            </option>
-          ))}
-        </styled.select>
+          <Select.Label>ステータス</Select.Label>
+          <Select.Control>
+            <Select.Trigger>
+              <Select.ValueText placeholder="ステータスを選択" />
+              <Select.Indicator />
+            </Select.Trigger>
+          </Select.Control>
+          <Select.Positioner>
+            <Select.Content>
+              {statusCollection.items.map((item) => (
+                <Select.Item key={item.value} item={item}>
+                  <Select.ItemText>{item.label}</Select.ItemText>
+                  <Select.ItemIndicator />
+                </Select.Item>
+              ))}
+            </Select.Content>
+          </Select.Positioner>
+        </Select.Root>
         {errors.statusId && (
           <Field.ErrorText>{errors.statusId.message}</Field.ErrorText>
         )}
