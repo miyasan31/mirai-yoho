@@ -1,5 +1,7 @@
 name: Terraform plan
 
+# Workload Identity の attribute_condition が release/dev・release/prod の
+# ref のみ許可しているため、Run workflow では release ブランチを選ぶこと。
 on:
   workflow_dispatch:
     inputs:
@@ -14,10 +16,6 @@ on:
         description: Worker image URI for TF_VAR_worker_image (default = currently deployed image)
         required: false
         type: string
-  pull_request:
-    paths:
-      - .github/workflows/terraform-plan.yml
-      - infra/terraform/**
 
 permissions:
   contents: read
