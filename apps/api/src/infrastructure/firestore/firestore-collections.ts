@@ -10,4 +10,7 @@ export const FIRESTORE_COLLECTIONS = {
   payments: "payments",
   slots: "slots",
   zoomSessions: "zoom-sessions",
+  users: "users",
+  userZoomCredentials: "user-zoom-credentials",
+  userCoupons: "user-coupons",
 } as const;

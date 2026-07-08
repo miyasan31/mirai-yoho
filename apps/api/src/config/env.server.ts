@@ -51,11 +51,32 @@ export const envServer = {
   get consoleAppUrl(): string {
     return requireServerEnv("CONSOLE_APP_URL");
   },
+  get userAppUrl(): string {
+    return requireServerEnv("USER_APP_URL");
+  },
   get corsAllowedOrigins(): string[] {
     return (process.env.CORS_ALLOWED_ORIGINS ?? "")
       .split(",")
       .map((origin) => origin.trim().replace(/\/$/, ""))
       .filter((origin) => origin.length > 0);
+  },
+  get zoomUserOAuthClientId(): string {
+    return requireServerEnv("ZOOM_USER_OAUTH_CLIENT_ID");
+  },
+  get zoomUserOAuthClientSecret(): string {
+    return requireServerEnv("ZOOM_USER_OAUTH_CLIENT_SECRET");
+  },
+  get zoomUserOAuthRedirectUri(): string {
+    return (
+      process.env.ZOOM_USER_OAUTH_REDIRECT_URI ??
+      `${requireServerEnv("API_URL")}/api/auth/zoom/callback`
+    );
+  },
+  get zoomOAuthStateSecret(): string {
+    return requireServerEnv("ZOOM_OAUTH_STATE_SECRET");
+  },
+  get zoomCredentialEncryptionKey(): string {
+    return requireServerEnv("ZOOM_CREDENTIAL_ENCRYPTION_KEY");
   },
   get firebaseProjectId(): string | undefined {
     return process.env.FIREBASE_PROJECT_ID;

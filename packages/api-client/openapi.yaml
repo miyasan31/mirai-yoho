@@ -8,6 +8,184 @@ servers:
   - url: /api
 
 paths:
+  /customer/me:
+    get:
+      operationId: getCustomerMe
+      summary: 顧客プロフィール取得
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CustomerProfile"
+        "404":
+          description: 未登録（サインアップ前）
+    patch:
+      operationId: updateCustomerProfile
+      summary: 顧客プロフィール更新
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [displayName, birthDate]
+              properties:
+                displayName:
+                  type: string
+                primaryEmail:
+                  type: string
+                birthDate:
+                  type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+    delete:
+      operationId: withdrawCustomer
+      summary: 顧客退会
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
+  /customer/me/signup:
+    post:
+      operationId: signupCustomer
+      summary: 顧客会員登録（匿名 / Google 連携）
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [displayName, birthDate]
+              properties:
+                displayName:
+                  type: string
+                birthDate:
+                  type: string
+                primaryEmail:
+                  type: string
+                providerUid:
+                  type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [userId, isNew]
+                properties:
+                  userId:
+                    type: string
+                  isNew:
+                    type: boolean
+  /customer/me/coupons:
+    get:
+      operationId: getCustomerCoupons
+      summary: 顧客の受け取り済みクーポン一覧
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [coupons]
+                properties:
+                  coupons:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CustomerCoupon"
+  /organizations/{organizationId}/customers/me/bookings:
+    get:
+      operationId: getCustomerBookings
+      summary: 顧客の予約履歴取得
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [bookings]
+                properties:
+                  bookings:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/CustomerBooking"
+  /auth/zoom/authorize:
+    post:
+      operationId: createZoomAuthorizeUrl
+      summary: Zoom 連携の認可 URL を発行
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [url]
+                properties:
+                  url:
+                    type: string
+  /auth/zoom/revoke:
+    post:
+      operationId: revokeZoomConnection
+      summary: Zoom 連携を解除
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                properties:
+                  ok:
+                    type: boolean
   /organizations/{organizationId}/consultants:
     get:
       operationId: getConsultants
@@ -1209,6 +1387,119 @@ components:
       scheme: bearer
 
   schemas:
+    CustomerProfile:
+      type: object
+      required:
+        [
+          userId,
+          authUid,
+          displayName,
+          primaryEmail,
+          birthDate,
+          status,
+          authProviders,
+          hasActiveZoomConnection,
+          zoomEmail,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        userId:
+          type: string
+        authUid:
+          type: string
+        displayName:
+          type: string
+        primaryEmail:
+          type: string
+          nullable: true
+        birthDate:
+          type: string
+        status:
+          type: string
+          enum: [active, withdrawn]
+        authProviders:
+          type: array
+          items:
+            $ref: "#/components/schemas/CustomerAuthProviderLink"
+        hasActiveZoomConnection:
+          type: boolean
+        zoomEmail:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+        updatedAt:
+          type: string
+    CustomerAuthProviderLink:
+      type: object
+      required: [providerId, linkedAt]
+      properties:
+        providerId:
+          type: string
+        linkedAt:
+          type: string
+    CustomerCoupon:
+      type: object
+      required:
+        [
+          userCouponId,
+          couponId,
+          organizationId,
+          receivedAt,
+          expiresAt,
+          redeemedAt,
+          isRedeemable,
+        ]
+      properties:
+        userCouponId:
+          type: string
+        couponId:
+          type: string
+        organizationId:
+          type: string
+          nullable: true
+        receivedAt:
+          type: string
+        expiresAt:
+          type: string
+          nullable: true
+        redeemedAt:
+          type: string
+          nullable: true
+        isRedeemable:
+          type: boolean
+    CustomerBooking:
+      type: object
+      required:
+        [
+          bookingId,
+          status,
+          startsAt,
+          consultantId,
+          joinUrl,
+          pricePlanName,
+          pricePlanTotalJPY,
+        ]
+      properties:
+        bookingId:
+          type: string
+        status:
+          type: string
+          enum: [pending, confirmed, completed, cancelled]
+        startsAt:
+          type: string
+        consultantId:
+          type: string
+        joinUrl:
+          type: string
+          nullable: true
+        pricePlanName:
+          type: string
+          nullable: true
+        pricePlanTotalJPY:
+          type: number
+          nullable: true
     AdminAccount:
       type: object
       required: [uid, email, name, role, roleName, status, createdAt, updatedAt]

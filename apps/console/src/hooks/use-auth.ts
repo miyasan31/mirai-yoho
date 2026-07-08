@@ -116,8 +116,13 @@ export function useAuthState(): AuthState {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      await syncAuthContext(firebaseUser);
-      setIsLoading(false);
+      try {
+        await syncAuthContext(firebaseUser);
+      } catch (error) {
+        console.error("Failed to sync auth context:", error);
+      } finally {
+        setIsLoading(false);
+      }
     });
     return unsubscribe;
   }, [syncAuthContext]);

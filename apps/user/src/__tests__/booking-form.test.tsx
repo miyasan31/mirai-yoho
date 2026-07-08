@@ -12,6 +12,17 @@ vi.mock("@tanstack/react-router", () => ({
     useParams: () => ({ organizationId: "org-test" }),
   }),
   useNavigate: () => mockNavigate,
+  useRouterState: <T,>({
+    select,
+  }: {
+    select: (state: { location: { href: string; pathname: string } }) => T;
+  }) =>
+    select({
+      location: {
+        href: "/org-test/booking?slotId=slot-1",
+        pathname: "/org-test/booking",
+      },
+    }),
   Link: ({
     to,
     children,
@@ -77,6 +88,7 @@ vi.mock("styled-system/jsx", () => {
 
 vi.mock("styled-system/recipes", () => ({
   tooltip: () => ({}),
+  spinner: () => ({}),
 }));
 
 vi.mock("@mirai-yoho/ui/components/empty-state", () => ({
@@ -122,6 +134,27 @@ vi.mock("@mirai-yoho/ui/components/ui/field", () => ({
 vi.mock("lucide-react", () => ({
   ArrowLeft: () => <span>ArrowLeft</span>,
   CalendarX: () => <span>CalendarX</span>,
+  LogIn: () => <span>LogIn</span>,
+  Video: () => <span>Video</span>,
+}));
+
+vi.mock("@/hooks/use-customer-auth", () => ({
+  useCustomerAuth: () => ({
+    user: { uid: "auth-uid-1" },
+    token: "test-token",
+    profile: null,
+    isSignedUp: true,
+    isAnonymous: false,
+    hasGoogleProvider: true,
+    hasActiveZoomConnection: true,
+    isLoading: false,
+    signInAnonymously: vi.fn(),
+    signInWithGoogle: vi.fn(),
+    linkGoogleAccount: vi.fn(),
+    signupOrLink: vi.fn(),
+    refreshProfile: vi.fn(),
+    signOut: vi.fn(),
+  }),
 }));
 
 vi.mock("@mirai-yoho/ui/components/ui/input", () => ({

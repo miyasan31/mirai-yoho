@@ -69,3 +69,7 @@ export async function getUsersByUids(
 export async function deleteUser(uid: string): Promise<void> {
   await auth.deleteUser(uid);
 }
+
+export async function disableUser(uid: string): Promise<void> {
+  await auth.updateUser(uid, { disabled: true });
+}

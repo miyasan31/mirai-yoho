@@ -3,10 +3,16 @@ import { renderHook, waitFor } from "@testing-library/react";
 
 const mockSendPasswordResetEmail = vi.fn();
 
+type MockAuthUser = {
+  getIdTokenResult: () => Promise<{ token: string }>;
+} | null;
+
+const authStateUser: MockAuthUser = null;
+
 vi.mock("firebase/auth", () => ({
   signOut: vi.fn(),
-  onAuthStateChanged: vi.fn((_auth, callback: (user: null) => void) => {
-    callback(null);
+  onAuthStateChanged: vi.fn((_auth, callback: (user: MockAuthUser) => void) => {
+    callback(authStateUser);
     return vi.fn();
   }),
   sendPasswordResetEmail: (...args: unknown[]) =>

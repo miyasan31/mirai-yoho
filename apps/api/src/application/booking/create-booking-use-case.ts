@@ -19,11 +19,13 @@ import { OrganizationSettings } from "@/domain/organization-settings/organizatio
 import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
 import type { Slot } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
+import type { IUserRepository } from "@/domain/user/user-repository";
 import { ZoomDailySession } from "@/domain/zoom-session/zoom-daily-session";
 import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
 
 interface CreateBookingInput {
   organizationId: string;
+  userId: string;
   slotId?: string;
   startsAt?: Date;
   endsAt?: Date;
@@ -72,23 +74,46 @@ export class CreateBookingUseCase {
     private readonly consultantRepository: IConsultantRepository,
     private readonly consultantPricePlanRepository: IConsultantPricePlanRepository,
     private readonly organizationSettingsRepository: IOrganizationSettingsRepository,
+    private readonly userRepository: IUserRepository,
   ) {}
 
   async execute(input: CreateBookingInput): Promise<CreateBookingOutput> {
+    const user = await this.userRepository.findById(input.userId);
+    if (!user || !user.isActive()) {
+      throw new AppError(404, "USER_NOT_FOUND", "User not found or withdrawn");
+    }
+    if (!user.hasActiveZoomConnection()) {
+      throw new AppError(
+        409,
+        "ZOOM_NOT_CONNECTED",
+        "Zoom connection is required to book a session",
+      );
+    }
+    const zoomEmail = user.getZoomEmail();
+    if (!zoomEmail) {
+      throw new AppError(
+        409,
+        "ZOOM_NOT_CONNECTED",
+        "Zoom connection is required to book a session",
+      );
+    }
+
     const { slot, pricePlan } = await this.resolveSlotAndPricePlan(input);
 
     const bookingId = crypto.randomUUID();
     slot.reserve(bookingId);
 
-    const existingCustomer = await this.customerRepository.findByEmail(
-      input.organizationId,
-      input.customerEmail,
-    );
+    const existingCustomer =
+      await this.customerRepository.findByUserIdAndOrganizationId(
+        input.userId,
+        input.organizationId,
+      );
     const customer =
       existingCustomer ??
       Customer.create({
         organizationId: input.organizationId,
         customerId: crypto.randomUUID(),
+        userId: input.userId,
         name: input.customerName,
         email: input.customerEmail,
         phone: input.customerPhone,
@@ -141,7 +166,7 @@ export class CreateBookingUseCase {
         session.assignParticipant(
           slot.getConsultantId(),
           consultantName,
-          input.customerEmail,
+          zoomEmail,
         );
         await this.zoomService.updateBreakoutRooms({
           meetingId: session.getZoomMeetingId(),
@@ -156,7 +181,7 @@ export class CreateBookingUseCase {
         session.assignParticipant(
           slot.getConsultantId(),
           consultantName,
-          input.customerEmail,
+          zoomEmail,
         );
         const { meetingId, joinUrl } =
           await this.zoomService.createDailyMeeting({

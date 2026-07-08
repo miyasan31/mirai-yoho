@@ -20,6 +20,11 @@ import type { IOrganizationSettingsRepository } from "@/domain/organization-sett
 import { Slot } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import { TimeRange } from "@/domain/slot/time-range";
+import { AuthProvider } from "@/domain/user/auth-provider";
+import { BirthDate } from "@/domain/user/birth-date";
+import { User } from "@/domain/user/user";
+import type { IUserRepository } from "@/domain/user/user-repository";
+import { UserZoomConnection } from "@/domain/user/user-zoom-connection";
 import type { ZoomDailySession } from "@/domain/zoom-session/zoom-daily-session";
 import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
 
@@ -143,6 +148,27 @@ class InMemoryCustomerRepository implements ICustomerRepository {
     );
   }
 
+  async findByEmailAcrossOrganizations(email: string): Promise<Customer[]> {
+    return this.customers.filter((customer) => customer.getEmail() === email);
+  }
+
+  async findByUserId(userId: string): Promise<Customer[]> {
+    return this.customers.filter((customer) => customer.getUserId() === userId);
+  }
+
+  async findByUserIdAndOrganizationId(
+    userId: string,
+    organizationId: string,
+  ): Promise<Customer | null> {
+    return (
+      this.customers.find(
+        (customer) =>
+          customer.getUserId() === userId &&
+          customer.getOrganizationId() === organizationId,
+      ) ?? null
+    );
+  }
+
   async findAll(_organizationId: string): Promise<Customer[]> {
     return this.customers;
   }
@@ -181,6 +207,15 @@ class InMemoryBookingRepository implements IBookingRepository {
   ): Promise<Booking[]> {
     return this.bookings.filter(
       (booking) => booking.getConsultantId() === consultantId,
+    );
+  }
+
+  async findByCustomerId(
+    _organizationId: string,
+    customerId: string,
+  ): Promise<Booking[]> {
+    return this.bookings.filter(
+      (booking) => booking.getCustomerId() === customerId,
     );
   }
 
@@ -322,6 +357,66 @@ class InMemoryOrganizationSettingsRepository
   async save(_settings: OrganizationSettings): Promise<void> {}
 }
 
+const TEST_USER_ID = "user-1";
+const TEST_AUTH_UID = "auth-1";
+const TEST_ZOOM_EMAIL = "taro.zoom@example.com";
+
+class InMemoryUserRepository implements IUserRepository {
+  public readonly users: User[] = [];
+
+  async findById(userId: string): Promise<User | null> {
+    return this.users.find((u) => u.getUserId() === userId) ?? null;
+  }
+
+  async findByAuthUid(authUid: string): Promise<User | null> {
+    return this.users.find((u) => u.getAuthUid() === authUid) ?? null;
+  }
+
+  async findByPrimaryEmail(email: string): Promise<User | null> {
+    return this.users.find((u) => u.getPrimaryEmail() === email) ?? null;
+  }
+
+  async save(user: User): Promise<void> {
+    const index = this.users.findIndex(
+      (u) => u.getUserId() === user.getUserId(),
+    );
+    if (index >= 0) {
+      this.users[index] = user;
+    } else {
+      this.users.push(user);
+    }
+  }
+}
+
+function createBookingTestUser(): User {
+  const user = User.reconstruct({
+    userId: TEST_USER_ID,
+    authUid: TEST_AUTH_UID,
+    authProviders: [
+      AuthProvider.create({
+        providerId: "anonymous",
+        linkedAt: new Date("2026-03-01T00:00:00.000Z"),
+      }),
+    ],
+    displayName: "山田太郎",
+    primaryEmail: undefined,
+    birthDate: BirthDate.reconstruct("1990-01-01"),
+    status: "active",
+    zoomConnection: UserZoomConnection.create({
+      zoomUserId: "zoom-user-1",
+      zoomEmail: TEST_ZOOM_EMAIL,
+      accessTokenCipher: "cipher",
+      refreshTokenCipher: "cipher",
+      accessTokenExpiresAt: new Date("2099-01-01T00:00:00Z"),
+      scopes: ["user:read"],
+      connectedAt: new Date("2026-03-01T00:00:00.000Z"),
+    }),
+    createdAt: new Date("2026-03-01T00:00:00.000Z"),
+    updatedAt: new Date("2026-03-01T00:00:00.000Z"),
+  });
+  return user;
+}
+
 function createPricePlan(consultantId: string) {
   return ConsultantPricePlan.create({
     organizationId: ORGANIZATION_ID,
@@ -380,6 +475,9 @@ function createUseCase(
     sendPasswordReset: vi.fn().mockResolvedValue(undefined),
   };
 
+  const userRepository = new InMemoryUserRepository();
+  userRepository.users.push(createBookingTestUser());
+
   return {
     useCase: new CreateBookingUseCase(
       slotRepository,
@@ -392,9 +490,11 @@ function createUseCase(
       consultantRepository,
       consultantPricePlanRepository,
       new InMemoryOrganizationSettingsRepository(),
+      userRepository,
     ),
     bookingRepository,
     customerRepository,
+    userRepository,
   };
 }
 
@@ -432,6 +532,7 @@ describe("CreateBookingUseCase", () => {
 
     await useCase.execute({
       organizationId: ORGANIZATION_ID,
+      userId: TEST_USER_ID,
       startsAt: new Date("2026-05-01T10:00:00.000Z"),
       endsAt: new Date("2026-05-01T10:30:00.000Z"),
       customerName: "山田太郎",
@@ -465,6 +566,7 @@ describe("CreateBookingUseCase", () => {
 
     await useCase.execute({
       organizationId: ORGANIZATION_ID,
+      userId: TEST_USER_ID,
       startsAt: new Date("2026-05-01T10:00:00.000Z"),
       endsAt: new Date("2026-05-01T10:30:00.000Z"),
       customerName: "山田太郎",
@@ -491,6 +593,7 @@ describe("CreateBookingUseCase", () => {
 
     await useCase.execute({
       organizationId: ORGANIZATION_ID,
+      userId: TEST_USER_ID,
       slotId: "slot-1",
       customerName: "山田太郎",
       customerEmail: "taro@example.com",
@@ -510,6 +613,7 @@ describe("CreateBookingUseCase", () => {
     await expect(
       useCase.execute({
         organizationId: ORGANIZATION_ID,
+        userId: TEST_USER_ID,
         startsAt: new Date("2026-05-01T10:00:00.000Z"),
         endsAt: new Date("2026-05-01T10:30:00.000Z"),
         customerName: "山田太郎",
@@ -537,6 +641,7 @@ describe("CreateBookingUseCase", () => {
     await expect(
       useCase.execute({
         organizationId: ORGANIZATION_ID,
+        userId: TEST_USER_ID,
         slotId: "slot-1",
         customerName: "山田太郎",
         customerEmail: "taro@example.com",
@@ -563,6 +668,7 @@ describe("CreateBookingUseCase", () => {
     await expect(
       useCase.execute({
         organizationId: ORGANIZATION_ID,
+        userId: TEST_USER_ID,
         slotId: "slot-1",
         customerName: "山田太郎",
         customerEmail: "taro@example.com",
@@ -589,6 +695,7 @@ describe("CreateBookingUseCase", () => {
     await expect(
       useCase.execute({
         organizationId: ORGANIZATION_ID,
+        userId: TEST_USER_ID,
         startsAt: new Date("2026-05-01T10:00:00.000Z"),
         endsAt: new Date("2026-05-01T10:30:00.000Z"),
         customerName: "山田太郎",
@@ -622,6 +729,7 @@ describe("CreateBookingUseCase", () => {
     await expect(
       useCase.execute({
         organizationId: ORGANIZATION_ID,
+        userId: TEST_USER_ID,
         slotId: "slot-1",
         customerName: "山田太郎",
         customerEmail: "taro@example.com",
@@ -664,6 +772,7 @@ describe("CreateBookingUseCase", () => {
     await expect(
       useCase.execute({
         organizationId: ORGANIZATION_ID,
+        userId: TEST_USER_ID,
         slotId: "slot-1",
         customerName: "山田太郎",
         customerEmail: "taro@example.com",
@@ -692,6 +801,7 @@ describe("CreateBookingUseCase", () => {
     customerRepository.customers.push(
       Customer.create({
         organizationId: ORGANIZATION_ID,
+        userId: TEST_USER_ID,
         customerId: "customer-1",
         name: "既存太郎",
         email: "taro@example.com",
@@ -702,6 +812,7 @@ describe("CreateBookingUseCase", () => {
 
     await useCase.execute({
       organizationId: ORGANIZATION_ID,
+      userId: TEST_USER_ID,
       slotId: "slot-1",
       customerName: "山田太郎",
       customerEmail: "taro@example.com",

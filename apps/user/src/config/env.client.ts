@@ -21,4 +21,22 @@ export const envClient = {
       "VITE_CONSOLE_APP_URL",
     );
   },
+  get firebaseApiKey(): string {
+    return requireClientEnv(
+      import.meta.env.VITE_FIREBASE_API_KEY,
+      "VITE_FIREBASE_API_KEY",
+    );
+  },
+  get firebaseAuthDomain(): string {
+    return requireClientEnv(
+      import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+      "VITE_FIREBASE_AUTH_DOMAIN",
+    );
+  },
+  get firebaseProjectId(): string {
+    return requireClientEnv(
+      import.meta.env.VITE_FIREBASE_PROJECT_ID,
+      "VITE_FIREBASE_PROJECT_ID",
+    );
+  },
 };
