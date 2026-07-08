@@ -5,7 +5,6 @@ import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { Link } from "@tanstack/react-router";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { useAuth } from "@/hooks/use-auth";
@@ -14,12 +13,8 @@ import {
   passwordResetFormSchema,
 } from "./password-reset-form-schema";
 
-const SUCCESS_MESSAGE =
-  "該当メールアドレスにパスワード再設定リンクを送信しました。メールをご確認ください。";
-
 export default function AdminPasswordResetPage() {
   const { sendPasswordResetEmail } = useAuth();
-  const [isSubmitted, setIsSubmitted] = useState(false);
   const {
     register,
     handleSubmit,
@@ -34,7 +29,11 @@ export default function AdminPasswordResetPage() {
   const onSubmit = async (values: PasswordResetFormValues) => {
     try {
       await sendPasswordResetEmail(values.email);
-      setIsSubmitted(true);
+      toaster.create({
+        type: "success",
+        title:
+          "該当メールアドレスにパスワード再設定リンクを送信しました。メールをご確認ください。",
+      });
     } catch (submitError) {
       toaster.create({
         type: "error",
@@ -82,7 +81,6 @@ export default function AdminPasswordResetPage() {
             <Field.ErrorText>{errors.email.message}</Field.ErrorText>
           )}
         </Field.Root>
-        {isSubmitted && <Text>{SUCCESS_MESSAGE}</Text>}
         <Button type="submit" loading={isSubmitting} loadingText="送信中...">
           再設定メールを送信
         </Button>
