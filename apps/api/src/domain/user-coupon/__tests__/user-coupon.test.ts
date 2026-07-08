@@ -1,4 +1,4 @@
-import { DomainError } from "@/domain/shared/domain-error";
+import { DomainError } from "@mirai-yoho/shared/domain-error";
 import { UserCoupon } from "@/domain/user-coupon/user-coupon";
 
 describe("UserCoupon", () => {

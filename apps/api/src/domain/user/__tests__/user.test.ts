@@ -1,4 +1,4 @@
-import { DomainError } from "@/domain/shared/domain-error";
+import { DomainError } from "@mirai-yoho/shared/domain-error";
 import { AuthProvider } from "@/domain/user/auth-provider";
 import { BirthDate } from "@/domain/user/birth-date";
 import { User } from "@/domain/user/user";

@@ -1,4 +1,4 @@
-import { DomainError } from "@/domain/shared/domain-error";
+import { DomainError } from "@mirai-yoho/shared/domain-error";
 
 const VALID_PROVIDER_IDS = ["anonymous", "google.com", "line"] as const;
 export type AuthProviderId = (typeof VALID_PROVIDER_IDS)[number];

@@ -1,8 +1,8 @@
+import { DomainError } from "@mirai-yoho/shared/domain-error";
 import { NextResponse } from "next/server";
 import * as v from "valibot";
 import { AppError } from "@/application/shared/app-error";
 import { envServer } from "@/config/env.server";
-import { DomainError } from "@/domain/shared/domain-error";
 import { createReceiveCouponUseCase } from "@/infrastructure/container";
 import { withNoStore } from "../../../cache-control";
 

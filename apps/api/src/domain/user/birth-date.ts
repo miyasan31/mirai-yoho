@@ -1,4 +1,4 @@
-import { DomainError } from "@/domain/shared/domain-error";
+import { DomainError } from "@mirai-yoho/shared/domain-error";
 
 const MIN_AGE_YEARS = 18;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;

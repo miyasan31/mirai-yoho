@@ -1,7 +1,7 @@
+import { DomainError } from "@mirai-yoho/shared/domain-error";
 import { NextResponse } from "next/server";
 import * as v from "valibot";
 import { AppError } from "@/application/shared/app-error";
-import { DomainError } from "@/domain/shared/domain-error";
 import { AuthError } from "@/infrastructure/auth/verify-auth";
 import { verifyCustomerAuth } from "@/infrastructure/auth/verify-customer-auth";
 import {

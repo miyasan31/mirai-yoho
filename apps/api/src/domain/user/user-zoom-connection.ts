@@ -1,4 +1,4 @@
-import { DomainError } from "@/domain/shared/domain-error";
+import { DomainError } from "@mirai-yoho/shared/domain-error";
 
 interface UserZoomConnectionCreateProps {
   zoomUserId: string;

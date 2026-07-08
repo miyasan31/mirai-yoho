@@ -18,7 +18,10 @@ export async function GET(request: Request) {
   const error = requestUrl.searchParams.get("error");
 
   if (error || !code || !state) {
-    return redirect(`${FAILURE_PATH}&reason=missing_params`, envServer.appUrl);
+    return redirect(
+      `${FAILURE_PATH}&reason=missing_params`,
+      envServer.userAppUrl,
+    );
   }
 
   let authUid: string;
@@ -29,7 +32,10 @@ export async function GET(request: Request) {
     });
     authUid = verified.authUid;
   } catch {
-    return redirect(`${FAILURE_PATH}&reason=invalid_state`, envServer.appUrl);
+    return redirect(
+      `${FAILURE_PATH}&reason=invalid_state`,
+      envServer.userAppUrl,
+    );
   }
 
   try {
@@ -38,8 +44,11 @@ export async function GET(request: Request) {
       code,
       redirectUri: envServer.zoomUserOAuthRedirectUri,
     });
-    return redirect(SUCCESS_PATH, envServer.appUrl);
+    return redirect(SUCCESS_PATH, envServer.userAppUrl);
   } catch {
-    return redirect(`${FAILURE_PATH}&reason=exchange_failed`, envServer.appUrl);
+    return redirect(
+      `${FAILURE_PATH}&reason=exchange_failed`,
+      envServer.userAppUrl,
+    );
   }
 }

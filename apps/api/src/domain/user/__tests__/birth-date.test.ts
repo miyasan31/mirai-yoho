@@ -1,4 +1,4 @@
-import { DomainError } from "@/domain/shared/domain-error";
+import { DomainError } from "@mirai-yoho/shared/domain-error";
 import { BirthDate } from "@/domain/user/birth-date";
 
 const REFERENCE_DATE = new Date("2026-07-01T00:00:00Z");

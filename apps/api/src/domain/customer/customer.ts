@@ -1,5 +1,5 @@
+import { DomainError } from "@mirai-yoho/shared/domain-error";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
-import { DomainError } from "@/domain/shared/domain-error";
 
 interface CustomerCreateProps {
   organizationId: string;

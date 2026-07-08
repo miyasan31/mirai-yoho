@@ -51,6 +51,9 @@ export const envServer = {
   get consoleAppUrl(): string {
     return requireServerEnv("CONSOLE_APP_URL");
   },
+  get userAppUrl(): string {
+    return requireServerEnv("USER_APP_URL");
+  },
   get corsAllowedOrigins(): string[] {
     return (process.env.CORS_ALLOWED_ORIGINS ?? "")
       .split(",")
@@ -66,7 +69,7 @@ export const envServer = {
   get zoomUserOAuthRedirectUri(): string {
     return (
       process.env.ZOOM_USER_OAUTH_REDIRECT_URI ??
-      `${requireServerEnv("NEXT_PUBLIC_APP_URL")}/api/auth/zoom/callback`
+      `${requireServerEnv("API_URL")}/api/auth/zoom/callback`
     );
   },
   get zoomOAuthStateSecret(): string {

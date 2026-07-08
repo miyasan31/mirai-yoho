@@ -1,5 +1,5 @@
+import { DomainError } from "@mirai-yoho/shared/domain-error";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
-import { DomainError } from "@/domain/shared/domain-error";
 import { AuthProvider } from "@/domain/user/auth-provider";
 import type { BirthDate } from "@/domain/user/birth-date";
 import { UserWithdrawnEvent } from "@/domain/user/user-withdrawn-event";
