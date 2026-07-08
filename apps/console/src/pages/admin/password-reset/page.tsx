@@ -3,6 +3,7 @@ import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Field from "@mirai-yoho/ui/components/ui/field";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
@@ -18,7 +19,6 @@ const SUCCESS_MESSAGE =
 
 export default function AdminPasswordResetPage() {
   const { sendPasswordResetEmail } = useAuth();
-  const [error, setError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const {
@@ -37,18 +37,19 @@ export default function AdminPasswordResetPage() {
       return;
     }
 
-    setError("");
     setIsSubmitting(true);
 
     try {
       await sendPasswordResetEmail(values.email);
       setIsSubmitted(true);
     } catch (submitError) {
-      const nextError =
-        submitError instanceof Error
-          ? submitError.message
-          : "メール送信に失敗しました。時間をおいて再度お試しください。";
-      setError(nextError);
+      toaster.create({
+        type: "error",
+        title:
+          submitError instanceof Error
+            ? submitError.message
+            : "メール送信に失敗しました。時間をおいて再度お試しください。",
+      });
     } finally {
       setIsSubmitting(false);
     }
@@ -90,7 +91,6 @@ export default function AdminPasswordResetPage() {
             <Field.ErrorText>{errors.email.message}</Field.ErrorText>
           )}
         </Field.Root>
-        {error && <Text color="fg.error">{error}</Text>}
         {isSubmitted && <Text>{SUCCESS_MESSAGE}</Text>}
         <Button type="submit" loading={isSubmitting} loadingText="送信中...">
           再設定メールを送信

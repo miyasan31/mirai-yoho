@@ -1,6 +1,7 @@
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Spinner } from "@mirai-yoho/ui/components/ui/spinner";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import {
   createFileRoute,
   Link,
@@ -30,7 +31,6 @@ function MypageLayout() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const [authError, setAuthError] = useState("");
   const [busy, setBusy] = useState(false);
 
   if (isLoading) {
@@ -48,14 +48,15 @@ function MypageLayout() {
 
   if (!user) {
     const startGoogle = async () => {
-      setAuthError("");
       setBusy(true);
       try {
         await signInWithGoogle();
       } catch (error) {
-        setAuthError(
-          error instanceof Error ? error.message : "ログインに失敗しました",
-        );
+        toaster.create({
+          type: "error",
+          title:
+            error instanceof Error ? error.message : "ログインに失敗しました",
+        });
       } finally {
         setBusy(false);
       }
@@ -76,7 +77,6 @@ function MypageLayout() {
             マイページのご利用にはログインが必要です
           </Text>
         </styled.div>
-        {authError && <Text color="fg.error">{authError}</Text>}
         <Button onClick={startGoogle} loading={busy}>
           Google アカウントでログイン
         </Button>

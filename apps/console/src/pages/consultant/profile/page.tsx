@@ -1,6 +1,7 @@
 /* biome-ignore-all lint: requested temporary file-level suppression */
 import { FileUpload } from "@ark-ui/react/file-upload";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { ApiResponseError } from "@mirai-yoho/api-client/custom-fetch";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Field from "@mirai-yoho/ui/components/ui/field";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
@@ -62,7 +63,6 @@ export default function ConsultantProfilePage() {
     undefined,
   );
   const [avatarWarning, setAvatarWarning] = useState("");
-  const [avatarError, setAvatarError] = useState("");
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const {
     register,
@@ -105,15 +105,20 @@ export default function ConsultantProfilePage() {
 
   const uploadAvatarFile = async (file: File) => {
     if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-      setAvatarError("画像は JPG / PNG / WebP のみアップロードできます");
+      toaster.create({
+        type: "error",
+        title: "画像は JPG / PNG / WebP のみアップロードできます",
+      });
       return;
     }
     if (file.size > AVATAR_MAX_FILE_SIZE) {
-      setAvatarError("画像サイズは 5MB 以下にしてください");
+      toaster.create({
+        type: "error",
+        title: "画像サイズは 5MB 以下にしてください",
+      });
       return;
     }
 
-    setAvatarError("");
     setAvatarWarning("");
     setIsUploadingAvatar(true);
     try {
@@ -161,8 +166,14 @@ export default function ConsultantProfilePage() {
       setValue("imageUrl", publishResponse.data.imageUrl, {
         shouldDirty: true,
       });
-    } catch {
-      setAvatarError("アバター画像のアップロードに失敗しました");
+    } catch (error) {
+      // API エラーは custom-fetch の toaster で表示される
+      if (!(error instanceof ApiResponseError)) {
+        toaster.create({
+          type: "error",
+          title: "アバター画像のアップロードに失敗しました",
+        });
+      }
     } finally {
       setIsUploadingAvatar(false);
     }
@@ -355,9 +366,6 @@ export default function ConsultantProfilePage() {
             ) : null}
             {isUploadingAvatar ? (
               <Field.HelperText>アバター画像を保存中...</Field.HelperText>
-            ) : null}
-            {avatarError ? (
-              <Field.ErrorText>{avatarError}</Field.ErrorText>
             ) : null}
           </Field.Root>
           <Button

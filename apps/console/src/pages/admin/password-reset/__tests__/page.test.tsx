@@ -8,6 +8,13 @@ import {
 } from "@testing-library/react";
 
 const mockSendPasswordResetEmail = vi.fn();
+const mockToasterCreate = vi.fn();
+
+vi.mock("@mirai-yoho/ui/components/ui/toast", () => ({
+  toaster: {
+    create: (...args: unknown[]) => mockToasterCreate(...args),
+  },
+}));
 
 vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => ({
@@ -112,7 +119,7 @@ describe("AdminPasswordResetPage", () => {
     });
   });
 
-  it("shows error message when sending fails", async () => {
+  it("shows error toast when sending fails", async () => {
     mockSendPasswordResetEmail.mockRejectedValueOnce(
       new Error("メール送信に失敗しました。時間をおいて再度お試しください。"),
     );
@@ -125,11 +132,10 @@ describe("AdminPasswordResetPage", () => {
     fireEvent.click(screen.getByText("再設定メールを送信"));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(
-          "メール送信に失敗しました。時間をおいて再度お試しください。",
-        ),
-      ).toBeDefined();
+      expect(mockToasterCreate).toHaveBeenCalledWith({
+        type: "error",
+        title: "メール送信に失敗しました。時間をおいて再度お試しください。",
+      });
     });
   });
 

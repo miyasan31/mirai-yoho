@@ -3,9 +3,9 @@ import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Field from "@mirai-yoho/ui/components/ui/field";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { useAuth } from "@/hooks/use-auth";
@@ -14,7 +14,6 @@ import { type LoginFormValues, loginFormSchema } from "./login-form-schema";
 export default function AdminLoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
-  const [error, setError] = useState("");
   const {
     register,
     handleSubmit,
@@ -28,7 +27,6 @@ export default function AdminLoginPage() {
   });
 
   const onSubmit = async (values: LoginFormValues) => {
-    setError("");
     try {
       const result = await signIn(values.email, values.password);
       if (!result.currentOrganizationId) {
@@ -42,7 +40,7 @@ export default function AdminLoginPage() {
         params: { organizationId: result.currentOrganizationId },
       });
     } catch {
-      setError("ログインに失敗しました");
+      toaster.create({ type: "error", title: "ログインに失敗しました" });
     }
   };
 
@@ -86,7 +84,6 @@ export default function AdminLoginPage() {
             <Field.ErrorText>{errors.password.message}</Field.ErrorText>
           )}
         </Field.Root>
-        {error && <Text color="fg.error">{error}</Text>}
         <Button type="submit">ログイン</Button>
       </styled.form>
       <styled.div display="flex" justifyContent="center" mt="3">

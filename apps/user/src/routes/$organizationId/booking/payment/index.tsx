@@ -3,6 +3,7 @@ import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import { RadioGroup } from "@mirai-yoho/ui/components/ui";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import {
   Elements,
   PaymentElement,
@@ -11,7 +12,7 @@ import {
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { createFileRoute } from "@tanstack/react-router";
-import { CircleX, FileQuestion } from "lucide-react";
+import { FileQuestion } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
@@ -44,28 +45,6 @@ export const Route = createFileRoute("/$organizationId/booking/payment/")({
   component: PaymentPage,
 });
 
-function ErrorMessage({ message }: { message: string }) {
-  return (
-    <styled.div
-      display="flex"
-      alignItems="center"
-      gap="2"
-      p="3"
-      bg="red.50"
-      rounded="l2"
-    >
-      <CircleX
-        size={16}
-        color="var(--colors-red-500)"
-        style={{ flexShrink: 0 }}
-      />
-      <Text textStyle="sm" color="red.700">
-        {message}
-      </Text>
-    </styled.div>
-  );
-}
-
 function CheckoutForm({
   bookingId,
   mode,
@@ -78,7 +57,6 @@ function CheckoutForm({
   const stripe = useStripe();
   const elements = useElements();
   const [isProcessing, setIsProcessing] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string>();
   const { handleSubmit } = useForm<CheckoutFormValues>({
     resolver: valibotResolver(checkoutFormSchema),
   });
@@ -87,7 +65,6 @@ function CheckoutForm({
     if (!stripe || !elements) return;
 
     setIsProcessing(true);
-    setErrorMessage(undefined);
 
     const returnUrl = `${window.location.origin}/${organizationId}/booking/complete?bookingId=${bookingId}&mode=${mode}`;
 
@@ -103,7 +80,10 @@ function CheckoutForm({
           });
 
     if (result.error) {
-      setErrorMessage(result.error.message);
+      toaster.create({
+        type: "error",
+        title: result.error.message ?? "決済処理に失敗しました",
+      });
       setIsProcessing(false);
     }
   };
@@ -116,8 +96,6 @@ function CheckoutForm({
       gap="6"
     >
       <PaymentElement />
-
-      {errorMessage && <ErrorMessage message={errorMessage} />}
 
       <Button
         type="submit"
@@ -145,13 +123,11 @@ function PaymentMethodSelector({
   const [clientSecret, setClientSecret] = useState<string>();
   const [mode, setMode] = useState<PaymentMode>();
   const [isLoading, setIsLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string>();
 
   const setupPayment = useSetupPayment();
 
   const handleSetupPayment = async () => {
     setIsLoading(true);
-    setErrorMessage(undefined);
 
     try {
       const result = await setupPayment.mutateAsync({
@@ -164,10 +140,8 @@ function PaymentMethodSelector({
       });
       setClientSecret(result.data.customerSecret);
       setMode(result.data.mode);
-    } catch (error) {
-      setErrorMessage(
-        error instanceof Error ? error.message : "エラーが発生しました",
-      );
+    } catch {
+      // エラーは custom-fetch の toaster で表示される
     } finally {
       setIsLoading(false);
     }
@@ -227,8 +201,6 @@ function PaymentMethodSelector({
           </RadioGroup.Item>
         ))}
       </RadioGroup.Root>
-
-      {errorMessage && <ErrorMessage message={errorMessage} />}
 
       <Button
         onClick={handleSetupPayment}

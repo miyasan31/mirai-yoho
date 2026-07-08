@@ -4,7 +4,7 @@ import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Dialog from "@mirai-yoho/ui/components/ui/dialog";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { createFileRoute } from "@tanstack/react-router";
-import { CheckCircle, CircleX, ShieldX } from "lucide-react";
+import { CheckCircle, ShieldX } from "lucide-react";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
 import { useCancelBooking } from "@/hooks/use-booking";
@@ -26,7 +26,6 @@ function CancelPage() {
   const [status, setStatus] = useState<
     "idle" | "loading" | "success" | "error"
   >("idle");
-  const [errorMessage, setErrorMessage] = useState<string>();
 
   const cancelBooking = useCancelBooking();
 
@@ -53,10 +52,8 @@ function CancelPage() {
         data: { cancelledBy: "customer", token } satisfies CancelBookingBody,
       });
       setStatus("success");
-    } catch (e) {
-      setErrorMessage(
-        e instanceof Error ? e.message : "キャンセルに失敗しました",
-      );
+    } catch {
+      // エラーは custom-fetch の toaster で表示される
       setStatus("error");
     }
   };
@@ -87,28 +84,6 @@ function CancelPage() {
       <Text color="fg.muted" mb="8">
         予約をキャンセルしますか？この操作は取り消せません。
       </Text>
-
-      {errorMessage && (
-        <styled.div
-          display="flex"
-          alignItems="center"
-          justifyContent="center"
-          gap="2"
-          p="3"
-          mb="4"
-          bg="red.50"
-          rounded="l2"
-        >
-          <CircleX
-            size={16}
-            color="var(--colors-red-500)"
-            style={{ flexShrink: 0 }}
-          />
-          <Text textStyle="sm" color="red.700">
-            {errorMessage}
-          </Text>
-        </styled.div>
-      )}
 
       <Dialog.Root>
         <Dialog.Trigger asChild>

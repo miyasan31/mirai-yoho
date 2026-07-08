@@ -1,11 +1,12 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { updateCustomerProfile } from "@mirai-yoho/api-client/api/customer/customer";
+import { ApiResponseError } from "@mirai-yoho/api-client/custom-fetch";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Field from "@mirai-yoho/ui/components/ui/field";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
@@ -36,9 +37,6 @@ function ProfilePage() {
     linkGoogleAccount,
     refreshProfile,
   } = useCustomerAuth();
-  const [submitError, setSubmitError] = useState<string>("");
-  const [submitSuccess, setSubmitSuccess] = useState<string>("");
-  const [linkError, setLinkError] = useState<string>("");
 
   const {
     register,
@@ -54,8 +52,6 @@ function ProfilePage() {
   });
 
   const onSubmit = async (values: ProfileFormValues) => {
-    setSubmitError("");
-    setSubmitSuccess("");
     try {
       if (!isSignedUp) {
         await signupOrLink({
@@ -71,16 +67,19 @@ function ProfilePage() {
         });
         await refreshProfile();
       }
-      setSubmitSuccess("プロフィールを保存しました");
+      toaster.create({ type: "success", title: "プロフィールを保存しました" });
     } catch (error) {
-      setSubmitError(
-        error instanceof Error ? error.message : "保存に失敗しました",
-      );
+      // API エラーは custom-fetch の toaster で表示される
+      if (!(error instanceof ApiResponseError)) {
+        toaster.create({
+          type: "error",
+          title: error instanceof Error ? error.message : "保存に失敗しました",
+        });
+      }
     }
   };
 
   const onLinkGoogle = async () => {
-    setLinkError("");
     try {
       const linkedUser = await linkGoogleAccount();
       const googleData = linkedUser.providerData.find(
@@ -97,9 +96,13 @@ function ProfilePage() {
       });
       await refreshProfile();
     } catch (error) {
-      setLinkError(
-        error instanceof Error ? error.message : "連携に失敗しました",
-      );
+      // API エラーは custom-fetch の toaster で表示される
+      if (!(error instanceof ApiResponseError)) {
+        toaster.create({
+          type: "error",
+          title: error instanceof Error ? error.message : "連携に失敗しました",
+        });
+      }
     }
   };
 
@@ -154,9 +157,6 @@ function ProfilePage() {
           )}
         </Field.Root>
 
-        {submitError && <Text color="fg.error">{submitError}</Text>}
-        {submitSuccess && <Text color="fg.success">{submitSuccess}</Text>}
-
         <Button type="submit" loading={isSubmitting}>
           {isSignedUp ? "更新する" : "登録する"}
         </Button>
@@ -176,7 +176,6 @@ function ProfilePage() {
           <Text textStyle="sm" color="fg.muted">
             連携すると別の端末からもログインしてご利用いただけます。
           </Text>
-          {linkError && <Text color="fg.error">{linkError}</Text>}
           <Button variant="outline" onClick={onLinkGoogle}>
             Google で連携する
           </Button>

@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 
+vi.mock("@mirai-yoho/ui/components/ui/toast", () => ({
+  toaster: {
+    create: vi.fn(),
+  },
+}));
+
 vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => ({
     signIn: vi.fn(),

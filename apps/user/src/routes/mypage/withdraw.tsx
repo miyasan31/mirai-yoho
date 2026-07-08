@@ -1,8 +1,10 @@
 import { withdrawCustomer } from "@mirai-yoho/api-client/api/customer/customer";
+import { ApiResponseError } from "@mirai-yoho/api-client/custom-fetch";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Field from "@mirai-yoho/ui/components/ui/field";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
@@ -16,20 +18,19 @@ function WithdrawPage() {
   const { profile, signOut } = useCustomerAuth();
   const navigate = useNavigate();
   const [confirmation, setConfirmation] = useState("");
-  const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
   const targetText = profile?.primaryEmail ?? profile?.displayName ?? "";
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setError("");
     if (!confirmation || confirmation !== targetText) {
-      setError(
-        profile?.primaryEmail
+      toaster.create({
+        type: "error",
+        title: profile?.primaryEmail
           ? "確認のためメールアドレスを正しく入力してください"
           : "確認のためお名前を正しく入力してください",
-      );
+      });
       return;
     }
     setBusy(true);
@@ -38,7 +39,13 @@ function WithdrawPage() {
       await signOut();
       navigate({ to: "/" });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "退会に失敗しました");
+      // API エラーは custom-fetch の toaster で表示される
+      if (!(e instanceof ApiResponseError)) {
+        toaster.create({
+          type: "error",
+          title: e instanceof Error ? e.message : "退会に失敗しました",
+        });
+      }
     } finally {
       setBusy(false);
     }
@@ -77,7 +84,7 @@ function WithdrawPage() {
       </styled.section>
 
       <styled.form onSubmit={onSubmit} display="flex" flexDir="column" gap="4">
-        <Field.Root invalid={!!error}>
+        <Field.Root>
           <Field.Label>
             {profile?.primaryEmail
               ? `確認のためメールアドレス（${profile.primaryEmail}）を入力してください`
@@ -88,7 +95,6 @@ function WithdrawPage() {
             onChange={(e) => setConfirmation(e.target.value)}
             placeholder={targetText}
           />
-          {error && <Field.ErrorText>{error}</Field.ErrorText>}
         </Field.Root>
         <Button
           type="submit"
