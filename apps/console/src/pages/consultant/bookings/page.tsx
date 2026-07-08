@@ -99,7 +99,7 @@ export default function ConsultantBookingsPage() {
             予約一覧
           </Text>
           <Text textStyle="sm" color="fg.muted">
-            担当予約の日時・ステータスを確認し、Zoom参加やメモ編集へ進む画面です。
+            担当予約の日時・ステータスを確認し、Zoom参加や鑑定メモ編集へ進む画面です。
           </Text>
         </styled.div>
         <TableSkeleton columns={6} rows={5} />
@@ -114,7 +114,7 @@ export default function ConsultantBookingsPage() {
           予約一覧
         </Text>
         <Text textStyle="sm" color="fg.muted">
-          担当予約の日時・ステータスを確認し、Zoom参加やメモ編集へ進む画面です。
+          担当予約の日時・ステータスを確認し、Zoom参加や鑑定メモ編集へ進む画面です。
         </Text>
       </styled.div>
 
@@ -191,7 +191,7 @@ export default function ConsultantBookingsPage() {
                     />
                   </Table.Cell>
                   <Table.Cell>
-                    <Tooltip content="メモ編集" showArrow>
+                    <Tooltip content="鑑定メモ編集" showArrow>
                       <IconButton variant="subtle" size="sm" asChild>
                         <Link
                           to={buildPath(

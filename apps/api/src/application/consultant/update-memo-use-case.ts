@@ -6,7 +6,10 @@ interface UpdateMemoInput {
   organizationId: string;
   bookingId: string;
   consultantId: string;
-  memo: string;
+  customerName: string;
+  birthDate: string;
+  appraisalDate: string;
+  freeMemo: string;
 }
 
 export class UpdateMemoUseCase {
@@ -25,7 +28,14 @@ export class UpdateMemoUseCase {
       throw new DomainError("FORBIDDEN", "You do not own this booking");
     }
 
-    booking.updateMemo(ConsultantMemo.create(input.memo));
+    booking.updateMemo(
+      ConsultantMemo.create({
+        customerName: input.customerName,
+        birthDate: input.birthDate,
+        appraisalDate: input.appraisalDate,
+        freeMemo: input.freeMemo,
+      }),
+    );
     await this.bookingRepository.save(booking);
   }
 }

@@ -45,7 +45,7 @@ function createBooking(
     joinUrl: ZoomUrl.reconstruct("https://zoom.us/j/123"),
     consultantJoinedAt: overrides.consultantJoinedAt,
     lateArrivalAlertSentAt: overrides.lateArrivalAlertSentAt,
-    consultantMemo: ConsultantMemo.reconstruct(""),
+    consultantMemo: ConsultantMemo.empty(),
     createdAt: new Date("2026-04-01T00:00:00.000Z"),
     updatedAt: new Date("2026-04-01T00:00:00.000Z"),
   });

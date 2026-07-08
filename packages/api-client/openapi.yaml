@@ -532,7 +532,7 @@ paths:
   /organizations/{organizationId}/consultant/bookings/{id}/memo:
     patch:
       operationId: updateConsultantMemo
-      summary: 相談員メモ更新
+      summary: 鑑定メモ更新
       tags: [consultant]
       security:
         - bearerAuth: []
@@ -545,10 +545,20 @@ paths:
           application/json:
             schema:
               type: object
-              required: [memo]
+              required: [customerName, birthDate, appraisalDate, freeMemo]
               properties:
-                memo:
+                customerName:
                   type: string
+                  description: お名前
+                birthDate:
+                  type: string
+                  description: 生年月日（YYYY-MM-DD、未入力は空文字）
+                appraisalDate:
+                  type: string
+                  description: 鑑定日（YYYY-MM-DD、未入力は空文字）
+                freeMemo:
+                  type: string
+                  description: フリーメモ
       responses:
         "200":
           description: OK
@@ -1816,6 +1826,16 @@ components:
           nullable: true
         consultantMemo:
           type: string
+          description: 鑑定メモのフリーメモ
+        memoCustomerName:
+          type: string
+          description: 鑑定メモのお名前
+        memoBirthDate:
+          type: string
+          description: 鑑定メモの生年月日（YYYY-MM-DD、未入力は空文字）
+        memoAppraisalDate:
+          type: string
+          description: 鑑定メモの鑑定日（YYYY-MM-DD、未入力は空文字）
         consultationContent:
           type: string
           nullable: true

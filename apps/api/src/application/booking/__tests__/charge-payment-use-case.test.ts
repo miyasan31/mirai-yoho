@@ -138,7 +138,12 @@ function createConfirmedBooking(startsAt: string): Booking {
     consultantId: "consultant-1",
     slotId: "slot-1",
     startsAt: new Date(startsAt),
-    consultantMemo: ConsultantMemo.create("memo"),
+    consultantMemo: ConsultantMemo.create({
+      customerName: "",
+      birthDate: "",
+      appraisalDate: "",
+      freeMemo: "memo",
+    }),
     pricePlanId: "plan-1",
     pricePlanName: "通常鑑定",
     pricePlanTotalJPY: 5500,

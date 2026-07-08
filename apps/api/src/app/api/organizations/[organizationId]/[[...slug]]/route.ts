@@ -950,7 +950,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
               b.getConsultantJoinedAt()?.toISOString() ?? null,
             lateArrivalAlertSentAt:
               b.getLateArrivalAlertSentAt()?.toISOString() ?? null,
-            consultantMemo: b.getConsultantMemo().getValue(),
+            consultantMemo: b.getConsultantMemo().getFreeMemo(),
+            memoCustomerName: b.getConsultantMemo().getCustomerName(),
+            memoBirthDate: b.getConsultantMemo().getBirthDate(),
+            memoAppraisalDate: b.getConsultantMemo().getAppraisalDate(),
             consultationContent: b.getConsultationContent() ?? null,
             chargeable: eligibility.chargeable,
             chargeDisabledReason: eligibility.reason,
@@ -1328,7 +1331,10 @@ export async function GET(request: NextRequest, context: RouteContext) {
               b.getConsultantJoinedAt()?.toISOString() ?? null,
             lateArrivalAlertSentAt:
               b.getLateArrivalAlertSentAt()?.toISOString() ?? null,
-            consultantMemo: b.getConsultantMemo().getValue(),
+            consultantMemo: b.getConsultantMemo().getFreeMemo(),
+            memoCustomerName: b.getConsultantMemo().getCustomerName(),
+            memoBirthDate: b.getConsultantMemo().getBirthDate(),
+            memoAppraisalDate: b.getConsultantMemo().getAppraisalDate(),
             consultationContent: b.getConsultationContent() ?? null,
             chargeable: eligibility.chargeable,
             chargeDisabledReason: eligibility.reason,
@@ -2774,15 +2780,27 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
     ) {
       requireOrganizationRole(authUser, organizationId, "consultant");
       const body = await request.json();
-      if (typeof body.memo !== "string") {
-        return jsonError(400, "VALIDATION_ERROR", "memo is required");
+      if (
+        typeof body.customerName !== "string" ||
+        typeof body.birthDate !== "string" ||
+        typeof body.appraisalDate !== "string" ||
+        typeof body.freeMemo !== "string"
+      ) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "customerName, birthDate, appraisalDate and freeMemo are required",
+        );
       }
 
       await new UpdateMemoUseCase(new FirestoreBookingRepository()).execute({
         organizationId,
         bookingId: segments[2],
         consultantId: authUser.uid,
-        memo: body.memo,
+        customerName: body.customerName,
+        birthDate: body.birthDate,
+        appraisalDate: body.appraisalDate,
+        freeMemo: body.freeMemo,
       });
 
       return NextResponse.json({ success: true });

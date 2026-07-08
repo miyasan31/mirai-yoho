@@ -136,7 +136,7 @@ export class CreateBookingUseCase {
       consultantId: slot.getConsultantId(),
       slotId: slot.getSlotId(),
       startsAt: slot.getTimeRange().getStartsAt(),
-      consultantMemo: ConsultantMemo.create(""),
+      consultantMemo: ConsultantMemo.empty(),
       consultationContent: input.consultationContent,
       pricePlanId: pricePlan.getPricePlanId(),
       pricePlanName: pricePlan.getName(),
