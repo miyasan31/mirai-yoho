@@ -1,14 +1,23 @@
 // @vitest-environment jsdom
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
+
+const mockSignIn = vi.fn();
+const mockNavigate = vi.fn();
 
 vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => ({
-    signIn: vi.fn(),
+    signIn: mockSignIn,
   }),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
-  useNavigate: () => vi.fn(),
+  useNavigate: () => mockNavigate,
   Link: ({ to, children }: { to: string; children: React.ReactNode }) => (
     <a href={to}>{children}</a>
   ),
@@ -50,6 +59,14 @@ vi.mock("styled-system/recipes", () => ({
 
 vi.mock("lucide-react", () => ({
   ShieldCheck: () => <span>ShieldCheck</span>,
+  CalendarDays: () => <span>CalendarDays</span>,
+  CreditCard: () => <span>CreditCard</span>,
+  House: () => <span>House</span>,
+  LayoutDashboard: () => <span>LayoutDashboard</span>,
+  Settings: () => <span>Settings</span>,
+  UserLock: () => <span>UserLock</span>,
+  UserRoundSearch: () => <span>UserRoundSearch</span>,
+  UserStar: () => <span>UserStar</span>,
 }));
 
 vi.mock("@mirai-yoho/ui/components/ui/button", () => ({
@@ -98,5 +115,78 @@ describe("AdminLoginPage", () => {
 
     expect(link.getAttribute("href")).toBe("/admin/password-reset");
     expect(screen.queryByText("相談員ログインはこちら")).toBeNull();
+  });
+
+  it("redirects to admin home when the account has admin permissions", async () => {
+    mockSignIn.mockResolvedValue({
+      currentOrganizationId: "org-test",
+      currentRole: "admin",
+      currentPermissions: ["admin.dashboard.read"],
+    });
+
+    const { container } = render(<AdminLoginPage />);
+
+    fireEvent.change(container.querySelector("#email") as HTMLInputElement, {
+      target: { value: "admin@example.com" },
+    });
+    fireEvent.change(container.querySelector("#password") as HTMLInputElement, {
+      target: { value: "password" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/$organizationId/admin/home",
+        params: { organizationId: "org-test" },
+      });
+    });
+  });
+
+  it("redirects to admin home when a custom role has admin permissions", async () => {
+    mockSignIn.mockResolvedValue({
+      currentOrganizationId: "org-test",
+      currentRole: "reception-custom-role",
+      currentPermissions: ["admin.bookings.read"],
+    });
+
+    const { container } = render(<AdminLoginPage />);
+
+    fireEvent.change(container.querySelector("#email") as HTMLInputElement, {
+      target: { value: "reception@example.com" },
+    });
+    fireEvent.change(container.querySelector("#password") as HTMLInputElement, {
+      target: { value: "password" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/$organizationId/admin/home",
+        params: { organizationId: "org-test" },
+      });
+    });
+  });
+
+  it("shows an error when the account has no admin permissions", async () => {
+    mockSignIn.mockResolvedValue({
+      currentOrganizationId: "org-test",
+      currentRole: "consultant",
+      currentPermissions: [],
+    });
+
+    const { container } = render(<AdminLoginPage />);
+
+    fireEvent.change(container.querySelector("#email") as HTMLInputElement, {
+      target: { value: "consultant@example.com" },
+    });
+    fireEvent.change(container.querySelector("#password") as HTMLInputElement, {
+      target: { value: "password" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
+
+    await waitFor(() => {
+      expect(screen.getByText("ログインに失敗しました")).toBeDefined();
+    });
+    expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
