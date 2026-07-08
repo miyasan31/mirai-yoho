@@ -288,11 +288,16 @@ describe("ConsultantProfilePage", () => {
       });
     });
 
-    // アップロードのトランジションが完了して保存ボタンが有効になるのを待つ
+    // アップロードのトランジション（useTransition）が完了して保存ボタンが
+    // 有効になるのを待つ。CI の負荷次第で非同期トランジションの解消がデフォルト
+    // の 1s を超えることがあるため、タイムアウトに余裕を持たせる。
     const saveButton = screen.getByText("保存") as HTMLButtonElement;
-    await waitFor(() => {
-      expect(saveButton.disabled).toBe(false);
-    });
+    await waitFor(
+      () => {
+        expect(saveButton.disabled).toBe(false);
+      },
+      { timeout: 5000 },
+    );
 
     await user.click(saveButton);
 
