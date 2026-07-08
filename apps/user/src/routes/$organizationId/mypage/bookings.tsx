@@ -1,31 +1,24 @@
-"use client";
-
-import { useParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useGetCustomerBookings } from "@mirai-yoho/api-client/api/customer/customer";
+import type { CustomerBooking } from "@mirai-yoho/api-client/schemas";
+import { Badge } from "@mirai-yoho/ui/components/ui/badge";
+import { Spinner } from "@mirai-yoho/ui/components/ui/spinner";
+import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { createFileRoute } from "@tanstack/react-router";
 import { styled } from "styled-system/jsx";
-import { Badge } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/spinner";
-import { Text } from "@/components/ui/text";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 
-interface BookingItem {
-  bookingId: string;
-  status: "pending" | "confirmed" | "completed" | "cancelled";
-  startsAt: string;
-  consultantId: string;
-  joinUrl: string | null;
-  pricePlanName: string | null;
-  pricePlanTotalJPY: number | null;
-}
+export const Route = createFileRoute("/$organizationId/mypage/bookings")({
+  component: MypageBookingsPage,
+});
 
-const STATUS_LABEL: Record<BookingItem["status"], string> = {
+const STATUS_LABEL: Record<CustomerBooking["status"], string> = {
   pending: "未確定",
   confirmed: "確定",
   completed: "終了",
   cancelled: "キャンセル",
 };
 
-const STATUS_COLOR: Record<BookingItem["status"], string> = {
+const STATUS_COLOR: Record<CustomerBooking["status"], string> = {
   pending: "yellow",
   confirmed: "green",
   completed: "gray",
@@ -42,38 +35,13 @@ function formatDateTime(iso: string): string {
   });
 }
 
-export default function MypageBookingsPage() {
-  const params = useParams();
-  const organizationId =
-    typeof params.organizationId === "string" ? params.organizationId : "";
-  const { token } = useCustomerAuth();
-  const [bookings, setBookings] = useState<BookingItem[] | null>(null);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!token || !organizationId) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const response = await fetch(
-          `/api/organizations/${organizationId}/customers/me/bookings`,
-          { headers: { Authorization: `Bearer ${token}` } },
-        );
-        if (!response.ok) {
-          throw new Error("予約履歴の取得に失敗しました");
-        }
-        const data = (await response.json()) as { bookings: BookingItem[] };
-        if (!cancelled) setBookings(data.bookings);
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : "取得に失敗しました");
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [token, organizationId]);
+function MypageBookingsPage() {
+  const { organizationId } = Route.useParams();
+  const { isSignedUp } = useCustomerAuth();
+  const bookingsQuery = useGetCustomerBookings(organizationId, {
+    query: { enabled: isSignedUp && !!organizationId },
+  });
+  const bookings = bookingsQuery.data?.data?.bookings ?? null;
 
   const now = Date.now();
   const upcoming = bookings?.filter(
@@ -93,7 +61,9 @@ export default function MypageBookingsPage() {
       <Text as="h1" textStyle="2xl" fontWeight="bold">
         予約履歴
       </Text>
-      {error && <Text color="fg.error">{error}</Text>}
+      {bookingsQuery.isError && (
+        <Text color="fg.error">予約履歴の取得に失敗しました</Text>
+      )}
       {bookings === null ? (
         <Spinner />
       ) : (
@@ -111,7 +81,7 @@ function BookingSection({
   items,
 }: {
   title: string;
-  items: BookingItem[];
+  items: CustomerBooking[];
 }) {
   return (
     <styled.section display="flex" flexDir="column" gap="2">

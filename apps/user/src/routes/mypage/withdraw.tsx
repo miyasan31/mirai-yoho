@@ -1,17 +1,20 @@
-"use client";
-
-import { useRouter } from "next/navigation";
+import { withdrawCustomer } from "@mirai-yoho/api-client/api/customer/customer";
+import { Button } from "@mirai-yoho/ui/components/ui/button";
+import * as Field from "@mirai-yoho/ui/components/ui/field";
+import { Input } from "@mirai-yoho/ui/components/ui/input";
+import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
-import { Button } from "@/components/ui/button";
-import * as Field from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Text } from "@/components/ui/text";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 
-export default function WithdrawPage() {
-  const { token, profile, signOut, refreshProfile } = useCustomerAuth();
-  const router = useRouter();
+export const Route = createFileRoute("/mypage/withdraw")({
+  component: WithdrawPage,
+});
+
+function WithdrawPage() {
+  const { profile, signOut } = useCustomerAuth();
+  const navigate = useNavigate();
   const [confirmation, setConfirmation] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -31,19 +34,9 @@ export default function WithdrawPage() {
     }
     setBusy(true);
     try {
-      const response = await fetch("/api/customer/me", {
-        method: "DELETE",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as {
-          message?: string;
-        };
-        throw new Error(payload.message ?? "退会に失敗しました");
-      }
-      await refreshProfile();
+      await withdrawCustomer();
       await signOut();
-      router.push("/");
+      navigate({ to: "/" });
     } catch (e) {
       setError(e instanceof Error ? e.message : "退会に失敗しました");
     } finally {

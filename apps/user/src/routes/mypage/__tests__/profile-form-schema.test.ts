@@ -1,5 +1,5 @@
 import * as v from "valibot";
-import { profileFormSchema } from "../profile-form-schema";
+import { profileFormSchema } from "../-profile-form-schema";
 
 const validValues = {
   displayName: "山田 太郎",

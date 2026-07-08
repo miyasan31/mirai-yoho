@@ -19,7 +19,9 @@ import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { useCreateBooking } from "@/hooks/use-booking";
+import { useCustomerAuth } from "@/hooks/use-customer-auth";
 import { useBookingPricePlans } from "@/hooks/use-price-plans";
+import { BookingAuthGate } from "./-booking-auth-gate";
 import {
   type BookingFormValues,
   bookingFormSchema,
@@ -44,6 +46,15 @@ export const Route = createFileRoute("/$organizationId/booking/")({
 });
 
 export function BookingPage() {
+  return (
+    <BookingAuthGate>
+      <BookingPageInner />
+    </BookingAuthGate>
+  );
+}
+
+function BookingPageInner() {
+  const { profile } = useCustomerAuth();
   const { slotId, startsAt, endsAt } = Route.useSearch();
   const { organizationId } = Route.useParams();
   const navigate = useNavigate();
@@ -72,10 +83,10 @@ export function BookingPage() {
   } = useForm<BookingFormValues>({
     resolver: valibotResolver(bookingFormSchema),
     defaultValues: {
-      customerName: "",
-      customerEmail: "",
+      customerName: profile?.displayName ?? "",
+      customerEmail: profile?.primaryEmail ?? "",
       customerPhone: "",
-      customerBirthDate: "",
+      customerBirthDate: profile?.birthDate ?? "",
       consultantContent: "",
     },
   });

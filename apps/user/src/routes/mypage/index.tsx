@@ -1,12 +1,14 @@
-"use client";
-
-import Link from "next/link";
+import { Button } from "@mirai-yoho/ui/components/ui/button";
+import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { styled } from "styled-system/jsx";
-import { Button } from "@/components/ui/button";
-import { Text } from "@/components/ui/text";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 
-export default function MypageDashboardPage() {
+export const Route = createFileRoute("/mypage/")({
+  component: MypageDashboardPage,
+});
+
+function MypageDashboardPage() {
   const { profile, isSignedUp, isAnonymous, hasActiveZoomConnection } =
     useCustomerAuth();
 
@@ -27,7 +29,7 @@ export default function MypageDashboardPage() {
         <Text color="fg.muted">
           会員情報の登録を完了するとマイページをご利用いただけます。
         </Text>
-        <Link href="/mypage/profile">
+        <Link to="/mypage/profile">
           <Button>会員情報を登録する</Button>
         </Link>
       </styled.div>
@@ -60,7 +62,7 @@ export default function MypageDashboardPage() {
           <Text textStyle="sm" color="fg.muted">
             ご予約には Zoom アカウントの連携が必要です。
           </Text>
-          <Link href="/mypage/zoom">
+          <Link to="/mypage/zoom">
             <Button size="sm">Zoom を連携する</Button>
           </Link>
         </styled.section>
@@ -80,7 +82,7 @@ export default function MypageDashboardPage() {
           <Text textStyle="sm" color="fg.muted">
             連携すると、別の端末からもログインしてご利用いただけます。
           </Text>
-          <Link href="/mypage/profile">
+          <Link to="/mypage/profile">
             <Button size="sm" variant="outline">
               プロフィールへ
             </Button>

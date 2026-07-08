@@ -1,63 +1,34 @@
-"use client";
-
-import { useEffect, useState } from "react";
+import { useGetCustomerCoupons } from "@mirai-yoho/api-client/api/customer/customer";
+import { Badge } from "@mirai-yoho/ui/components/ui/badge";
+import { Spinner } from "@mirai-yoho/ui/components/ui/spinner";
+import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { createFileRoute } from "@tanstack/react-router";
 import { styled } from "styled-system/jsx";
-import { Badge } from "@/components/ui/badge";
-import { Spinner } from "@/components/ui/spinner";
-import { Text } from "@/components/ui/text";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 
-interface CouponItem {
-  userCouponId: string;
-  couponId: string;
-  organizationId: string | null;
-  receivedAt: string;
-  expiresAt: string | null;
-  redeemedAt: string | null;
-  isRedeemable: boolean;
-}
+export const Route = createFileRoute("/mypage/coupons")({
+  component: CouponsPage,
+});
 
 function formatDate(iso: string | null): string {
   if (!iso) return "-";
   return new Date(iso).toLocaleDateString("ja-JP");
 }
 
-export default function CouponsPage() {
-  const { token } = useCustomerAuth();
-  const [coupons, setCoupons] = useState<CouponItem[] | null>(null);
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    if (!token) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const response = await fetch("/api/customer/me/coupons", {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        if (!response.ok) {
-          throw new Error("クーポンの取得に失敗しました");
-        }
-        const data = (await response.json()) as { coupons: CouponItem[] };
-        if (!cancelled) setCoupons(data.coupons);
-      } catch (e) {
-        if (!cancelled) {
-          setError(e instanceof Error ? e.message : "取得に失敗しました");
-        }
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
+function CouponsPage() {
+  const { isSignedUp } = useCustomerAuth();
+  const couponsQuery = useGetCustomerCoupons({
+    query: { enabled: isSignedUp },
+  });
+  const coupons = couponsQuery.data?.data?.coupons ?? null;
 
   return (
     <styled.div display="flex" flexDir="column" gap="4">
       <Text as="h1" textStyle="2xl" fontWeight="bold">
         クーポン
       </Text>
-      {error ? (
-        <Text color="fg.error">{error}</Text>
+      {couponsQuery.isError ? (
+        <Text color="fg.error">クーポンの取得に失敗しました</Text>
       ) : coupons === null ? (
         <Spinner />
       ) : coupons.length === 0 ? (

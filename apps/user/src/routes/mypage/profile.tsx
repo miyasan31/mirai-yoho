@@ -1,23 +1,33 @@
-"use client";
-
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { updateCustomerProfile } from "@mirai-yoho/api-client/api/customer/customer";
+import { Button } from "@mirai-yoho/ui/components/ui/button";
+import * as Field from "@mirai-yoho/ui/components/ui/field";
+import { Input } from "@mirai-yoho/ui/components/ui/input";
+import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
-import { Button } from "@/components/ui/button";
-import * as Field from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Text } from "@/components/ui/text";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 import {
   type ProfileFormValues,
   profileFormSchema,
-} from "./profile-form-schema";
+} from "./-profile-form-schema";
 
-export default function ProfilePage() {
+interface ProfileSearch {
+  returnTo?: string;
+}
+
+export const Route = createFileRoute("/mypage/profile")({
+  validateSearch: (search: Record<string, unknown>): ProfileSearch => ({
+    returnTo: typeof search.returnTo === "string" ? search.returnTo : undefined,
+  }),
+  component: ProfilePage,
+});
+
+function ProfilePage() {
   const {
     user,
-    token,
     profile,
     isSignedUp,
     isAnonymous,
@@ -54,24 +64,11 @@ export default function ProfilePage() {
           primaryEmail: values.primaryEmail || undefined,
         });
       } else {
-        const response = await fetch("/api/customer/me", {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            displayName: values.displayName,
-            primaryEmail: values.primaryEmail || undefined,
-            birthDate: values.birthDate,
-          }),
+        await updateCustomerProfile({
+          displayName: values.displayName,
+          primaryEmail: values.primaryEmail || undefined,
+          birthDate: values.birthDate,
         });
-        if (!response.ok) {
-          const error = (await response.json().catch(() => ({}))) as {
-            message?: string;
-          };
-          throw new Error(error.message ?? "更新に失敗しました");
-        }
         await refreshProfile();
       }
       setSubmitSuccess("プロフィールを保存しました");
@@ -92,18 +89,11 @@ export default function ProfilePage() {
       if (!googleData || !googleData.email || !googleData.uid) {
         throw new Error("Google アカウント情報を取得できませんでした");
       }
-      await fetch("/api/customer/me/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${await linkedUser.getIdToken()}`,
-        },
-        body: JSON.stringify({
-          displayName: profile?.displayName ?? "",
-          birthDate: profile?.birthDate ?? "",
-          providerUid: googleData.uid,
-          primaryEmail: googleData.email,
-        }),
+      await signupOrLink({
+        displayName: profile?.displayName ?? "",
+        birthDate: profile?.birthDate ?? "",
+        providerUid: googleData.uid,
+        primaryEmail: googleData.email,
       });
       await refreshProfile();
     } catch (error) {

@@ -1,23 +1,38 @@
-"use client";
-
-import { useSearchParams } from "next/navigation";
+import {
+  createZoomAuthorizeUrl,
+  revokeZoomConnection,
+} from "@mirai-yoho/api-client/api/customer/customer";
+import { Button } from "@mirai-yoho/ui/components/ui/button";
+import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
-import { Button } from "@/components/ui/button";
-import { Text } from "@/components/ui/text";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
+
+interface ZoomSearch {
+  status?: string;
+  reason?: string;
+  returnTo?: string;
+}
+
+export const Route = createFileRoute("/mypage/zoom")({
+  validateSearch: (search: Record<string, unknown>): ZoomSearch => ({
+    status: typeof search.status === "string" ? search.status : undefined,
+    reason: typeof search.reason === "string" ? search.reason : undefined,
+    returnTo: typeof search.returnTo === "string" ? search.returnTo : undefined,
+  }),
+  component: ZoomLinkPage,
+});
 
 const STATUS_MESSAGES: Record<string, { color: string; text: string }> = {
   connected: { color: "fg.success", text: "Zoom 連携が完了しました。" },
   error: { color: "fg.error", text: "Zoom 連携に失敗しました。" },
 };
 
-export default function ZoomLinkPage() {
-  const { token, profile, hasActiveZoomConnection, refreshProfile } =
+function ZoomLinkPage() {
+  const { profile, hasActiveZoomConnection, refreshProfile } =
     useCustomerAuth();
-  const searchParams = useSearchParams();
-  const callbackStatus = searchParams.get("status") ?? "";
-  const callbackReason = searchParams.get("reason") ?? "";
+  const { status: callbackStatus, reason: callbackReason } = Route.useSearch();
   const [actionError, setActionError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -25,18 +40,8 @@ export default function ZoomLinkPage() {
     setActionError("");
     setIsLoading(true);
     try {
-      const response = await fetch("/api/auth/zoom/authorize", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as {
-          message?: string;
-        };
-        throw new Error(payload.message ?? "認可 URL の取得に失敗しました");
-      }
-      const { url } = (await response.json()) as { url: string };
-      window.location.href = url;
+      const response = await createZoomAuthorizeUrl();
+      window.location.href = response.data.url;
     } catch (error) {
       setActionError(
         error instanceof Error ? error.message : "連携を開始できませんでした",
@@ -49,16 +54,7 @@ export default function ZoomLinkPage() {
     setActionError("");
     setIsLoading(true);
     try {
-      const response = await fetch("/api/auth/zoom/revoke", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      if (!response.ok) {
-        const payload = (await response.json().catch(() => ({}))) as {
-          message?: string;
-        };
-        throw new Error(payload.message ?? "連携解除に失敗しました");
-      }
+      await revokeZoomConnection();
       await refreshProfile();
     } catch (error) {
       setActionError(
@@ -69,7 +65,7 @@ export default function ZoomLinkPage() {
     }
   };
 
-  const callback = STATUS_MESSAGES[callbackStatus];
+  const callback = callbackStatus ? STATUS_MESSAGES[callbackStatus] : undefined;
 
   return (
     <styled.div display="flex" flexDir="column" gap="4">

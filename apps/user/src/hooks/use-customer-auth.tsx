@@ -1,5 +1,5 @@
-"use client";
-
+import { signupCustomer } from "@mirai-yoho/api-client/api/customer/customer";
+import type { CustomerProfile } from "@mirai-yoho/api-client/schemas";
 import {
   type User as FirebaseUser,
   signInAnonymously as firebaseSignInAnonymously,
@@ -18,26 +18,8 @@ import {
   useMemo,
   useState,
 } from "react";
+import { envClient } from "@/config/env.client";
 import { auth } from "@/lib/firebase";
-
-export interface CustomerAuthProvider {
-  providerId: string;
-  linkedAt: string;
-}
-
-export interface CustomerProfile {
-  userId: string;
-  authUid: string;
-  displayName: string;
-  primaryEmail: string | null;
-  birthDate: string;
-  status: "active" | "withdrawn";
-  authProviders: CustomerAuthProvider[];
-  hasActiveZoomConnection: boolean;
-  zoomEmail: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
 
 export interface CustomerAuthState {
   user: FirebaseUser | null;
@@ -65,8 +47,11 @@ export const CustomerAuthContext = createContext<CustomerAuthState | null>(
   null,
 );
 
+// 未登録（404）を「エラーではなく状態」として扱う必要があるため、
+// グローバルの 404 ハンドリング（/404 リダイレクト）を持つ api-client は使わず直接 fetch する
 async function fetchProfile(token: string): Promise<CustomerProfile | null> {
-  const response = await fetch("/api/customer/me", {
+  const baseUrl = envClient.apiUrl.replace(/\/$/, "");
+  const response = await fetch(`${baseUrl}/api/customer/me`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (response.status === 404) {
@@ -148,31 +133,10 @@ export function useCustomerAuthState(): CustomerAuthState {
       if (!user || !token) {
         throw new Error("Not signed in");
       }
-      const response = await fetch("/api/customer/me/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(params),
-      });
-      if (!response.ok) {
-        const errorPayload = (await response.json().catch(() => ({}))) as {
-          message?: string;
-          code?: string;
-        };
-        throw new Error(
-          errorPayload.message ??
-            `Signup failed (${response.status} ${errorPayload.code ?? ""})`,
-        );
-      }
-      const data = (await response.json()) as {
-        userId: string;
-        isNew: boolean;
-      };
+      const response = await signupCustomer(params);
       const nextProfile = await fetchProfile(token);
       setProfile(nextProfile);
-      return data;
+      return response.data;
     },
     [user, token],
   );

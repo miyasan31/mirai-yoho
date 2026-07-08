@@ -1,13 +1,10 @@
-"use client";
-
+import { Button } from "@mirai-yoho/ui/components/ui/button";
+import { Spinner } from "@mirai-yoho/ui/components/ui/spinner";
+import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { Link, useRouterState } from "@tanstack/react-router";
 import { LogIn, Video } from "lucide-react";
-import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { styled } from "styled-system/jsx";
-import { Button } from "@/components/ui/button";
-import { Spinner } from "@/components/ui/spinner";
-import { Text } from "@/components/ui/text";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 
 interface BookingAuthGateProps {
@@ -21,16 +18,13 @@ export function BookingAuthGate({ children }: BookingAuthGateProps) {
     hasActiveZoomConnection,
     isLoading,
     signInAnonymously,
+    signInWithGoogle,
   } = useCustomerAuth();
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
+  const returnPath = useRouterState({
+    select: (state) => state.location.href,
+  });
   const [authError, setAuthError] = useState("");
   const [busy, setBusy] = useState(false);
-
-  const returnPath = `${pathname}?${searchParams.toString()}`;
-  const profileHref = `/mypage/profile?returnTo=${encodeURIComponent(returnPath)}`;
-  const zoomHref = `/mypage/zoom?returnTo=${encodeURIComponent(returnPath)}`;
 
   if (isLoading) {
     return (
@@ -62,6 +56,20 @@ export function BookingAuthGate({ children }: BookingAuthGateProps) {
       }
     };
 
+    const startGoogle = async () => {
+      setAuthError("");
+      setBusy(true);
+      try {
+        await signInWithGoogle();
+      } catch (error) {
+        setAuthError(
+          error instanceof Error ? error.message : "ログインに失敗しました",
+        );
+      } finally {
+        setBusy(false);
+      }
+    };
+
     return (
       <styled.div
         maxW="lg"
@@ -86,14 +94,8 @@ export function BookingAuthGate({ children }: BookingAuthGateProps) {
           <Button onClick={startGuest} loading={busy}>
             ゲストとして予約に進む
           </Button>
-          <Button
-            asChild
-            variant="outline"
-            onClick={() => {
-              router.push(`/login?returnTo=${encodeURIComponent(returnPath)}`);
-            }}
-          >
-            <span>Google アカウントでログイン</span>
+          <Button variant="outline" onClick={startGoogle} disabled={busy}>
+            Google アカウントでログイン
           </Button>
         </styled.div>
       </styled.div>
@@ -117,7 +119,9 @@ export function BookingAuthGate({ children }: BookingAuthGateProps) {
           お名前と生年月日をご登録ください。
         </Text>
         <Button asChild>
-          <Link href={profileHref}>会員情報を登録する</Link>
+          <Link to="/mypage/profile" search={{ returnTo: returnPath }}>
+            会員情報を登録する
+          </Link>
         </Button>
       </styled.div>
     );
@@ -143,7 +147,9 @@ export function BookingAuthGate({ children }: BookingAuthGateProps) {
           ご予約には Zoom アカウントの連携が必要です。
         </Text>
         <Button asChild>
-          <Link href={zoomHref}>Zoom を連携する</Link>
+          <Link to="/mypage/zoom" search={{ returnTo: returnPath }}>
+            Zoom を連携する
+          </Link>
         </Button>
       </styled.div>
     );

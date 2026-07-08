@@ -12,6 +12,17 @@ vi.mock("@tanstack/react-router", () => ({
     useParams: () => ({ organizationId: "org-test" }),
   }),
   useNavigate: () => mockNavigate,
+  useRouterState: <T,>({
+    select,
+  }: {
+    select: (state: { location: { href: string; pathname: string } }) => T;
+  }) =>
+    select({
+      location: {
+        href: "/org-test/booking?slotId=slot-1",
+        pathname: "/org-test/booking",
+      },
+    }),
   Link: ({
     to,
     children,
