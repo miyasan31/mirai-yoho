@@ -5,6 +5,7 @@ import {
 } from "@mirai-yoho/shared/slot-availability";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
+import * as Checkbox from "@mirai-yoho/ui/components/ui/checkbox";
 import * as Field from "@mirai-yoho/ui/components/ui/field";
 import { IconButton } from "@mirai-yoho/ui/components/ui/icon-button";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
@@ -16,7 +17,7 @@ import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, CalendarX } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useForm } from "react-hook-form";
+import { Controller, useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { useCreateBooking } from "@/hooks/use-booking";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
@@ -78,6 +79,7 @@ function BookingPageInner() {
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<BookingFormValues>({
@@ -88,6 +90,7 @@ function BookingPageInner() {
       customerPhone: "",
       customerBirthDate: profile?.birthDate ?? "",
       consultantContent: "",
+      agreedToTerms: false,
     },
   });
 
@@ -324,6 +327,49 @@ function BookingPageInner() {
                   </RadioGroup.Item>
                 ))}
               </RadioGroup.Root>
+            )}
+          </Field.Root>
+
+          <Field.Root invalid={!!errors.agreedToTerms}>
+            <Controller
+              control={control}
+              name="agreedToTerms"
+              render={({ field }) => (
+                <Checkbox.Root
+                  checked={field.value}
+                  onCheckedChange={(details) =>
+                    field.onChange(details.checked === true)
+                  }
+                >
+                  <Checkbox.HiddenInput
+                    name={field.name}
+                    onBlur={field.onBlur}
+                    ref={field.ref}
+                  />
+                  <Checkbox.Control>
+                    <Checkbox.Indicator />
+                  </Checkbox.Control>
+                  <Checkbox.Label>
+                    <Link
+                      to="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <styled.span
+                        color="colorPalette.default"
+                        textDecoration="underline"
+                      >
+                        利用規約
+                      </styled.span>
+                    </Link>
+                    に同意する
+                  </Checkbox.Label>
+                </Checkbox.Root>
+              )}
+            />
+            {errors.agreedToTerms && (
+              <Field.ErrorText>{errors.agreedToTerms.message}</Field.ErrorText>
             )}
           </Field.Root>
 

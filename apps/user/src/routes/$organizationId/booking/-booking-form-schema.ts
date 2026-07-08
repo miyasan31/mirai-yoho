@@ -35,6 +35,10 @@ export const bookingFormSchema = v.object({
     ),
   ),
   consultantContent: v.optional(v.string()),
+  agreedToTerms: v.pipe(
+    v.boolean(),
+    v.check((value) => value === true, "利用規約への同意が必要です"),
+  ),
 });
 
 export type BookingFormValues = v.InferOutput<typeof bookingFormSchema>;
