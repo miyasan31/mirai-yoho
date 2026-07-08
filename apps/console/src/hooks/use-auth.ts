@@ -58,9 +58,7 @@ export function useAuthState(): AuthState {
   const [isLoading, setIsLoading] = useState(true);
 
   const syncAuthContext = useCallback(async (nextUser: User | null) => {
-    // 匿名ユーザーは顧客向け認証（use-customer-auth）の対象であり、
-    // 組織アカウントを持たないため組織認証コンテキストでは未認証として扱う
-    if (!nextUser || nextUser.isAnonymous) {
+    if (!nextUser) {
       setUser(null);
       setToken(null);
       setAccounts([]);
