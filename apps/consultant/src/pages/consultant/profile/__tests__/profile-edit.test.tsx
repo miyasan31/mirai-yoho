@@ -289,14 +289,16 @@ describe("ConsultantProfilePage", () => {
     });
 
     // アップロードのトランジション（useTransition）が完了して保存ボタンが
-    // 有効になるのを待つ。CI の負荷次第で非同期トランジションの解消がデフォルト
-    // の 1s を超えることがあるため、タイムアウトに余裕を持たせる。
+    // 有効になるのを待つ。CI（少コアの runner）では React スケジューラの
+    // MessageChannel コールバックが負荷で遅延し、pending 解消がデフォルトの
+    // 1s を大きく超えることがあるため、waitFor と it 全体のタイムアウトに
+    // 余裕を持たせる。
     const saveButton = screen.getByText("保存") as HTMLButtonElement;
     await waitFor(
       () => {
         expect(saveButton.disabled).toBe(false);
       },
-      { timeout: 5000 },
+      { timeout: 15000 },
     );
 
     await user.click(saveButton);
@@ -313,7 +315,7 @@ describe("ConsultantProfilePage", () => {
         },
       });
     });
-  });
+  }, 20000);
 
   it("shows success message after saving", async () => {
     mockUseConsultantProfile.mockReturnValue({
