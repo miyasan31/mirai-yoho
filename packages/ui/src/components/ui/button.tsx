@@ -1,7 +1,12 @@
 "use client";
 import { ark } from "@ark-ui/react/factory";
 import { createContext, mergeProps } from "@ark-ui/react/utils";
-import { type ComponentProps, forwardRef, useMemo } from "react";
+import {
+  type ComponentProps,
+  type ComponentPropsWithoutRef,
+  forwardRef,
+  useMemo,
+} from "react";
 import { styled } from "styled-system/jsx";
 import { type ButtonVariantProps, button } from "styled-system/recipes";
 import { Group, type GroupProps } from "./group";
@@ -28,10 +33,21 @@ interface ButtonLoadingProps {
   spinnerPlacement?: "start" | "end" | undefined;
 }
 
-type BaseButtonProps = ComponentProps<typeof BaseButton>;
+type StyledButtonProps = ComponentProps<typeof BaseButton>;
+type BaseButtonProps = Omit<StyledButtonProps, "type" | "children">;
 const BaseButton = styled(ark.button, button);
 
-export interface ButtonProps extends BaseButtonProps, ButtonLoadingProps {}
+type HtmlButtonProps = Pick<
+  ComponentPropsWithoutRef<"button">,
+  "type" | "disabled" | "onClick" | "name" | "value" | "form"
+>;
+
+export interface ButtonProps
+  extends BaseButtonProps,
+    ButtonLoadingProps,
+    HtmlButtonProps {
+  children?: React.ReactNode;
+}
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   function Button(props, ref) {
