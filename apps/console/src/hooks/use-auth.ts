@@ -36,6 +36,7 @@ export interface AuthState {
   ) => Promise<{
     currentOrganizationId: string | null;
     currentRole: string | null;
+    currentPermissions: AuthorizationPermission[];
   }>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
   setCurrentOrganizationId: (organizationId: string) => Promise<void>;
@@ -135,14 +136,14 @@ export function useAuthState(): AuthState {
         password,
       );
       const data = await syncAuthContext(credential.user);
-      const currentRole =
-        data.accounts.find(
-          (account) => account.organizationId === data.currentOrganizationId,
-        )?.role ?? null;
+      const currentAccount = data.accounts.find(
+        (account) => account.organizationId === data.currentOrganizationId,
+      );
 
       return {
         currentOrganizationId: data.currentOrganizationId,
-        currentRole,
+        currentRole: currentAccount?.role ?? null,
+        currentPermissions: currentAccount?.permissions ?? [],
       };
     },
     [syncAuthContext],

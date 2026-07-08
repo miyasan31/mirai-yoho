@@ -1,18 +1,6 @@
-import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-permission";
 import { useNavigate } from "@tanstack/react-router";
-import {
-  CalendarDays,
-  CreditCard,
-  House,
-  LayoutDashboard,
-  Settings,
-  UserLock,
-  UserRoundSearch,
-  UserStar,
-} from "lucide-react";
 import type { ReactNode } from "react";
 import { useEffect, useMemo } from "react";
-import type { NavItem } from "@/components/sidebar-layout";
 import {
   SidebarLayout,
   SidebarLayoutSkeleton,
@@ -20,62 +8,7 @@ import {
 import { useAuth } from "@/hooks/use-auth";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import { UNAUTHORIZED_EVENT_NAME } from "@/lib/api-client";
-
-const NAV_ITEMS: Array<
-  Omit<NavItem, "href"> & {
-    path: string;
-    permissions: AuthorizationPermission[];
-  }
-> = [
-  {
-    path: "/admin/home",
-    label: "ホーム",
-    icon: House,
-    permissions: ["admin.dashboard.read"],
-  },
-  {
-    path: "/admin/dashboard",
-    label: "ダッシュボード（集計）",
-    icon: LayoutDashboard,
-    permissions: ["admin.dashboard.read"],
-  },
-  {
-    path: "/admin/bookings",
-    label: "予約管理",
-    icon: CalendarDays,
-    permissions: ["admin.bookings.read"],
-  },
-  {
-    path: "/admin/payments",
-    label: "決済管理",
-    icon: CreditCard,
-    permissions: ["admin.payments.read"],
-  },
-  {
-    path: "/admin/customers",
-    label: "顧客管理",
-    icon: UserStar,
-    permissions: ["admin.customers.read"],
-  },
-  {
-    path: "/admin/consultants",
-    label: "相談員管理",
-    icon: UserRoundSearch,
-    permissions: ["admin.consultants.read"],
-  },
-  {
-    path: "/admin/accounts",
-    label: "アカウント管理",
-    icon: UserLock,
-    permissions: ["admin.accounts.read"],
-  },
-  {
-    path: "/admin/settings",
-    label: "設定",
-    icon: Settings,
-    permissions: ["admin.settings.read"],
-  },
-];
+import { ADMIN_NAV_PERMISSIONS, NAV_ITEMS } from "./nav-items";
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const {
@@ -115,7 +48,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (!hasAnyPermission(NAV_ITEMS.flatMap((item) => item.permissions))) {
+    if (!hasAnyPermission(ADMIN_NAV_PERMISSIONS)) {
       void navigate({ href: "/404", replace: true });
     }
   }, [
@@ -151,11 +84,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     return <SidebarLayoutSkeleton navItemCount={NAV_ITEMS.length} />;
   }
 
-  if (
-    !user ||
-    !organizationId ||
-    !hasAnyPermission(NAV_ITEMS.flatMap((item) => item.permissions))
-  ) {
+  if (!user || !organizationId || !hasAnyPermission(ADMIN_NAV_PERMISSIONS)) {
     return null;
   }
 

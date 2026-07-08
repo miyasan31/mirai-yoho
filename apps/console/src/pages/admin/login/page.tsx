@@ -9,6 +9,7 @@ import { ShieldCheck } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { useAuth } from "@/hooks/use-auth";
+import { ADMIN_NAV_PERMISSIONS } from "../nav-items";
 import { type LoginFormValues, loginFormSchema } from "./login-form-schema";
 
 export default function AdminLoginPage() {
@@ -32,7 +33,10 @@ export default function AdminLoginPage() {
       if (!result.currentOrganizationId) {
         throw new Error("No organization available");
       }
-      if (result.currentRole !== "admin" && result.currentRole !== "operator") {
+      const hasAdminAccess = result.currentPermissions.some((permission) =>
+        ADMIN_NAV_PERMISSIONS.includes(permission),
+      );
+      if (!hasAdminAccess) {
         throw new Error("No admin access");
       }
       void navigate({
