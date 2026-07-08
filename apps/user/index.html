@@ -9,6 +9,18 @@
       name="description"
       content="あなたの未来を一緒に考える、オンライン相談サービス"
     />
+    <script>
+      (() => {
+        const mq = window.matchMedia("(prefers-color-scheme: dark)");
+        const apply = () => {
+          const theme = localStorage.getItem("theme");
+          const dark = theme === "dark" || (theme !== "light" && mq.matches);
+          document.documentElement.classList.toggle("dark", dark);
+        };
+        apply();
+        mq.addEventListener("change", apply);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

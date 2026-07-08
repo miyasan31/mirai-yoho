@@ -33,6 +33,44 @@ export const miraiYohoPreset = definePreset({
       },
       semanticTokens: {
         colors: {
+          canvas: {
+            value: {
+              _light: "{colors.gray.1}",
+              _dark: "{colors.gray.1}",
+            },
+          },
+          bg: {
+            default: {
+              value: {
+                _light: "{colors.white}",
+                _dark: "{colors.gray.2}",
+              },
+            },
+            subtle: {
+              value: {
+                _light: "{colors.gray.2}",
+                _dark: "{colors.gray.2}",
+              },
+            },
+            muted: {
+              value: {
+                _light: "{colors.gray.3}",
+                _dark: "{colors.gray.3}",
+              },
+            },
+            emphasized: {
+              value: {
+                _light: "{colors.gray.4}",
+                _dark: "{colors.gray.4}",
+              },
+            },
+            disabled: {
+              value: {
+                _light: "{colors.gray.5}",
+                _dark: "{colors.gray.5}",
+              },
+            },
+          },
           fg: {
             default: {
               value: {

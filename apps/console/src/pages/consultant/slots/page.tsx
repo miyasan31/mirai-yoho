@@ -279,8 +279,8 @@ export default function ConsultantSlotsPage() {
   const eventStyleGetter = useCallback(() => {
     return {
       style: {
-        backgroundColor: "#2563eb",
-        borderColor: "#1d4ed8",
+        backgroundColor: "#2661cf",
+        borderColor: "#2550a8",
         color: "#fff",
         opacity: 0.8,
       },
@@ -296,15 +296,7 @@ export default function ConsultantSlotsPage() {
         return {};
       }
 
-      return {
-        style: {
-          backgroundImage:
-            "repeating-linear-gradient(-45deg, rgba(148,163,184,0.22) 0, rgba(148,163,184,0.22) 6px, rgba(148,163,184,0.1) 6px, rgba(148,163,184,0.1) 12px)",
-          backgroundColor: "rgba(248,250,252,0.8)",
-          pointerEvents: "none" as const,
-          cursor: "not-allowed",
-        },
-      };
+      return { className: "rbc-day-unavailable" };
     },
     [businessHours],
   );
@@ -319,14 +311,7 @@ export default function ConsultantSlotsPage() {
         return {};
       }
 
-      return {
-        style: {
-          backgroundImage:
-            "repeating-linear-gradient(-45deg, rgba(148,163,184,0.18) 0, rgba(148,163,184,0.18) 5px, rgba(148,163,184,0.07) 5px, rgba(148,163,184,0.07) 10px)",
-          pointerEvents: "none" as const,
-          cursor: "not-allowed",
-        },
-      };
+      return { className: "rbc-slot-unavailable" };
     },
     [businessHours],
   );

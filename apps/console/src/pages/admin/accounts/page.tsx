@@ -413,7 +413,7 @@ export default function AdminAccountsPage() {
               {accounts.map((adminUser) => (
                 <Table.Row
                   key={adminUser.uid}
-                  bg={currentUid === adminUser.uid ? "blue.50" : undefined}
+                  bg={currentUid === adminUser.uid ? "blue.2" : undefined}
                 >
                   <Table.Cell>{adminUser.email}</Table.Cell>
                   <Table.Cell>
