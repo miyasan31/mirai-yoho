@@ -10,7 +10,7 @@ import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { Textarea } from "@mirai-yoho/ui/components/ui/textarea";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import {
@@ -63,7 +63,7 @@ export default function ConsultantProfilePage() {
     undefined,
   );
   const [avatarWarning, setAvatarWarning] = useState("");
-  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const [isUploadingAvatar, startAvatarUpload] = useTransition();
   const {
     register,
     handleSubmit,
@@ -120,7 +120,6 @@ export default function ConsultantProfilePage() {
     }
 
     setAvatarWarning("");
-    setIsUploadingAvatar(true);
     try {
       const isSquare = await isSquareImage(file);
       if (!isSquare) {
@@ -174,8 +173,6 @@ export default function ConsultantProfilePage() {
           title: "アバター画像のアップロードに失敗しました",
         });
       }
-    } finally {
-      setIsUploadingAvatar(false);
     }
   };
 
@@ -302,7 +299,9 @@ export default function ConsultantProfilePage() {
               onFileChange={(details) => {
                 const targetFile = details.acceptedFiles[0];
                 if (targetFile) {
-                  void uploadAvatarFile(targetFile);
+                  startAvatarUpload(async () => {
+                    await uploadAvatarFile(targetFile);
+                  });
                 }
               }}
             >
