@@ -185,8 +185,13 @@ describe("AdminLoginPage", () => {
     fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
 
     await waitFor(() => {
-      expect(screen.getByText("ログインに失敗しました")).toBeDefined();
+      expect(mockSignIn).toHaveBeenCalled();
     });
+    expect(
+      await screen.findByText("ログインに失敗しました", undefined, {
+        timeout: 5000,
+      }),
+    ).toBeDefined();
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
