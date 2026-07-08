@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import {
+  act,
   cleanup,
   fireEvent,
   render,
@@ -132,7 +133,9 @@ describe("AdminLoginPage", () => {
     fireEvent.change(container.querySelector("#password") as HTMLInputElement, {
       target: { value: "password" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
+    });
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith({
@@ -157,7 +160,9 @@ describe("AdminLoginPage", () => {
     fireEvent.change(container.querySelector("#password") as HTMLInputElement, {
       target: { value: "password" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
+    });
 
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith({
@@ -182,7 +187,9 @@ describe("AdminLoginPage", () => {
     fireEvent.change(container.querySelector("#password") as HTMLInputElement, {
       target: { value: "password" },
     });
-    fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
+    });
 
     await waitFor(() => {
       expect(mockSignIn).toHaveBeenCalled();
