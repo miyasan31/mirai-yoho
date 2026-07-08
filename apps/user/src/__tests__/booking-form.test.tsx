@@ -122,6 +122,35 @@ vi.mock("@mirai-yoho/ui/components/ui/button", () => ({
   ),
 }));
 
+vi.mock("@mirai-yoho/ui/components/ui/checkbox", () => ({
+  Root: ({
+    children,
+    checked,
+    onCheckedChange,
+  }: {
+    children: React.ReactNode;
+    checked?: boolean;
+    onCheckedChange?: (details: { checked: boolean }) => void;
+  }) => (
+    <label>
+      <input
+        type="checkbox"
+        checked={checked ?? false}
+        onChange={(event) =>
+          onCheckedChange?.({ checked: event.target.checked })
+        }
+      />
+      {children}
+    </label>
+  ),
+  HiddenInput: () => null,
+  Control: (props: React.ComponentProps<"span">) => <span {...props} />,
+  Indicator: () => null,
+  Label: ({ children }: { children: React.ReactNode }) => (
+    <span>{children}</span>
+  ),
+}));
+
 vi.mock("@mirai-yoho/ui/components/ui/field", () => ({
   Root: (props: React.ComponentProps<"div">) => <div {...props} />,
   // biome-ignore lint/a11y/noLabelWithoutControl: test mock
@@ -250,6 +279,10 @@ function getBirthdateInput() {
   return input;
 }
 
+function getTermsCheckbox() {
+  return screen.getByRole("checkbox");
+}
+
 describe("BookingPage", () => {
   afterEach(() => {
     cleanup();
@@ -272,6 +305,8 @@ describe("BookingPage", () => {
     expect(
       screen.getByPlaceholderText("ご相談内容をお書きください"),
     ).toBeDefined();
+    expect(getTermsCheckbox()).toBeDefined();
+    expect(screen.getByText("利用規約")).toBeDefined();
   });
 
   it("shows validation errors when submitting empty form", async () => {
@@ -350,6 +385,7 @@ describe("BookingPage", () => {
       "090-0000-0000",
     );
     await user.type(getBirthdateInput(), "1990-01-01");
+    await user.click(getTermsCheckbox());
     await user.click(screen.getByText("お支払いへ進む"));
 
     await waitFor(() => {
@@ -394,11 +430,34 @@ describe("BookingPage", () => {
       "090-0000-0000",
     );
     await user.type(getBirthdateInput(), "1990-01-01");
+    await user.click(getTermsCheckbox());
     await user.click(screen.getByText("お支払いへ進む"));
 
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalled();
       expect(mockNavigate).not.toHaveBeenCalled();
+    });
+  });
+
+  it("blocks submission when the terms checkbox is unchecked", async () => {
+    const user = userEvent.setup();
+    render(<BookingPage />);
+
+    await user.type(screen.getByPlaceholderText("山田 太郎"), "テスト太郎");
+    await user.type(
+      screen.getByPlaceholderText("example@email.com"),
+      "test@example.com",
+    );
+    await user.type(
+      screen.getByPlaceholderText("090-1234-5678"),
+      "090-0000-0000",
+    );
+    await user.type(getBirthdateInput(), "1990-01-01");
+    await user.click(screen.getByText("お支払いへ進む"));
+
+    await waitFor(() => {
+      expect(screen.getByText("利用規約への同意が必要です")).toBeDefined();
+      expect(mockMutateAsync).not.toHaveBeenCalled();
     });
   });
 
@@ -437,6 +496,7 @@ describe("BookingPage", () => {
       "080-0000-0000",
     );
     await user.type(getBirthdateInput(), "1995-12-31");
+    await user.click(getTermsCheckbox());
     await user.click(screen.getByText("お支払いへ進む"));
 
     await waitFor(() => {
