@@ -33,33 +33,26 @@ function ZoomLinkPage() {
   const { profile, hasActiveZoomConnection, refreshProfile } =
     useCustomerAuth();
   const { status: callbackStatus, reason: callbackReason } = Route.useSearch();
-  const [actionError, setActionError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   const startConnect = async () => {
-    setActionError("");
     setIsLoading(true);
     try {
       const response = await createZoomAuthorizeUrl();
       window.location.href = response.data.url;
-    } catch (error) {
-      setActionError(
-        error instanceof Error ? error.message : "連携を開始できませんでした",
-      );
+    } catch {
+      // エラーは custom-fetch の toaster で表示される
       setIsLoading(false);
     }
   };
 
   const onDisconnect = async () => {
-    setActionError("");
     setIsLoading(true);
     try {
       await revokeZoomConnection();
       await refreshProfile();
-    } catch (error) {
-      setActionError(
-        error instanceof Error ? error.message : "連携解除に失敗しました",
-      );
+    } catch {
+      // エラーは custom-fetch の toaster で表示される
     } finally {
       setIsLoading(false);
     }
@@ -111,7 +104,6 @@ function ZoomLinkPage() {
             Zoom Email: {profile.zoomEmail}
           </Text>
         )}
-        {actionError && <Text color="fg.error">{actionError}</Text>}
         {hasActiveZoomConnection ? (
           <Button
             variant="outline"

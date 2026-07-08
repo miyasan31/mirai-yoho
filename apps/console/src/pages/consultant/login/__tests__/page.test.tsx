@@ -10,6 +10,12 @@ import {
 const mockSignIn = vi.fn();
 const mockNavigate = vi.fn();
 
+vi.mock("@mirai-yoho/ui/components/ui/toast", () => ({
+  toaster: {
+    create: vi.fn(),
+  },
+}));
+
 vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => ({
     signIn: mockSignIn,

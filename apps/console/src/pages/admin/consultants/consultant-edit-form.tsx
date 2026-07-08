@@ -5,10 +5,9 @@ import * as Dialog from "@mirai-yoho/ui/components/ui/dialog";
 import * as Field from "@mirai-yoho/ui/components/ui/field";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Skeleton } from "@mirai-yoho/ui/components/ui/skeleton";
-import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { Textarea } from "@mirai-yoho/ui/components/ui/textarea";
 import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import {
@@ -36,7 +35,6 @@ export function ConsultantEditForm({
 }: ConsultantEditFormProps) {
   const { organizationId } = useOrganizationRouting();
   const queryCustomer = useQueryClient();
-  const [error, setError] = useState("");
   const {
     register,
     handleSubmit,
@@ -97,7 +95,6 @@ export function ConsultantEditForm({
   };
 
   const onSubmit = async (values: ConsultantFormValues) => {
-    setError("");
     try {
       await updateConsultant.mutateAsync({
         organizationId: organizationId ?? "",
@@ -115,8 +112,8 @@ export function ConsultantEditForm({
       });
       await invalidateConsultants();
       onCompleted();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "保存に失敗しました");
+    } catch {
+      // エラーは custom-fetch の toaster で表示される
     }
   };
 
@@ -128,8 +125,8 @@ export function ConsultantEditForm({
       });
       await invalidateConsultants();
       onCompleted();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "無効化に失敗しました");
+    } catch {
+      // エラーは custom-fetch の toaster で表示される
     }
   };
 
@@ -206,7 +203,6 @@ export function ConsultantEditForm({
           <Field.ErrorText>{errors.statusId.message}</Field.ErrorText>
         )}
       </Field.Root>
-      {error && <Text color="fg.error">{error}</Text>}
       <styled.div display="flex" gap="2">
         <Button
           type="submit"

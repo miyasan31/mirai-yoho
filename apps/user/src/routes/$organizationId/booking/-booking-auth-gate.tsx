@@ -1,6 +1,7 @@
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Spinner } from "@mirai-yoho/ui/components/ui/spinner";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { LogIn, Video } from "lucide-react";
 import { type ReactNode, useState } from "react";
@@ -23,7 +24,6 @@ export function BookingAuthGate({ children }: BookingAuthGateProps) {
   const returnPath = useRouterState({
     select: (state) => state.location.href,
   });
-  const [authError, setAuthError] = useState("");
   const [busy, setBusy] = useState(false);
 
   if (isLoading) {
@@ -41,30 +41,32 @@ export function BookingAuthGate({ children }: BookingAuthGateProps) {
 
   if (!user) {
     const startGuest = async () => {
-      setAuthError("");
       setBusy(true);
       try {
         await signInAnonymously();
       } catch (error) {
-        setAuthError(
-          error instanceof Error
-            ? error.message
-            : "ゲスト予約の開始に失敗しました",
-        );
+        toaster.create({
+          type: "error",
+          title:
+            error instanceof Error
+              ? error.message
+              : "ゲスト予約の開始に失敗しました",
+        });
       } finally {
         setBusy(false);
       }
     };
 
     const startGoogle = async () => {
-      setAuthError("");
       setBusy(true);
       try {
         await signInWithGoogle();
       } catch (error) {
-        setAuthError(
-          error instanceof Error ? error.message : "ログインに失敗しました",
-        );
+        toaster.create({
+          type: "error",
+          title:
+            error instanceof Error ? error.message : "ログインに失敗しました",
+        });
       } finally {
         setBusy(false);
       }
@@ -89,7 +91,6 @@ export function BookingAuthGate({ children }: BookingAuthGateProps) {
           メールアドレスのみで予約できる「ゲスト予約」、もしくは Google
           アカウントでのログインを選択してください。
         </Text>
-        {authError && <Text color="fg.error">{authError}</Text>}
         <styled.div display="flex" flexDir="column" gap="2">
           <Button onClick={startGuest} loading={busy}>
             ゲストとして予約に進む
