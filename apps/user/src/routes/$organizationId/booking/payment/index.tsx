@@ -56,15 +56,15 @@ function CheckoutForm({
 }) {
   const stripe = useStripe();
   const elements = useElements();
-  const [isProcessing, setIsProcessing] = useState(false);
-  const { handleSubmit } = useForm<CheckoutFormValues>({
+  const {
+    handleSubmit,
+    formState: { isSubmitting },
+  } = useForm<CheckoutFormValues>({
     resolver: valibotResolver(checkoutFormSchema),
   });
 
   const onSubmit = async () => {
     if (!stripe || !elements) return;
-
-    setIsProcessing(true);
 
     const returnUrl = `${window.location.origin}/${organizationId}/booking/complete?bookingId=${bookingId}&mode=${mode}`;
 
@@ -84,7 +84,6 @@ function CheckoutForm({
         type: "error",
         title: result.error.message ?? "決済処理に失敗しました",
       });
-      setIsProcessing(false);
     }
   };
 
@@ -99,8 +98,8 @@ function CheckoutForm({
 
       <Button
         type="submit"
-        disabled={!stripe || isProcessing}
-        loading={isProcessing}
+        disabled={!stripe || isSubmitting}
+        loading={isSubmitting}
         loadingText="処理中..."
       >
         {mode === "setup" ? "カード情報を登録する" : "お支払いを確定する"}
@@ -122,29 +121,27 @@ function PaymentMethodSelector({
     useState<PaymentMethodType>("card");
   const [clientSecret, setClientSecret] = useState<string>();
   const [mode, setMode] = useState<PaymentMode>();
-  const [isLoading, setIsLoading] = useState(false);
 
   const setupPayment = useSetupPayment();
 
-  const handleSetupPayment = async () => {
-    setIsLoading(true);
-
-    try {
-      const result = await setupPayment.mutateAsync({
+  const handleSetupPayment = () => {
+    // エラーは custom-fetch の toaster で表示される
+    setupPayment.mutate(
+      {
         organizationId,
         bookingId,
         data: {
           paymentMethodType: selectedMethod,
           bookingActionToken,
         },
-      });
-      setClientSecret(result.data.customerSecret);
-      setMode(result.data.mode);
-    } catch {
-      // エラーは custom-fetch の toaster で表示される
-    } finally {
-      setIsLoading(false);
-    }
+      },
+      {
+        onSuccess: (result) => {
+          setClientSecret(result.data.customerSecret);
+          setMode(result.data.mode);
+        },
+      },
+    );
   };
 
   if (clientSecret && mode) {
@@ -204,7 +201,7 @@ function PaymentMethodSelector({
 
       <Button
         onClick={handleSetupPayment}
-        loading={isLoading}
+        loading={setupPayment.isPending}
         loadingText="準備中..."
       >
         次へ進む

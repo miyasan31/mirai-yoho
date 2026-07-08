@@ -5,7 +5,7 @@ import {
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useTransition } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 
@@ -33,29 +33,28 @@ function ZoomLinkPage() {
   const { profile, hasActiveZoomConnection, refreshProfile } =
     useCustomerAuth();
   const { status: callbackStatus, reason: callbackReason } = Route.useSearch();
-  const [isLoading, setIsLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
-  const startConnect = async () => {
-    setIsLoading(true);
-    try {
-      const response = await createZoomAuthorizeUrl();
-      window.location.href = response.data.url;
-    } catch {
-      // エラーは custom-fetch の toaster で表示される
-      setIsLoading(false);
-    }
+  const startConnect = () => {
+    startTransition(async () => {
+      try {
+        const response = await createZoomAuthorizeUrl();
+        window.location.href = response.data.url;
+      } catch {
+        // エラーは custom-fetch の toaster で表示される
+      }
+    });
   };
 
-  const onDisconnect = async () => {
-    setIsLoading(true);
-    try {
-      await revokeZoomConnection();
-      await refreshProfile();
-    } catch {
-      // エラーは custom-fetch の toaster で表示される
-    } finally {
-      setIsLoading(false);
-    }
+  const onDisconnect = () => {
+    startTransition(async () => {
+      try {
+        await revokeZoomConnection();
+        await refreshProfile();
+      } catch {
+        // エラーは custom-fetch の toaster で表示される
+      }
+    });
   };
 
   const callback = callbackStatus ? STATUS_MESSAGES[callbackStatus] : undefined;
@@ -108,13 +107,13 @@ function ZoomLinkPage() {
           <Button
             variant="outline"
             onClick={onDisconnect}
-            loading={isLoading}
+            loading={isPending}
             loadingText="解除中..."
           >
             連携を解除する
           </Button>
         ) : (
-          <Button onClick={startConnect} loading={isLoading}>
+          <Button onClick={startConnect} loading={isPending}>
             Zoom を連携する
           </Button>
         )}

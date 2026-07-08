@@ -6,7 +6,7 @@ import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 
@@ -18,11 +18,11 @@ function WithdrawPage() {
   const { profile, signOut } = useCustomerAuth();
   const navigate = useNavigate();
   const [confirmation, setConfirmation] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const targetText = profile?.primaryEmail ?? profile?.displayName ?? "";
 
-  const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+  const onSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!confirmation || confirmation !== targetText) {
       toaster.create({
@@ -33,22 +33,21 @@ function WithdrawPage() {
       });
       return;
     }
-    setBusy(true);
-    try {
-      await withdrawCustomer();
-      await signOut();
-      navigate({ to: "/" });
-    } catch (e) {
-      // API エラーは custom-fetch の toaster で表示される
-      if (!(e instanceof ApiResponseError)) {
-        toaster.create({
-          type: "error",
-          title: e instanceof Error ? e.message : "退会に失敗しました",
-        });
+    startTransition(async () => {
+      try {
+        await withdrawCustomer();
+        await signOut();
+        navigate({ to: "/" });
+      } catch (e) {
+        // API エラーは custom-fetch の toaster で表示される
+        if (!(e instanceof ApiResponseError)) {
+          toaster.create({
+            type: "error",
+            title: e instanceof Error ? e.message : "退会に失敗しました",
+          });
+        }
       }
-    } finally {
-      setBusy(false);
-    }
+    });
   };
 
   return (
@@ -99,8 +98,8 @@ function WithdrawPage() {
         <Button
           type="submit"
           colorPalette="red"
-          disabled={busy || !targetText}
-          loading={busy}
+          disabled={isPending || !targetText}
+          loading={isPending}
           loadingText="処理中..."
         >
           退会する（取り消せません）

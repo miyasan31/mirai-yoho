@@ -4,7 +4,7 @@ import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { Link, useRouterState } from "@tanstack/react-router";
 import { LogIn, Video } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useTransition } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 
@@ -24,7 +24,7 @@ export function BookingAuthGate({ children }: BookingAuthGateProps) {
   const returnPath = useRouterState({
     select: (state) => state.location.href,
   });
-  const [busy, setBusy] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   if (isLoading) {
     return (
@@ -40,36 +40,34 @@ export function BookingAuthGate({ children }: BookingAuthGateProps) {
   }
 
   if (!user) {
-    const startGuest = async () => {
-      setBusy(true);
-      try {
-        await signInAnonymously();
-      } catch (error) {
-        toaster.create({
-          type: "error",
-          title:
-            error instanceof Error
-              ? error.message
-              : "ゲスト予約の開始に失敗しました",
-        });
-      } finally {
-        setBusy(false);
-      }
+    const startGuest = () => {
+      startTransition(async () => {
+        try {
+          await signInAnonymously();
+        } catch (error) {
+          toaster.create({
+            type: "error",
+            title:
+              error instanceof Error
+                ? error.message
+                : "ゲスト予約の開始に失敗しました",
+          });
+        }
+      });
     };
 
-    const startGoogle = async () => {
-      setBusy(true);
-      try {
-        await signInWithGoogle();
-      } catch (error) {
-        toaster.create({
-          type: "error",
-          title:
-            error instanceof Error ? error.message : "ログインに失敗しました",
-        });
-      } finally {
-        setBusy(false);
-      }
+    const startGoogle = () => {
+      startTransition(async () => {
+        try {
+          await signInWithGoogle();
+        } catch (error) {
+          toaster.create({
+            type: "error",
+            title:
+              error instanceof Error ? error.message : "ログインに失敗しました",
+          });
+        }
+      });
     };
 
     return (
@@ -92,10 +90,10 @@ export function BookingAuthGate({ children }: BookingAuthGateProps) {
           アカウントでのログインを選択してください。
         </Text>
         <styled.div display="flex" flexDir="column" gap="2">
-          <Button onClick={startGuest} loading={busy}>
+          <Button onClick={startGuest} loading={isPending}>
             ゲストとして予約に進む
           </Button>
-          <Button variant="outline" onClick={startGoogle} disabled={busy}>
+          <Button variant="outline" onClick={startGoogle} disabled={isPending}>
             Google アカウントでログイン
           </Button>
         </styled.div>

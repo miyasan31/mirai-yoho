@@ -19,12 +19,11 @@ const SUCCESS_MESSAGE =
 
 export default function ConsultantPasswordResetPage() {
   const { sendPasswordResetEmail } = useAuth();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const {
     register,
     handleSubmit,
-    formState: { errors },
+    formState: { errors, isSubmitting },
   } = useForm<PasswordResetFormValues>({
     resolver: valibotResolver(passwordResetFormSchema),
     defaultValues: {
@@ -33,12 +32,6 @@ export default function ConsultantPasswordResetPage() {
   });
 
   const onSubmit = async (values: PasswordResetFormValues) => {
-    if (isSubmitting) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
     try {
       await sendPasswordResetEmail(values.email);
       setIsSubmitted(true);
@@ -50,8 +43,6 @@ export default function ConsultantPasswordResetPage() {
             ? submitError.message
             : "メール送信に失敗しました。時間をおいて再度お試しください。",
       });
-    } finally {
-      setIsSubmitting(false);
     }
   };
 

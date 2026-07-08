@@ -288,7 +288,13 @@ describe("ConsultantProfilePage", () => {
       });
     });
 
-    await user.click(screen.getByText("保存"));
+    // アップロードのトランジションが完了して保存ボタンが有効になるのを待つ
+    const saveButton = screen.getByText("保存") as HTMLButtonElement;
+    await waitFor(() => {
+      expect(saveButton.disabled).toBe(false);
+    });
+
+    await user.click(saveButton);
 
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith({

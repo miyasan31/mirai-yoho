@@ -5,7 +5,6 @@ import * as Dialog from "@mirai-yoho/ui/components/ui/dialog";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { createFileRoute } from "@tanstack/react-router";
 import { CheckCircle, ShieldX } from "lucide-react";
-import { useState } from "react";
 import { styled } from "styled-system/jsx";
 import { useCancelBooking } from "@/hooks/use-booking";
 
@@ -23,9 +22,6 @@ export const Route = createFileRoute("/$organizationId/booking/cancel")({
 function CancelPage() {
   const { token } = Route.useSearch();
   const { organizationId } = Route.useParams();
-  const [status, setStatus] = useState<
-    "idle" | "loading" | "success" | "error"
-  >("idle");
 
   const cancelBooking = useCancelBooking();
 
@@ -43,22 +39,16 @@ function CancelPage() {
 
   const bookingId = token.split(".")[0];
 
-  const handleCancel = async () => {
-    setStatus("loading");
-    try {
-      await cancelBooking.mutateAsync({
-        organizationId: organizationId ?? "",
-        bookingId,
-        data: { cancelledBy: "customer", token } satisfies CancelBookingBody,
-      });
-      setStatus("success");
-    } catch {
-      // エラーは custom-fetch の toaster で表示される
-      setStatus("error");
-    }
+  const handleCancel = () => {
+    // エラーは custom-fetch の toaster で表示される
+    cancelBooking.mutate({
+      organizationId: organizationId ?? "",
+      bookingId,
+      data: { cancelledBy: "customer", token } satisfies CancelBookingBody,
+    });
   };
 
-  if (status === "success") {
+  if (cancelBooking.isSuccess) {
     return (
       <styled.div maxW="lg" mx="auto" p="8" textAlign="center">
         <CheckCircle
@@ -108,7 +98,7 @@ function CancelPage() {
                 <Button
                   colorPalette="red"
                   onClick={handleCancel}
-                  loading={status === "loading"}
+                  loading={cancelBooking.isPending}
                   loadingText="キャンセル中..."
                 >
                   キャンセルする

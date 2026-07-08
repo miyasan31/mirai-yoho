@@ -10,7 +10,7 @@ import {
   useRouterState,
 } from "@tanstack/react-router";
 import { CalendarDays, LogIn, LogOut, Ticket, User, Video } from "lucide-react";
-import { useState } from "react";
+import { useTransition } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 
@@ -31,7 +31,7 @@ function MypageLayout() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   });
-  const [busy, setBusy] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   if (isLoading) {
     return (
@@ -47,19 +47,18 @@ function MypageLayout() {
   }
 
   if (!user) {
-    const startGoogle = async () => {
-      setBusy(true);
-      try {
-        await signInWithGoogle();
-      } catch (error) {
-        toaster.create({
-          type: "error",
-          title:
-            error instanceof Error ? error.message : "ログインに失敗しました",
-        });
-      } finally {
-        setBusy(false);
-      }
+    const startGoogle = () => {
+      startTransition(async () => {
+        try {
+          await signInWithGoogle();
+        } catch (error) {
+          toaster.create({
+            type: "error",
+            title:
+              error instanceof Error ? error.message : "ログインに失敗しました",
+          });
+        }
+      });
     };
 
     return (
@@ -77,7 +76,7 @@ function MypageLayout() {
             マイページのご利用にはログインが必要です
           </Text>
         </styled.div>
-        <Button onClick={startGoogle} loading={busy}>
+        <Button onClick={startGoogle} loading={isPending}>
           Google アカウントでログイン
         </Button>
       </styled.div>
