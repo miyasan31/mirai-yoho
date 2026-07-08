@@ -1,0 +1,43 @@
+{
+  "name": "@mirai-yoho/console-core",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    "./hooks/*": "./src/hooks/*.ts",
+    "./lib/*": "./src/lib/*.ts",
+    "./config/*": "./src/config/*.ts"
+  },
+  "scripts": {
+    "tsc": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@mirai-yoho/api-client": "workspace:*",
+    "@mirai-yoho/shared": "workspace:*",
+    "@mirai-yoho/ui": "workspace:*",
+    "firebase": "^12.11.0"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "^5.95.2",
+    "@tanstack/react-router": "^1.132.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@tanstack/react-query": "^5.95.2",
+    "@tanstack/react-router": "^1.132.0",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^5.0.0",
+    "jsdom": "^29.0.1",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "typescript": "^5",
+    "vitest": "^4.1.1"
+  }
+}

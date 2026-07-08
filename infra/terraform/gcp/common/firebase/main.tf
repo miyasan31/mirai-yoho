@@ -301,11 +301,26 @@ resource "google_firebase_hosting_site" "user_spa" {
   site_id  = "${var.project_id}-user"
 }
 
-resource "google_firebase_hosting_site" "console_spa" {
+resource "google_firebase_hosting_site" "admin_spa" {
   provider = google-beta
   project  = var.project_id
-  site_id  = "${var.project_id}-console"
+  site_id  = "${var.project_id}-admin"
 }
+
+resource "google_firebase_hosting_site" "consultant_spa" {
+  provider = google-beta
+  project  = var.project_id
+  site_id  = "${var.project_id}-consultant"
+}
+
+# NOTE: `${project}-console` サイトは admin / consultant への分割で廃止。
+# 既存サイトはカットオーバー完了後に手動削除する（Firebase Console もしくは
+# `firebase hosting:sites:delete`）。移行期間中に残しておいても課金影響は軽微。
+# resource "google_firebase_hosting_site" "console_spa" {
+#   provider = google-beta
+#   project  = var.project_id
+#   site_id  = "${var.project_id}-console"
+# }
 
 resource "google_secret_manager_secret" "app_hosting" {
   for_each = local.app_hosting_secret_ids

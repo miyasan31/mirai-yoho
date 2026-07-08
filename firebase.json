@@ -33,8 +33,40 @@
       ]
     },
     {
-      "target": "console",
-      "public": "apps/console/dist",
+      "target": "admin",
+      "public": "apps/admin/dist",
+      "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "cleanUrls": true,
+      "rewrites": [
+        {
+          "source": "**",
+          "destination": "/index.html"
+        }
+      ],
+      "headers": [
+        {
+          "source": "/assets/**",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "public, max-age=31536000, immutable"
+            }
+          ]
+        },
+        {
+          "source": "/index.html",
+          "headers": [
+            {
+              "key": "Cache-Control",
+              "value": "no-cache"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "target": "consultant",
+      "public": "apps/consultant/dist",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "cleanUrls": true,
       "rewrites": [

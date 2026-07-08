@@ -27,7 +27,7 @@ function Home() {
           あなたの未来を一緒に考える、オンライン相談サービス
         </Text>
         <Button asChild size="lg">
-          <a href={`${envClient.consoleAppUrl}/admin/login`}>
+          <a href={`${envClient.adminAppUrl}/admin/login`}>
             ログインする
             <ArrowRight size={18} />
           </a>
