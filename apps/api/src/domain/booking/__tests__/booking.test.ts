@@ -16,7 +16,7 @@ function createPendingBooking() {
     consultantId: "consultant-1",
     slotId: "slot-1",
     startsAt: futureDate,
-    consultantMemo: ConsultantMemo.create(""),
+    consultantMemo: ConsultantMemo.empty(),
     pricePlanId: "plan-1",
     pricePlanName: "通常鑑定",
     pricePlanTotalJPY: 5500,
@@ -68,7 +68,7 @@ describe("Booking", () => {
         status: BookingStatus.reconstruct("confirmed"),
         cancelDeadlineAt: CancelDeadline.create(futureDate),
         consultationReminderEmailSentAt: sentAt,
-        consultantMemo: ConsultantMemo.create(""),
+        consultantMemo: ConsultantMemo.empty(),
       });
 
       expect(booking.getConsultationReminderEmailSentAt()).toEqual(sentAt);
@@ -137,7 +137,7 @@ describe("Booking", () => {
         startsAt: pastDate,
         status: BookingStatus.reconstruct("confirmed"),
         cancelDeadlineAt: CancelDeadline.create(pastDate),
-        consultantMemo: ConsultantMemo.create(""),
+        consultantMemo: ConsultantMemo.empty(),
       });
       expect(() => booking.cancel("admin")).not.toThrow();
     });
@@ -153,7 +153,7 @@ describe("Booking", () => {
         startsAt: pastDate,
         status: BookingStatus.reconstruct("confirmed"),
         cancelDeadlineAt: CancelDeadline.create(pastDate),
-        consultantMemo: ConsultantMemo.create(""),
+        consultantMemo: ConsultantMemo.empty(),
       });
       expect(() => booking.cancel("customer")).toThrow(DomainError);
     });
@@ -187,9 +187,17 @@ describe("Booking", () => {
   describe("updateMemo", () => {
     it("メモを更新できる", () => {
       const booking = createPendingBooking();
-      const newMemo = ConsultantMemo.create("updated memo");
+      const newMemo = ConsultantMemo.create({
+        customerName: "山田 花子",
+        birthDate: "1990-01-01",
+        appraisalDate: "2026-05-01",
+        freeMemo: "updated memo",
+      });
       booking.updateMemo(newMemo);
-      expect(booking.getConsultantMemo().getValue()).toBe("updated memo");
+      expect(booking.getConsultantMemo().getFreeMemo()).toBe("updated memo");
+      expect(booking.getConsultantMemo().getCustomerName()).toBe("山田 花子");
+      expect(booking.getConsultantMemo().getBirthDate()).toBe("1990-01-01");
+      expect(booking.getConsultantMemo().getAppraisalDate()).toBe("2026-05-01");
     });
   });
 

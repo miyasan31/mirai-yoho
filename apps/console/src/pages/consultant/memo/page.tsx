@@ -2,6 +2,7 @@ import { valibotResolver } from "@hookform/resolvers/valibot";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Field from "@mirai-yoho/ui/components/ui/field";
 import { IconButton } from "@mirai-yoho/ui/components/ui/icon-button";
+import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Skeleton } from "@mirai-yoho/ui/components/ui/skeleton";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { Textarea } from "@mirai-yoho/ui/components/ui/textarea";
@@ -34,7 +35,10 @@ export default function ConsultantMemoEditPage() {
   const { register, handleSubmit, reset } = useForm<MemoFormValues>({
     resolver: valibotResolver(memoFormSchema),
     defaultValues: {
-      memo: "",
+      customerName: "",
+      birthDate: "",
+      appraisalDate: "",
+      freeMemo: "",
     },
   });
   const bookings = data?.data?.bookings ?? [];
@@ -42,7 +46,12 @@ export default function ConsultantMemoEditPage() {
 
   useEffect(() => {
     if (booking) {
-      reset({ memo: booking.consultantMemo ?? "" });
+      reset({
+        customerName: booking.memoCustomerName ?? "",
+        birthDate: booking.memoBirthDate ?? "",
+        appraisalDate: booking.memoAppraisalDate ?? "",
+        freeMemo: booking.consultantMemo ?? "",
+      });
     }
   }, [booking, reset]);
 
@@ -57,9 +66,14 @@ export default function ConsultantMemoEditPage() {
       await updateMemo.mutateAsync({
         organizationId: organizationId ?? "",
         id: bookingId,
-        data: { memo: values.memo?.trim() ?? "" },
+        data: {
+          customerName: values.customerName?.trim() ?? "",
+          birthDate: values.birthDate ?? "",
+          appraisalDate: values.appraisalDate ?? "",
+          freeMemo: values.freeMemo?.trim() ?? "",
+        },
       });
-      toaster.create({ type: "success", title: "メモを保存しました" });
+      toaster.create({ type: "success", title: "鑑定メモを保存しました" });
       void navigate({ to: buildPath("/consultant/bookings") });
     } catch {
       // custom-fetch.ts がエラー Toast を自動表示
@@ -72,11 +86,11 @@ export default function ConsultantMemoEditPage() {
         <styled.div display="flex" alignItems="center" gap="2" mb="6">
           <Skeleton height="9" width="9" rounded="l2" />
           <Text as="h1" textStyle="2xl" fontWeight="bold">
-            メモ編集
+            鑑定メモ編集
           </Text>
         </styled.div>
         <Text textStyle="sm" color="fg.muted" mb="4">
-          相談内容や対応履歴など、予約ごとの記録を保存する画面です。
+          お名前・生年月日・鑑定日・フリーメモなど、予約ごとの鑑定記録を保存する画面です。
         </Text>
         <styled.div
           display="flex"
@@ -108,11 +122,11 @@ export default function ConsultantMemoEditPage() {
           </IconButton>
         </Tooltip>
         <Text as="h1" textStyle="2xl" fontWeight="bold">
-          メモ編集
+          鑑定メモ編集
         </Text>
       </styled.div>
       <Text textStyle="sm" color="fg.muted" mb="4">
-        相談内容や対応履歴など、予約ごとの記録を保存する画面です。
+        お名前・生年月日・鑑定日・フリーメモなど、予約ごとの鑑定記録を保存する画面です。
       </Text>
       <styled.div shadow="xs" rounded="l2" p="6">
         <styled.form
@@ -122,8 +136,25 @@ export default function ConsultantMemoEditPage() {
           gap="4"
         >
           <Field.Root>
-            <Field.Label>相談員メモ</Field.Label>
-            <Textarea id="memo" {...register("memo")} rows={6} />
+            <Field.Label>お名前</Field.Label>
+            <Input id="customerName" {...register("customerName")} />
+            <Field.HelperText>鑑定対象の方のお名前</Field.HelperText>
+          </Field.Root>
+          <Field.Root>
+            <Field.Label>生年月日</Field.Label>
+            <Input id="birthDate" type="date" {...register("birthDate")} />
+          </Field.Root>
+          <Field.Root>
+            <Field.Label>鑑定日</Field.Label>
+            <Input
+              id="appraisalDate"
+              type="date"
+              {...register("appraisalDate")}
+            />
+          </Field.Root>
+          <Field.Root>
+            <Field.Label>フリーメモ</Field.Label>
+            <Textarea id="freeMemo" {...register("freeMemo")} rows={6} />
             <Field.HelperText>
               相談内容やフォローアップ事項をメモできます
             </Field.HelperText>

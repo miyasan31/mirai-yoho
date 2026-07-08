@@ -25,6 +25,9 @@ interface BookingDoc {
   consultationReminderEmailSentAt?: Timestamp;
   lateArrivalAlertSentAt?: Timestamp;
   consultantMemo: string;
+  memoCustomerName?: string;
+  memoBirthDate?: string;
+  memoAppraisalDate?: string;
   consultationContent?: string;
   pricePlanId?: string;
   pricePlanName?: string;
@@ -49,7 +52,12 @@ function toDomain(doc: BookingDoc): Booking {
     consultationReminderEmailSentAt:
       doc.consultationReminderEmailSentAt?.toDate(),
     lateArrivalAlertSentAt: doc.lateArrivalAlertSentAt?.toDate(),
-    consultantMemo: ConsultantMemo.reconstruct(doc.consultantMemo),
+    consultantMemo: ConsultantMemo.reconstruct({
+      customerName: doc.memoCustomerName ?? "",
+      birthDate: doc.memoBirthDate ?? "",
+      appraisalDate: doc.memoAppraisalDate ?? "",
+      freeMemo: doc.consultantMemo,
+    }),
     consultationContent: doc.consultationContent,
     pricePlanId: doc.pricePlanId,
     pricePlanName: doc.pricePlanName,
@@ -74,7 +82,10 @@ function toFirestore(booking: Booking): Record<string, unknown> {
     consultationReminderEmailSentAt:
       booking.getConsultationReminderEmailSentAt() ?? null,
     lateArrivalAlertSentAt: booking.getLateArrivalAlertSentAt() ?? null,
-    consultantMemo: booking.getConsultantMemo().getValue(),
+    consultantMemo: booking.getConsultantMemo().getFreeMemo(),
+    memoCustomerName: booking.getConsultantMemo().getCustomerName(),
+    memoBirthDate: booking.getConsultantMemo().getBirthDate(),
+    memoAppraisalDate: booking.getConsultantMemo().getAppraisalDate(),
     consultationContent: booking.getConsultationContent() ?? null,
     pricePlanId: booking.getPricePlanId() ?? null,
     pricePlanName: booking.getPricePlanName() ?? null,

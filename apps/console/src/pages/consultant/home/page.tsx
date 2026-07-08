@@ -144,7 +144,7 @@ export default function ConsultantHomePage() {
                       `/consultant/bookings/${nextBooking.bookingId}/memo`,
                     )}
                   >
-                    メモ編集
+                    鑑定メモ編集
                   </Link>
                 </Button>
               </styled.div>
@@ -272,7 +272,7 @@ export default function ConsultantHomePage() {
                         `/consultant/bookings/${booking.bookingId}/memo`,
                       )}
                     >
-                      メモ編集
+                      鑑定メモ編集
                     </Link>
                   </Button>
                 </styled.div>

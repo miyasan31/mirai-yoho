@@ -30,7 +30,7 @@ function createBooking(params: {
     consultantId: params.consultantId ?? "consultant-1",
     slotId: `slot-${params.bookingId}`,
     startsAt: new Date(params.startsAt),
-    consultantMemo: ConsultantMemo.create(""),
+    consultantMemo: ConsultantMemo.empty(),
     pricePlanId: "plan-1",
     pricePlanName: "通常鑑定",
     pricePlanTotalJPY: 5500,
@@ -370,7 +370,7 @@ describe("SendConsultationReminderUseCase", () => {
       cancelDeadlineAt: CancelDeadline.create(
         new Date("2026-05-01T09:40:00.000Z"),
       ),
-      consultantMemo: ConsultantMemo.create(""),
+      consultantMemo: ConsultantMemo.empty(),
     });
     const bookingRepository = new InMemoryBookingRepository([
       missingZoomBooking,

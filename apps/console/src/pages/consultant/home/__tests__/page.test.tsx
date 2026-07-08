@@ -188,7 +188,9 @@ describe("ConsultantHomePage", () => {
 
     expect(screen.getAllByText(/顧客: 佐藤 花子/).length).toBe(2);
     expect(screen.getByText("今日の担当件数: 2件")).toBeInTheDocument();
-    expect(screen.getAllByText("メモ編集").length).toBeGreaterThanOrEqual(2);
+    expect(screen.getAllByText("鑑定メモ編集").length).toBeGreaterThanOrEqual(
+      2,
+    );
     expect(screen.getAllByText("入室確認").length).toBeGreaterThanOrEqual(2);
     expect(screen.getByText("予約一覧を開く")).toBeInTheDocument();
     expect(screen.getByText("プロフィールを更新する")).toBeInTheDocument();

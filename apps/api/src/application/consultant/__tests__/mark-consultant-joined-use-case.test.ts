@@ -16,7 +16,7 @@ function createBooking(startsAt = "2026-05-01T10:00:00.000Z") {
     consultantId: CONSULTANT_ID,
     slotId: "slot-1",
     startsAt: new Date(startsAt),
-    consultantMemo: ConsultantMemo.create(""),
+    consultantMemo: ConsultantMemo.empty(),
     pricePlanId: "plan-1",
     pricePlanName: "通常鑑定",
     pricePlanTotalJPY: 5500,
