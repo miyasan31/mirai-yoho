@@ -62,7 +62,6 @@ export default function ConsultantProfilePage() {
   const [avatarPreviewUrl, setAvatarPreviewUrl] = useState<string | undefined>(
     undefined,
   );
-  const [avatarWarning, setAvatarWarning] = useState("");
   const [isUploadingAvatar, startAvatarUpload] = useTransition();
   const {
     register,
@@ -119,13 +118,13 @@ export default function ConsultantProfilePage() {
       return;
     }
 
-    setAvatarWarning("");
     try {
       const isSquare = await isSquareImage(file);
       if (!isSquare) {
-        setAvatarWarning(
-          "正方形画像を推奨しています（表示がトリミングされます）",
-        );
+        toaster.create({
+          type: "warning",
+          title: "正方形画像を推奨しています（表示がトリミングされます）",
+        });
       }
 
       const uploadMeta = await createAvatarUploadUrl.mutateAsync({
@@ -360,9 +359,6 @@ export default function ConsultantProfilePage() {
                 mt="3"
               />
             )}
-            {avatarWarning ? (
-              <Field.HelperText>{avatarWarning}</Field.HelperText>
-            ) : null}
             {isUploadingAvatar ? (
               <Field.HelperText>アバター画像を保存中...</Field.HelperText>
             ) : null}

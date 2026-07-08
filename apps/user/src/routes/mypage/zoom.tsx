@@ -4,8 +4,9 @@ import {
 } from "@mirai-yoho/api-client/api/customer/customer";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { createFileRoute } from "@tanstack/react-router";
-import { useTransition } from "react";
+import { useEffect, useTransition } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 
@@ -24,16 +25,23 @@ export const Route = createFileRoute("/mypage/zoom")({
   component: ZoomLinkPage,
 });
 
-const STATUS_MESSAGES: Record<string, { color: string; text: string }> = {
-  connected: { color: "fg.success", text: "Zoom 連携が完了しました。" },
-  error: { color: "fg.error", text: "Zoom 連携に失敗しました。" },
-};
-
 function ZoomLinkPage() {
   const { profile, hasActiveZoomConnection, refreshProfile } =
     useCustomerAuth();
   const { status: callbackStatus, reason: callbackReason } = Route.useSearch();
   const [isPending, startTransition] = useTransition();
+
+  useEffect(() => {
+    if (callbackStatus === "connected") {
+      toaster.create({ type: "success", title: "Zoom 連携が完了しました" });
+    } else if (callbackStatus === "error") {
+      toaster.create({
+        type: "error",
+        title: "Zoom 連携に失敗しました",
+        description: callbackReason,
+      });
+    }
+  }, [callbackStatus, callbackReason]);
 
   const startConnect = () => {
     startTransition(async () => {
@@ -57,8 +65,6 @@ function ZoomLinkPage() {
     });
   };
 
-  const callback = callbackStatus ? STATUS_MESSAGES[callbackStatus] : undefined;
-
   return (
     <styled.div display="flex" flexDir="column" gap="4">
       <Text as="h1" textStyle="2xl" fontWeight="bold">
@@ -67,15 +73,6 @@ function ZoomLinkPage() {
       <Text color="fg.muted" textStyle="sm">
         ご予約には Zoom アカウントの連携が必要です。
       </Text>
-
-      {callback && (
-        <Text color={callback.color}>
-          {callback.text}
-          {callbackReason && (
-            <styled.span color="fg.muted">（{callbackReason}）</styled.span>
-          )}
-        </Text>
-      )}
 
       <styled.div
         border="1px solid"

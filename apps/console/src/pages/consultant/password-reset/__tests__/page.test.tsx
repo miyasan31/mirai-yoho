@@ -100,7 +100,7 @@ describe("ConsultantPasswordResetPage", () => {
     vi.clearAllMocks();
   });
 
-  it("shows success message after submit", async () => {
+  it("shows success toast after submit", async () => {
     mockSendPasswordResetEmail.mockResolvedValueOnce(undefined);
 
     render(<ConsultantPasswordResetPage />);
@@ -111,11 +111,11 @@ describe("ConsultantPasswordResetPage", () => {
     fireEvent.click(screen.getByText("再設定メールを送信"));
 
     await waitFor(() => {
-      expect(
-        screen.getByText(
+      expect(mockToasterCreate).toHaveBeenCalledWith({
+        type: "success",
+        title:
           "該当メールアドレスにパスワード再設定リンクを送信しました。メールをご確認ください。",
-        ),
-      ).toBeDefined();
+      });
     });
   });
 
