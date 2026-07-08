@@ -187,11 +187,29 @@ describe("AdminLoginPage", () => {
     await waitFor(() => {
       expect(mockSignIn).toHaveBeenCalled();
     });
-    expect(
-      await screen.findByText("ログインに失敗しました", undefined, {
-        timeout: 5000,
-      }),
-    ).toBeDefined();
+    await waitFor(
+      async () => {
+        const signInResults = await Promise.all(
+          mockSignIn.mock.results.map(async (result) => {
+            try {
+              return await result.value;
+            } catch (error) {
+              return `rejected: ${String(error)}`;
+            }
+          }),
+        );
+        const diagnostic = JSON.stringify({
+          signInResults,
+          navigateCalls: mockNavigate.mock.calls,
+          bodyText: document.body.textContent,
+        });
+        expect(
+          screen.queryByText("ログインに失敗しました"),
+          diagnostic,
+        ).not.toBeNull();
+      },
+      { timeout: 3000 },
+    );
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 });
