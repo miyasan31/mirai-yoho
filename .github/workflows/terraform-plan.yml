@@ -14,29 +14,33 @@ on:
         description: Worker image URI for TF_VAR_worker_image (default = currently deployed image)
         required: false
         type: string
+  pull_request:
+    paths:
+      - .github/workflows/terraform-plan.yml
+      - infra/terraform/**
 
 permissions:
   contents: read
   id-token: write
 
 concurrency:
-  group: terraform-plan-${{ inputs.environment }}
+  group: terraform-plan-${{ inputs.environment || 'dev' }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
   plan:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: ${{ inputs.environment || 'dev' }}
     env:
-      DEPLOY_ENV: ${{ inputs.environment }}
-      PROJECT_ID: mirai-yoho-${{ inputs.environment }}
+      DEPLOY_ENV: ${{ inputs.environment || 'dev' }}
+      PROJECT_ID: mirai-yoho-${{ inputs.environment || 'dev' }}
       REGION: asia-northeast1
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-actions/providers/github
-          service_account: github-deployer@mirai-yoho-${{ inputs.environment }}.iam.gserviceaccount.com
+          service_account: github-deployer@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
       - uses: google-github-actions/setup-gcloud@v2
       - uses: hashicorp/setup-terraform@v3
       - name: Resolve worker image
