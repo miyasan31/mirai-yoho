@@ -120,6 +120,12 @@ resource "google_service_account_iam_member" "github_can_run_cloud_build" {
   member             = "serviceAccount:${var.github_deployer_service_account_email}"
 }
 
+resource "google_service_account_iam_member" "github_can_act_as_app_hosting_compute" {
+  service_account_id = "projects/${var.project_id}/serviceAccounts/${var.app_hosting_compute_service_account_email}"
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${var.github_deployer_service_account_email}"
+}
+
 resource "google_project_iam_member" "app_hosting_compute_roles" {
   for_each = toset([
     "roles/developerconnect.readTokenAccessor",

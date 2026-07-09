@@ -24,7 +24,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        environment: [dev, prod]
+        # prod は WIF プール/プロバイダ未整備のため一旦無効化。整備後に戻す。
+        environment: [dev] # [dev, prod]
     env:
       DEPLOY_ENV: ${{ matrix.environment }}
       PROJECT_ID: mirai-yoho-${{ matrix.environment }}
