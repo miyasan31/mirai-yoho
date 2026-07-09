@@ -65,7 +65,9 @@ resource "google_iam_workload_identity_pool_provider" "github" {
   workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
   workload_identity_pool_provider_id = "github"
   display_name                       = "GitHub Actions OIDC"
-  attribute_condition                = "assertion.repository == 'miyasan31/mirai-yoho' && (assertion.ref == 'refs/heads/release/dev' || assertion.ref == 'refs/heads/release/prod')"
+  # main: apply（push: main）、release/*: アプリデプロイ、refs/pull/*: PR の terraform plan
+  # NOTE: GCP 側の改行正規化による perpetual diff を避けるため単一行で記述する
+  attribute_condition = "assertion.repository == 'miyasan31/mirai-yoho' && (assertion.ref == 'refs/heads/main' || assertion.ref == 'refs/heads/release/dev' || assertion.ref == 'refs/heads/release/prod' || assertion.ref.startsWith('refs/pull/'))"
   attribute_mapping = {
     "google.subject"       = "assertion.sub"
     "attribute.repository" = "assertion.repository"

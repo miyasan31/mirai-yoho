@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}
     env:
-      DEPLOY_ENV: ${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}
       PROJECT_ID: mirai-yoho-${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}
       REGION: asia-northeast1
       IMAGE_TAG: ${{ github.sha }}
@@ -28,18 +27,22 @@ jobs:
           workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-actions/providers/github
           service_account: github-deployer@mirai-yoho-${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}.iam.gserviceaccount.com
       - uses: google-github-actions/setup-gcloud@v2
-      - uses: hashicorp/setup-terraform@v3
       - name: Build and push worker image
         run: |
           gcloud builds submit \
             --project="$PROJECT_ID" \
             --config=apps/api/cloudbuild.worker.yaml \
             --substitutions=_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/batch-worker/worker:$IMAGE_TAG"
-      - name: Apply worker infrastructure
-        working-directory: infra/terraform/gcp
+      # インフラ（Cloud Run job の存在・構成）は terraform-apply.yml が main への push で適用済みの想定。
+      # ここでは既存 job の稼働イメージを新しいビルドに差し替えるだけ（image は terraform 管理外）。
+      - name: Deploy worker image to Cloud Run jobs
         env:
-          TF_VAR_worker_image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/batch-worker/worker:${{ env.IMAGE_TAG }}
+          IMAGE: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/batch-worker/worker:${{ env.IMAGE_TAG }}
         run: |
-          make init ENV="$DEPLOY_ENV"
-          make plan ENV="$DEPLOY_ENV" TF_PLAN_FLAGS="-lock-timeout=10m"
-          make apply ENV="$DEPLOY_ENV" TF_APPLY_FLAGS="-auto-approve -lock-timeout=10m"
+          for job in batch-charge batch-consultation-reminders batch-late-arrival-alerts; do
+            echo "Updating $job -> $IMAGE"
+            gcloud run jobs update "$job" \
+              --project "$PROJECT_ID" \
+              --region "$REGION" \
+              --image "$IMAGE"
+          done

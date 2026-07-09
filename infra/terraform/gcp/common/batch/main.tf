@@ -120,6 +120,14 @@ resource "google_cloud_run_v2_job" "batch" {
   }
 
   depends_on = [google_secret_manager_secret_iam_member.batch_worker_can_read_secrets]
+
+  # 稼働イメージはリリース時に GitHub Actions が `gcloud run jobs update` で差し替えるため、
+  # terraform の管理対象から外す。初回作成時のみ var.worker_image を使用する。
+  lifecycle {
+    ignore_changes = [
+      template[0].template[0].containers[0].image,
+    ]
+  }
 }
 
 resource "google_cloud_run_v2_job_iam_member" "scheduler_can_run_batch" {
