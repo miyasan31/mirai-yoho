@@ -1,65 +1,76 @@
 name: Terraform plan
 
-# Workload Identity の attribute_condition が release/dev・release/prod の
-# ref のみ許可しているため、Run workflow では release ブランチを選ぶこと。
+# infra/terraform 配下を変更した PR で dev / prod 両方の plan を実行し、結果を PR にコメントする。
+# apply は行わない（apply は terraform-apply.yml が main への push で担当する）。
 on:
+  pull_request:
+    paths:
+      - infra/terraform/**
+      - .github/workflows/terraform-plan.yml
   workflow_dispatch:
-    inputs:
-      environment:
-        description: Target environment
-        required: true
-        type: choice
-        options:
-          - dev
-          - prod
-      worker_image:
-        description: Worker image URI for TF_VAR_worker_image (default = currently deployed image)
-        required: false
-        type: string
 
 permissions:
   contents: read
   id-token: write
+  pull-requests: write
 
 concurrency:
-  group: terraform-plan-${{ inputs.environment || 'dev' }}-${{ github.ref }}
-  cancel-in-progress: false
+  group: terraform-plan-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   plan:
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment || 'dev' }}
+    strategy:
+      fail-fast: false
+      matrix:
+        environment: [dev, prod]
     env:
-      DEPLOY_ENV: ${{ inputs.environment || 'dev' }}
-      PROJECT_ID: mirai-yoho-${{ inputs.environment || 'dev' }}
+      DEPLOY_ENV: ${{ matrix.environment }}
+      PROJECT_ID: mirai-yoho-${{ matrix.environment }}
       REGION: asia-northeast1
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      # NOTE: prod の GitHub Environment には required reviewers を設定するため、
+      # plan は Environment を使わずリポジトリ変数 GCP_PROJECT_NUMBER_DEV / _PROD を参照する
+      # （Environment を指定すると plan まで承認待ちになってしまうため）。
       - uses: google-github-actions/auth@v2
         with:
-          workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-actions/providers/github
+          workload_identity_provider: projects/${{ matrix.environment == 'dev' && vars.GCP_PROJECT_NUMBER_DEV || vars.GCP_PROJECT_NUMBER_PROD }}/locations/global/workloadIdentityPools/github-actions/providers/github
           service_account: github-deployer@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
       - uses: google-github-actions/setup-gcloud@v2
       - uses: hashicorp/setup-terraform@v3
-      - name: Resolve worker image
-        id: worker-image
-        run: |
-          worker_image="${{ inputs.worker_image }}"
-          if [ -z "$worker_image" ]; then
-            worker_image="$(gcloud run jobs describe batch-charge \
-              --project "$PROJECT_ID" \
-              --region "$REGION" \
-              --format 'value(template.template.containers[0].image)' 2>/dev/null || true)"
-          fi
-          if [ -z "$worker_image" ]; then
-            worker_image="$REGION-docker.pkg.dev/$PROJECT_ID/batch-worker/worker:plan-placeholder"
-            echo "No deployed batch-charge job found; using placeholder image."
-          fi
-          echo "worker_image=$worker_image" >> "$GITHUB_OUTPUT"
       - name: Terraform plan
+        id: plan
         working-directory: infra/terraform/gcp
+        # 稼働イメージは terraform 管理外（ignore_changes）なので、変数検証を満たすための
+        # プレースホルダを渡す。既存 job の image 差分は plan に現れない。
         env:
-          TF_VAR_worker_image: ${{ steps.worker-image.outputs.worker_image }}
+          TF_VAR_worker_image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/batch-worker/worker:plan-placeholder
         run: |
+          set -o pipefail
           make init ENV="$DEPLOY_ENV"
-          make plan ENV="$DEPLOY_ENV" TF_PLAN_FLAGS="-lock-timeout=10m -input=false"
+          make plan ENV="$DEPLOY_ENV" \
+            TF_PLAN_FLAGS="-lock-timeout=10m -input=false -no-color" \
+            2>&1 | tee plan-output.txt
+      - name: Comment plan result on PR
+        if: always() && github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          OUTCOME: ${{ steps.plan.outcome }}
+        working-directory: infra/terraform/gcp
+        run: |
+          {
+            echo "### Terraform plan (\`$DEPLOY_ENV\`) — $OUTCOME"
+            echo ""
+            echo "<details><summary>Show plan</summary>"
+            echo ""
+            echo '```terraform'
+            # コメントは 65536 文字上限があるため末尾を優先して切り詰める
+            tail -c 60000 plan-output.txt
+            echo '```'
+            echo ""
+            echo "</details>"
+          } > comment.md
+          gh pr comment "$PR_NUMBER" --body-file comment.md
