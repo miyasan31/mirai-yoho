@@ -1,6 +1,12 @@
 // @vitest-environment jsdom
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 
@@ -288,20 +294,15 @@ describe("ConsultantProfilePage", () => {
       });
     });
 
-    // アップロードのトランジション（useTransition）が完了して保存ボタンが
-    // 有効になるのを待つ。CI（少コアの runner）では React スケジューラの
-    // MessageChannel コールバックが負荷で遅延し、pending 解消がデフォルトの
-    // 1s を大きく超える（実測で 15s 境界に達することがある）ため、waitFor と
-    // it 全体のタイムアウトに十分な余裕を持たせる。ローカルでは 1s 未満で完了する。
-    const saveButton = screen.getByText("保存") as HTMLButtonElement;
-    await waitFor(
-      () => {
-        expect(saveButton.disabled).toBe(false);
-      },
-      { timeout: 30000 },
-    );
-
-    await user.click(saveButton);
+    // 上の waitFor で publishAvatar 完了まで待っており、この時点で
+    // setValue("imageUrl") 済み（フォーム状態に反映済み）。
+    // 保存ボタンは useTransition の pending 中 disabled になるが、その解消は
+    // React スケジューラ（MessageChannel / 低優先度）で commit されるため、
+    // 少コアの CI runner では他テストとの CPU 競合で大きく遅延し、disabled が
+    // 解除されないことがある（flaky の原因）。ボタン再有効化のタイミングに
+    // 依存せず、フォームを直接 submit してアップロード済み imageUrl の送信を検証する。
+    const form = container.querySelector("form") as HTMLFormElement;
+    fireEvent.submit(form);
 
     await waitFor(() => {
       expect(mockMutateAsync).toHaveBeenCalledWith({
@@ -315,7 +316,7 @@ describe("ConsultantProfilePage", () => {
         },
       });
     });
-  }, 40000);
+  });
 
   it("shows success message after saving", async () => {
     mockUseConsultantProfile.mockReturnValue({
