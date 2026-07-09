@@ -14,9 +14,9 @@ export default function NotFound() {
       hint="URL を確認して、もう一度アクセスしてください。"
       actions={
         <>
-          <BackNavigationButton fallbackHref="/consultant/login" />
+          <BackNavigationButton fallbackHref="/login" />
           <Button asChild>
-            <Link to="/consultant/login">トップへ戻る</Link>
+            <Link to="/login">トップへ戻る</Link>
           </Button>
         </>
       }

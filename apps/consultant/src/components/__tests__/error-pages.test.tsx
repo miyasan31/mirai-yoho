@@ -66,7 +66,7 @@ describe("error pages", () => {
     ).toBeVisible();
     expect(screen.getByRole("link", { name: "トップへ戻る" })).toHaveAttribute(
       "href",
-      "/consultant/login",
+      "/login",
     );
   });
 });

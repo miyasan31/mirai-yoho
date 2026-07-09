@@ -13,9 +13,7 @@ export function useOrganizationIdFromRoute(): string | null {
   const firstSegment = pathname.split("/").filter(Boolean)[0];
   if (
     firstSegment &&
-    !["admin", "consultant", "consultants", "booking", "api"].includes(
-      firstSegment,
-    )
+    !["login", "password-reset", "api"].includes(firstSegment)
   ) {
     return firstSegment;
   }
@@ -39,10 +37,6 @@ export function switchOrganizationInPath(
 
   if (segments.length === 0) {
     return `/${nextOrganizationId}`;
-  }
-
-  if (segments[0] === "admin" || segments[0] === "consultant") {
-    return `/${nextOrganizationId}/${segments.join("/")}`;
   }
 
   if (segments[0]) {
