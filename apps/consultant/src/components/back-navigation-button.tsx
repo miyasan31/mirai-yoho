@@ -6,7 +6,7 @@ interface BackNavigationButtonProps extends Omit<ButtonProps, "onClick"> {
 }
 
 export function BackNavigationButton({
-  fallbackHref = "/consultant/login",
+  fallbackHref = "/login",
   children = "前の画面に戻る",
   ...props
 }: BackNavigationButtonProps) {
