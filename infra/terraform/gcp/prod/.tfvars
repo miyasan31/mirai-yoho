@@ -23,6 +23,7 @@ firebase_web_app_id           = "1:PROJECT_NUMBER:web:WEB_APP_ID"
 firebase_web_app_display_name = "未来予報"
 app_hosting_backend_id        = "mirai-yoho"
 app_hosting_location          = "asia-east1"
+app_hosting_custom_domain     = "api.miraiyohou.com"
 
 developer_connect_connection_id              = "APP_HOSTING_CONNECTION_ID"
 developer_connect_repository_link_id         = "miyasan31-mirai-yoho"
