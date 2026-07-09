@@ -28,17 +28,19 @@ locals {
     "ZOOM_HOST_USER_ID",
   ])
 
-  app_hosting_build_secret_accessor_members = toset([
-    "serviceAccount:${data.google_project.current.number}@cloudbuild.gserviceaccount.com",
-    "serviceAccount:service-${data.google_project.current.number}@gcp-sa-firebaseapphosting.iam.gserviceaccount.com",
-  ])
+  # メンバー値は SA の email / project number（plan 時に未確定になり得る値）を含むため、
+  # for_each のキーには使わず、静的なラベルをキーにする（値は known-after-apply でも可）。
+  app_hosting_build_secret_accessor_members = {
+    cloud_build = "serviceAccount:${data.google_project.current.number}@cloudbuild.gserviceaccount.com"
+    app_hosting = "serviceAccount:service-${data.google_project.current.number}@gcp-sa-firebaseapphosting.iam.gserviceaccount.com"
+  }
 
-  app_hosting_secret_viewer_members = toset(concat(
-    [
-      "serviceAccount:${var.app_hosting_compute_service_account_email}",
-    ],
-    tolist(local.app_hosting_build_secret_accessor_members),
-  ))
+  app_hosting_secret_viewer_members = merge(
+    {
+      compute = "serviceAccount:${var.app_hosting_compute_service_account_email}"
+    },
+    local.app_hosting_build_secret_accessor_members,
+  )
 
   app_hosting_custom_domain_required_dns_updates = try(
     google_firebase_app_hosting_domain.custom[0].custom_domain_status[0].required_dns_updates,
@@ -345,10 +347,10 @@ resource "google_secret_manager_secret_iam_member" "app_hosting_can_read_secrets
 
 resource "google_secret_manager_secret_iam_member" "app_hosting_build_can_read_secrets" {
   for_each = {
-    for pair in setproduct(local.app_hosting_secret_ids, local.app_hosting_build_secret_accessor_members) :
+    for pair in setproduct(tolist(local.app_hosting_secret_ids), keys(local.app_hosting_build_secret_accessor_members)) :
     "${pair[0]}:${pair[1]}" => {
       secret_id = pair[0]
-      member    = pair[1]
+      member    = local.app_hosting_build_secret_accessor_members[pair[1]]
     }
   }
 
@@ -360,10 +362,10 @@ resource "google_secret_manager_secret_iam_member" "app_hosting_build_can_read_s
 
 resource "google_secret_manager_secret_iam_member" "app_hosting_can_view_secret_versions" {
   for_each = {
-    for pair in setproduct(local.app_hosting_secret_ids, local.app_hosting_secret_viewer_members) :
+    for pair in setproduct(tolist(local.app_hosting_secret_ids), keys(local.app_hosting_secret_viewer_members)) :
     "${pair[0]}:${pair[1]}" => {
       secret_id = pair[0]
-      member    = pair[1]
+      member    = local.app_hosting_secret_viewer_members[pair[1]]
     }
   }
 
