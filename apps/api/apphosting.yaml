@@ -5,6 +5,17 @@ runConfig:
   minInstances: 0
   maxInstances: 4
 
+# pnpm workspace モノレポ対応。
+# buildCommand / runCommand は rootDirectory に関係なく常にリポジトリルート
+# (/workspace) から実行される。buildCommand を明示指定すると Next.js の
+# framework adapter がバイパスされ、ルートの pnpm-lock.yaml を使う通常の pnpm
+# install に切り替わるため、`fah/missing-lock-file` を回避できる。
+# runCommand は next.config.ts の output: "standalone" が生成する server.js を
+# フルパスで起動する。
+scripts:
+  buildCommand: pnpm --filter @mirai-yoho/api build
+  runCommand: node apps/api/.next/standalone/apps/api/server.js
+
 env:
   # API サーバー自身の URL（Cloud Scheduler の OIDC audience 検証に使用）
   - variable: API_URL
