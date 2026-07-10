@@ -311,8 +311,13 @@ resource "google_firebase_app_hosting_backend" "app" {
   deletion_policy  = "PREVENT"
 
   codebase {
-    repository     = google_developer_connect_git_repository_link.app.name
-    root_directory = "/apps/api"
+    repository = google_developer_connect_git_repository_link.app.name
+    # pnpm workspace のため root は リポジトリルート。パッケージマネージャ検出は
+    # root_directory 内の lock file を見るので、ルートの pnpm-lock.yaml を使わせる
+    # 必要がある（/apps/api だと lock file が無く npm にフォールバックして
+    # `workspace:*` で失敗する）。apphosting.yaml もリポジトリルートに置く。
+    # 対象アプリのビルド/起動は apphosting.yaml の buildCommand / runCommand で指定。
+    root_directory = "/"
   }
 }
 

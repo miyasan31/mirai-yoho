@@ -6,12 +6,13 @@ runConfig:
   maxInstances: 4
 
 # pnpm workspace モノレポ対応。
-# buildCommand / runCommand は rootDirectory に関係なく常にリポジトリルート
-# (/workspace) から実行される。buildCommand を明示指定すると Next.js の
-# framework adapter がバイパスされ、ルートの pnpm-lock.yaml を使う通常の pnpm
-# install に切り替わるため、`fah/missing-lock-file` を回避できる。
-# runCommand は next.config.ts の output: "standalone" が生成する server.js を
-# フルパスで起動する。
+# このファイルはリポジトリルートに置き、backend の root_directory も "/" にする。
+# パッケージマネージャ検出は root_directory 内の lock file を見るため、ルートの
+# pnpm-lock.yaml（+ packageManager: pnpm）で pnpm を検出させる必要がある
+# （/apps/api だと lock file が無く npm にフォールバックし workspace:* で失敗する）。
+# buildCommand を明示すると Next.js の framework adapter がバイパスされる。
+# buildCommand / runCommand は root_directory に関係なく常に /workspace から実行される。
+# runCommand は next.config.ts の output: "standalone" が生成する server.js を起動する。
 scripts:
   buildCommand: pnpm --filter @mirai-yoho/api build
   runCommand: node apps/api/.next/standalone/apps/api/server.js
