@@ -1,3 +1,6 @@
+// このファイルは Terraform 管理です（infra/terraform/gcp/common/firebase-rules）。
+// google_firebaserules_ruleset/release がこのファイルを読み込んでデプロイします。
+// `firebase deploy --only storage` 等の CLI で配信しないこと（state ドリフトの原因になります）。
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {

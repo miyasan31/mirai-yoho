@@ -57,3 +57,4 @@
 - any 型を使わない
 - `packages/api-client/src/generated/` や各パッケージの `styled-system/` を手動編集しない（`pnpm generate` で再生成される）
 - SPA（apps/user, apps/admin, apps/consultant）から firebase-admin / stripe（サーバー SDK）/ domain 層を import しない
+- `firestore.rules` / `storage.rules` は Terraform 管理（`infra/terraform/gcp/common/firebase-rules`）。`firebase deploy --only firestore` / `--only storage` で配信しない（`deploy-hosting.yml` は `--only hosting` のみ。state ドリフトを防ぐため rules は必ず terraform apply 経由）

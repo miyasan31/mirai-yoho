@@ -106,6 +106,12 @@ variable "app_hosting_custom_domain" {
   }
 }
 
+variable "spa_hosting_custom_domains" {
+  description = "Custom domains for the SPA Firebase Hosting sites, keyed by site (user / admin / consultant). Omit a key to skip custom domain management for that site."
+  type        = map(string)
+  default     = {}
+}
+
 variable "developer_connect_connection_id" {
   description = "Developer Connect GitHub connection ID used by App Hosting."
   type        = string

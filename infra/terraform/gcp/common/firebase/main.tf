@@ -78,6 +78,51 @@ locals {
       ]
     ]
   ])
+
+  # SPA サイトのカスタムドメイン用。site キー（user/admin/consultant）→ site_id。
+  spa_hosting_site_ids = {
+    user       = google_firebase_hosting_site.user_spa.site_id
+    admin      = google_firebase_hosting_site.admin_spa.site_id
+    consultant = google_firebase_hosting_site.consultant_spa.site_id
+  }
+
+  spa_hosting_custom_domain_dns_records_to_add = flatten([
+    for site, domain in google_firebase_hosting_custom_domain.spa : [
+      for update in domain.required_dns_updates : [
+        for desired in update.desired : [
+          for record in desired.records : {
+            site          = site
+            custom_domain = domain.custom_domain
+            domain_name   = record.domain_name
+            xserver_name  = trimsuffix(record.domain_name, ".")
+            type          = record.type
+            value         = record.rdata
+            action        = record.required_action
+          }
+          if record.required_action == "ADD"
+        ]
+      ]
+    ]
+  ])
+
+  spa_hosting_custom_domain_dns_records_to_remove = flatten([
+    for site, domain in google_firebase_hosting_custom_domain.spa : [
+      for update in domain.required_dns_updates : [
+        for discovered in update.discovered : [
+          for record in discovered.records : {
+            site          = site
+            custom_domain = domain.custom_domain
+            domain_name   = record.domain_name
+            xserver_name  = trimsuffix(record.domain_name, ".")
+            type          = record.type
+            value         = record.rdata
+            action        = record.required_action
+          }
+          if record.required_action == "REMOVE"
+        ]
+      ]
+    ]
+  ])
 }
 
 data "google_project" "current" {
@@ -323,6 +368,20 @@ resource "google_firebase_hosting_site" "consultant_spa" {
 #   project  = var.project_id
 #   site_id  = "${var.project_id}-console"
 # }
+
+# SPA サイトのカスタムドメイン。App Hosting（api）と同じく Terraform で管理する。
+# DNS は外部（Xserver）管理のため、apply では検証を待たず（wait_dns_verification = false）、
+# 追加すべきレコードを output で提示する運用（App Hosting のドメインと同じ流儀）。
+resource "google_firebase_hosting_custom_domain" "spa" {
+  for_each = var.spa_hosting_custom_domains
+
+  provider              = google-beta
+  project               = var.project_id
+  site_id               = local.spa_hosting_site_ids[each.key]
+  custom_domain         = each.value
+  cert_preference       = "GROUPED"
+  wait_dns_verification = false
+}
 
 resource "google_secret_manager_secret" "app_hosting" {
   for_each = local.app_hosting_secret_ids
