@@ -1,3 +1,4 @@
+import { MobileNavMenu } from "@mirai-yoho/ui/components/mobile-nav-menu";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Spinner } from "@mirai-yoho/ui/components/ui/spinner";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
@@ -88,6 +89,14 @@ function MypageLayout() {
     navigate({ to: "/" });
   };
 
+  const navMenuItems = NAV_ITEMS.map((item) => ({
+    key: item.to,
+    label: item.label,
+    icon: item.icon,
+    active: item.exact ? pathname === item.to : pathname.startsWith(item.to),
+    onSelect: () => navigate({ to: item.to }),
+  }));
+
   return (
     <styled.div
       maxW="1024px"
@@ -98,13 +107,8 @@ function MypageLayout() {
       gridTemplateColumns={{ base: "1fr", md: "220px 1fr" }}
       gap="6"
     >
-      <styled.aside>
-        <styled.nav
-          display="flex"
-          flexDir={{ base: "row", md: "column" }}
-          gap="1"
-          overflowX={{ base: "auto", md: "visible" }}
-        >
+      <styled.aside display={{ base: "none", md: "block" }}>
+        <styled.nav display="flex" flexDir="column" gap="1">
           {NAV_ITEMS.map((item) => {
             const isActive = item.exact
               ? pathname === item.to
@@ -131,14 +135,27 @@ function MypageLayout() {
             );
           })}
         </styled.nav>
-        <styled.div mt="4" display={{ base: "none", md: "block" }}>
+        <styled.div mt="4">
           <Button variant="plain" size="sm" onClick={handleSignOut}>
             <LogOut size={16} />
             ログアウト
           </Button>
         </styled.div>
       </styled.aside>
-      <styled.main>
+      <styled.main minW="0">
+        <MobileNavMenu
+          title="マイページ"
+          items={navMenuItems}
+          footerItems={[
+            {
+              key: "signout",
+              label: "ログアウト",
+              icon: LogOut,
+              danger: true,
+              onSelect: handleSignOut,
+            },
+          ]}
+        />
         <Outlet />
       </styled.main>
     </styled.div>
