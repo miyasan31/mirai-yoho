@@ -375,11 +375,12 @@ resource "google_firebase_hosting_site" "consultant_spa" {
 resource "google_firebase_hosting_custom_domain" "spa" {
   for_each = var.spa_hosting_custom_domains
 
-  provider              = google-beta
-  project               = var.project_id
-  site_id               = local.spa_hosting_site_ids[each.key]
-  custom_domain         = each.value
-  cert_preference       = "GROUPED"
+  provider      = google-beta
+  project       = var.project_id
+  site_id       = local.spa_hosting_site_ids[each.key]
+  custom_domain = each.value
+  # 既存の手動作成ドメインは PROJECT_GROUPED で作られているため実態に合わせる（import 後の差分回避）。
+  cert_preference       = "PROJECT_GROUPED"
   wait_dns_verification = false
 }
 
