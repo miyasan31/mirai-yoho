@@ -32,6 +32,8 @@ module "iam" {
   batch_scheduler_service_account_email       = module.service_accounts.batch_scheduler_service_account_email
   batch_worker_service_account_name           = module.service_accounts.batch_worker_service_account_name
   batch_worker_service_account_email          = module.service_accounts.batch_worker_service_account_email
+  api_server_service_account_name             = module.service_accounts.api_server_service_account_name
+  api_server_service_account_email            = module.service_accounts.api_server_service_account_email
   github_deployer_service_account_name        = module.service_accounts.github_deployer_service_account_name
   github_deployer_service_account_email       = module.service_accounts.github_deployer_service_account_email
   organization_operator_service_account_name  = module.service_accounts.organization_operator_service_account_name
@@ -54,6 +56,23 @@ module "batch" {
   batch_scheduler_service_account_email = module.service_accounts.batch_scheduler_service_account_email
   batch_worker_service_account_email    = module.service_accounts.batch_worker_service_account_email
   scheduler_job_runner_role_name        = module.iam.scheduler_job_runner_role_name
+
+  depends_on = [
+    module.project_services,
+    module.artifact_registry,
+    module.firebase,
+    module.iam,
+  ]
+}
+
+module "api" {
+  source = "../common/api"
+
+  project_id                       = var.project_id
+  region                           = var.region
+  api_image                        = var.api_image
+  api_server_service_account_email = module.service_accounts.api_server_service_account_email
+  api_custom_domain                = var.api_custom_domain
 
   depends_on = [
     module.project_services,

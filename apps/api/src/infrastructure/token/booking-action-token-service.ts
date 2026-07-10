@@ -1,7 +1,11 @@
 import crypto, { createHmac } from "node:crypto";
 import { envServer } from "@/config/env.server";
 
-const SECRET_KEY = envServer.cancelTokenSecret;
+// import 時ではなく利用時に読む（envServer.cancelTokenSecret は未設定なら throw する）。
+// ビルド（next build の page data 収集）でシークレットを不要にするための遅延評価。
+function secretKey(): string {
+  return envServer.cancelTokenSecret;
+}
 
 interface BookingActionTokenPayload {
   bookingId: string;
@@ -17,7 +21,7 @@ interface GenerateBookingActionTokenInput {
 }
 
 function signPayload(payload: string): string {
-  return createHmac("sha256", SECRET_KEY).update(payload).digest("base64url");
+  return createHmac("sha256", secretKey()).update(payload).digest("base64url");
 }
 
 export class HmacBookingActionTokenService {

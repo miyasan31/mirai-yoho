@@ -25,3 +25,31 @@ resource "google_artifact_registry_repository" "batch_worker" {
     }
   }
 }
+
+resource "google_artifact_registry_repository" "api" {
+  project       = var.project_id
+  location      = var.region
+  repository_id = "api"
+  description   = "Container images for the Cloud Run API server"
+  format        = "DOCKER"
+
+  cleanup_policy_dry_run = false
+
+  cleanup_policies {
+    id     = "delete-old-api-images"
+    action = "DELETE"
+
+    condition {
+      tag_state = "ANY"
+    }
+  }
+
+  cleanup_policies {
+    id     = "keep-latest-ten-api-images"
+    action = "KEEP"
+
+    most_recent_versions {
+      keep_count = 10
+    }
+  }
+}

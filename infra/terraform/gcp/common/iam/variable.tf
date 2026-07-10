@@ -28,6 +28,16 @@ variable "batch_worker_service_account_email" {
   type        = string
 }
 
+variable "api_server_service_account_name" {
+  description = "Cloud Run API server runtime service account resource name."
+  type        = string
+}
+
+variable "api_server_service_account_email" {
+  description = "Cloud Run API server runtime service account email."
+  type        = string
+}
+
 variable "github_deployer_service_account_name" {
   description = "GitHub deployer service account resource name."
   type        = string

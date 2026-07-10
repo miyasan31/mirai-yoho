@@ -10,6 +10,12 @@ resource "google_service_account" "batch_worker" {
   display_name = "Cloud Run batch worker runtime"
 }
 
+resource "google_service_account" "api_server" {
+  project      = var.project_id
+  account_id   = "api-server"
+  display_name = "Cloud Run API server runtime"
+}
+
 resource "google_service_account" "github_deployer" {
   project      = var.project_id
   account_id   = "github-deployer"
