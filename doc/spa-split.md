@@ -43,6 +43,8 @@
 - App Hosting backend の `root_directory = "/apps/api"`（モノレポ対応）
 - Secret Manager の新シークレット `API_URL` / `CONSOLE_APP_URL` / `CORS_ALLOWED_ORIGINS`（作成と IAM。**値の投入は手動**: `make setup-secrets`）
 - SPA 用 Firebase Hosting サイト `{project}-user` / `{project}-admin` / `{project}-consultant`（`.firebaserc` の targets と一致）
+- SPA サイトのカスタムドメイン（`spa_hosting_custom_domains`。現状 admin / consultant。DNS は外部管理のため `wait_dns_verification = false` で apply し、追加すべきレコードは output で提示）
+- Firestore / Storage のセキュリティルール（`firestore.rules` / `storage.rules` を `google_firebaserules_ruleset/release` が読み込む。CLI では配信しない）
 - batch worker の `CONSOLE_APP_URL` シークレット参照
 - github-deployer の Hosting デプロイ権限（既存の `roles/firebase.admin` でカバー）
 
@@ -50,7 +52,7 @@
 
 1. **Secret Manager へ値を投入**: Terraform apply 後、`make setup-secrets`（または `make setup-apphosting-secrets-from-env-fish:{dev,prod}`）で `API_URL` / `CONSOLE_APP_URL` / `CORS_ALLOWED_ORIGINS` を含む全キーに値を設定してから App Hosting のロールアウトを実行する。
 2. **GitHub Environments（dev / prod）の vars 追加**: `API_URL`, `ADMIN_APP_URL`, `CONSULTANT_APP_URL`, `STRIPE_PUBLISHABLE_KEY`, `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`（`GCP_PROJECT_NUMBER` は既存）。deploy-hosting.yml のビルドが参照する。旧 `CONSOLE_APP_URL` var は `ADMIN_APP_URL` / `CONSULTANT_APP_URL` に置き換え。
-3. **カスタムドメイン**: Hosting 各サイトに `{hoge}.miraiyohou.com` / `admin.console.miraiyohou.com`（dev は `admin.dev.console.miraiyohou.com`）/ `consultant.console.miraiyohou.com`（dev は `consultant.dev.console.miraiyohou.com`）を、App Hosting backend に `api.miraiyohou.com` を割り当て、DNS を設定。
+3. **カスタムドメイン**: user / admin / consultant の Hosting サイト（prod: `user.miraiyohou.com` / `admin.console.miraiyohou.com` / `consultant.console.miraiyohou.com`、dev: `dev.user…` / `admin.dev.console…` / `consultant.dev.console…`）と App Hosting backend（`api.miraiyohou.com`）のドメイン割り当ては Terraform 管理（`.tfvars` の `spa_hosting_custom_domains` / `app_hosting_custom_domain`）。terraform apply 後、`spa_hosting_custom_domain_dns_records_to_add` / `app_hosting_custom_domain_dns_records_to_add` output に出る DNS レコードを Xserver 側に登録する（`wait_dns_verification = false` のため apply は検証を待たない）。
 4. **Firebase Auth の Authorized domains** に `admin.console.miraiyohou.com` / `consultant.console.miraiyohou.com`（dev はそれぞれ `admin.dev.console…` / `consultant.dev.console…`）を追加（`.tfvars` の `authorized_domains` で管理）。
 5. **Stripe / Zoom などの Webhook URL** は API ドメイン（api.miraiyohou.com）に変わるため、ドメイン切替時に Stripe ダッシュボードの webhook endpoint を更新。
 6. **移行完了後のクリーンアップ**: 旧 `NEXT_PUBLIC_*` シークレットを `terraform state rm` + 手動削除（deletion_protection のため Terraform では消せない）。

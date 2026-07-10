@@ -25,6 +25,13 @@ app_hosting_backend_id        = "mirai-yoho"
 app_hosting_location          = "asia-east1"
 app_hosting_custom_domain     = "api.miraiyohou.com"
 
+# SPA サイトのカスタムドメイン。
+spa_hosting_custom_domains = {
+  user       = "user.miraiyohou.com"
+  admin      = "admin.console.miraiyohou.com"
+  consultant = "consultant.console.miraiyohou.com"
+}
+
 developer_connect_connection_id              = "APP_HOSTING_CONNECTION_ID"
 developer_connect_repository_link_id         = "miyasan31-mirai-yoho"
 developer_connect_oauth_token_secret_version = "projects/mirai-yoho-prod/secrets/DEVELOPER_CONNECT_OAUTH_TOKEN/versions/latest"
