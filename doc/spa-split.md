@@ -40,7 +40,7 @@
 
 ## Terraform が管理するもの（release ブランチ push で自動 apply）
 
-- App Hosting backend の `root_directory = "/apps/api"`（モノレポ対応）
+- App Hosting backend の `root_directory = "/"`（pnpm workspace のパッケージマネージャ検出のためルートを指定。ビルド対象は `apphosting.yaml` の `buildCommand` / `runCommand` で指定）
 - Secret Manager の新シークレット `API_URL` / `CONSOLE_APP_URL` / `CORS_ALLOWED_ORIGINS`（作成と IAM。**値の投入は手動**: `make setup-secrets`）
 - SPA 用 Firebase Hosting サイト `{project}-user` / `{project}-admin` / `{project}-consultant`（`.firebaserc` の targets と一致）
 - SPA サイトのカスタムドメイン（`spa_hosting_custom_domains`。現状 admin / consultant。DNS は外部管理のため `wait_dns_verification = false` で apply し、追加すべきレコードは output で提示）
