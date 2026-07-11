@@ -1,9 +1,10 @@
-# 未来予報 API サーバー（Next.js Route Handlers）を Cloud Run で動かすためのイメージ。
+# 未来予報 API サーバー（Hono + @hono/node-server）を Cloud Run で動かすためのイメージ。
 # リポジトリルートをビルドコンテキストとして実行する:
 #   gcloud builds submit --config=apps/api/cloudbuild.yaml ...
 #
-# next.config.ts の output: "standalone" + outputFileTracingRoot=リポジトリルートにより、
-# standalone 出力は apps/api/.next/standalone/apps/api/server.js に生成される。
+# esbuild でアプリコード（@mirai-yoho/shared / hono 含む）を dist/server.js に
+# 単一バンドルする。firebase-admin / stripe 等の重い依存は external のまま
+# node_modules から解決する（コールドスタート短縮のためモジュール解決 I/O を最小化）。
 
 FROM node:24-alpine AS builder
 
@@ -16,11 +17,11 @@ RUN corepack enable
 COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
 COPY apps/api/package.json apps/api/
 COPY packages/shared/package.json packages/shared/
-# build には devDependencies（next / typescript 等）が要るため --prod は付けない。
+# build には devDependencies（esbuild / typescript 等）が要るため --prod は付けない。
 # prepare フック（husky）は不要なので --ignore-scripts でスキップする。
 RUN pnpm install --frozen-lockfile --ignore-scripts --filter "@mirai-yoho/api..."
 
-# ソースを copy して Next.js を standalone ビルドする。
+# ソースを copy して esbuild でバンドルする。
 COPY tsconfig.base.json ./
 COPY apps/api apps/api
 COPY packages/shared packages/shared
@@ -32,21 +33,25 @@ FROM node:24-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
-# Cloud Run は $PORT でリッスンさせる。Next standalone server.js は PORT / HOSTNAME を尊重する。
+# Cloud Run は $PORT でリッスンさせる。src/server/index.ts は PORT / HOSTNAME を尊重する。
 ENV PORT=8080
 ENV HOSTNAME=0.0.0.0
 
+RUN corepack enable
+
+# external にした依存（firebase-admin / stripe 等）だけを prod install する。
+COPY pnpm-workspace.yaml pnpm-lock.yaml package.json ./
+COPY apps/api/package.json apps/api/
+COPY packages/shared/package.json packages/shared/
+RUN pnpm install --frozen-lockfile --prod --ignore-scripts --filter "@mirai-yoho/api..."
+
 # 非 root で実行する。
-RUN addgroup -S nodejs && adduser -S nextjs -G nodejs
+RUN addgroup -S nodejs && adduser -S api -G nodejs
 
-# standalone 出力を copy する。
-# outputFileTracingRoot=リポジトリルートのため standalone はリポジトリ構造を保持しており、
-# server.js は apps/api/server.js、依存は node_modules / packages/shared に含まれる。
-COPY --from=builder --chown=nextjs:nodejs /app/apps/api/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/apps/api/.next/static ./apps/api/.next/static
+COPY --from=builder --chown=api:nodejs /app/apps/api/dist apps/api/dist
 
-USER nextjs
+USER api
 
 EXPOSE 8080
 
-CMD ["node", "apps/api/server.js"]
+CMD ["node", "apps/api/dist/server.js"]

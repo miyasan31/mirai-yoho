@@ -1,4 +1,4 @@
-# 未来予報 API サーバー（Next.js）のコンテナイメージをビルドして Artifact Registry に push する。
+# 未来予報 API サーバー（Hono）のコンテナイメージをビルドして Artifact Registry に push する。
 # リポジトリルートをビルドコンテキストとして実行する:
 #   gcloud builds submit --config=apps/api/cloudbuild.yaml \
 #     --substitutions=_IMAGE=<region>-docker.pkg.dev/<project>/api/api:<tag> .
