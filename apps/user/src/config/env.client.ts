@@ -21,12 +21,6 @@ export const envClient = {
       "VITE_ADMIN_APP_URL",
     );
   },
-  get consultantAppUrl(): string {
-    return requireClientEnv(
-      import.meta.env.VITE_CONSULTANT_APP_URL,
-      "VITE_CONSULTANT_APP_URL",
-    );
-  },
   get firebaseApiKey(): string {
     return requireClientEnv(
       import.meta.env.VITE_FIREBASE_API_KEY,
