@@ -10,38 +10,8 @@ import * as couponsReceive from "@/presentation/customer/coupons-receive";
 import * as customerMe from "@/presentation/customer/me";
 import * as customerMeCoupons from "@/presentation/customer/me-coupons";
 import * as customerSignup from "@/presentation/customer/signup";
-import * as customerBookings from "@/presentation/organizations/customer-bookings";
-import * as organizationRoutes from "@/presentation/organizations/organization-routes";
+import { createOrganizationRoutes } from "@/presentation/organizations/organization-router";
 import * as stripeWebhook from "@/presentation/webhooks/stripe";
-
-interface OrganizationRouteContext {
-  params: Promise<{
-    organizationId: string;
-    slug?: string[];
-  }>;
-}
-
-type OrganizationRouteHandler = (
-  request: Request,
-  context: OrganizationRouteContext,
-) => Promise<Response>;
-
-const organizationRouteHandlers: Record<string, OrganizationRouteHandler> = {
-  GET: organizationRoutes.GET,
-  POST: organizationRoutes.POST,
-  PATCH: organizationRoutes.PATCH,
-  DELETE: organizationRoutes.DELETE,
-};
-
-// /api/organizations/:organizationId/ 以降のパスセグメントを
-// Next.js の optional catch-all（[[...slug]]）と同じ形に分解する
-function parseOrganizationSlug(requestUrl: string): string[] {
-  return new URL(requestUrl).pathname
-    .split("/")
-    .filter((segment) => segment.length > 0)
-    .slice(3)
-    .map((segment) => decodeURIComponent(segment));
-}
 
 export function createApp(): Hono {
   const app = new Hono();
@@ -74,37 +44,7 @@ export function createApp(): Hono {
 
   app.post("/api/webhooks/stripe", (c) => stripeWebhook.POST(c.req.raw));
 
-  // 具体的なパスを catch-all より先に登録する（Hono は登録順に一致を評価する）
-  app.get("/api/organizations/:organizationId/customers/me/bookings", (c) =>
-    customerBookings.GET(c.req.raw, {
-      params: Promise.resolve({
-        organizationId: c.req.param("organizationId"),
-      }),
-    }),
-  );
-
-  app.on(
-    ["GET", "POST", "PATCH", "DELETE"],
-    [
-      "/api/organizations/:organizationId",
-      "/api/organizations/:organizationId/*",
-    ],
-    (c) => {
-      const handler = organizationRouteHandlers[c.req.method];
-      if (!handler) {
-        return c.json(
-          { code: "METHOD_NOT_ALLOWED", message: "Method not allowed" },
-          405,
-        );
-      }
-      return handler(c.req.raw, {
-        params: Promise.resolve({
-          organizationId: c.req.param("organizationId"),
-          slug: parseOrganizationSlug(c.req.url),
-        }),
-      });
-    },
-  );
+  app.route("/api/organizations", createOrganizationRoutes());
 
   app.notFound((c) =>
     c.json({ code: "NOT_FOUND", message: "Endpoint not found" }, 404),

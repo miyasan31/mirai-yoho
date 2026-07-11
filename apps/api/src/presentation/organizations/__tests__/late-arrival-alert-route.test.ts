@@ -87,25 +87,16 @@ vi.mock("@/infrastructure/auth/require-organization-permission", () => ({
   requireOrganizationPermission: mocks.requireOrganizationPermission,
 }));
 
-import { POST } from "../organization-routes";
+import { createOrganizationRoutes } from "../organization-router";
 
-function createRequest(headers?: HeadersInit) {
-  return new Request(
-    "http://localhost/api/organizations/org-1/batch/late-arrival-alerts",
+function postLateArrivalAlerts(headers?: HeadersInit) {
+  return createOrganizationRoutes().request(
+    "/org-1/batch/late-arrival-alerts",
     {
       method: "POST",
       headers,
     },
   );
-}
-
-function createContext() {
-  return {
-    params: Promise.resolve({
-      organizationId: "org-1",
-      slug: ["batch", "late-arrival-alerts"],
-    }),
-  };
 }
 
 describe("late arrival alert route", () => {
@@ -130,10 +121,9 @@ describe("late arrival alert route", () => {
   });
 
   it("rejects the removed cron secret header", async () => {
-    const response = await POST(
-      createRequest({ "x-cron-secret": "legacy-secret" }),
-      createContext(),
-    );
+    const response = await postLateArrivalAlerts({
+      "x-cron-secret": "legacy-secret",
+    });
 
     expect(response.status).toBe(401);
     await expect(response.json()).resolves.toEqual({
@@ -148,7 +138,7 @@ describe("late arrival alert route", () => {
       serviceAccountEmail: "batch-scheduler@project-1.iam.gserviceaccount.com",
     });
 
-    const response = await POST(createRequest(), createContext());
+    const response = await postLateArrivalAlerts();
 
     expect(response.status).toBe(200);
     await expect(response.json()).resolves.toEqual({
@@ -171,10 +161,9 @@ describe("late arrival alert route", () => {
       currentDisplayName: "Admin",
     });
 
-    const response = await POST(
-      createRequest({ Authorization: "Bearer firebase-id-token" }),
-      createContext(),
-    );
+    const response = await postLateArrivalAlerts({
+      Authorization: "Bearer firebase-id-token",
+    });
 
     expect(response.status).toBe(200);
     expect(mocks.requireOrganizationPermission).toHaveBeenCalledWith(

@@ -1,4 +1,5 @@
 import { DomainError } from "@mirai-yoho/shared/domain-error";
+import { Hono } from "hono";
 import { AppError } from "@/application/shared/app-error";
 import { AuthError } from "@/infrastructure/auth/verify-auth";
 import { verifyCustomerAuth } from "@/infrastructure/auth/verify-customer-auth";
@@ -25,14 +26,12 @@ function handleError(error: unknown) {
   return jsonError(500, "INTERNAL_ERROR", "Internal server error");
 }
 
-interface RouteContext {
-  params: Promise<{ organizationId: string }>;
-}
+export const customerBookingRoutes = new Hono();
 
-export async function GET(request: Request, context: RouteContext) {
+customerBookingRoutes.get("/customers/me/bookings", async (c) => {
   try {
-    const { organizationId } = await context.params;
-    const { authUid } = await verifyCustomerAuth(request);
+    const organizationId = c.req.param("organizationId") ?? "";
+    const { authUid } = await verifyCustomerAuth(c.req.raw);
     const user = await createUserRepository().findByAuthUid(authUid);
     if (!user) {
       return jsonError(
@@ -69,4 +68,4 @@ export async function GET(request: Request, context: RouteContext) {
   } catch (error) {
     return handleError(error);
   }
-}
+});

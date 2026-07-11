@@ -113,26 +113,14 @@ vi.mock("@/infrastructure/auth/require-organization-permission", () => ({
   requireSystemAdminRole: mocks.requireSystemAdminRole,
 }));
 
-import { POST } from "../organization-routes";
+import { createOrganizationRoutes } from "../organization-router";
 
-function createInviteRequest(body: Record<string, unknown>) {
-  return new Request(
-    "http://localhost/api/organizations/org-1/admin/accounts/invite",
-    {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-    },
-  );
-}
-
-function createContext() {
-  return {
-    params: Promise.resolve({
-      organizationId: "org-1",
-      slug: ["admin", "accounts", "invite"],
-    }),
-  };
+function postInvite(body: Record<string, unknown>) {
+  return createOrganizationRoutes().request("/org-1/admin/accounts/invite", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify(body),
+  });
 }
 
 describe("account invite route", () => {
@@ -169,14 +157,11 @@ describe("account invite route", () => {
   });
 
   it("invites a new email address and creates the auth user", async () => {
-    const response = await POST(
-      createInviteRequest({
-        email: "new@example.com",
-        role: "admin",
-        name: "新規 太郎",
-      }),
-      createContext(),
-    );
+    const response = await postInvite({
+      email: "new@example.com",
+      role: "admin",
+      name: "新規 太郎",
+    });
 
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toEqual({ uid: "new-uid" });
@@ -211,14 +196,11 @@ describe("account invite route", () => {
       }),
     });
 
-    const response = await POST(
-      createInviteRequest({
-        email: "member@example.com",
-        role: "admin",
-        name: "既存 花子",
-      }),
-      createContext(),
-    );
+    const response = await postInvite({
+      email: "member@example.com",
+      role: "admin",
+      name: "既存 花子",
+    });
 
     expect(response.status).toBe(409);
     await expect(response.json()).resolves.toEqual({
@@ -245,14 +227,11 @@ describe("account invite route", () => {
       }),
     });
 
-    const response = await POST(
-      createInviteRequest({
-        email: "consultant@example.com",
-        role: "consultant",
-        name: "相談員 一郎",
-      }),
-      createContext(),
-    );
+    const response = await postInvite({
+      email: "consultant@example.com",
+      role: "consultant",
+      name: "相談員 一郎",
+    });
 
     expect(response.status).toBe(409);
     await expect(response.json()).resolves.toEqual({
@@ -270,14 +249,11 @@ describe("account invite route", () => {
     });
     mocks.accountDocGet.mockResolvedValue({ exists: false });
 
-    const response = await POST(
-      createInviteRequest({
-        email: "member@example.com",
-        role: "admin",
-        name: "兼務 次郎",
-      }),
-      createContext(),
-    );
+    const response = await postInvite({
+      email: "member@example.com",
+      role: "admin",
+      name: "兼務 次郎",
+    });
 
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toEqual({ uid: "other-org-uid" });
@@ -301,14 +277,11 @@ describe("account invite route", () => {
     });
     mocks.accountDocGet.mockResolvedValue({ exists: false });
 
-    const response = await POST(
-      createInviteRequest({
-        email: "consultant@example.com",
-        role: "consultant",
-        name: "相談員 二郎",
-      }),
-      createContext(),
-    );
+    const response = await postInvite({
+      email: "consultant@example.com",
+      role: "consultant",
+      name: "相談員 二郎",
+    });
 
     expect(response.status).toBe(201);
     expect(mocks.createUser).not.toHaveBeenCalled();

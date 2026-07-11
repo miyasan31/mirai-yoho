@@ -1,0 +1,50 @@
+import type { Timestamp } from "firebase-admin/firestore";
+import { getOrganizationAccountDocId } from "@/infrastructure/auth/load-auth-context";
+import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
+import { db } from "@/infrastructure/firestore/firestore-customer";
+
+export const ACCOUNT_COLLECTION = FIRESTORE_COLLECTIONS.organizationAccounts;
+
+export async function listOrganizationAccounts(organizationId: string) {
+  const snapshot = await db
+    .collection(ACCOUNT_COLLECTION)
+    .where("organizationId", "==", organizationId)
+    .get();
+
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...(doc.data() as {
+      uid: string;
+      organizationId: string;
+      role: string;
+      status: string;
+      name?: string;
+      createdAt?: Timestamp;
+      updatedAt?: Timestamp;
+    }),
+  }));
+}
+
+export async function getOrganizationAccount(
+  organizationId: string,
+  uid: string,
+): Promise<{
+  uid: string;
+  organizationId: string;
+  role: string;
+  status: string;
+} | null> {
+  const docId = getOrganizationAccountDocId(organizationId, uid);
+  const doc = await db.collection(ACCOUNT_COLLECTION).doc(docId).get();
+  if (!doc.exists) return null;
+  return doc.data() as {
+    uid: string;
+    organizationId: string;
+    role: string;
+    status: string;
+  };
+}
+
+export function isAdminPanelUserRole(role: unknown): role is string {
+  return typeof role === "string" && role !== "consultant";
+}
