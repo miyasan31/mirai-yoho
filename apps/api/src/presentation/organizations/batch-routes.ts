@@ -133,9 +133,6 @@ batchRoutes.post(
 batchRoutes.post(
   "/batch/charge",
   postRoute(async ({ organizationId, request, requestUrl }) => {
-    // 旧 catch-all では共通の verifyAuth をこの分岐より先に通過していたため、
-    // Cloud Scheduler 認証はこのエンドポイントでは従来から通らない。挙動維持のため先に実行する
-    await verifyAuth(request);
     const actor = await authorizeBatchExecution(request, organizationId);
 
     const rateLimitState = getBatchChargeRateLimitState(organizationId);
@@ -196,9 +193,6 @@ batchRoutes.post(
 batchRoutes.post(
   "/batch/consultation-reminders",
   postRoute(async ({ organizationId, request, requestUrl }) => {
-    // 旧 catch-all では共通の verifyAuth をこの分岐より先に通過していたため、
-    // Cloud Scheduler 認証はこのエンドポイントでは従来から通らない。挙動維持のため先に実行する
-    await verifyAuth(request);
     const actor = await authorizeBatchExecution(request, organizationId);
 
     const rateLimitState =
