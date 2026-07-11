@@ -1,0 +1,46 @@
+name: Deploy API
+
+on:
+  push:
+    branches: [release/dev, release/prod]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: deploy-api-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}
+    env:
+      PROJECT_ID: mirai-yoho-${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}
+      REGION: asia-northeast1
+      SERVICE: api
+      IMAGE_TAG: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-actions/providers/github
+          service_account: github-deployer@mirai-yoho-${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}.iam.gserviceaccount.com
+      - uses: google-github-actions/setup-gcloud@v2
+      - name: Build and push API image
+        run: |
+          gcloud builds submit \
+            --project="$PROJECT_ID" \
+            --config=apps/api/cloudbuild.yaml \
+            --substitutions=_IMAGE="$REGION-docker.pkg.dev/$PROJECT_ID/api/api:$IMAGE_TAG"
+      # インフラ（Cloud Run service の存在・構成）は terraform-apply.yml が main への push で適用済みの想定。
+      # ここでは既存 service の稼働イメージを新しいビルドに差し替えるだけ（image は terraform 管理外）。
+      - name: Deploy API image to Cloud Run
+        env:
+          IMAGE: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/api/api:${{ env.IMAGE_TAG }}
+        run: |
+          gcloud run services update "$SERVICE" \
+            --project "$PROJECT_ID" \
+            --region "$REGION" \
+            --image "$IMAGE"

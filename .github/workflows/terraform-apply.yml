@@ -57,10 +57,27 @@ jobs:
             echo "No deployed batch-charge job found; using placeholder image."
           fi
           echo "worker_image=$worker_image" >> "$GITHUB_OUTPUT"
+      - name: Resolve api image
+        id: api-image
+        # image は ignore_changes なので既存 service には影響しないが、Cloud Run service は
+        # job と違い作成時に即リビジョンをデプロイするため、初回 create 時に実在＆起動する
+        # イメージが必要。稼働中の image があればそれを、無ければ Cloud Run の hello サンプルを
+        # ブートストラップに使う（実際のイメージは deploy-api.yml が差し替える）。
+        run: |
+          api_image="$(gcloud run services describe api \
+            --project "$PROJECT_ID" \
+            --region "$REGION" \
+            --format 'value(template.containers[0].image)' 2>/dev/null || true)"
+          if [ -z "$api_image" ]; then
+            api_image="us-docker.pkg.dev/cloudrun/container/hello:latest"
+            echo "No deployed api service found; using Cloud Run hello bootstrap image."
+          fi
+          echo "api_image=$api_image" >> "$GITHUB_OUTPUT"
       - name: Terraform apply
         working-directory: infra/terraform/gcp
         env:
           TF_VAR_worker_image: ${{ steps.worker-image.outputs.worker_image }}
+          TF_VAR_api_image: ${{ steps.api-image.outputs.api_image }}
         run: |
           make init ENV="$DEPLOY_ENV"
           make plan ENV="$DEPLOY_ENV" TF_PLAN_FLAGS="-lock-timeout=10m -input=false"

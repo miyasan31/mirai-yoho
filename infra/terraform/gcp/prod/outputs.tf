@@ -23,6 +23,16 @@ output "github_workload_identity_provider" {
   value       = module.iam.github_workload_identity_provider
 }
 
+output "api_service_uri" {
+  description = "Default run.app URL of the Cloud Run API service."
+  value       = module.api.api_service_uri
+}
+
+output "api_custom_domain_dns_records" {
+  description = "DNS records to add in Xserver DNS to activate the Cloud Run API custom domain (empty when api_custom_domain is null)."
+  value       = module.api.api_custom_domain_dns_records
+}
+
 output "app_hosting_custom_domain_dns_records_to_add" {
   description = "DNS records to add in Xserver DNS for Firebase App Hosting custom domain setup."
   value       = module.firebase.app_hosting_custom_domain_dns_records_to_add

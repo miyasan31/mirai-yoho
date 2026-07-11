@@ -48,6 +48,7 @@ jobs:
         # プレースホルダを渡す。既存 job の image 差分は plan に現れない。
         env:
           TF_VAR_worker_image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/batch-worker/worker:plan-placeholder
+          TF_VAR_api_image: ${{ env.REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/api/api:plan-placeholder
         run: |
           set -o pipefail
           make init ENV="$DEPLOY_ENV"

@@ -29,6 +29,28 @@ variable "worker_image" {
   }
 }
 
+variable "api_image" {
+  description = "Artifact Registry image URI for the Cloud Run API server, tagged with the Git SHA."
+  type        = string
+
+  validation {
+    condition     = can(regex("^.+@sha256:.+$|^.+:.+$", var.api_image))
+    error_message = "api_image must be a container image URI with a tag or digest."
+  }
+}
+
+variable "api_custom_domain" {
+  description = "Custom domain to map to the Cloud Run API service. Set to null to skip domain mapping (run.app URL only)."
+  type        = string
+  default     = null
+  nullable    = true
+
+  validation {
+    condition     = var.api_custom_domain == null || can(regex("^[a-z0-9][a-z0-9.-]*[a-z0-9]$", var.api_custom_domain))
+    error_message = "api_custom_domain must be a valid lowercase domain name, or null."
+  }
+}
+
 variable "organization_ids" {
   description = "Organization IDs for which batch jobs are created."
   type        = set(string)

@@ -24,6 +24,11 @@ app_hosting_backend_id        = "mirai-yoho"
 app_hosting_location          = "asia-east1"
 app_hosting_custom_domain     = "dev.api.miraiyohou.com"
 
+# API を App Hosting から Cloud Run に切り替える際に有効化する。
+# 有効化前は Cloud Run の run.app URL のみで稼働する（api_service_uri output を参照）。
+# 切替手順は doc/api-cloud-run-migration.md を参照。
+# api_custom_domain = "dev.api.miraiyohou.com"
+
 # SPA サイトのカスタムドメイン。
 spa_hosting_custom_domains = {
   user       = "dev.user.miraiyohou.com"
