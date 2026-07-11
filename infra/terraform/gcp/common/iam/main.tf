@@ -98,7 +98,9 @@ resource "google_service_account_iam_member" "github_can_impersonate_deployer" {
 
 resource "google_project_iam_member" "github_deployer_roles" {
   for_each = toset([
-    "roles/artifactregistry.writer",
+    # Artifact Registry のリポジトリ作成（terraform で api / batch-worker リポジトリを管理）と
+    # イメージ push の両方に必要なため admin を付与する（writer は repositories.create を含まない）。
+    "roles/artifactregistry.admin",
     "roles/cloudbuild.builds.editor",
     "roles/datastore.owner",
     "roles/developerconnect.admin",
