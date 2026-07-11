@@ -15,12 +15,6 @@ export const envClient = {
       "VITE_STRIPE_PUBLISHABLE_KEY",
     );
   },
-  get adminAppUrl(): string {
-    return requireClientEnv(
-      import.meta.env.VITE_ADMIN_APP_URL,
-      "VITE_ADMIN_APP_URL",
-    );
-  },
   get firebaseApiKey(): string {
     return requireClientEnv(
       import.meta.env.VITE_FIREBASE_API_KEY,
