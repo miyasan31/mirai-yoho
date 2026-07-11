@@ -14,12 +14,7 @@ module "artifact_registry" {
   project_id = var.project_id
   region     = var.region
 
-  # iam を先に適用して github-deployer の artifactregistry.admin 付与を反映させてから
-  # リポジトリを作成する（repositories.create 権限の伝播順を保証する）。
-  depends_on = [
-    module.project_services,
-    module.iam,
-  ]
+  depends_on = [module.project_services]
 }
 
 module "service_accounts" {
