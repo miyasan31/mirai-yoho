@@ -66,6 +66,26 @@ resource "google_project_iam_custom_role" "scheduler_job_runner" {
   ]
 }
 
+# terraform で Artifact Registry のリポジトリ（api / batch-worker）を作成・更新するための
+# 最小権限ロール。push/pull は writer 側で賄うため、ここでは create/update のみに絞る
+# （broad な artifactregistry.admin の代替。setIamPolicy や delete は含めない）。
+resource "google_project_iam_custom_role" "artifact_registry_repo_manager" {
+  project     = var.project_id
+  role_id     = "artifactRegistryRepoManager"
+  title       = "Artifact Registry Repository Manager"
+  description = "Create and update Artifact Registry repositories via Terraform."
+  permissions = [
+    "artifactregistry.repositories.create",
+    "artifactregistry.repositories.update",
+  ]
+}
+
+resource "google_project_iam_member" "github_deployer_can_manage_artifact_repos" {
+  project = var.project_id
+  role    = google_project_iam_custom_role.artifact_registry_repo_manager.id
+  member  = "serviceAccount:${var.github_deployer_service_account_email}"
+}
+
 resource "google_iam_workload_identity_pool" "github" {
   project                   = var.project_id
   workload_identity_pool_id = "github-actions"
@@ -98,9 +118,9 @@ resource "google_service_account_iam_member" "github_can_impersonate_deployer" {
 
 resource "google_project_iam_member" "github_deployer_roles" {
   for_each = toset([
-    # Artifact Registry のリポジトリ作成（terraform で api / batch-worker リポジトリを管理）と
-    # イメージ push の両方に必要なため admin を付与する（writer は repositories.create を含まない）。
-    "roles/artifactregistry.admin",
+    # イメージの push / pull は writer で足りる。リポジトリ作成・更新は writer に含まれないため、
+    # 別途 artifactRegistryRepoManager カスタムロール（下記）で最小限だけ補う（admin は広すぎるため使わない）。
+    "roles/artifactregistry.writer",
     "roles/cloudbuild.builds.editor",
     "roles/datastore.owner",
     "roles/developerconnect.admin",
