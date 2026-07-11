@@ -1,10 +1,25 @@
 // @vitest-environment jsdom
 import { cleanup, render, screen } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
+
 vi.mock("@tanstack/react-router", () => ({
-  Link: ({ to, children }: { to: string; children: React.ReactNode }) => (
-    <a href={to}>{children}</a>
-  ),
+  Link: ({
+    to,
+    params,
+    children,
+  }: {
+    to: string;
+    params?: Record<string, string>;
+    children: React.ReactNode;
+  }) => {
+    const href = params
+      ? Object.entries(params).reduce(
+          (acc, [key, value]) => acc.replace(`$${key}`, value),
+          to,
+        )
+      : to;
+    return <a href={href}>{children}</a>;
+  },
 }));
 
 vi.mock("@/components/back-navigation-button", () => ({
@@ -49,6 +64,12 @@ vi.mock("@mirai-yoho/ui/components/error-status-page", () => ({
   ),
 }));
 
+const useAuthMock = vi.fn();
+
+vi.mock("@mirai-yoho/console-core/hooks/use-auth", () => ({
+  useAuth: () => useAuthMock(),
+}));
+
 import NotFound from "../not-found";
 
 describe("error pages", () => {
@@ -57,16 +78,29 @@ describe("error pages", () => {
     vi.clearAllMocks();
   });
 
-  it("renders not-found page with key links", () => {
+  it("shows the 404 page with a link to the organization home when authenticated", () => {
+    useAuthMock.mockReturnValue({ currentOrganizationId: "org-1" });
+
     render(<NotFound />);
 
     expect(screen.getByText("404")).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { name: "ページが見つかりません" }),
     ).toBeVisible();
-    expect(screen.getByRole("link", { name: "トップへ戻る" })).toHaveAttribute(
+    expect(screen.getByRole("link", { name: "ホームへ戻る" })).toHaveAttribute(
       "href",
-      "/login",
+      "/org-1/home",
     );
+  });
+
+  it("shows the 404 page with a link to login when there is no organization", () => {
+    useAuthMock.mockReturnValue({ currentOrganizationId: null });
+
+    render(<NotFound />);
+
+    expect(screen.getByText("404")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "ログイン画面へ" }),
+    ).toHaveAttribute("href", "/login");
   });
 });
