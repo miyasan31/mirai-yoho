@@ -16,7 +16,7 @@ end
 
 set -l secret_keys \
     API_URL \
-    CONSOLE_APP_URL \
+    ADMIN_APP_URL \
     CORS_ALLOWED_ORIGINS \
     STRIPE_SECRET_KEY \
     STRIPE_WEBHOOK_SECRET \

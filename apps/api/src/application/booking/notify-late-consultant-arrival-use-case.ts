@@ -22,7 +22,7 @@ export class NotifyLateConsultantArrivalUseCase {
     private readonly customerRepository: ICustomerRepository,
     private readonly userContactService: IUserContactService,
     private readonly lateArrivalAlertService: ILateArrivalAlertService,
-    private readonly appUrl: string,
+    private readonly adminAppUrl: string,
   ) {}
 
   async execute(
@@ -102,7 +102,7 @@ export class NotifyLateConsultantArrivalUseCase {
   }
 
   private buildAdminBookingsUrl(organizationId: string): string {
-    const baseUrl = this.appUrl.replace(/\/$/, "");
+    const baseUrl = this.adminAppUrl.replace(/\/$/, "");
     return `${baseUrl}/${organizationId}/admin/bookings`;
   }
 }
