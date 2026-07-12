@@ -54,14 +54,6 @@ jobs:
       - uses: ./.github/actions/ci-setup
       - name: Build
         run: pnpm build
-        env:
-          CANCEL_TOKEN_SECRET: ci-placeholder-cancel-token-secret
-          VITE_API_URL: http://localhost:3000
-          VITE_CONSOLE_APP_URL: http://localhost:3020
-          VITE_STRIPE_PUBLISHABLE_KEY: pk_test_ci_placeholder
-          VITE_FIREBASE_API_KEY: ci-placeholder
-          VITE_FIREBASE_AUTH_DOMAIN: ci-placeholder.firebaseapp.com
-          VITE_FIREBASE_PROJECT_ID: ci-placeholder
 
   worker-docker-build:
     runs-on: ubuntu-latest
