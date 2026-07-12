@@ -44,6 +44,7 @@ github_app_installation_id                   = "121530488"
 authorized_domains = [
   "dev.admin.console.miraiyohou.com",
   "dev.consultant.console.miraiyohou.com",
+  "dev.user.miraiyohou.com",
   # 旧コンソール。カットオーバー完了後に削除。
   "dev.console.miraiyohou.com",
   "localhost",
