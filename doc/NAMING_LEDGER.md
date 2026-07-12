@@ -1,7 +1,7 @@
 # 命名台帳 — Firestore / Domain / API
 
-> Version 1.0 | 2026-06-26  
-> 対象: 全11コレクション + 横断命名ルール  
+> Version 1.0 | 2026-06-26（2026-07-12 追記: §6.5 のギャップ解消状況を更新）  
+> 対象: 策定時点の全11コレクション + 横断命名ルール（その後 `organization-roles`/`users`/`user-zoom-credentials`/`user-coupons` が追加され現行14コレクション。詳細は §6.5）  
 > 目的: 永続化・ドメイン・API の名称を整理し、今後の実装・リネームの基準とする
 
 ---
@@ -650,17 +650,20 @@ export const FIRESTORE_COLLECTIONS = {
 | `note` vs `consultantMemo` | 主体が異なるメモ | 許容（§6.3-E） |
 | `AggregatedSlot`（openapi） | 台帳未記載だが `startsAt`/`endsAt` に追随すれば OK | 実装時に openapi 更新で対応 |
 
-#### ❌ 台帳と現行コードのギャップ（想定内・未実装）
+#### ✅ 台帳と現行コードのギャップ（2026-07-12 時点で解消済み）
+
+第2回監査時点（2026-06-26）では下表は「想定内・未実装」だったが、その後の実装 PR で全て台帳どおりに反映された。
 
 | 項目 | 台帳（正） | 現行コード |
 |---|---|---|
-| コレクション名 | `customers`, `price-plans`, `zoom-sessions` | `clients`, `consultant-price-plans`, `zoom-daily-sessions` |
-| 時刻フィールド | `startsAt`/`endsAt` | `startDatetime`/`startAt` 混在 |
-| 顧客 | `customerId`, `CustomerDetail` | `clientId`, `ClientDetail` |
-| user-preferences | 廃止 | 存続 |
+| コレクション名 | `customers`, `price-plans`, `zoom-sessions` | 一致（`FIRESTORE_COLLECTIONS`） |
+| 時刻フィールド | `startsAt`/`endsAt` | 一致（`domain/slot/time-range.ts` 等） |
+| 顧客 | `customerId`, `CustomerDetail` | 一致（`domain/customer/` のみ、`domain/client/` は存在しない） |
+| user-preferences | 廃止 | 廃止済み（コード上に参照なし） |
+| `booking.zoomUrl` | `joinUrl` | 一致（`domain/booking/booking.ts`） |
 
-→ 実装 PR 前の状態。付録に「目標状態」注記あり。
+**未収録の新規コレクション**（台帳の集約時点になかった機能）: `organization-roles`, `users`, `user-zoom-credentials`, `user-coupons`（`apps/api/src/infrastructure/firestore/firestore-collections.ts`）。命名は他コレクションの規則（kebab-case、camelCase キー）と整合しているため追加監査は不要だが、台帳本文（§3.x）には未反映。
 
 #### 第2回監査結論
 
-**台帳内の一貫性: OK**（矛盾なし）。残る作業は現行コードへの反映のみ。
+**台帳内の一貫性: OK**（矛盾なし）。現行コードへの反映も完了（上表参照）。

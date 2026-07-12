@@ -42,12 +42,12 @@
 | 予約枠 | Slot | `Slot` | 相談員が開けた時間枠。`Booking` と 1 対 1 |
 | 相談員 | Consultant | `Consultant` | ≠ Advisor / Staff |
 | 顧客 | Customer | `Customer` | 匿名ユーザー |
-| 仮決済 | Authorization | `Payment`（`status: authorized`） | Stripe `capture_method: manual` |
-| 本決済 | Capture | `Payment.capture()` | バッチ or 手動 |
+| カード登録（後日課金） | Setup | `Payment`（`status: setup_pending → setup_complete`） | Stripe SetupIntent。`paymentStrategy: 'deferred'` |
+| 課金 | Charge | `Payment.charge()` | バッチ or 手動。`status: charged` |
 | 相談メモ | Consultant memo | `ConsultantMemo` | 顧客非公開の内部メモ |
 | キャンセル期限 | Cancel deadline | `CancelDeadline` | 相談開始 24 時間前 |
-| 予約確定 | Booking confirmed | `BookingConfirmedEvent` | 仮決済完了・Zoom URL 発行済み |
-| バッチ本決済 | Batch capture | `captureMethod: 'batch'` | 深夜 0 時 Cloud Scheduler 実行 |
+| 予約確定 | Booking confirmed | `BookingConfirmedEvent` | Zoom Join URL 発行済み（決済とは非同期） |
+| バッチ課金 | Batch charge | `chargeMethod: 'batch'` | 深夜 0 時 Cloud Scheduler 実行 |
 
 ---
 
@@ -77,14 +77,14 @@
 ┌──────────────────────┐   ┌──────────────────────────────────────┐
 │   決済コンテキスト      │   │         相談員コンテキスト               │
 │   Payment 集約        │   │   Consultant 集約                     │
-│   PaymentCaptured ↓  │   └──────────────────────────────────────┘
+│   PaymentCharged ↓   │   └──────────────────────────────────────┘
 └──────────────────────┘
-               │ 決済完了イベント
+               │ 課金完了イベント
                ▼
 ┌──────────────────────────────────────────────────────────────────┐
 │   通知コンテキスト（汎用）                                           │
 │   EmailNotificationHandler（Resend 呼び出し）                     │
-│   イベント受信: BookingConfirmed / PaymentCaptured / Cancelled    │
+│   イベント受信: BookingConfirmed / PaymentCharged / Cancelled     │
 └──────────────────────────────────────────────────────────────────┘
 ```
 
@@ -107,34 +107,38 @@
 |---|---|---|---|
 | `Booking` | `BookingStatus` `CancelDeadline` `ZoomUrl` `ConsultantMemo` | `confirm()` `cancel()` `complete()` `updateMemo()` | 予約作成・キャンセル・完了 |
 | `Slot` | `TimeRange` | `reserve()` `release()` | 予約作成・キャンセル |
-| `Payment` | `Money` `PaymentStatus` `CaptureMethod` | `capture()` `cancel()` | 決済操作 |
+| `Payment` | `Money` `PaymentStatus` `PaymentStrategy` | `completeSetup()` `charge()` `refund()` `cancel()` `failCharge()` | 決済操作 |
 | `Consultant` | `ConsultantProfile` `ZoomRoomId[]` | `updateProfile()` `assignZoomRooms()` `deactivate()` | プロフィール更新・論理削除 |
-| `Customer` | —（シンプルなデータ保持） | `updateInfo()` `updateMemo()` | 顧客情報更新 |
+| `Customer` | —（シンプルなデータ保持） | `updateInfo()` `updateNote()` `linkUser()` `mask()` | 顧客情報更新・退会時マスキング |
 
 ### 5.2 Booking 集約詳細
 
 ```
 Booking（集約ルート）
+├── organizationId: string          外部参照（マルチテナント境界）
 ├── bookingId: string               ID（Firestore 自動生成）
 ├── customerId: CustomerId          外部参照（別集約）
 ├── consultantId: ConsultantId      外部参照（別集約）
 ├── slotId: SlotId                  外部参照（別集約）
-├── startDatetime: Date             slots から複製（非正規化）
+├── startsAt: Date                  slots から複製（非正規化）
 ├── status: BookingStatus           pending|confirmed|completed|cancelled
-├── cancelDeadline: CancelDeadline  startDatetime - 24h
-├── zoomUrl?: ZoomUrl               confirm() 後にセット
+├── cancelDeadlineAt: CancelDeadline  startsAt - 24h
+├── joinUrl?: ZoomUrl               confirm() 後にセット（Zoom Daily Session の Join URL）
 ├── consultantMemo: ConsultantMemo  管理者・相談員のみ閲覧可
-├── consultantContent?: string      顧客入力（任意）
-├── stripePaymentIntentId?: string  confirm() 後にセット
+├── consultationContent?: string    顧客入力（任意）
+├── pricePlanId / pricePlanName / pricePlanTotalJPY?  予約確定時点の料金プランを非正規化
+├── consultantJoinedAt / consultationReminderEmailSentAt / lateArrivalAlertSentAt?: Date  バッチ処理の実行済みフラグ
 └── _domainEvents: DomainEvent[]    pullDomainEvents() で取り出す
 ```
+
+> 決済（Stripe）は予約作成と非同期。`Payment` 集約は別途 `chargeMethod: 'batch' | 'manual'` で後日課金される（§8.1 参照）。
 
 #### BookingStatus 遷移
 
 ```
-pending ─── confirm(zoomUrl) ──────► confirmed ─── complete() ──► completed
+pending ─── confirm(joinUrl) ──────► confirmed ─── complete() ──► completed
    │                                     │
-   │                                     └── cancel('client' | 'admin') ──► cancelled
+   │                                     └── cancel('customer' | 'admin') ──► cancelled
    │
    └── cancel('admin') ──────────────────────────────────────────► cancelled
 ```
@@ -143,13 +147,15 @@ pending ─── confirm(zoomUrl) ──────► confirmed ─── com
 
 ```
 Payment（集約ルート）
+├── organizationId: string          外部参照（マルチテナント境界）
 ├── paymentId: string
 ├── bookingId: string               外部参照
-├── clientId: string                集計用に非正規化
-├── stripePaymentIntentId: string
+├── customerId: string              集計用に非正規化
 ├── money: Money                    amountJPY / taxAmountJPY / taxRate
-├── status: PaymentStatus           authorized|captured|cancelled|failed
-└── captureMethod?: CaptureMethod   batch|manual（本決済後にセット）
+├── status: PaymentStatus           setup_pending|setup_complete|charged|refunded|cancelled|failed
+├── paymentStrategy: PaymentStrategy  deferred（先にカード登録のみ）|immediate（即時決済）
+├── stripeSetupIntentId? / stripePaymentIntentId? / stripePaymentMethodId?: string
+└── chargeMethod?: ChargeMethod     batch|manual（charge() 後にセット）
 ```
 
 ### 5.4 集約をまたぐ操作の原則
@@ -178,22 +184,22 @@ class Booking {
 
 | イベント名 | 発火元 | 発火タイミング | ハンドラ（通知） |
 |---|---|---|---|
-| `BookingConfirmedEvent` | `Booking.confirm()` | 仮決済完了・Zoom URL セット後 | 顧客確認メール・相談員予約通知メール |
-| `BookingCancelledEvent` | `Booking.cancel()` | キャンセル確定後 | 顧客キャンセル確認メール・相談員キャンセル通知メール |
-| `PaymentCapturedEvent` | `Payment.capture()` | 本決済確定後 | 顧客領収書メール・管理者バッチ完了通知（バッチ時） |
+| `BookingConfirmedEvent` | `Booking.confirm()` | Zoom Join URL セット後 | （集約に追加はされるが `CreateBookingUseCase` は現状未使用。確認メールは UseCase が直接送信） |
+| `BookingCancelledEvent` | `Booking.cancel()` | キャンセル確定後 | `CancelBookingUseCase` が `pullDomainEvents()` で取り出し、顧客キャンセル確認メールを送信 |
+| `PaymentChargedEvent` | `Payment.charge()` | 課金確定後 | `ChargePaymentUseCase` が `pullDomainEvents()` で取り出し、顧客領収書メールを送信 |
 
 ### 6.2 イベントの流れ
 
-```
-Booking.confirm()
-  └─ BookingConfirmedEvent を _domainEvents に追加
+イベントは `pullDomainEvents()` で取り出した UseCase 側が明示的にハンドリングする（イベントバスは介さない）。`BookingConfirmedEvent` は `Booking.confirm()` 時に `_domainEvents` へ追加されるが、`CreateBookingUseCase` は取り出すだけで中身を使わず、確認メールは同ユースケース内で入力値から直接送信している（実装上のイベント未活用箇所）。課金・キャンセルは以下の通りイベントを実際に使う。
 
-CreateBookingUseCase
-  └─ booking.pullDomainEvents() でイベントを取り出す
-       └─ onBookingConfirmed(event) を呼ぶ
-            └─ ResendEmailService.sendBookingConfirmation(...)
-                  ├─ 顧客へ確認メール（Zoom URL・キャンセルリンク含む）
-                  └─ 相談員へ予約通知メール
+```
+Payment.charge(paymentIntentId, method)
+  └─ PaymentChargedEvent を _domainEvents に追加
+
+ChargePaymentUseCase
+  └─ payment.pullDomainEvents() でイベントを取り出す
+       └─ event.eventName === "PaymentCharged" を判定
+            └─ EmailService.sendPaymentReceipt(...) で顧客へ領収書メール
 ```
 
 ---
@@ -274,50 +280,62 @@ apps/api/src/
 ### 8.1 予約作成（`CreateBookingUseCase`）
 
 ```
-入力: slotId / clientName / clientEmail / clientPhone / amountJPY / taxRate
+入力: organizationId / userId / slotId（or startsAt+endsAt） / customerName / customerEmail /
+       customerPhone / customerBirthDate / consultationContent? / selectionId（料金プラン選択）
 
-1. SlotRepository.findById(slotId)
-2. slot.reserve(newBookingId)          ← 二重予約・過去日時チェック（DomainError）
-3. Customer.create({...})
-4. Booking.create({...})               ← status: pending
-5. StripeService.createPaymentIntent() ← 仮決済
-6. ZoomService.createMeetingUrl()      ← Zoom URL 生成
-7. booking.confirm(zoomUrl, paymentIntentId)  ← BookingConfirmedEvent 発火
-8. Payment.create({...})               ← status: authorized
-9. UnitOfWork.runInTransaction(client, slot, booking, payment)  ← Firestore トランザクション
-10. booking.pullDomainEvents() → onBookingConfirmed(event)     ← メール通知
+1. UserRepository.findById(userId)         ← アクティブ・Zoom 連携済みチェック
+2. 料金プラン・スロットを解決（selectionId → ConsultantPricePlan、slotId or 空き枠検索）
+3. slot.reserve(newBookingId)              ← 二重予約・過去日時チェック（DomainError）
+4. CustomerRepository.findByUserIdAndOrganizationId() → 既存なければ Customer.create({...})
+5. Booking.create({...})                   ← status: pending。料金プランを非正規化して保持
+6. ZoomDailySessionRepository.findByDate() → 当日セッションが無ければ ZoomService.createDailyMeeting()、
+   あれば ZoomService.updateBreakoutRooms()  ← 参加者をブレイクアウトルームへ割り当て
+7. booking.confirm(joinUrl)                ← BookingConfirmedEvent 発火（現状 UseCase は未使用）
+8. EmailService.sendBookingConfirmation()  ← 入力値から直接送信（イベント経由ではない）
+9. UnitOfWork.runInTransaction(customer, slot, booking, zoomDailySession)  ← Firestore トランザクション
 
-出力: { bookingId, clientSecret, zoomUrl }
+出力: { bookingId, joinUrl }
 ```
+
+> 決済（Stripe SetupIntent でのカード登録・課金）はこのフローに含まれない。カード登録は別ユースケース、課金は §8.3 `ChargePaymentUseCase` がバッチ/手動で別途行う。
 
 ### 8.2 キャンセル（`CancelBookingUseCase`）
 
 ```
-入力: bookingId / cancelledBy: 'client' | 'admin'
+入力: organizationId / bookingId / cancelledBy: 'customer' | 'admin'
 
-1. BookingRepository.findById(bookingId)
-2. booking.cancel(cancelledBy)          ← 期限チェック（client のみ）
+1. BookingRepository.findById(organizationId, bookingId)
+2. booking.cancel(cancelledBy)              ← 期限チェック（customer のみ）
 3. PaymentRepository.findByBookingId()
-4. StripeService.cancelPaymentIntent()  ← 全額返金
-5. payment.cancel()
-6. SlotRepository.findById(booking.slotId)
-7. slot.release()
-8. 各 Repository.save()（並列）
-9. booking.pullDomainEvents() → onBookingCancelled(event)     ← メール通知
+4. payment があれば戦略・状態で分岐：
+     immediate かつ charged → StripeService.refundPaymentIntent() → payment.refund()
+     deferred かつ setup_pending|setup_complete → payment.cancel()（Stripe 側は未課金なので返金不要）
+5. SlotRepository.findById(booking.slotId) → slot.release()
+6. ZoomDailySessionRepository.findByDate() → 参加者を Breakout Room から除外し
+   ZoomService.updateBreakoutRooms() を呼ぶ
+7. 各 Repository.save()（並列）
+8. booking.pullDomainEvents() → BookingCancelledEvent を判定し
+   EmailService.sendBookingCancellation() でキャンセル確認メールを送信
 ```
 
-### 8.3 本決済（`CapturePaymentUseCase`）
+### 8.3 課金（`ChargePaymentUseCase`）
 
 ```
-入力: bookingId / method: 'batch' | 'manual'
+入力: organizationId / bookingId / method: 'batch' | 'manual'
 
-1. BookingRepository.findById(bookingId)
+1. BookingRepository.findById(organizationId, bookingId)
 2. PaymentRepository.findByBookingId()
-3. StripeService.capturePaymentIntent()
-4. payment.capture(method)              ← PaymentCapturedEvent 発火
-5. booking.complete()
-6. 各 Repository.save()（並列）
-7. payment.pullDomainEvents() → onPaymentCaptured(event)      ← 領収書メール
+3. CustomerRepository.findById(booking.customerId)
+4. evaluateChargeEligibility({ booking, payment })  ← 課金可否判定（見つからない/対象外は AppError）
+5. payment.getStripePaymentMethodId() が未登録なら 400 PAYMENT_SETUP_INCOMPLETE
+6. StripeService.createOffSessionPaymentIntent({ amountJPY, paymentMethodId })
+7. payment.charge(paymentIntentId, method)   ← PaymentChargedEvent 発火
+8. booking.complete()
+9. 各 Repository.save()（並列）
+10. payment.pullDomainEvents() → event.eventName === "PaymentCharged" を判定し
+    EmailService.sendPaymentReceipt() で領収書メール
+
+失敗時: catch 節で payment.failCharge() → save し、エラーを re-throw
 ```
 
 ---
