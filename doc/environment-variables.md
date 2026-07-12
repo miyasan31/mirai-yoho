@@ -45,22 +45,22 @@
 2. Basic Information → OAuth Redirect URL にコールバック URL を登録（OAuth Allow Lists にも同じ URL を追加）
    - ローカル: `http://127.0.0.1:3000/api/auth/zoom/callback`
      - Zoom は HTTPS 必須。ローカルテストの例外は `http://127.0.0.1` / `http://[::1]` のみで、`http://localhost` は登録できない
-     - このため `.env.local` の `ZOOM_USER_OAUTH_REDIRECT_URI` も `127.0.0.1` で設定する（`NEXT_PUBLIC_APP_URL` は `localhost` のままでよい。コールバック後は `NEXT_PUBLIC_APP_URL` にリダイレクトで戻る）
+     - このため `.env.local` の `ZOOM_USER_OAUTH_REDIRECT_URI` も `127.0.0.1` で設定する（`API_URL` は `localhost` のままでよい。コールバック後は SPA（`USER_APP_URL` など）にリダイレクトで戻る）
    - 本番: `https://<本番ドメイン>/api/auth/zoom/callback`
 3. Scopes に `user:read` を追加
 4. App Credentials から以下を取得
    - `ZOOM_USER_OAUTH_CLIENT_ID`
    - `ZOOM_USER_OAUTH_CLIENT_SECRET`
 
-`ZOOM_USER_OAUTH_REDIRECT_URI` は任意。未設定なら `NEXT_PUBLIC_APP_URL + /api/auth/zoom/callback` が使われる（ローカルは `NEXT_PUBLIC_APP_URL` が `localhost` のため、上記の理由で明示設定が必要）。いずれの場合も Zoom アプリ側に登録した Redirect URL と完全一致していないと認可エラー（4700: 無効なリダイレクト）になる。
+`ZOOM_USER_OAUTH_REDIRECT_URI` は任意。未設定なら `API_URL + /api/auth/zoom/callback` が使われる（ローカルは `API_URL` が `localhost` のため、上記の理由で明示設定が必要）。いずれの場合も Zoom アプリ側に登録した Redirect URL と完全一致していないと認可エラー（4700: 無効なリダイレクト）になる。
 
 ## その他の外部サービス
 
 | 環境変数 | 取得元 |
 | --- | --- |
-| `STRIPE_SECRET_KEY` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | [Stripe Dashboard](https://dashboard.stripe.com/) → 開発者 → API キー |
+| `STRIPE_SECRET_KEY`（API）/ `VITE_STRIPE_PUBLISHABLE_KEY`（apps/user のビルド時に注入） | [Stripe Dashboard](https://dashboard.stripe.com/) → 開発者 → API キー |
 | `STRIPE_WEBHOOK_SECRET` | Stripe Dashboard → Webhook エンドポイント作成時に発行（ローカルは `stripe listen` の出力） |
 | `RESEND_API_KEY` | [Resend](https://resend.com/) → API Keys |
 | `FIREBASE_PROJECT_ID` / `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` | Firebase Console → プロジェクトの設定 → サービスアカウント → 新しい秘密鍵の生成（JSON 内の値） |
-| `NEXT_PUBLIC_FIREBASE_API_KEY` / `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` / `NEXT_PUBLIC_FIREBASE_PROJECT_ID` | Firebase Console → プロジェクトの設定 → 全般 → ウェブアプリの構成 |
+| `VITE_FIREBASE_API_KEY` / `VITE_FIREBASE_AUTH_DOMAIN` / `VITE_FIREBASE_PROJECT_ID`（admin / consultant SPA のビルド時に注入） | Firebase Console → プロジェクトの設定 → 全般 → ウェブアプリの構成 |
 | `LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL` | LINE WORKS の受信 Webhook（Incoming Webhook）作成時に発行される URL |

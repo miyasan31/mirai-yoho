@@ -1,31 +1,33 @@
-# Firebase App Hosting Secret 運用手順
+# Secret Manager 運用手順（Cloud Run / batch worker）
 
-Firebase App Hosting では、Console の Environment variables はプロジェクトメンバー全員に表示され、`apphosting.yaml` の設定より優先されます。  
-機密値は必ず Cloud Secret Manager 経由で参照してください。
+API サーバー（Cloud Run service `api`）と batch worker（Cloud Run Job）の機密値は、
+すべて **Cloud Secret Manager** で管理し、実行時に env として注入します。値はリポジトリ・
+Issue・チャットに貼り付けないでください。
 
-## 1. apphosting.yaml で secret 参照を定義する
+> 以前は API を Firebase App Hosting でホストし `apphosting.yaml` の `secret:` 参照で
+> 注入していましたが、現在は Cloud Run に移行済みです（[API を Cloud Run へ移行する](api-cloud-run-migration.md) 参照）。
+> Secret Manager による管理・登録フロー自体は変わりません。ブラウザに公開する SPA の値
+> （`VITE_*`）は Secret ではなく GitHub Environment の variables で管理します。
 
-このリポジトリでは `apphosting.yaml` の `env` に `secret:` 形式で定義済みです。  
-新規の機密値（例: `OPENAI_API_KEY`）を追加するときは、値ではなく Secret 名を記述します。
+## 1. Terraform で Secret 参照を定義する
 
-```yaml
-env:
-  - variable: OPENAI_API_KEY
-    secret: OPENAI_API_KEY
-    availability:
-      - RUNTIME
-```
+Secret のコンテナと、実行サービスアカウントの参照権限（`roles/secretmanager.secretAccessor`）は
+Terraform で管理します。新しい Secret を追加するときは、値ではなく Secret 名を参照リストに追加します。
 
-## 2. Terraform で Secret と IAM を適用する
+- API サーバーが参照する Secret: `infra/terraform/gcp/common/api`（`api_secret_ids`）
+- batch worker が参照する Secret: `infra/terraform/gcp/common/batch`
 
-Secret のコンテナと App Hosting compute service account の参照権限は Terraform で管理します。新しい Secret を追加した場合は、`apphosting.yaml` と `infra/terraform/gcp/common/firebase/main.tf` の両方に名前を追加し、対象環境で Terraform を適用してください。
+参照リストと env ファイルの両方に名前を追加してから、対象環境で Terraform を適用してください。
 
 ```bash
 cd infra/terraform/gcp
 make apply ENV=dev
 ```
 
-## 3. Secret の値を登録する
+## 2. Secret の値を登録する
+
+Secret コンテナだけでは不十分で、`versions/latest` が解決できるように少なくとも 1 つの
+version が必要です。
 
 まとめて登録:
 
@@ -33,40 +35,52 @@ make apply ENV=dev
 make setup-secrets:dev
 ```
 
+環境別 env ファイル（`.env.dev` / `.env.prod`）から一括投入:
+
+```bash
+make setup-apphosting-secrets-from-env:dev
+# fish
+make setup-apphosting-secrets-from-env-fish:dev
+```
+
 単体登録（新規追加時）:
 
 ```bash
-make setup-secret:dev KEY=OPENAI_API_KEY
+make setup-secret:dev KEY=STRIPE_WEBHOOK_SECRET
 ```
 
-## 4. Firebase Console の重複環境変数を排除する
+batch worker が参照する最小セットだけ先に投入:
 
-Firebase Console > App Hosting の Environment variables に同名キーがあると、そちらが優先されます。  
-`apphosting.yaml` で管理するキーと同名の値は Console 側から削除（または空に）してください。
+```bash
+make setup-batch-worker-secrets:dev
+```
 
-## 5. 再デプロイして反映する
+## 3. 反映（再デプロイ）する
 
-Secret 追加・更新後は新しいロールアウトを実行して反映します。
+Secret を追加・更新したら Cloud Run を再デプロイして反映します。
 
-## 6. ローテーション
+- API: `release/dev` / `release/prod` への push（`deploy-api.yml`）、または
+  `gcloud run services update api --region asia-northeast1 --project <project>`
+- batch worker: 次回の Job 実行で最新 version が解決されます
 
-Secret 値を更新したら再ロールアウトしてください。  
-固定バージョンが必要な場合は `secret: OPENAI_API_KEY@5` のようにバージョン指定します。
+固定バージョンが必要な場合は、Terraform の参照側で `SECRET_NAME:5` のようにバージョンを
+指定します。
 
 ## チェックリスト
 
 - サーバー側で `process.env.<KEY>` が取得できる
-- クライアント公開変数に不要な機密値を置いていない（`NEXT_PUBLIC_` を付けない）
-- Firebase Console 側に同名キーの重複設定がない
+- ブラウザ公開変数（`VITE_*`）に不要な機密値を置いていない（secret key / private key は API 側のみ）
+- Cloud Run の稼働リビジョンが最新イメージ・最新 Secret version を参照している
 
 ## トラブルシュート: `Error resolving secret version .../versions/latest`
 
-このエラーは、バージョンそのものより「App Hosting backend の Secret アクセス権不足」で起こることが多いです。
+このエラーは、バージョンそのものより「実行サービスアカウントの Secret アクセス権不足」で
+起こることが多いです。
 
 1. 対象 secret の状態を確認（存在・バージョン）
 
 ```bash
-make describe-secret:dev KEY=NEXT_PUBLIC_FIREBASE_API_KEY
+make describe-secret:dev KEY=STRIPE_WEBHOOK_SECRET
 ```
 
 2. Terraform plan で Secret と IAM が管理対象であることを確認
@@ -81,16 +95,13 @@ make plan ENV=dev
 3. `latest` 解決を確認
 
 ```bash
-make access-secret:dev KEY=NEXT_PUBLIC_FIREBASE_API_KEY
+make access-secret:dev KEY=STRIPE_WEBHOOK_SECRET
 ```
 
 4. 値が空でないことを確認（値そのものは表示しない）
 
 ```bash
-make check-secret-value:dev KEY=NEXT_PUBLIC_FIREBASE_API_KEY
-make check-public-build-secrets:dev
+make check-secret-value:dev KEY=STRIPE_WEBHOOK_SECRET
 ```
 
-5. 再ロールアウト
-
-Secret の権限変更後は App Hosting を再デプロイしてください。
+5. Secret の権限変更後は Cloud Run を再デプロイしてください。

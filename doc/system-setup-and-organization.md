@@ -10,7 +10,7 @@
 flowchart TD
   A["GCP / Firebase プロジェクト"] --> B["Terraform: 基盤リソース・ルール・IAM"]
   B --> C["Secret Manager: 実行環境変数"]
-  C --> D["Firebase App Hosting: Next.js アプリ"]
+  C --> D["Cloud Run: API（Hono）／ Firebase Hosting: SPA（Vite）"]
   B --> E["Cloud Run Job / Cloud Scheduler: 定期バッチ"]
   D --> F["Firestore / Firebase Auth"]
   G["組織作成スクリプト"] --> F
@@ -70,10 +70,11 @@ cp .env.example .env.local
 
 このリポジトリの env 運用は用途ごとに分かれます。
 
-- Next.js（`pnpm dev`）: Next.js 標準の `.env*` / `.env.development*` を読みます。通常は `.env.local` を使います。
+- API（`pnpm dev:api`）: `tsx watch --env-file-if-exists=.env --env-file-if-exists=.env.local` で `apps/api/.env` / `apps/api/.env.local` を読みます。通常はローカル値を `.env.local` に置きます。
+- SPA（`pnpm dev:user` など）: Vite が `apps/<app>/.env*` の `VITE_*` を読み込み、ビルド時に埋め込みます。
 - Make コマンド: 多くのターゲットは `<command>:dev` / `<command>:prod` で環境を切り替えられます（例: `make setup-batch-worker-secrets:dev`）。`.env.dev` / `.env.prod` を自動で読み、`PROJECT` も `mirai-yoho-dev` / `mirai-yoho-prod` に固定されます。
 - 従来どおり `ENV=<local|dev|prod>` や `PROJECT=...` を明示する書き方も使えます。
-- `.env.dev` / `.env.prod` は Next.js が自動読み込みしません。必要な場合は Make 経由で使います。
+- `.env.dev` / `.env.prod` はアプリ起動時には自動読み込みされません。必要な場合は Make 経由で使います。
 
 ローカルでメール送信を避けたい場合は、`EMAIL_DELIVERY_MODE=log` を設定します。設定しない場合の既定値は `resend` です。
 
@@ -81,7 +82,7 @@ cp .env.example .env.local
 
 実行環境や一時的な検証で private key を使う場合、`FIREBASE_PRIVATE_KEY` は key 内の改行を `\n` として 1 行で設定できます。サーバー側で実際の改行に復元されます。
 
-`NEXT_PUBLIC_` 付きの値はブラウザに公開され、Next.js のビルド時に埋め込まれます。ここには Firebase Client 設定、Stripe publishable key、公開 URL だけを置き、secret key や private key を置かないでください。
+SPA 側の `VITE_` 付きの値はブラウザに公開され、Vite のビルド時に埋め込まれます。ここには Firebase Client 設定、Stripe publishable key、API の公開 URL だけを置き、secret key や private key を置かないでください。API サーバー側の env（`.env.local` / Secret Manager）は公開されないため、そちらに秘密値を置きます。
 
 ### 2.2 組織作成コマンド用の認証を設定する
 
@@ -109,7 +110,7 @@ Firestore の初期コレクション作成は行いません。Firestore のコ
 pnpm dev
 ```
 
-`http://localhost:3000` を開きます。初期管理者を作る前は、ログインしても組織ロールがないため管理 API にはアクセスできません。次章の組織作成を行ってください。
+API は `http://localhost:3000`、顧客 SPA は `http://localhost:3010`、管理コンソールは `http://localhost:3020`、相談員コンソールは `http://localhost:3030` で起動します。管理コンソール（`:3020`）を開いて動作を確認します。初期管理者を作る前は、ログインしても組織ロールがないため管理 API にはアクセスできません。次章の組織作成を行ってください。
 
 日常的な確認コマンドです。
 
@@ -125,9 +126,11 @@ pnpm test
 
 環境ごとに GCP プロジェクトを作成して Firebase プロジェクトとして登録します。Firestore のロケーション、Firebase Storage のロケーションは後から変更できないため、作成前に確定してください。
 
-Firebase App Hosting を使うため、Firebase GitHub App をリポジトリ `miyasan31/mirai-yoho` に接続します。Developer Connect 用 OAuth token の Secret version、GitHub App installation ID、接続 ID を取得し、Terraform 変数に設定します。
+API（Cloud Run）・SPA（Firebase Hosting）・batch worker（Cloud Run Job）の継続デプロイは、GitHub Actions が Workload Identity Federation（WIF）で `github-deployer` サービスアカウントを利用して行います（`deploy-api.yml` / `deploy-hosting.yml` / `deploy-batch-worker.yml`）。GitHub App / Developer Connect の接続は不要です。
 
-既存環境を Terraform 管理へ移す場合は、既存 Firebase Web App / App Hosting backend / Storage などを先に import してから apply してください。これらのリソースには削除保護が設定されています。
+> 旧構成では API を Firebase App Hosting（Developer Connect + Firebase GitHub App 経由）でデプロイしていました。現在は Cloud Run に移行済みです（[API を Cloud Run へ移行する](api-cloud-run-migration.md) 参照）。App Hosting backend の Terraform リソースは削除保護付きで残っており、撤去は別対応です。
+
+既存環境を Terraform 管理へ移す場合は、既存 Firebase Web App / Storage などを先に import してから apply してください。これらのリソースには削除保護が設定されています。
 
 ### 3.2 Terraform の環境設定
 
@@ -189,16 +192,17 @@ make apply ENV=dev
 
 - Firestore Native database、複合インデックス、Firestore / Storage Security Rules
 - Firebase Storage bucket、Firebase Authentication 設定、Firebase Web App
-- App Hosting backend、実行用サービスアカウント、Secret 参照権限
+- Cloud Run service `api`（イメージは `deploy-api.yml` が差し替え）、実行用サービスアカウント、Secret 参照権限
+- SPA 用 Firebase Hosting サイト（user / admin / consultant）
 - Secret Manager の Secret コンテナ（値そのものは含まない）
 - Artifact Registry、Cloud Run Job、Cloud Scheduler、各サービスアカウントと IAM
 - GitHub Actions 用 Workload Identity Federation
 
 Cloud Scheduler / Worker の詳細は [Cloud Scheduler バッチ運用](cloud-scheduler.md) を参照してください。
 
-### 3.4 App Hosting の Secret を登録する
+### 3.4 実行環境の Secret を登録する
 
-Terraform apply 後、各 Secret に値を登録します。Secret コンテナだけでは不十分で、`versions/latest` が解決できるように少なくとも 1 つの version が必要です。
+Terraform apply 後、各 Secret に値を登録します。Secret コンテナだけでは不十分で、`versions/latest` が解決できるように少なくとも 1 つの version が必要です。Cloud Run service `api` と Cloud Run Job（batch worker）は、これらの Secret Manager Secret を env として参照します。
 
 ```bash
 make setup-secrets:dev
@@ -221,17 +225,19 @@ Cloud Run Job が参照する最小セットだけ先に投入したい場合は
 make setup-batch-worker-secrets:dev
 ```
 
-App Hosting の変数は `[apphosting.yaml](../apphosting.yaml)` が正です。`NEXT_PUBLIC_*` の 5 項目はビルド時にも必要なため `BUILD` と `RUNTIME` の両方に公開されます。それ以外は Runtime Secret として扱います。
+API サーバーが参照する Secret は `common/api` の `api_secret_ids`、batch worker が参照する Secret は `common/batch` で管理します。Secret を追加したら Terraform 側の参照リストと env ファイルの両方に追加してから apply・投入します。SPA のブラウザ公開値（`VITE_*`）は Secret ではなく GitHub Environment の variables として管理され、`deploy-hosting.yml` のビルド時に注入されます。
 
-Firebase Console の App Hosting Environment variables に同名キーがあると、`apphosting.yaml` より優先されます。重複した環境変数は Console から削除または空にしてください。Secret の追加・更新後は App Hosting を再ロールアウトします。
+Secret の追加・更新後は Cloud Run（`deploy-api.yml` の再実行、または `gcloud run services update`）を再デプロイして反映します。
 
-Secret の詳しい運用・確認方法は [Firebase App Hosting Secret 運用手順](firebase-app-hosting-secrets.md) を参照してください。
+Secret の詳しい運用・確認方法は [Secret Manager 運用手順](firebase-app-hosting-secrets.md) を参照してください。
 
 ### 3.5 継続デプロイ
 
-`release/dev` または `release/prod` への push で、GitHub Actions が Worker イメージをビルド・push し、該当環境へ Terraform apply します。GitHub Environment ごとに `GCP_PROJECT_NUMBER` variable を設定し、`github-deployer` サービスアカウントへ Terraform state bucket の読み書き権限を付与してください。
+`release/dev` または `release/prod` への push で、GitHub Actions が以下を実行します。GitHub Environment ごとに `GCP_PROJECT_NUMBER` や SPA ビルド用の variables を設定し、`github-deployer` サービスアカウントへ Terraform state bucket の読み書き権限を付与してください。
 
-App Hosting は Terraform の rollout policy により、`dev` では `release/dev`、`prod` では `release/prod` を監視します。
+- `deploy-api.yml` … API イメージをビルドして Cloud Run service `api` を更新
+- `deploy-hosting.yml` … SPA（user / admin / consultant）をビルドして Firebase Hosting にデプロイ
+- `deploy-batch-worker.yml` … Worker イメージをビルド・push し、該当環境へ Terraform apply
 
 ## 4. 組織作成フロー
 
@@ -315,7 +321,7 @@ make apply ENV=dev
 - [ ] 管理画面で営業時間、料金範囲、相談員ステータスなどを組織要件に合わせて設定した。
 - [ ] 公開 URL の `/<organizationId>/consultants` と `/<organizationId>/booking` が正しい組織として表示される。
 - [ ] Scheduler を利用する場合、`organization_ids` への追加と Terraform apply が完了し、3 種類のジョブがある。
-- [ ] Secret の値が空でなく、App Hosting の重複 Environment variables がない。
+- [ ] Secret の値が空でなく、Cloud Run（`api`）が最新イメージ・最新 Secret version で稼働している。
 
 ## よくある問題
 
@@ -325,12 +331,12 @@ make apply ENV=dev
 | `User has no assigned role`                   | organization 作成時のメールアドレスとログインした Firebase Auth ユーザーが同じか、account の `status` が `active` / `invited` かを確認する。     |
 | `Organization '<id>' already exists`          | 既存組織の上書きはできない。ID を確認し、既存データを利用するか別 ID を選ぶ。                                                                      |
 | `No value for required variable worker_image` | `make plan` / `make apply` の前に `TF_VAR_worker_image` を設定する。                                                     |
-| App Hosting で Secret を読めない                    | Secret の存在・値・App Hosting 実行サービスアカウントの参照権限を確認し、再ロールアウトする。詳細は [Secret 運用手順](firebase-app-hosting-secrets.md) を参照。 |
+| Cloud Run で Secret を読めない                     | Secret の存在・値・`api-server` 実行サービスアカウントの参照権限を確認し、再デプロイする。詳細は [Secret 運用手順](firebase-app-hosting-secrets.md) を参照。 |
 | 定期バッチが対象組織に存在しない                              | `.tfvars` の `organization_ids` に組織 ID を追加して Terraform apply する。                                                 |
 
 
 ## 関連ドキュメント
 
-- [Firebase App Hosting Secret 運用手順](firebase-app-hosting-secrets.md)
+- [Secret Manager 運用手順](firebase-app-hosting-secrets.md)
 - [Cloud Scheduler バッチ運用](cloud-scheduler.md)
 - [DDD 設計](DDD_DESIGN.md)

@@ -1,6 +1,6 @@
 # Cloud Scheduler バッチ運用
 
-Cloud Scheduler は Firebase App Hosting と同じ GCP project で実行しますが、実行先は App Hosting ではありません。Scheduler は OAuth で共有 Cloud Run Job を起動し、組織 ID を execution override として渡します。このため Scheduler 専用サービスアカウントには、override 付き Job 実行だけを許可するカスタム IAM ロールを付与します。Web API の `batch/*` は Firebase の `admin` / `operator` によるオンデマンド実行専用です。
+Cloud Scheduler は API（Cloud Run service `api`）と同じ GCP project で実行しますが、実行先は API ではありません。Scheduler は OAuth で共有 Cloud Run Job を起動し、組織 ID を execution override として渡します。このため Scheduler 専用サービスアカウントには、override 付き Job 実行だけを許可するカスタム IAM ロールを付与します。Web API の `batch/*` は Firebase の `admin` / `operator` によるオンデマンド実行専用です。
 
 | ジョブ | スケジュール | 対象 API |
 | --- | --- | --- |
