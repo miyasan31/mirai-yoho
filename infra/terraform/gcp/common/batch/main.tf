@@ -20,7 +20,7 @@ locals {
       "FIREBASE_PRIVATE_KEY",
       "FIREBASE_PROJECT_ID",
       "LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL",
-      "CONSOLE_APP_URL",
+      "ADMIN_APP_URL",
     ])
   }
 

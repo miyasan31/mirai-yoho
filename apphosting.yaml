@@ -24,8 +24,8 @@ env:
     availability:
       - RUNTIME
   # コンソール SPA の URL（通知内のリンク生成に使用）
-  - variable: CONSOLE_APP_URL
-    secret: CONSOLE_APP_URL
+  - variable: ADMIN_APP_URL
+    secret: ADMIN_APP_URL
     availability:
       - RUNTIME
   # CORS で許可するオリジン（カンマ区切り。user / console SPA のオリジン）

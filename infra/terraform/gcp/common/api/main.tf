@@ -5,7 +5,7 @@ locals {
   api_secret_ids = toset([
     "API_URL",
     "CANCEL_TOKEN_SECRET",
-    "CONSOLE_APP_URL",
+    "ADMIN_APP_URL",
     "CORS_ALLOWED_ORIGINS",
     "FIREBASE_CLIENT_EMAIL",
     "FIREBASE_PRIVATE_KEY",

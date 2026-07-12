@@ -2,7 +2,7 @@ locals {
   app_hosting_secret_ids = toset([
     "API_URL",
     "CANCEL_TOKEN_SECRET",
-    "CONSOLE_APP_URL",
+    "ADMIN_APP_URL",
     "CORS_ALLOWED_ORIGINS",
     "FIREBASE_CLIENT_EMAIL",
     "FIREBASE_PRIVATE_KEY",
@@ -10,14 +10,6 @@ locals {
     "FIREBASE_STORAGE_BUCKET",
     "INVOICE_REGISTRATION_NUMBER",
     "LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL",
-    # NEXT_PUBLIC_* は SPA 分割で廃止済み（値は SPA ビルド時の VITE_* に移行）。
-    # deletion_protection のため一括 apply では消せない。移行完了後に
-    # terraform state rm + 手動削除でクリーンアップする。
-    "NEXT_PUBLIC_APP_URL",
-    "NEXT_PUBLIC_FIREBASE_API_KEY",
-    "NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN",
-    "NEXT_PUBLIC_FIREBASE_PROJECT_ID",
-    "NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY",
     "RESEND_API_KEY",
     "RESEND_FROM_EMAIL",
     "STRIPE_SECRET_KEY",

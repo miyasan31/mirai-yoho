@@ -83,7 +83,7 @@ delete-slots:
 # apphosting.yaml と同じキーセット
 APPHOSTING_SECRET_KEYS = \
 	API_URL \
-	CONSOLE_APP_URL \
+	ADMIN_APP_URL \
 	CORS_ALLOWED_ORIGINS \
 	STRIPE_SECRET_KEY \
 	STRIPE_WEBHOOK_SECRET \
@@ -113,7 +113,7 @@ BATCH_WORKER_SECRET_KEYS = \
 	RESEND_FROM_EMAIL \
 	STRIPE_SECRET_KEY \
 	LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL \
-	CONSOLE_APP_URL
+	ADMIN_APP_URL
 
 # Usage: make setup-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
 # Usage: make setup-secrets:dev
