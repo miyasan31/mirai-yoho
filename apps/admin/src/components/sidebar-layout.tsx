@@ -1,6 +1,5 @@
 import { Splitter, useSplitterContext } from "@ark-ui/react/splitter";
 import type { AppPath } from "@mirai-yoho/console-core/lib/app-path";
-import { IconButton } from "@mirai-yoho/ui/components/ui/icon-button";
 import * as Menu from "@mirai-yoho/ui/components/ui/menu";
 import { Skeleton } from "@mirai-yoho/ui/components/ui/skeleton";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
@@ -119,16 +118,43 @@ function SidebarToggleButton({ collapsed }: { collapsed: boolean }) {
     }
   }, [collapsed, splitter]);
 
-  return (
-    <Tooltip
-      content={collapsed ? "メニューを開く" : "メニューを閉じる"}
-      showArrow
-      positioning={{ placement: "right" }}
+  const label = collapsed ? "メニューを開く" : "メニューを閉じる";
+
+  const button = (
+    <styled.button
+      type="button"
+      onClick={handleToggle}
+      display="flex"
+      alignItems="center"
+      justifyContent={collapsed ? "center" : undefined}
+      gap="2"
+      w="full"
+      px="3"
+      py="2"
+      rounded="l2"
+      textStyle="sm"
+      transition="all"
+      transitionDuration="normal"
+      cursor="pointer"
+      whiteSpace="nowrap"
+      overflow="hidden"
+      color="fg.muted"
+      bg="transparent"
+      _hover={{ bg: "colorPalette.subtle" }}
     >
-      <IconButton variant="subtle" size="sm" onClick={handleToggle}>
+      <styled.span flexShrink={0} display="flex">
         {collapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
-      </IconButton>
+      </styled.span>
+      {!collapsed && label}
+    </styled.button>
+  );
+
+  return collapsed ? (
+    <Tooltip content={label} showArrow positioning={{ placement: "right" }}>
+      {button}
     </Tooltip>
+  ) : (
+    button
   );
 }
 
@@ -481,12 +507,7 @@ export function SidebarLayout({
             })}
           </styled.nav>
 
-          <styled.div
-            mt="auto"
-            pt="2"
-            display="flex"
-            justifyContent={collapsed ? "center" : "flex-start"}
-          >
+          <styled.div mt="auto" pt="2">
             <SidebarToggleButton collapsed={collapsed} />
           </styled.div>
         </styled.aside>
