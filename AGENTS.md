@@ -1,4 +1,4 @@
-# Arc - 未来予報 開発ルール
+# Arc - みらい予報 開発ルール
 
 ## リポジトリ構成（pnpm workspace モノレポ）
 - `apps/user` … 顧客向け予約 SPA（Vite + TanStack Router、認証なし）

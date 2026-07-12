@@ -62,7 +62,7 @@ export class ResendEmailService implements IEmailService {
     startsAt: Date;
     bookingId: string;
   }): Promise<void> {
-    const subject = "【未来予報】ご予約確認";
+    const subject = "【みらい予報】ご予約確認";
     const html = `
 				<h2>ご予約が確認されました</h2>
 				<p>${params.customerName} 様</p>
@@ -92,7 +92,7 @@ export class ResendEmailService implements IEmailService {
   }): Promise<void> {
     const cancelledByText =
       params.cancelledBy === "customer" ? "お客様" : "管理者";
-    const subject = "【未来予報】ご予約キャンセルのお知らせ";
+    const subject = "【みらい予報】ご予約キャンセルのお知らせ";
     const html = `
 				<h2>ご予約がキャンセルされました</h2>
 				<p>${params.customerName} 様</p>
@@ -116,7 +116,7 @@ export class ResendEmailService implements IEmailService {
     amountJPY: number;
     bookingId: string;
   }): Promise<void> {
-    const subject = "【未来予報】お支払い完了のお知らせ";
+    const subject = "【みらい予報】お支払い完了のお知らせ";
     const html = `
 				<h2>お支払いが完了しました</h2>
 				<p>${params.customerName} 様</p>
@@ -141,7 +141,7 @@ export class ResendEmailService implements IEmailService {
     startsAt: Date;
     bookingId: string;
   }): Promise<void> {
-    const subject = "【未来予報】相談開始15分前のお知らせ";
+    const subject = "【みらい予報】相談開始15分前のお知らせ";
     const html = `
 				<h2>相談開始15分前のお知らせ</h2>
 				<p>${params.customerName} 様</p>
@@ -174,9 +174,9 @@ export class ResendEmailService implements IEmailService {
     };
     const roleLabel = roleLabels[params.role] ?? params.role;
 
-    const subject = "【未来予報】アカウント招待のお知らせ";
+    const subject = "【みらい予報】アカウント招待のお知らせ";
     const html = `
-				<h2>未来予報へご招待します</h2>
+				<h2>みらい予報へご招待します</h2>
 				<p>あなたのアカウントが作成されました。</p>
 				<ul>
 					<li><strong>ロール:</strong> ${roleLabel}</li>
@@ -196,7 +196,7 @@ export class ResendEmailService implements IEmailService {
     email: string;
     passwordResetLink: string;
   }): Promise<void> {
-    const subject = "【未来予報】パスワードリセットのお知らせ";
+    const subject = "【みらい予報】パスワードリセットのお知らせ";
     const html = `
 				<h2>パスワードリセット</h2>
 				<p>管理者よりパスワードリセットのリクエストがありました。</p>

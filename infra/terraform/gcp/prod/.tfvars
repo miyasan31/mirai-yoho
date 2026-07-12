@@ -20,7 +20,7 @@ firebase_storage_cors_origins = [
 # Replace the placeholders after obtaining access to the existing prod project,
 # then import the resources following doc/terraform-firebase-migration.md.
 firebase_web_app_id           = "1:PROJECT_NUMBER:web:WEB_APP_ID"
-firebase_web_app_display_name = "未来予報"
+firebase_web_app_display_name = "みらい予報"
 app_hosting_backend_id        = "mirai-yoho"
 app_hosting_location          = "asia-east1"
 app_hosting_custom_domain     = "api.miraiyohou.com"

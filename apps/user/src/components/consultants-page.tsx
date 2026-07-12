@@ -158,7 +158,7 @@ export function ConsultantsPage() {
         </Text>
         <Text textStyle="sm" color="fg.muted">
           {consultantSelectionEnabled === true
-            ? "未来予報の相談員を選んで予約できます"
+            ? "みらい予報の相談員を選んで予約できます"
             : "日時を選ぶと、空き状況に応じて相談員を自動でご案内します"}
         </Text>
       </styled.div>

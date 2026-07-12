@@ -19,7 +19,7 @@ function Home() {
     >
       <styled.div textAlign="center" maxW="2xl" mb="12">
         <Text as="h1" textStyle="5xl" fontWeight="bold" mb="4">
-          未来予報
+          みらい予報
         </Text>
         <Text textStyle="lg" color="fg.muted" maxW="md" mx="auto">
           あなたの未来を一緒に考える、オンライン相談サービス

@@ -19,7 +19,7 @@ firebase_storage_cors_origins = [
 ]
 
 firebase_web_app_id           = "1:173156005504:web:478232d812edccae4cd865"
-firebase_web_app_display_name = "未来予報"
+firebase_web_app_display_name = "みらい予報"
 app_hosting_backend_id        = "mirai-yoho"
 app_hosting_location          = "asia-east1"
 app_hosting_custom_domain     = "dev.api.miraiyohou.com"

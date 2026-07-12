@@ -1,4 +1,4 @@
-# 未来予報 API サーバー（Hono + @hono/node-server）を Cloud Run で動かすためのイメージ。
+# みらい予報 API サーバー（Hono + @hono/node-server）を Cloud Run で動かすためのイメージ。
 # リポジトリルートをビルドコンテキストとして実行する:
 #   gcloud builds submit --config=apps/api/cloudbuild.yaml ...
 #
