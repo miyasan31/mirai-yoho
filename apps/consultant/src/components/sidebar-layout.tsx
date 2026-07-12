@@ -118,7 +118,7 @@ function SidebarToggleButton({ collapsed }: { collapsed: boolean }) {
     }
   }, [collapsed, splitter]);
 
-  const label = collapsed ? "メニューを開く" : "メニューを閉じる";
+  const label = collapsed ? "サイドバーを開く" : "サイドバーを閉じる";
 
   const button = (
     <styled.button
@@ -257,15 +257,6 @@ function SidebarOrganizationMenu({
                 >
                   {currentLabel}
                 </Text>
-                <Text
-                  textStyle="xs"
-                  color="fg.muted"
-                  whiteSpace="nowrap"
-                  overflow="hidden"
-                  textOverflow="ellipsis"
-                >
-                  {subtitle}
-                </Text>
               </styled.span>
               <styled.span flexShrink={0} color="fg.muted" display="flex">
                 <ChevronsUpDown size={16} />
@@ -305,7 +296,6 @@ function SidebarOrganizationMenu({
           )}
 
           <Menu.ItemGroup>
-            <Menu.ItemGroupLabel>組織を切り替え</Menu.ItemGroupLabel>
             {organizationSwitcher.items.map((item) => {
               const isCurrent = item.value === organizationSwitcher.value;
               return (
