@@ -229,7 +229,7 @@ API サーバーが参照する Secret は `common/api` の `api_secret_ids`、b
 
 Secret の追加・更新後は Cloud Run（`deploy-api.yml` の再実行、または `gcloud run services update`）を再デプロイして反映します。
 
-Secret の詳しい運用・確認方法は [Secret Manager 運用手順](firebase-app-hosting-secrets.md) を参照してください。
+Secret の詳しい運用・確認方法は [Secret Manager 運用手順](secret-manager.md) を参照してください。
 
 ### 3.5 継続デプロイ
 
@@ -331,12 +331,12 @@ make apply ENV=dev
 | `User has no assigned role`                   | organization 作成時のメールアドレスとログインした Firebase Auth ユーザーが同じか、account の `status` が `active` / `invited` かを確認する。     |
 | `Organization '<id>' already exists`          | 既存組織の上書きはできない。ID を確認し、既存データを利用するか別 ID を選ぶ。                                                                      |
 | `No value for required variable worker_image` | `make plan` / `make apply` の前に `TF_VAR_worker_image` を設定する。                                                     |
-| Cloud Run で Secret を読めない                     | Secret の存在・値・`api-server` 実行サービスアカウントの参照権限を確認し、再デプロイする。詳細は [Secret 運用手順](firebase-app-hosting-secrets.md) を参照。 |
+| Cloud Run で Secret を読めない                     | Secret の存在・値・`api-server` 実行サービスアカウントの参照権限を確認し、再デプロイする。詳細は [Secret 運用手順](secret-manager.md) を参照。 |
 | 定期バッチが対象組織に存在しない                              | `.tfvars` の `organization_ids` に組織 ID を追加して Terraform apply する。                                                 |
 
 
 ## 関連ドキュメント
 
-- [Secret Manager 運用手順](firebase-app-hosting-secrets.md)
+- [Secret Manager 運用手順](secret-manager.md)
 - [Cloud Scheduler バッチ運用](cloud-scheduler.md)
 - [DDD 設計](DDD_DESIGN.md)

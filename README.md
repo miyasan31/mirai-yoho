@@ -18,7 +18,7 @@
 ## 運用ドキュメント
 
 - [システム環境構築・組織作成ガイド](doc/system-setup-and-organization.md)
-- [Secret Manager 運用手順](doc/firebase-app-hosting-secrets.md)
+- [Secret Manager 運用手順](doc/secret-manager.md)
 - [Cloud Scheduler バッチ運用](doc/cloud-scheduler.md)
 - [SPA 分割アーキテクチャと移行手順](doc/spa-split.md)
 

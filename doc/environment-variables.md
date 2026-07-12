@@ -1,7 +1,7 @@
 # 環境変数の取得・生成方法
 
 `.env.example` に列挙されている環境変数のうち、値の入手方法が自明でないものの手順をまとめる。
-本番環境への設定は [firebase-app-hosting-secrets.md](./firebase-app-hosting-secrets.md) の手順（Cloud Secret Manager 経由）に従うこと。
+本番環境への設定は [secret-manager.md](./secret-manager.md) の手順（Cloud Secret Manager 経由）に従うこと。
 
 ## 自分で生成するシークレット
 
