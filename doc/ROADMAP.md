@@ -108,4 +108,4 @@ vitest を走らせてドメインテストが全部通ることを確認して�
 | `RESEND_API_KEY` | Resend API キー |
 | `RESEND_FROM_EMAIL` | 送信元メールアドレス（本番: `noreply@ドメイン`） |
 | `INVOICE_REGISTRATION_NUMBER` | インボイス登録番号（T から始まる 13 桁） |
-| `NEXT_PUBLIC_APP_URL` | アプリの公開 URL（キャンセルリンク生成用） |
+| `API_URL` | API サーバーの公開 URL（Cloud Scheduler の OIDC audience 検証・リンク生成用） |

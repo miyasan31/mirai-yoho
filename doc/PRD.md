@@ -22,7 +22,7 @@
 
 ## 1. 概要
 
-本システムは Next.js をベースとしたオンライン相談予約管理プラットフォーム **Arc - みらい予報** である。顧客はアカウント登録不要（完全匿名）で相談員を選択・空き枠を予約・仮決済し、Zoom URL をメールで受け取ることができる。相談終了後は深夜 0 時のバッチ処理により前日分の本決済が自動実行される。Zoom のブレイクアウトルーム機能で複数顧客の並行サポートを実現する。
+本システムは Hono（API）+ Vite / TanStack Router（SPA）で構成されるオンライン相談予約管理プラットフォーム **Arc - みらい予報** である。顧客はアカウント登録不要（完全匿名）で相談員を選択・空き枠を予約・仮決済し、Zoom URL をメールで受け取ることができる。相談終了後は深夜 0 時のバッチ処理により前日分の本決済が自動実行される。Zoom のブレイクアウトルーム機能で複数顧客の並行サポートを実現する。
 
 ### 1.1 目的
 
@@ -232,7 +232,8 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 
 | カテゴリ | 技術 / サービス | 備考 |
 |---|---|---|
-| フロントエンド FW | Next.js（App Router） | |
+| フロントエンド FW | Vite + TanStack Router（file-based routing） | 顧客 / 管理 / 相談員の 3 SPA |
+| API FW | Hono（`@hono/node-server`） | esbuild で単一バンドル。DDD 4 層 |
 | 認証 | Firebase Authentication | 管理者・相談員。顧客は完全匿名 |
 | データベース | Firestore（GCP） | Firebase 統一でコスト最適化 |
 | ファイルストレージ | Firebase Storage | 相談員プロフィール写真 |
@@ -264,7 +265,7 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 | Resend | デフォルトドメイン可（`onboarding@resend.dev`） | 独自ドメイン（`noreply@ドメイン`） |
 | Cloud Scheduler | 無効（手動トリガーでテスト） | 有効（深夜 0 時バッチ） |
 | Cloud Run URL | 自動割り当て URL | 独自ドメイン + HTTPS |
-| 環境変数 | `.env.local`（Next.js ローカル起動）/ `.env.dev`（運用コマンド）/ Secret Manager（GCP） | `.env.prod`（運用コマンド）/ Secret Manager（GCP） |
+| 環境変数 | `.env.local`（API / SPA ローカル起動）/ `.env.dev`（運用コマンド）/ Secret Manager（GCP） | `.env.prod`（運用コマンド）/ Secret Manager（GCP） |
 
 > **Resend 独自ドメイン設定：** DNS への SPF / DKIM / DMARC レコード追加 → Resend ダッシュボードで検証。本番リリース前に必須。
 
@@ -549,7 +550,7 @@ pending ──── 仮決済失敗 or タイムアウト ───────
 | フォーマット検証 | Biome | コードフォーマットの一貫性確認 |
 | Unit テスト | Vitest | ユーティリティ・フック・ロジックのテスト |
 | Component テスト | Vitest + RTL | UI コンポーネントの動作検証 |
-| ビルドチェック | Next.js | ビルドエラーの早期検知 |
+| ビルドチェック | Vite（SPA）/ esbuild（API） | ビルドエラーの早期検知 |
 
 > E2E テストは今回のスコープ外。
 

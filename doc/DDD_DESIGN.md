@@ -26,7 +26,7 @@
 |---|---|
 | 適用範囲 | ドメイン層（集約・Value Object・ドメインイベント）に集中 |
 | アーキテクチャ | レイヤードアーキテクチャ（Presentation / Application / Domain / Infrastructure） |
-| フレームワーク | Next.js App Router。API Routes が Presentation 層を担う |
+| フレームワーク | Hono（`@hono/node-server` 上で実行）。Hono のルートハンドラが Presentation 層を担う |
 | イベントバス | 採用しない。Application Service（UseCase）内でイベントハンドラを直接呼ぶ |
 | CQRS | 採用しない（将来の拡張として検討） |
 
@@ -207,71 +207,64 @@ CreateBookingUseCase
 | **Domain** | ビジネスルール・整合性保証 | なし（純粋な TypeScript） |
 | **Application** | ユースケース調整・トランザクション管理 | Domain のみ（Infrastructure は Interface 経由） |
 | **Infrastructure** | 外部サービス実装（Firestore / Stripe / Zoom / Resend） | 全て可 |
-| **Presentation** | HTTP 入出力（Next.js API Routes） | Application のみ |
+| **Presentation** | HTTP 入出力（Hono ルートハンドラ） | Application のみ |
 
 ### 7.2 フォルダ構造
 
+全ファイル **kebab-case**。Repository Interface にプレフィックスは付けない（`booking-repository.ts`）。
+
 ```
-src/
+apps/api/src/
+├── config/                           ← env の読み込み・検証（env.server 等）
+├── lib/                              ← 横断ユーティリティ
 ├── domain/
 │   ├── shared/
-│   │   ├── domainError.ts
-│   │   └── domainEvent.ts
+│   │   ├── aggregate-root.ts
+│   │   └── domain-event.ts
 │   ├── booking/
 │   │   ├── booking.ts               ← 集約ルート
-│   │   ├── bookingStatus.ts         ← VO
-│   │   ├── cancelDeadline.ts        ← VO（24h チェック）
-│   │   ├── zoomUrl.ts               ← VO
-│   │   ├── consultantMemo.ts        ← VO
-│   │   ├── bookingEvents.ts         ← ドメインイベント定義
-│   │   └── iBookingRepository.ts   ← Repository Interface
+│   │   ├── booking-status.ts        ← VO
+│   │   ├── cancel-deadline.ts       ← VO（24h チェック）
+│   │   ├── zoom-url.ts              ← VO
+│   │   ├── consultant-memo.ts       ← VO
+│   │   ├── booking-events.ts        ← ドメインイベント定義
+│   │   └── booking-repository.ts    ← Repository Interface（プレフィックスなし）
 │   ├── slot/
 │   │   ├── slot.ts
-│   │   ├── timeRange.ts             ← VO（過去日時チェック）
-│   │   └── iSlotRepository.ts
+│   │   ├── time-range.ts            ← VO（過去日時チェック）
+│   │   └── slot-repository.ts
 │   ├── payment/
 │   │   ├── payment.ts
 │   │   ├── money.ts                 ← VO（税込み計算）
-│   │   ├── paymentStatus.ts         ← VO
-│   │   └── iPaymentRepository.ts
-│   ├── consultant/
-│   │   ├── consultant.ts
-│   │   ├── consultantProfile.ts     ← VO
-│   │   └── iConsultantRepository.ts
-│   └── client/
-│       ├── client.ts
-│       └── iCustomerRepository.ts
+│   │   ├── payment-status.ts        ← VO
+│   │   ├── payment-strategy.ts
+│   │   └── payment-repository.ts
+│   ├── consultant/ · consultant-price-plan/
+│   ├── customer/ · user/ · user-coupon/
+│   ├── organization-settings/ · authorization/
+│   └── zoom-session/
 │
 ├── application/
-│   └── booking/
-│       ├── createBookingUseCase.ts   ← 3集約トランザクション
-│       ├── cancelBookingUseCase.ts
-│       └── capturePaymentUseCase.ts
+│   ├── booking/
+│   │   ├── create-booking-use-case.ts   ← 集約横断トランザクション
+│   │   ├── cancel-booking-use-case.ts
+│   │   └── charge-payment-use-case.ts
+│   └── shared/                      ← UseCase から使うポート（Interface）
+│       ├── stripe-service.ts · zoom-service.ts · email-service.ts
+│       └── unit-of-work.ts          ← トランザクション境界
 │
-├── infrastructure/
-│   ├── firestore/
-│   │   ├── firestoreBookingRepository.ts
-│   │   ├── firestoreSlotRepository.ts
-│   │   ├── firestorePaymentRepository.ts
-│   │   ├── firestoreCustomerRepository.ts
-│   │   ├── firestoreConsultantRepository.ts
-│   │   └── firestoreUnitOfWork.ts    ← トランザクション実装
-│   ├── stripe/
-│   │   └── stripeService.ts
-│   ├── zoom/
-│   │   └── zoomService.ts
-│   └── resend/
-│       └── resendEmailService.ts
+├── infrastructure/                  ← 上記ポートの実装（Firestore / Stripe / Zoom / Resend）
 │
-└── app/
-    └── api/
-        ├── bookings/
-        │   └── route.ts              ← CreateBookingUseCase を呼ぶだけ
-        ├── bookings/[id]/
-        │   ├── cancel/route.ts
-        │   └── capture/route.ts
-        ├── batch/capture/route.ts
-        └── webhooks/stripe/route.ts
+├── presentation/                    ← Hono ルートハンドラ（Application のみ依存）
+│   ├── auth/                        ← /api/auth/*
+│   ├── customer/                    ← /api/customer/*
+│   ├── organizations/               ← /api/organizations/*（Hono サブルーター）
+│   └── webhooks/                    ← /api/webhooks/stripe など
+│
+├── server/
+│   ├── app.ts                       ← Hono アプリ組み立て（CORS・ルート登録）
+│   └── index.ts                     ← @hono/node-server で起動
+└── worker/                          ← batch worker（Cloud Run Job）
 ```
 
 ---
@@ -339,7 +332,7 @@ import { Firestore } from 'firebase-admin/firestore'  // 禁止
 import Stripe from 'stripe'                            // 禁止
 
 // ✅ Interface（ポート）に依存させる
-import type { IBookingRepository } from './iBookingRepository'
+import type { IBookingRepository } from './booking-repository'
 ```
 
 ### 9.2 Value Object の原則
@@ -356,12 +349,12 @@ import type { IBookingRepository } from './iBookingRepository'
 
 ### 9.4 ファイル命名規則
 
-- 全ファイル **camelCase**
+- 全ファイル **kebab-case**
 - 集約ルート: `booking.ts` / `slot.ts` / `payment.ts`
-- Value Object: `bookingStatus.ts` / `cancelDeadline.ts`
-- Repository Interface: `iBookingRepository.ts`（先頭 `i` + camelCase）
-- UseCase: `createBookingUseCase.ts`
-- ドメインイベント: `bookingEvents.ts`（複数イベントを 1 ファイルに集約）
+- Value Object: `booking-status.ts` / `cancel-deadline.ts`
+- Repository Interface: `booking-repository.ts`（**プレフィックスは付けない**）
+- UseCase: `create-booking-use-case.ts`
+- ドメインイベント: `booking-events.ts`（複数イベントを 1 ファイルに集約）
 
 ### 9.5 Vitest テスト指針
 

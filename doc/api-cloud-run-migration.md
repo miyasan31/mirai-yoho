@@ -8,15 +8,17 @@ Firebase App Hosting のビルドパックが pnpm workspace モノレポの `pn
 ローカルの `pnpm install` は Node 22/24・frozen/full 問わず全て成功し、リポジトリ側の設定に
 問題は無いことを確認済み）。
 
-そこで API サーバー（Next.js Route Handlers）を **Dockerfile ベースの Cloud Run サービス** に
-載せ替え、ビルドパックの自動 install を経由しない構成にする。既存の batch worker
-（`Dockerfile.worker` + Cloud Build + Cloud Run Job）と同じ運用パターンに揃えている。
+そこで API サーバーを **Dockerfile ベースの Cloud Run サービス** に
+載せ替え、ビルドパックの自動 install を経由しない構成にする。あわせて API フレームワークも
+Next.js Route Handlers から **Hono（`@hono/node-server`）** へ移行し、esbuild で単一バンドル
+（`dist/server.js`）する構成にした。既存の batch worker（`Dockerfile.worker` + Cloud Build
++ Cloud Run Job）と同じ運用パターンに揃えている。
 
 ## 構成
 
 | 項目 | 値 |
 | --- | --- |
-| イメージビルド | `apps/api/Dockerfile`（Next standalone マルチステージ）+ `apps/api/cloudbuild.yaml` |
+| イメージビルド | `apps/api/Dockerfile`（esbuild バンドルのマルチステージ）+ `apps/api/cloudbuild.yaml` |
 | レジストリ | `asia-northeast1-docker.pkg.dev/<project>/api/api:<git-sha>` |
 | 実行環境 | Cloud Run service `api`（`asia-northeast1`） |
 | ランタイム SA | `api-server@<project>.iam.gserviceaccount.com`（datastore.user / firebaseauth.admin / logging.logWriter + 各シークレットの secretAccessor） |
