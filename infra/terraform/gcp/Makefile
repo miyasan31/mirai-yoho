@@ -75,7 +75,7 @@ init: check-env
 # TF_VAR_api_image で使う Artifact Registry の API イメージ URI を出力する。
 # SHA を省略すると HEAD のコミット SHA を使う（deploy-api.yml の IMAGE_TAG=github.sha と同じ形式）。
 print-api-image:
-	@echo "TF_VAR_api_image=$(REGION)-docker.pkg.dev/$(PROJECT_ID)/api/api:$(SHA)"
+	@echo $(REGION)-docker.pkg.dev/$(PROJECT_ID)/api/api:$(SHA)
 
 # Usage: make plan ENV=dev
 plan: check-env
