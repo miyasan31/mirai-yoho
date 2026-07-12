@@ -4,6 +4,7 @@ import { Toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import { SearchX } from "lucide-react";
 import { BackNavigationButton } from "@/components/back-navigation-button";
+import { MobileBackButton } from "@/components/mobile-back-button";
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -14,6 +15,7 @@ function RootLayout() {
   return (
     <>
       <Outlet />
+      <MobileBackButton />
       <Toaster />
     </>
   );
