@@ -4,8 +4,10 @@ locals {
   # （App Hosting の apphosting.yaml で env に列挙していた RUNTIME シークレットと同一集合。）
   api_secret_ids = toset([
     "API_URL",
-    "CANCEL_TOKEN_SECRET",
+    "USER_APP_URL",
     "ADMIN_APP_URL",
+    "CANCEL_TOKEN_SECRET",
+    "COUPON_WEBHOOK_SECRET",
     "CORS_ALLOWED_ORIGINS",
     "FIREBASE_CLIENT_EMAIL",
     "FIREBASE_PRIVATE_KEY",
@@ -21,6 +23,10 @@ locals {
     "ZOOM_CLIENT_ID",
     "ZOOM_CLIENT_SECRET",
     "ZOOM_HOST_USER_ID",
+    "ZOOM_USER_OAUTH_CLIENT_ID",
+    "ZOOM_USER_OAUTH_CLIENT_SECRET",
+    "ZOOM_OAUTH_STATE_SECRET",
+    "ZOOM_CREDENTIAL_ENCRYPTION_KEY",
   ])
 }
 

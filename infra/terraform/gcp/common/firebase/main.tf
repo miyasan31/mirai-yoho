@@ -1,8 +1,10 @@
 locals {
   app_hosting_secret_ids = toset([
     "API_URL",
-    "CANCEL_TOKEN_SECRET",
+    "USER_APP_URL",
     "ADMIN_APP_URL",
+    "CANCEL_TOKEN_SECRET",
+    "COUPON_WEBHOOK_SECRET",
     "CORS_ALLOWED_ORIGINS",
     "FIREBASE_CLIENT_EMAIL",
     "FIREBASE_PRIVATE_KEY",
@@ -18,6 +20,10 @@ locals {
     "ZOOM_CLIENT_ID",
     "ZOOM_CLIENT_SECRET",
     "ZOOM_HOST_USER_ID",
+    "ZOOM_USER_OAUTH_CLIENT_ID",
+    "ZOOM_USER_OAUTH_CLIENT_SECRET",
+    "ZOOM_OAUTH_STATE_SECRET",
+    "ZOOM_CREDENTIAL_ENCRYPTION_KEY",
   ])
 
   # メンバー値は SA の email / project number（plan 時に未確定になり得る値）を含むため、
