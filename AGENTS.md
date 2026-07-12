@@ -1,10 +1,10 @@
-# Arc - 未来予報 開発ルール
+# Arc - みらい予報 開発ルール
 
 ## リポジトリ構成（pnpm workspace モノレポ）
 - `apps/user` … 顧客向け予約 SPA（Vite + TanStack Router、認証なし）
 - `apps/admin` … 管理者・オペレーター向けコンソール SPA（Vite + TanStack Router、`admin.console.miraiyohou.com`）
 - `apps/consultant` … 相談員向けコンソール SPA（Vite + TanStack Router、`consultant.console.miraiyohou.com`）
-- `apps/api` … API サーバー（Next.js Route Handlers）+ batch worker。domain / application / infrastructure 層はここに置く
+- `apps/api` … API サーバー（Hono + @hono/node-server）+ batch worker。domain / application / infrastructure / presentation 層はここに置く
 - `packages/api-client` … OpenAPI スペックと Orval 生成の React Query hooks
 - `packages/console-core` … admin / consultant で共有する認証・API クライアント・組織ルーティング等のロジック（panda 非依存）
 - `packages/ui` … Panda CSS preset（panda.preset.ts）と Park UI / Ark UI ベースの共有 UI コンポーネント
@@ -23,7 +23,7 @@
 - export 名は PascalCase（コンポーネント、クラス）/ camelCase（関数、変数）
 
 ## 技術スタック
-- API: Next.js Route Handlers / TypeScript / Firestore / Stripe / Zoom / Resend
+- API: Hono（@hono/node-server 上で実行、esbuild で単一バンドル） / TypeScript / Firestore / Stripe / Zoom / Resend
 - SPA: Vite / TanStack Router（file-based routing, search params も Router で管理）
 - フォーム: React Hook Form + Valibot
 - UI: ParkUI（packages/ui）/ カレンダー: react-big-calendar

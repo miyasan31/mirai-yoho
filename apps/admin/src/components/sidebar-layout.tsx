@@ -1,14 +1,18 @@
-import { createListCollection } from "@ark-ui/react/select";
 import { Splitter, useSplitterContext } from "@ark-ui/react/splitter";
 import type { AppPath } from "@mirai-yoho/console-core/lib/app-path";
-import { IconButton } from "@mirai-yoho/ui/components/ui/icon-button";
-import * as Select from "@mirai-yoho/ui/components/ui/select";
+import * as Menu from "@mirai-yoho/ui/components/ui/menu";
 import { Skeleton } from "@mirai-yoho/ui/components/ui/skeleton";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
 import { Link, useLocation } from "@tanstack/react-router";
 import type { LucideIcon } from "lucide-react";
-import { LogOut, PanelLeft, PanelLeftClose } from "lucide-react";
+import {
+  Check,
+  ChevronsUpDown,
+  LogOut,
+  PanelLeft,
+  PanelLeftClose,
+} from "lucide-react";
 import type { CSSProperties, ReactNode } from "react";
 import { useCallback, useState } from "react";
 import { css } from "styled-system/css";
@@ -20,17 +24,19 @@ export interface NavItem {
   icon: LucideIcon;
 }
 
+export interface OrganizationSwitcher {
+  items: Array<{ label: string; value: string }>;
+  value: string | null;
+  onChange: (organizationId: string) => void;
+}
+
 export interface SidebarLayoutProps {
   title: string;
   navItems: NavItem[];
   children: ReactNode;
   onSignOut: () => void;
   currentDisplayName?: string | null;
-  organizationSwitcher?: {
-    items: Array<{ label: string; value: string }>;
-    value: string | null;
-    onChange: (organizationId: string) => void;
-  };
+  organizationSwitcher?: OrganizationSwitcher;
 }
 
 /** サイドバーの初期幅 (%) */
@@ -46,6 +52,11 @@ const COLLAPSE_THRESHOLD_PX = 120;
 
 const SIDEBAR_PANEL_ID = "sidebar";
 
+/** メニュー項目の value に付与する組織切り替え用プレフィックス */
+const ORG_ITEM_PREFIX = "org:";
+/** ログアウト用メニュー項目の value */
+const SIGN_OUT_ITEM_VALUE = "sign-out";
+
 const splitterRootStyle = css({
   display: "flex",
   minH: "100vh",
@@ -59,6 +70,11 @@ const resizeTriggerStyle = css({
   _active: { bg: "colorPalette.default" },
   cursor: "col-resize",
 });
+
+/** 組織名の先頭 1 文字（サロゲートペア考慮）をアバター表示用に取得する */
+function getOrganizationInitial(label: string): string {
+  return [...label][0] ?? "?";
+}
 
 export function SidebarLayoutSkeleton({
   navItemCount = 3,
@@ -102,16 +118,240 @@ function SidebarToggleButton({ collapsed }: { collapsed: boolean }) {
     }
   }, [collapsed, splitter]);
 
-  return (
-    <Tooltip
-      content={collapsed ? "メニューを開く" : "メニューを閉じる"}
-      showArrow
-      positioning={{ placement: "right" }}
+  const label = collapsed ? "サイドバーを開く" : "サイドバーを閉じる";
+
+  const button = (
+    <styled.button
+      type="button"
+      onClick={handleToggle}
+      display="flex"
+      alignItems="center"
+      justifyContent={collapsed ? "center" : undefined}
+      gap="2"
+      w="full"
+      px="3"
+      py="2"
+      rounded="l2"
+      textStyle="sm"
+      transition="all"
+      transitionDuration="normal"
+      cursor="pointer"
+      whiteSpace="nowrap"
+      overflow="hidden"
+      color="fg.muted"
+      bg="transparent"
+      _hover={{ bg: "colorPalette.subtle" }}
     >
-      <IconButton variant="subtle" size="sm" onClick={handleToggle}>
+      <styled.span flexShrink={0} display="flex">
         {collapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
-      </IconButton>
+      </styled.span>
+      {!collapsed && label}
+    </styled.button>
+  );
+
+  return collapsed ? (
+    <Tooltip content={label} showArrow positioning={{ placement: "right" }}>
+      {button}
     </Tooltip>
+  ) : (
+    button
+  );
+}
+
+/**
+ * Notion 風の組織スイッチャー。
+ * サイドバー上部のヘッダーとして現在の組織名を表示し、
+ * クリックするとログイン可能な組織一覧・表示名・ログアウトを含むドロップダウンを開く。
+ */
+function SidebarOrganizationMenu({
+  collapsed,
+  subtitle,
+  organizationSwitcher,
+  currentDisplayName,
+  onSignOut,
+}: {
+  collapsed: boolean;
+  subtitle: string;
+  organizationSwitcher: OrganizationSwitcher;
+  currentDisplayName?: string | null;
+  onSignOut: () => void;
+}) {
+  const currentOrganization = organizationSwitcher.items.find(
+    (item) => item.value === organizationSwitcher.value,
+  );
+  const currentLabel = currentOrganization?.label ?? subtitle;
+  const currentInitial = getOrganizationInitial(currentLabel);
+
+  const handleSelect = useCallback(
+    (details: { value: string }) => {
+      if (details.value === SIGN_OUT_ITEM_VALUE) {
+        onSignOut();
+        return;
+      }
+      if (details.value.startsWith(ORG_ITEM_PREFIX)) {
+        const nextOrganizationId = details.value.slice(ORG_ITEM_PREFIX.length);
+        if (nextOrganizationId !== organizationSwitcher.value) {
+          organizationSwitcher.onChange(nextOrganizationId);
+        }
+      }
+    },
+    [onSignOut, organizationSwitcher],
+  );
+
+  return (
+    <Menu.Root
+      positioning={{
+        placement: collapsed ? "right-start" : "bottom-start",
+        gutter: 4,
+      }}
+      onSelect={handleSelect}
+    >
+      <Menu.Trigger asChild>
+        <styled.button
+          type="button"
+          display="flex"
+          alignItems="center"
+          gap="2"
+          flex={collapsed ? undefined : "1"}
+          minW="0"
+          maxW="full"
+          px={collapsed ? "0" : "2"}
+          py="1.5"
+          rounded="l2"
+          cursor="pointer"
+          textAlign="start"
+          bg="transparent"
+          transition="background"
+          transitionDuration="fast"
+          _hover={{ bg: "colorPalette.subtle" }}
+        >
+          <styled.span
+            flexShrink={0}
+            display="flex"
+            alignItems="center"
+            justifyContent="center"
+            boxSize="7"
+            rounded="l2"
+            bg="colorPalette.subtle"
+            color="colorPalette.default"
+            fontWeight="bold"
+            textStyle="sm"
+          >
+            {currentInitial}
+          </styled.span>
+          {!collapsed && (
+            <>
+              <styled.span
+                display="flex"
+                flexDir="column"
+                minW="0"
+                flex="1"
+                overflow="hidden"
+              >
+                <Text
+                  textStyle="sm"
+                  fontWeight="bold"
+                  whiteSpace="nowrap"
+                  overflow="hidden"
+                  textOverflow="ellipsis"
+                >
+                  {currentLabel}
+                </Text>
+              </styled.span>
+              <styled.span flexShrink={0} color="fg.muted" display="flex">
+                <ChevronsUpDown size={16} />
+              </styled.span>
+            </>
+          )}
+        </styled.button>
+      </Menu.Trigger>
+
+      <Menu.Positioner>
+        <Menu.Content minW="60" maxW="80">
+          {currentDisplayName && (
+            <>
+              <styled.div
+                px="2"
+                py="1.5"
+                display="flex"
+                flexDir="column"
+                gap="0.5"
+              >
+                <Text textStyle="xs" color="fg.muted">
+                  表示名
+                </Text>
+                <Text
+                  textStyle="sm"
+                  fontWeight="medium"
+                  whiteSpace="nowrap"
+                  overflow="hidden"
+                  textOverflow="ellipsis"
+                  title={currentDisplayName}
+                >
+                  {currentDisplayName}
+                </Text>
+              </styled.div>
+              <Menu.Separator />
+            </>
+          )}
+
+          <Menu.ItemGroup>
+            {organizationSwitcher.items.map((item) => {
+              const isCurrent = item.value === organizationSwitcher.value;
+              return (
+                <Menu.Item
+                  key={item.value}
+                  value={`${ORG_ITEM_PREFIX}${item.value}`}
+                >
+                  <styled.span
+                    flexShrink={0}
+                    display="flex"
+                    alignItems="center"
+                    justifyContent="center"
+                    boxSize="6"
+                    rounded="l2"
+                    bg="colorPalette.subtle"
+                    color="colorPalette.default"
+                    fontWeight="bold"
+                    textStyle="xs"
+                  >
+                    {getOrganizationInitial(item.label)}
+                  </styled.span>
+                  <Menu.ItemText
+                    flex="1"
+                    whiteSpace="nowrap"
+                    overflow="hidden"
+                    textOverflow="ellipsis"
+                  >
+                    {item.label}
+                  </Menu.ItemText>
+                  {isCurrent && (
+                    <styled.span
+                      flexShrink={0}
+                      color="colorPalette.default"
+                      display="flex"
+                    >
+                      <Check size={16} />
+                    </styled.span>
+                  )}
+                </Menu.Item>
+              );
+            })}
+          </Menu.ItemGroup>
+
+          <Menu.Separator />
+
+          <Menu.Item
+            value={SIGN_OUT_ITEM_VALUE}
+            color="red.default"
+            _hover={{ bg: "red.subtle" }}
+          >
+            <LogOut size={16} />
+            <Menu.ItemText>ログアウト</Menu.ItemText>
+          </Menu.Item>
+        </Menu.Content>
+      </Menu.Positioner>
+    </Menu.Root>
   );
 }
 
@@ -127,9 +367,9 @@ export function SidebarLayout({
   const [collapsed, setCollapsed] = useState(false);
   const [sidebarSizePercent, setSidebarSizePercent] =
     useState(SIDEBAR_DEFAULT_SIZE);
-  const organizationCollection = createListCollection({
-    items: organizationSwitcher?.items ?? [],
-  });
+
+  const hasOrganizationSwitcher =
+    organizationSwitcher != null && organizationSwitcher.items.length > 0;
 
   const handleResize = useCallback(({ size }: { size: number[] }) => {
     const sidebarSize = size[0];
@@ -180,21 +420,29 @@ export function SidebarLayout({
         >
           <styled.div
             display="flex"
-            alignItems="center"
-            justifyContent={collapsed ? "center" : "space-between"}
+            justifyContent={collapsed ? "center" : undefined}
             mb="6"
           >
-            {!collapsed && (
-              <Text
-                as="h2"
-                textStyle="lg"
-                fontWeight="bold"
-                whiteSpace="nowrap"
-              >
-                {title}
-              </Text>
+            {hasOrganizationSwitcher ? (
+              <SidebarOrganizationMenu
+                collapsed={collapsed}
+                subtitle={title}
+                organizationSwitcher={organizationSwitcher}
+                currentDisplayName={currentDisplayName}
+                onSignOut={onSignOut}
+              />
+            ) : (
+              !collapsed && (
+                <Text
+                  as="h2"
+                  textStyle="lg"
+                  fontWeight="bold"
+                  whiteSpace="nowrap"
+                >
+                  {title}
+                </Text>
+              )
             )}
-            <SidebarToggleButton collapsed={collapsed} />
           </styled.div>
 
           <styled.nav display="flex" flexDir="column" gap="1">
@@ -249,121 +497,8 @@ export function SidebarLayout({
             })}
           </styled.nav>
 
-          <styled.div mt="auto" display="flex" flexDirection="column" gap="3">
-            {organizationSwitcher &&
-              organizationSwitcher.items.length > 0 &&
-              !collapsed && (
-                <styled.div
-                  px="3"
-                  py="2"
-                  rounded="l2"
-                  bg="bg.default"
-                  borderWidth="1px"
-                  borderColor="border"
-                  display="flex"
-                  flexDir="column"
-                  gap="1"
-                >
-                  <Select.Root
-                    collection={organizationCollection}
-                    positioning={{ placement: "top" }}
-                    value={
-                      organizationSwitcher.value
-                        ? [organizationSwitcher.value]
-                        : undefined
-                    }
-                    onValueChange={(details) => {
-                      const nextOrganizationId = details.value[0];
-                      if (nextOrganizationId) {
-                        organizationSwitcher.onChange(nextOrganizationId);
-                      }
-                    }}
-                  >
-                    <Select.Label
-                      textStyle="xs"
-                      color="fg.muted"
-                      fontWeight="normal"
-                    >
-                      組織
-                    </Select.Label>
-                    <Select.Control>
-                      <Select.Trigger>
-                        <Select.ValueText placeholder="組織を選択" />
-                        <Select.Indicator />
-                      </Select.Trigger>
-                    </Select.Control>
-                    <Select.Positioner>
-                      <Select.Content>
-                        {organizationSwitcher.items.map((item) => (
-                          <Select.Item key={item.value} item={item}>
-                            <Select.ItemText>{item.label}</Select.ItemText>
-                            <Select.ItemIndicator />
-                          </Select.Item>
-                        ))}
-                      </Select.Content>
-                    </Select.Positioner>
-                  </Select.Root>
-                </styled.div>
-              )}
-
-            {!collapsed && currentDisplayName && (
-              <styled.div
-                px="3"
-                py="2"
-                rounded="l2"
-                bg="bg.default"
-                borderWidth="1px"
-                borderColor="border"
-                display="flex"
-                flexDir="column"
-                gap="1"
-                title={currentDisplayName}
-              >
-                <Text textStyle="xs" color="fg.muted">
-                  表示名
-                </Text>
-                <Text
-                  textStyle="sm"
-                  fontWeight="medium"
-                  whiteSpace="nowrap"
-                  overflow="hidden"
-                  textOverflow="ellipsis"
-                >
-                  {currentDisplayName}
-                </Text>
-              </styled.div>
-            )}
-
-            <Tooltip
-              content="ログアウト"
-              showArrow
-              positioning={{ placement: "right" }}
-              disabled={!collapsed}
-            >
-              <styled.span
-                display="flex"
-                alignItems="center"
-                justifyContent={collapsed ? "center" : undefined}
-                gap="2"
-                px="3"
-                py="2"
-                rounded="l2"
-                textStyle="sm"
-                cursor="pointer"
-                whiteSpace="nowrap"
-                overflow="hidden"
-                color="fg.muted"
-                transition="all"
-                transitionDuration="normal"
-                _hover={{ bg: "red.subtle" }}
-                onClick={onSignOut}
-              >
-                <styled.span flexShrink={0}>
-                  <LogOut size={18} />
-                </styled.span>
-                {!collapsed && "ログアウト"}
-              </styled.span>
-            </Tooltip>
+          <styled.div mt="auto" pt="2">
+            <SidebarToggleButton collapsed={collapsed} />
           </styled.div>
         </styled.aside>
       </Splitter.Panel>

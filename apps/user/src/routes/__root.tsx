@@ -5,7 +5,6 @@ import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import { SearchX } from "lucide-react";
 import { BackNavigationButton } from "@/components/back-navigation-button";
 import { MobileBackButton } from "@/components/mobile-back-button";
-import { envClient } from "@/config/env.client";
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -37,14 +36,7 @@ function NotFound() {
             <Link to="/">トップへ戻る</Link>
           </Button>
           <Button asChild variant="outline">
-            <a href={`${envClient.adminAppUrl}/admin/login`}>
-              管理者ログインへ
-            </a>
-          </Button>
-          <Button asChild variant="outline">
-            <a href={`${envClient.consultantAppUrl}/consultant/login`}>
-              相談員ログインへ
-            </a>
+            <Link to="/mypage">マイページへ</Link>
           </Button>
         </>
       }

@@ -58,7 +58,7 @@ describe("ResendEmailService", () => {
         emailType: "booking-confirmation",
         from: "noreply@example.com",
         to: "taro@example.com",
-        subject: "【未来予報】ご予約確認",
+        subject: "【みらい予報】ご予約確認",
         html: expect.stringContaining("booking-123"),
       }),
     );
@@ -78,7 +78,7 @@ describe("ResendEmailService", () => {
     expect(sendEmailMock).toHaveBeenCalledWith({
       from: "noreply@example.com",
       to: "invitee@example.com",
-      subject: "【未来予報】アカウント招待のお知らせ",
+      subject: "【みらい予報】アカウント招待のお知らせ",
       html: expect.stringContaining("https://example.com/reset"),
     });
   });

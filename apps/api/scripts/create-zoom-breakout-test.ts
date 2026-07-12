@@ -176,7 +176,7 @@ async function sameTime(argv: string[]) {
     { name: "Room 2", participants: [room2Consultant, room2Customer] },
   ];
 
-  const topic = `未来予報 ブレイクアウトテスト (same-time) ${date}`;
+  const topic = `みらい予報 ブレイクアウトテスト (same-time) ${date}`;
 
   const meeting = await createMeeting({
     token,
@@ -219,7 +219,7 @@ async function differentTime(argv: string[]) {
   const rooms1 = [
     { name: "Room 1", participants: [room1Consultant, room1Customer] },
   ];
-  const topic1 = `未来予報 ブレイクアウトテスト (different-time Room1 ${h1}:00) ${date}`;
+  const topic1 = `みらい予報 ブレイクアウトテスト (different-time Room1 ${h1}:00) ${date}`;
 
   const meeting1 = await createMeeting({
     token,
@@ -234,7 +234,7 @@ async function differentTime(argv: string[]) {
   const rooms2 = [
     { name: "Room 2", participants: [room2Consultant, room2Customer] },
   ];
-  const topic2 = `未来予報 ブレイクアウトテスト (different-time Room2 ${h2}:00) ${date}`;
+  const topic2 = `みらい予報 ブレイクアウトテスト (different-time Room2 ${h2}:00) ${date}`;
 
   const meeting2 = await createMeeting({
     token,

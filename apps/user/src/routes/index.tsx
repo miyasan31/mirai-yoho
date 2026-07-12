@@ -1,9 +1,7 @@
-import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowRight, Calendar, MessageCircle, Shield } from "lucide-react";
+import { Calendar, MessageCircle, Shield } from "lucide-react";
 import { styled } from "styled-system/jsx";
-import { envClient } from "@/config/env.client";
 
 export const Route = createFileRoute("/")({
   component: Home,
@@ -21,17 +19,11 @@ function Home() {
     >
       <styled.div textAlign="center" maxW="2xl" mb="12">
         <Text as="h1" textStyle="5xl" fontWeight="bold" mb="4">
-          未来予報
+          みらい予報
         </Text>
-        <Text textStyle="lg" color="fg.muted" mb="8" maxW="md" mx="auto">
+        <Text textStyle="lg" color="fg.muted" maxW="md" mx="auto">
           あなたの未来を一緒に考える、オンライン相談サービス
         </Text>
-        <Button asChild size="lg">
-          <a href={`${envClient.adminAppUrl}/admin/login`}>
-            ログインする
-            <ArrowRight size={18} />
-          </a>
-        </Button>
       </styled.div>
 
       <styled.div

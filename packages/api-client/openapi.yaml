@@ -1,6 +1,6 @@
 openapi: 3.1.0
 info:
-  title: Arc - 未来予報 API
+  title: Arc - みらい予報 API
   version: 0.2.0
   description: 予約・決済・相談員管理 API
 

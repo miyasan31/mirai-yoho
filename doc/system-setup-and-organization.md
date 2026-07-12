@@ -1,6 +1,6 @@
 # システム環境構築・組織作成ガイド
 
-このドキュメントは、Arc - 未来予報をローカルで起動し、Firebase / GCP 上の環境を用意して、最初の組織を利用可能にするまでの運用手順です。
+このドキュメントは、Arc - みらい予報をローカルで起動し、Firebase / GCP 上の環境を用意して、最初の組織を利用可能にするまでの運用手順です。
 
 > 対象環境は `dev`（`mirai-yoho-dev`）と `prod`（`mirai-yoho-prod`）です。開発・検証は必ず `dev` で行い、本番の Secret、Firestore、Firebase Auth を開発環境と共有しません。
 

@@ -24,6 +24,18 @@ resource "google_project_iam_member" "batch_worker_roles" {
   member  = "serviceAccount:${var.batch_worker_service_account_email}"
 }
 
+resource "google_project_iam_member" "api_server_roles" {
+  for_each = toset([
+    "roles/datastore.user",
+    "roles/firebaseauth.admin",
+    "roles/logging.logWriter",
+  ])
+
+  project = var.project_id
+  role    = each.value
+  member  = "serviceAccount:${var.api_server_service_account_email}"
+}
+
 resource "google_project_iam_member" "organization_operator_roles" {
   for_each = toset([
     "roles/datastore.user",
@@ -86,6 +98,10 @@ resource "google_service_account_iam_member" "github_can_impersonate_deployer" {
 
 resource "google_project_iam_member" "github_deployer_roles" {
   for_each = toset([
+    # イメージの push / pull と既存リポジトリの参照（get）は writer で足りる。
+    # リポジトリ作成（repositories.create）は writer/repoAdmin に無く admin か
+    # カスタムロールが要るが、api / batch-worker は作成済みで以後 create は不要なため付与しない
+    # （新規 AR リポジトリを増やす場合のみ、その時に admin か手動作成で対応する）。
     "roles/artifactregistry.writer",
     "roles/cloudbuild.builds.editor",
     "roles/datastore.owner",
@@ -110,6 +126,12 @@ resource "google_project_iam_member" "github_deployer_roles" {
 
 resource "google_service_account_iam_member" "github_can_deploy_worker" {
   service_account_id = var.batch_worker_service_account_name
+  role               = "roles/iam.serviceAccountUser"
+  member             = "serviceAccount:${var.github_deployer_service_account_email}"
+}
+
+resource "google_service_account_iam_member" "github_can_deploy_api" {
+  service_account_id = var.api_server_service_account_name
   role               = "roles/iam.serviceAccountUser"
   member             = "serviceAccount:${var.github_deployer_service_account_email}"
 }

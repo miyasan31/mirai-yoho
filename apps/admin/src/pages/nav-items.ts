@@ -25,7 +25,7 @@ export const NAV_ITEMS: Array<
   },
   {
     path: "/dashboard",
-    label: "ダッシュボード（集計）",
+    label: "ダッシュボード",
     icon: LayoutDashboard,
     permissions: ["admin.dashboard.read"],
   },
