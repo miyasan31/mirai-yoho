@@ -57,8 +57,3 @@ variable "organization_operator_service_account_email" {
   description = "Organization operator service account email."
   type        = string
 }
-
-variable "app_hosting_compute_service_account_email" {
-  description = "Firebase App Hosting compute service account email."
-  type        = string
-}

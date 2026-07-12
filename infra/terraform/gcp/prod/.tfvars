@@ -15,17 +15,8 @@ firebase_storage_cors_origins = [
   "https://consultant.console.miraiyohou.com",
 ]
 
-# Replace the placeholders after obtaining access to the existing prod project,
-# then import the resources following doc/terraform-firebase-migration.md.
-firebase_web_app_id           = "1:PROJECT_NUMBER:web:WEB_APP_ID"
-firebase_web_app_display_name = "みらい予報"
-app_hosting_backend_id        = "mirai-yoho"
-app_hosting_location          = "asia-east1"
-app_hosting_custom_domain     = "api.miraiyohou.com"
-
-# API を App Hosting から Cloud Run に切り替える際に有効化する。
-# 有効化前は Cloud Run の run.app URL のみで稼働する（api_service_uri output を参照）。
-# 切替手順は doc/api-cloud-run-migration.md を参照。
+# Cloud Run API のカスタムドメイン。null（既定）だと run.app URL のみで稼働する
+# （api_service_uri output を参照）。切替手順は doc/api-cloud-run-migration.md を参照。
 # api_custom_domain = "api.miraiyohou.com"
 
 # SPA サイトのカスタムドメイン。
@@ -34,11 +25,6 @@ spa_hosting_custom_domains = {
   admin      = "admin.console.miraiyohou.com"
   consultant = "consultant.console.miraiyohou.com"
 }
-
-developer_connect_connection_id              = "APP_HOSTING_CONNECTION_ID"
-developer_connect_repository_link_id         = "miyasan31-mirai-yoho"
-developer_connect_oauth_token_secret_version = "projects/mirai-yoho-prod/secrets/DEVELOPER_CONNECT_OAUTH_TOKEN/versions/latest"
-github_app_installation_id                   = "GITHUB_APP_INSTALLATION_ID"
 
 authorized_domains = [
   "user.miraiyohou.com",

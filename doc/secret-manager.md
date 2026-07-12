@@ -38,9 +38,9 @@ make setup-secrets:dev
 環境別 env ファイル（`.env.dev` / `.env.prod`）から一括投入:
 
 ```bash
-make setup-apphosting-secrets-from-env:dev
+make setup-api-secrets-from-env:dev
 # fish
-make setup-apphosting-secrets-from-env-fish:dev
+make setup-api-secrets-from-env-fish:dev
 ```
 
 単体登録（新規追加時）:

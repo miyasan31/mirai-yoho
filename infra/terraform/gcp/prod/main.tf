@@ -38,7 +38,6 @@ module "iam" {
   github_deployer_service_account_email       = module.service_accounts.github_deployer_service_account_email
   organization_operator_service_account_name  = module.service_accounts.organization_operator_service_account_name
   organization_operator_service_account_email = module.service_accounts.organization_operator_service_account_email
-  app_hosting_compute_service_account_email   = module.service_accounts.app_hosting_compute_service_account_email
 
   depends_on = [
     module.project_services,
@@ -90,23 +89,14 @@ module "firebase" {
     google-beta = google-beta
   }
 
-  project_id                                   = var.project_id
-  firestore_location                           = var.firestore_location
-  firebase_storage_bucket_name                 = var.firebase_storage_bucket_name
-  manage_firebase_storage_bucket               = var.manage_firebase_storage_bucket
-  firebase_storage_location                    = var.firebase_storage_location
-  firebase_storage_cors_origins                = var.firebase_storage_cors_origins
-  authorized_domains                           = var.authorized_domains
-  firebase_web_app_display_name                = var.firebase_web_app_display_name
-  app_hosting_backend_id                       = var.app_hosting_backend_id
-  app_hosting_location                         = var.app_hosting_location
-  app_hosting_custom_domain                    = var.app_hosting_custom_domain
-  spa_hosting_custom_domains                   = var.spa_hosting_custom_domains
-  developer_connect_connection_id              = var.developer_connect_connection_id
-  developer_connect_repository_link_id         = var.developer_connect_repository_link_id
-  developer_connect_oauth_token_secret_version = var.developer_connect_oauth_token_secret_version
-  github_app_installation_id                   = var.github_app_installation_id
-  app_hosting_compute_service_account_email    = module.service_accounts.app_hosting_compute_service_account_email
+  project_id                     = var.project_id
+  firestore_location             = var.firestore_location
+  firebase_storage_bucket_name   = var.firebase_storage_bucket_name
+  manage_firebase_storage_bucket = var.manage_firebase_storage_bucket
+  firebase_storage_location      = var.firebase_storage_location
+  firebase_storage_cors_origins  = var.firebase_storage_cors_origins
+  authorized_domains             = var.authorized_domains
+  spa_hosting_custom_domains     = var.spa_hosting_custom_domains
 
   depends_on = [
     module.project_services,

@@ -1,7 +1,6 @@
 locals {
   # Cloud Run API サーバーがランタイムで参照する Secret Manager シークレット。
   # 実体は firebase モジュール（google_secret_manager_secret.app_hosting）で作成済みのものを参照する。
-  # （App Hosting の apphosting.yaml で env に列挙していた RUNTIME シークレットと同一集合。）
   api_secret_ids = toset([
     "API_URL",
     "USER_APP_URL",
