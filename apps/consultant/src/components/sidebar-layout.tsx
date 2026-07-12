@@ -404,10 +404,7 @@ export function SidebarLayout({
         >
           <styled.div
             display="flex"
-            flexDir={collapsed ? "column" : "row"}
-            alignItems="center"
-            justifyContent={collapsed ? "center" : "space-between"}
-            gap="2"
+            justifyContent={collapsed ? "center" : undefined}
             mb="6"
           >
             {hasOrganizationSwitcher ? (
@@ -430,7 +427,6 @@ export function SidebarLayout({
                 </Text>
               )
             )}
-            <SidebarToggleButton collapsed={collapsed} />
           </styled.div>
 
           <styled.nav display="flex" flexDir="column" gap="1">
@@ -484,6 +480,15 @@ export function SidebarLayout({
               );
             })}
           </styled.nav>
+
+          <styled.div
+            mt="auto"
+            pt="2"
+            display="flex"
+            justifyContent={collapsed ? "center" : "flex-start"}
+          >
+            <SidebarToggleButton collapsed={collapsed} />
+          </styled.div>
         </styled.aside>
       </Splitter.Panel>
 
