@@ -1,16 +1,16 @@
 import { FieldValue } from "firebase-admin/firestore";
-import { OrganizationRole } from "../src/domain/authorization/organization-role";
+import { Role } from "../src/domain/authorization/role";
 import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore-collections";
 import { db } from "../src/infrastructure/firestore/firestore-customer";
-import { getOrganizationRoleDocId } from "../src/infrastructure/firestore/firestore-organization-role-repository";
+import { getRoleDocId } from "../src/infrastructure/firestore/firestore-role-repository";
 
 const ORGANIZATION_COLLECTION = FIRESTORE_COLLECTIONS.organizations;
-const ROLE_COLLECTION = FIRESTORE_COLLECTIONS.organizationRoles;
+const ROLE_COLLECTION = FIRESTORE_COLLECTIONS.roles;
 
-async function saveIfMissing(role: OrganizationRole): Promise<boolean> {
+async function saveIfMissing(role: Role): Promise<boolean> {
   const ref = db
     .collection(ROLE_COLLECTION)
-    .doc(getOrganizationRoleDocId(role.getOrganizationId(), role.getRoleId()));
+    .doc(getRoleDocId(role.getOrganizationId(), role.getRoleId()));
   const existing = await ref.get();
   if (existing.exists) {
     await ref.set(
@@ -48,8 +48,8 @@ async function main() {
     const data = doc.data() as { organizationId?: string };
     const organizationId = data.organizationId ?? doc.id;
     const roles = [
-      OrganizationRole.createSystemAdmin(organizationId),
-      OrganizationRole.createSystemOperator(organizationId),
+      Role.createSystemAdmin(organizationId),
+      Role.createSystemOperator(organizationId),
     ];
 
     for (const role of roles) {

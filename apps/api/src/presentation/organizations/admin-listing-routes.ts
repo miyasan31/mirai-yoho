@@ -1,14 +1,14 @@
 import { Hono } from "hono";
 import { evaluateChargeEligibility } from "@/application/booking/charge-eligibility";
-import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
-import { requireOrganizationPermission } from "@/infrastructure/auth/require-organization-permission";
+import { Settings } from "@/domain/settings/settings";
+import { requirePermission } from "@/infrastructure/auth/require-permission";
 import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createBookingRepository,
   createConsultantRepository,
   createCustomerRepository,
-  createOrganizationSettingsRepository,
   createPaymentRepository,
+  createSettingsRepository,
   createSlotRepository,
 } from "@/infrastructure/container";
 import {
@@ -38,11 +38,7 @@ adminListingRoutes.get(
       );
     }
     if (account.role !== "consultant") {
-      requireOrganizationPermission(
-        authUser,
-        organizationId,
-        "admin.slots.read",
-      );
+      requirePermission(authUser, organizationId, "admin.slots.read");
     }
 
     const requestedConsultantId = requestUrl.searchParams.get("consultantId");
@@ -50,9 +46,8 @@ adminListingRoutes.get(
       account.role === "consultant" ? authUser.uid : requestedConsultantId;
     const repository = createSlotRepository();
     const settings =
-      (await createOrganizationSettingsRepository().findByOrganizationId(
-        organizationId,
-      )) ?? OrganizationSettings.createDefault(organizationId);
+      (await createSettingsRepository().findByOrganizationId(organizationId)) ??
+      Settings.createDefault(organizationId);
     const businessHours = settings.getBusinessHours();
 
     if (consultantId) {
@@ -111,11 +106,7 @@ adminListingRoutes.get(
   "/admin/dashboard",
   getRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
-      authUser,
-      organizationId,
-      "admin.dashboard.read",
-    );
+    requirePermission(authUser, organizationId, "admin.dashboard.read");
     const [bookings, payments, customers, consultants] = await Promise.all([
       createBookingRepository().findAll(organizationId),
       createPaymentRepository().findAll(organizationId),
@@ -155,11 +146,7 @@ adminListingRoutes.get(
   "/admin/bookings",
   getRoute(async ({ organizationId, request, requestUrl }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
-      authUser,
-      organizationId,
-      "admin.bookings.read",
-    );
+    requirePermission(authUser, organizationId, "admin.bookings.read");
     const listQueryParams = parseListQueryParams(requestUrl.searchParams);
     if (!listQueryParams) {
       return jsonError(400, "VALIDATION_ERROR", INVALID_LIST_QUERY_MESSAGE);
@@ -218,11 +205,7 @@ adminListingRoutes.get(
   "/admin/customers",
   getRoute(async ({ organizationId, request, requestUrl }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
-      authUser,
-      organizationId,
-      "admin.customers.read",
-    );
+    requirePermission(authUser, organizationId, "admin.customers.read");
     const listQueryParams = parseListQueryParams(requestUrl.searchParams);
     if (!listQueryParams) {
       return jsonError(400, "VALIDATION_ERROR", INVALID_LIST_QUERY_MESSAGE);
@@ -255,11 +238,7 @@ adminListingRoutes.get(
   "/admin/payments",
   getRoute(async ({ organizationId, request, requestUrl }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
-      authUser,
-      organizationId,
-      "admin.payments.read",
-    );
+    requirePermission(authUser, organizationId, "admin.payments.read");
     const listQueryParams = parseListQueryParams(requestUrl.searchParams);
     if (!listQueryParams) {
       return jsonError(400, "VALIDATION_ERROR", INVALID_LIST_QUERY_MESSAGE);

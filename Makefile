@@ -1,10 +1,10 @@
-.PHONY: create-organization create-default-organization-roles seed-slots delete-slots
+.PHONY: create-organization create-default-roles seed-slots delete-slots
 .PHONY: auth-adc-organization-operator setup-secrets setup-secret
 .PHONY: setup-secrets-from-env setup-secrets-from-env-fish
 .PHONY: describe-secret access-secret check-secret-value
 .PHONY: auth-adc-organization-operator\:dev auth-adc-organization-operator\:prod
 .PHONY: create-organization\:dev create-organization\:prod
-.PHONY: create-default-organization-roles\:dev create-default-organization-roles\:prod
+.PHONY: create-default-roles\:dev create-default-roles\:prod
 .PHONY: seed-slots\:dev seed-slots\:prod
 .PHONY: delete-slots\:dev delete-slots\:prod
 .PHONY: setup-secrets\:dev setup-secrets\:prod
@@ -44,15 +44,15 @@ create-organization:
 	@test -n "$(ADMIN_EMAIL)" || (echo "Error: ADMIN_EMAIL is required. Usage: make create-organization ORGANIZATION_ID=<id> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email>" && exit 1)
 	pnpm dlx tsx --env-file=$(ENV_FILE) apps/api/scripts/create-organization.ts $(ORGANIZATION_ID) "$(ORGANIZATION_NAME)" $(ADMIN_EMAIL)
 
-# Usage: make create-default-organization-roles ORGANIZATION_ID=<organizationId> [ENV=<local|dev|prod>]
-# Usage: make create-default-organization-roles:dev ORGANIZATION_ID=<id>
-# Usage: make create-default-organization-roles:prod ORGANIZATION_ID=<id>
-# Example: make create-default-organization-roles ORGANIZATION_ID=org-1 ENV=prod
-create-default-organization-roles:
+# Usage: make create-default-roles ORGANIZATION_ID=<organizationId> [ENV=<local|dev|prod>]
+# Usage: make create-default-roles:dev ORGANIZATION_ID=<id>
+# Usage: make create-default-roles:prod ORGANIZATION_ID=<id>
+# Example: make create-default-roles ORGANIZATION_ID=org-1 ENV=prod
+create-default-roles:
 	@test "$(ENV)" = "local" || test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be one of local, dev, prod" && exit 1)
 	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
-	@test -n "$(ORGANIZATION_ID)" || (echo "Error: ORGANIZATION_ID is required. Usage: make create-default-organization-roles ORGANIZATION_ID=<id>" && exit 1)
-	pnpm dlx tsx --env-file=$(ENV_FILE) apps/api/scripts/create-default-organization-roles.ts $(ORGANIZATION_ID)
+	@test -n "$(ORGANIZATION_ID)" || (echo "Error: ORGANIZATION_ID is required. Usage: make create-default-roles ORGANIZATION_ID=<id>" && exit 1)
+	pnpm dlx tsx --env-file=$(ENV_FILE) apps/api/scripts/create-default-roles.ts $(ORGANIZATION_ID)
 
 # Usage: make seed-slots ORGANIZATION_ID=<organizationId> CONSULTANT_ID=<consultantId> [ENV=<local|dev|prod>]
 # Usage: make seed-slots:dev ORGANIZATION_ID=<id> CONSULTANT_ID=<id>
@@ -210,11 +210,11 @@ create-organization\:dev:
 create-organization\:prod:
 	$(MAKE) create-organization ENV=prod ORGANIZATION_ID=$(ORGANIZATION_ID) ORGANIZATION_NAME="$(ORGANIZATION_NAME)" ADMIN_EMAIL=$(ADMIN_EMAIL)
 
-create-default-organization-roles\:dev:
-	$(MAKE) create-default-organization-roles ENV=dev ORGANIZATION_ID=$(ORGANIZATION_ID)
+create-default-roles\:dev:
+	$(MAKE) create-default-roles ENV=dev ORGANIZATION_ID=$(ORGANIZATION_ID)
 
-create-default-organization-roles\:prod:
-	$(MAKE) create-default-organization-roles ENV=prod ORGANIZATION_ID=$(ORGANIZATION_ID)
+create-default-roles\:prod:
+	$(MAKE) create-default-roles ENV=prod ORGANIZATION_ID=$(ORGANIZATION_ID)
 
 seed-slots\:dev:
 	$(MAKE) seed-slots ENV=dev ORGANIZATION_ID=$(ORGANIZATION_ID) CONSULTANT_ID=$(CONSULTANT_ID)

@@ -1,13 +1,13 @@
 import crypto from "node:crypto";
 import { isValidSlotRange } from "@mirai-yoho/shared/slot-availability";
 import { Hono } from "hono";
-import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
+import { Settings } from "@/domain/settings/settings";
 import { Slot } from "@/domain/slot/slot";
 import { TimeRange } from "@/domain/slot/time-range";
-import { requireOrganizationPermission } from "@/infrastructure/auth/require-organization-permission";
+import { requirePermission } from "@/infrastructure/auth/require-permission";
 import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
-  createOrganizationSettingsRepository,
+  createSettingsRepository,
   createSlotRepository,
 } from "@/infrastructure/container";
 import { deleteRoute, jsonError, postRoute } from "./route-handler";
@@ -31,11 +31,7 @@ slotRoutes.post(
       );
     }
     if (account.role !== "consultant") {
-      requireOrganizationPermission(
-        authUser,
-        organizationId,
-        "admin.slots.manage",
-      );
+      requirePermission(authUser, organizationId, "admin.slots.manage");
     }
 
     const body = await request.json();
@@ -65,9 +61,8 @@ slotRoutes.post(
       consultantId,
     );
     const settings =
-      (await createOrganizationSettingsRepository().findByOrganizationId(
-        organizationId,
-      )) ?? OrganizationSettings.createDefault(organizationId);
+      (await createSettingsRepository().findByOrganizationId(organizationId)) ??
+      Settings.createDefault(organizationId);
 
     if (!isValidSlotRange(start, end)) {
       return jsonError(
@@ -124,11 +119,7 @@ slotRoutes.delete(
       );
     }
     if (account.role !== "consultant") {
-      requireOrganizationPermission(
-        authUser,
-        organizationId,
-        "admin.slots.manage",
-      );
+      requirePermission(authUser, organizationId, "admin.slots.manage");
     }
     const slotId = param("slotId");
     const repo = createSlotRepository();

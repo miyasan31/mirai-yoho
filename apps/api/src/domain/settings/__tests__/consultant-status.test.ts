@@ -3,14 +3,14 @@ import { DomainError } from "@mirai-yoho/shared/domain-error";
 import {
   createDefaultConsultantStatuses,
   validateConsultantStatuses,
-} from "@/domain/organization-settings/consultant-status";
-import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
+} from "@/domain/settings/consultant-status";
+import { Settings } from "@/domain/settings/settings";
 
 const businessHours = BusinessHours.createDefault().toJSON();
 
 describe("consultant statuses", () => {
   it("creates default consultant status", () => {
-    const settings = OrganizationSettings.createDefault("org-1");
+    const settings = Settings.createDefault("org-1");
 
     expect(settings.getConsultantStatuses()).toEqual([
       { statusId: "standard", name: "標準" },
@@ -19,7 +19,7 @@ describe("consultant statuses", () => {
   });
 
   it("restores default statuses for existing settings without status fields", () => {
-    const settings = OrganizationSettings.reconstruct({
+    const settings = Settings.reconstruct({
       organizationId: "org-1",
       consultantSelectionEnabled: true,
       businessHours,

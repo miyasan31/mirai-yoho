@@ -6,13 +6,13 @@ import {
   type ConsultantStatusProps,
   createDefaultConsultantStatuses,
   validateConsultantStatuses,
-} from "@/domain/organization-settings/consultant-status";
+} from "@/domain/settings/consultant-status";
 import {
   PricePlanRange,
   type PricePlanRangeProps,
-} from "@/domain/organization-settings/price-plan-range";
+} from "@/domain/settings/price-plan-range";
 
-export interface OrganizationSettingsProps {
+export interface SettingsProps {
   organizationId: string;
   consultantSelectionEnabled: boolean;
   businessHours: BusinessHoursProps;
@@ -21,7 +21,7 @@ export interface OrganizationSettingsProps {
   pricePlanRange?: PricePlanRangeProps;
 }
 
-export class OrganizationSettings {
+export class Settings {
   private constructor(
     private readonly organizationId: string,
     private consultantSelectionEnabled: boolean,
@@ -31,12 +31,12 @@ export class OrganizationSettings {
     private pricePlanRange: PricePlanRange,
   ) {}
 
-  static create(props: OrganizationSettingsProps): OrganizationSettings {
+  static create(props: SettingsProps): Settings {
     const statuses =
       props.consultantStatuses ?? createDefaultConsultantStatuses();
     const defaultStatusId =
       props.defaultConsultantStatusId ?? statuses[0].statusId;
-    return new OrganizationSettings(
+    return new Settings(
       props.organizationId,
       props.consultantSelectionEnabled,
       BusinessHours.create(props.businessHours),
@@ -48,12 +48,12 @@ export class OrganizationSettings {
     );
   }
 
-  static reconstruct(props: OrganizationSettingsProps): OrganizationSettings {
+  static reconstruct(props: SettingsProps): Settings {
     const statuses =
       props.consultantStatuses ?? createDefaultConsultantStatuses();
     const defaultStatusId =
       props.defaultConsultantStatusId ?? statuses[0].statusId;
-    return new OrganizationSettings(
+    return new Settings(
       props.organizationId,
       props.consultantSelectionEnabled,
       BusinessHours.reconstruct(props.businessHours),
@@ -65,9 +65,9 @@ export class OrganizationSettings {
     );
   }
 
-  static createDefault(organizationId: string): OrganizationSettings {
+  static createDefault(organizationId: string): Settings {
     const statuses = createDefaultConsultantStatuses();
-    return new OrganizationSettings(
+    return new Settings(
       organizationId,
       true,
       BusinessHours.createDefault(),

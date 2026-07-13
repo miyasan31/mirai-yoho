@@ -2,7 +2,7 @@ import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore
 import { db } from "../src/infrastructure/firestore/firestore-customer";
 
 const LEGACY_ACCOUNT_COLLECTION = `organization-${"member"}${"ships"}`;
-const ACCOUNT_COLLECTION = FIRESTORE_COLLECTIONS.organizationAccounts;
+const ACCOUNT_COLLECTION = FIRESTORE_COLLECTIONS.accounts;
 const BATCH_DOC_SIZE = 200;
 
 async function main() {

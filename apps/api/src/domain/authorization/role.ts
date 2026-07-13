@@ -7,7 +7,7 @@ import {
 export const SYSTEM_ADMIN_ROLE_ID = "admin";
 export const SYSTEM_OPERATOR_ROLE_ID = "operator";
 
-export interface OrganizationRoleProps {
+export interface RoleProps {
   organizationId: string;
   roleId: string;
   name: string;
@@ -18,7 +18,7 @@ export interface OrganizationRoleProps {
   updatedAt: Date;
 }
 
-export class OrganizationRole {
+export class Role {
   private constructor(
     private readonly organizationId: string,
     private readonly roleId: string,
@@ -30,11 +30,9 @@ export class OrganizationRole {
     private updatedAt: Date,
   ) {}
 
-  static create(
-    props: Omit<OrganizationRoleProps, "createdAt" | "updatedAt">,
-  ): OrganizationRole {
+  static create(props: Omit<RoleProps, "createdAt" | "updatedAt">): Role {
     const now = new Date();
-    return new OrganizationRole(
+    return new Role(
       props.organizationId,
       props.roleId,
       props.name,
@@ -46,8 +44,8 @@ export class OrganizationRole {
     );
   }
 
-  static reconstruct(props: OrganizationRoleProps): OrganizationRole {
-    return new OrganizationRole(
+  static reconstruct(props: RoleProps): Role {
+    return new Role(
       props.organizationId,
       props.roleId,
       props.name,
@@ -59,8 +57,8 @@ export class OrganizationRole {
     );
   }
 
-  static createSystemAdmin(organizationId: string): OrganizationRole {
-    return OrganizationRole.create({
+  static createSystemAdmin(organizationId: string): Role {
+    return Role.create({
       organizationId,
       roleId: SYSTEM_ADMIN_ROLE_ID,
       name: "管理者",
@@ -70,8 +68,8 @@ export class OrganizationRole {
     });
   }
 
-  static createSystemOperator(organizationId: string): OrganizationRole {
-    return OrganizationRole.create({
+  static createSystemOperator(organizationId: string): Role {
+    return Role.create({
       organizationId,
       roleId: SYSTEM_OPERATOR_ROLE_ID,
       name: "オペレーター",
@@ -141,19 +139,19 @@ export class OrganizationRole {
   }
 }
 
-export function createSystemOrganizationRole(
+export function createSystemRole(
   organizationId: string,
   roleId: string,
-): OrganizationRole | null {
+): Role | null {
   if (roleId === SYSTEM_ADMIN_ROLE_ID) {
-    return OrganizationRole.createSystemAdmin(organizationId);
+    return Role.createSystemAdmin(organizationId);
   }
   if (roleId === SYSTEM_OPERATOR_ROLE_ID) {
-    return OrganizationRole.createSystemOperator(organizationId);
+    return Role.createSystemOperator(organizationId);
   }
   return null;
 }
 
-export function isSystemOrganizationRoleId(roleId: string): boolean {
+export function isSystemRoleId(roleId: string): boolean {
   return roleId === SYSTEM_ADMIN_ROLE_ID || roleId === SYSTEM_OPERATOR_ROLE_ID;
 }

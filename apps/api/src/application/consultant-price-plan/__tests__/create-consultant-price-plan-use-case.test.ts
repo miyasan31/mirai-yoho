@@ -1,8 +1,8 @@
 import { CreateConsultantPricePlanUseCase } from "@/application/consultant-price-plan/create-consultant-price-plan-use-case";
 import { ConsultantPricePlan } from "@/domain/consultant-price-plan/consultant-price-plan";
 import type { IConsultantPricePlanRepository } from "@/domain/consultant-price-plan/consultant-price-plan-repository";
-import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
-import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
+import { Settings } from "@/domain/settings/settings";
+import type { ISettingsRepository } from "@/domain/settings/settings-repository";
 
 const ORGANIZATION_ID = "org-1";
 const CONSULTANT_ID = "consultant-1";
@@ -63,18 +63,14 @@ class InMemoryConsultantPricePlanRepository
   }
 }
 
-class InMemoryOrganizationSettingsRepository
-  implements IOrganizationSettingsRepository
-{
-  async findByOrganizationId(
-    organizationId: string,
-  ): Promise<OrganizationSettings | null> {
-    const settings = OrganizationSettings.createDefault(organizationId);
+class InMemorySettingsRepository implements ISettingsRepository {
+  async findByOrganizationId(organizationId: string): Promise<Settings | null> {
+    const settings = Settings.createDefault(organizationId);
     settings.updatePricePlanRange({ minTotalJPY: 1000, maxTotalJPY: 100000 });
     return settings;
   }
 
-  async save(_settings: OrganizationSettings): Promise<void> {}
+  async save(_settings: Settings): Promise<void> {}
 }
 
 function createUseCase(pricePlans: ConsultantPricePlan[] = []): {
@@ -85,7 +81,7 @@ function createUseCase(pricePlans: ConsultantPricePlan[] = []): {
   return {
     useCase: new CreateConsultantPricePlanUseCase(
       repository,
-      new InMemoryOrganizationSettingsRepository(),
+      new InMemorySettingsRepository(),
     ),
     repository,
   };

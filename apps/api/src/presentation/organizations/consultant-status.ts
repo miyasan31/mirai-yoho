@@ -1,8 +1,8 @@
-import type { ConsultantStatusProps } from "@/domain/organization-settings/consultant-status";
-import type { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
+import type { ConsultantStatusProps } from "@/domain/settings/consultant-status";
+import type { Settings } from "@/domain/settings/settings";
 
 export function resolveConsultantStatus(
-  settings: OrganizationSettings,
+  settings: Settings,
   statusId: string,
 ): ConsultantStatusProps {
   return (
@@ -19,7 +19,7 @@ export function toConsultantStatusResponse(status: ConsultantStatusProps) {
   };
 }
 
-export function toConsultantStatusesResponse(settings: OrganizationSettings) {
+export function toConsultantStatusesResponse(settings: Settings) {
   return {
     consultantStatuses: settings.getConsultantStatuses(),
     defaultConsultantStatusId: settings.getDefaultConsultantStatusId(),

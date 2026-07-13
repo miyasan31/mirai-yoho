@@ -4,8 +4,8 @@ import {
   parsePricePlanSelectionId,
 } from "@/domain/consultant-price-plan/consultant-price-plan";
 import type { IConsultantPricePlanRepository } from "@/domain/consultant-price-plan/consultant-price-plan-repository";
-import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
-import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
+import { Settings } from "@/domain/settings/settings";
+import type { ISettingsRepository } from "@/domain/settings/settings-repository";
 
 interface CreateConsultantPricePlanInput {
   organizationId: string;
@@ -46,16 +46,16 @@ export function toConsultantPricePlanOutput(params: {
 export class CreateConsultantPricePlanUseCase {
   constructor(
     private readonly consultantPricePlanRepository: IConsultantPricePlanRepository,
-    private readonly organizationSettingsRepository: IOrganizationSettingsRepository,
+    private readonly settingsRepository: ISettingsRepository,
   ) {}
 
   async execute(
     input: CreateConsultantPricePlanInput,
   ): Promise<ConsultantPricePlanOutput> {
     const settings =
-      (await this.organizationSettingsRepository.findByOrganizationId(
+      (await this.settingsRepository.findByOrganizationId(
         input.organizationId,
-      )) ?? OrganizationSettings.createDefault(input.organizationId);
+      )) ?? Settings.createDefault(input.organizationId);
 
     if (!settings.getPricePlanRange().contains(input.totalJPY)) {
       throw new AppError(

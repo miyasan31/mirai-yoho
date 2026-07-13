@@ -1,17 +1,14 @@
 import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-permission";
 import { Timestamp } from "firebase-admin/firestore";
-import type {
-  AuthUser,
-  OrganizationAccount,
-} from "@/infrastructure/auth/auth-types";
+import type { Account, AuthUser } from "@/infrastructure/auth/auth-types";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 import { db } from "@/infrastructure/firestore/firestore-customer";
-import { FirestoreOrganizationRoleRepository } from "@/infrastructure/firestore/firestore-organization-role-repository";
+import { FirestoreRoleRepository } from "@/infrastructure/firestore/firestore-role-repository";
 
-const ACCOUNT_COLLECTION = FIRESTORE_COLLECTIONS.organizationAccounts;
+const ACCOUNT_COLLECTION = FIRESTORE_COLLECTIONS.accounts;
 const ORGANIZATION_COLLECTION = FIRESTORE_COLLECTIONS.organizations;
 
-interface OrganizationAccountDoc {
+interface AccountDoc {
   uid: string;
   organizationId: string;
   role: string;
@@ -35,10 +32,7 @@ function toIsoString(value: Timestamp | Date | string): string {
   return value;
 }
 
-export function getOrganizationAccountDocId(
-  organizationId: string,
-  uid: string,
-): string {
+export function getAccountDocId(organizationId: string, uid: string): string {
   return `${organizationId}_${uid}`;
 }
 
@@ -72,7 +66,7 @@ export async function loadAuthUser(uid: string): Promise<AuthUser> {
     .get();
 
   const accountDocs = accountSnapshot.docs.map(
-    (doc) => doc.data() as OrganizationAccountDoc,
+    (doc) => doc.data() as AccountDoc,
   );
   accountDocs.sort(
     (left, right) =>
@@ -96,7 +90,7 @@ export async function loadAuthUser(uid: string): Promise<AuthUser> {
     nameById.set(organization.organizationId, organization.name);
   }
 
-  const roleRepository = new FirestoreOrganizationRoleRepository();
+  const roleRepository = new FirestoreRoleRepository();
   const roleByOrganizationAndRole = new Map<
     string,
     { name: string; permissions: AuthorizationPermission[] }
@@ -116,7 +110,7 @@ export async function loadAuthUser(uid: string): Promise<AuthUser> {
     }
   }
 
-  const accounts: OrganizationAccount[] = accountDocs.map((doc) => ({
+  const accounts: Account[] = accountDocs.map((doc) => ({
     organizationId: doc.organizationId,
     name: nameById.get(doc.organizationId) ?? doc.organizationId,
     role: doc.role,
@@ -155,7 +149,7 @@ export async function setUserDisplayName(
   uid: string,
   name: string,
 ): Promise<void> {
-  const docId = getOrganizationAccountDocId(organizationId, uid);
+  const docId = getAccountDocId(organizationId, uid);
   await db
     .collection(ACCOUNT_COLLECTION)
     .doc(docId)

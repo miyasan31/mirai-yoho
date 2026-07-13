@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import { toConsultantPricePlanOutput } from "@/application/consultant-price-plan/create-consultant-price-plan-use-case";
-import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
-import { requireOrganizationRole } from "@/infrastructure/auth/require-organization-role";
+import { Settings } from "@/domain/settings/settings";
+import { requireRole } from "@/infrastructure/auth/require-role";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createConsultantPricePlanRepository,
   createCreateConsultantPricePlanUseCase,
-  createOrganizationSettingsRepository,
+  createSettingsRepository,
   createUpdateConsultantPricePlanUseCase,
 } from "@/infrastructure/container";
 import {
@@ -24,11 +24,10 @@ consultantPricePlanRoutes.get(
   "/consultant/price-plans",
   getRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationRole(authUser, organizationId, "consultant");
+    requireRole(authUser, organizationId, "consultant");
     const settings =
-      (await createOrganizationSettingsRepository().findByOrganizationId(
-        organizationId,
-      )) ?? OrganizationSettings.createDefault(organizationId);
+      (await createSettingsRepository().findByOrganizationId(organizationId)) ??
+      Settings.createDefault(organizationId);
     const pricePlanRange = settings.getPricePlanRange();
     const pricePlans =
       await createConsultantPricePlanRepository().findByConsultantId(
@@ -54,7 +53,7 @@ consultantPricePlanRoutes.post(
   "/consultant/price-plans",
   postRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationRole(authUser, organizationId, "consultant");
+    requireRole(authUser, organizationId, "consultant");
     const body = await request.json();
     if (typeof body.name !== "string" || body.name.trim().length === 0) {
       return jsonError(400, "VALIDATION_ERROR", "name is required");
@@ -78,7 +77,7 @@ consultantPricePlanRoutes.patch(
   "/consultant/price-plans/:pricePlanId",
   patchRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationRole(authUser, organizationId, "consultant");
+    requireRole(authUser, organizationId, "consultant");
     const body = await request.json();
     if (
       body.name !== undefined &&
@@ -106,7 +105,7 @@ consultantPricePlanRoutes.delete(
   "/consultant/price-plans/:pricePlanId",
   deleteRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationRole(authUser, organizationId, "consultant");
+    requireRole(authUser, organizationId, "consultant");
     const pricePlan = await createConsultantPricePlanRepository().findById(
       organizationId,
       param("pricePlanId"),

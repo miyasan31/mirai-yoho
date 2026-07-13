@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { evaluateChargeEligibility } from "@/application/booking/charge-eligibility";
 import { MarkConsultantJoinedUseCase } from "@/application/consultant/mark-consultant-joined-use-case";
 import { UpdateMemoUseCase } from "@/application/consultant/update-memo-use-case";
-import { requireOrganizationRole } from "@/infrastructure/auth/require-organization-role";
+import { requireRole } from "@/infrastructure/auth/require-role";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createBookingRepository,
@@ -30,7 +30,7 @@ consultantBookingRoutes.get(
   "/consultant/bookings",
   getRoute(async ({ organizationId, request, requestUrl }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationRole(authUser, organizationId, "consultant");
+    requireRole(authUser, organizationId, "consultant");
     const listQueryParams = parseListQueryParams(requestUrl.searchParams);
     if (!listQueryParams) {
       return jsonError(400, "VALIDATION_ERROR", INVALID_LIST_QUERY_MESSAGE);
@@ -112,7 +112,7 @@ consultantBookingRoutes.post(
   "/consultant/bookings/:bookingId/join",
   postRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationRole(authUser, organizationId, "consultant");
+    requireRole(authUser, organizationId, "consultant");
 
     await new MarkConsultantJoinedUseCase(
       new FirestoreBookingRepository(),
@@ -131,7 +131,7 @@ consultantBookingRoutes.patch(
   "/consultant/bookings/:bookingId/memo",
   patchRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationRole(authUser, organizationId, "consultant");
+    requireRole(authUser, organizationId, "consultant");
     const body = await request.json();
     if (
       typeof body.customerName !== "string" ||

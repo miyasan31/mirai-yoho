@@ -1,12 +1,12 @@
 import { Hono } from "hono";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
-import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
-import { requireOrganizationPermission } from "@/infrastructure/auth/require-organization-permission";
+import { Settings } from "@/domain/settings/settings";
+import { requirePermission } from "@/infrastructure/auth/require-permission";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createConsultantRepository,
-  createOrganizationSettingsRepository,
+  createSettingsRepository,
 } from "@/infrastructure/container";
 import { getUsersByUids } from "@/infrastructure/firebase/firebase-auth-admin";
 import {
@@ -34,11 +34,7 @@ adminConsultantRoutes.get(
   "/admin/consultants",
   getRoute(async ({ organizationId, request, requestUrl }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
-      authUser,
-      organizationId,
-      "admin.consultants.read",
-    );
+    requirePermission(authUser, organizationId, "admin.consultants.read");
     const listQueryParams = parseListQueryParams(requestUrl.searchParams);
     if (!listQueryParams) {
       return jsonError(400, "VALIDATION_ERROR", INVALID_LIST_QUERY_MESSAGE);
@@ -46,12 +42,9 @@ adminConsultantRoutes.get(
     const repo = createConsultantRepository();
     const [consultants, settings] = await Promise.all([
       repo.findAllActive(organizationId),
-      createOrganizationSettingsRepository().findByOrganizationId(
-        organizationId,
-      ),
+      createSettingsRepository().findByOrganizationId(organizationId),
     ]);
-    const resolvedSettings =
-      settings ?? OrganizationSettings.createDefault(organizationId);
+    const resolvedSettings = settings ?? Settings.createDefault(organizationId);
     const userByUid = await getUsersByUids(
       consultants.map((consultant) => consultant.getConsultantId()),
     );
@@ -92,11 +85,7 @@ adminConsultantRoutes.post(
   "/admin/consultants",
   postRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
-      authUser,
-      organizationId,
-      "admin.consultants.manage",
-    );
+    requirePermission(authUser, organizationId, "admin.consultants.manage");
     const body = await request.json();
     const { consultantId, name, bio, specialties, phone, zoomRoomIds } = body;
     if (!consultantId || !name) {
@@ -107,7 +96,7 @@ adminConsultantRoutes.post(
       );
     }
     if (body.statusId !== undefined) {
-      requireOrganizationPermission(
+      requirePermission(
         authUser,
         organizationId,
         "admin.consultants.status.manage",
@@ -115,9 +104,8 @@ adminConsultantRoutes.post(
     }
 
     const settings =
-      (await createOrganizationSettingsRepository().findByOrganizationId(
-        organizationId,
-      )) ?? OrganizationSettings.createDefault(organizationId);
+      (await createSettingsRepository().findByOrganizationId(organizationId)) ??
+      Settings.createDefault(organizationId);
     const statusId = body.statusId ?? settings.getDefaultConsultantStatusId();
     if (
       typeof statusId !== "string" ||
@@ -148,11 +136,7 @@ adminConsultantRoutes.patch(
   "/admin/consultants/:consultantId",
   patchRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
-      authUser,
-      organizationId,
-      "admin.consultants.manage",
-    );
+    requirePermission(authUser, organizationId, "admin.consultants.manage");
     const consultantId = param("consultantId");
     const body = await request.json();
     const repo = createConsultantRepository();
@@ -178,15 +162,15 @@ adminConsultantRoutes.patch(
     }
 
     if (body.statusId !== undefined) {
-      requireOrganizationPermission(
+      requirePermission(
         authUser,
         organizationId,
         "admin.consultants.status.manage",
       );
       const settings =
-        (await createOrganizationSettingsRepository().findByOrganizationId(
+        (await createSettingsRepository().findByOrganizationId(
           organizationId,
-        )) ?? OrganizationSettings.createDefault(organizationId);
+        )) ?? Settings.createDefault(organizationId);
       if (
         typeof body.statusId !== "string" ||
         !settings.findConsultantStatus(body.statusId)
@@ -205,11 +189,7 @@ adminConsultantRoutes.delete(
   "/admin/consultants/:consultantId",
   deleteRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
-      authUser,
-      organizationId,
-      "admin.consultants.manage",
-    );
+    requirePermission(authUser, organizationId, "admin.consultants.manage");
     const repo = createConsultantRepository();
     const consultant = await repo.findById(
       organizationId,

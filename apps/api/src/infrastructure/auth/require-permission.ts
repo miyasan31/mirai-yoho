@@ -1,23 +1,20 @@
 import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-permission";
-import { SYSTEM_ADMIN_ROLE_ID } from "@/domain/authorization/organization-role";
-import type {
-  AuthUser,
-  OrganizationAccount,
-} from "@/infrastructure/auth/auth-types";
+import { SYSTEM_ADMIN_ROLE_ID } from "@/domain/authorization/role";
+import type { Account, AuthUser } from "@/infrastructure/auth/auth-types";
 import { AuthError } from "@/infrastructure/auth/verify-auth";
 
-export function hasOrganizationPermission(
-  account: OrganizationAccount,
+export function hasPermission(
+  account: Account,
   permission: AuthorizationPermission,
 ): boolean {
   return account.permissions.includes(permission);
 }
 
-export function requireOrganizationPermission(
+export function requirePermission(
   authUser: AuthUser,
   organizationId: string,
   permission: AuthorizationPermission,
-): OrganizationAccount {
+): Account {
   const account = authUser.accounts.find(
     (candidate) =>
       candidate.organizationId === organizationId &&
@@ -32,7 +29,7 @@ export function requireOrganizationPermission(
     );
   }
 
-  if (!hasOrganizationPermission(account, permission)) {
+  if (!hasPermission(account, permission)) {
     throw new AuthError(
       403,
       "FORBIDDEN",
@@ -46,7 +43,7 @@ export function requireOrganizationPermission(
 export function requireSystemAdminRole(
   authUser: AuthUser,
   organizationId: string,
-): OrganizationAccount {
+): Account {
   const account = authUser.accounts.find(
     (candidate) =>
       candidate.organizationId === organizationId &&

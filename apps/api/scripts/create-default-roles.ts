@@ -1,21 +1,21 @@
 import { FieldValue } from "firebase-admin/firestore";
-import { OrganizationRole } from "../src/domain/authorization/organization-role";
+import { Role } from "../src/domain/authorization/role";
 import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore-collections";
 import { db } from "../src/infrastructure/firestore/firestore-customer";
-import { getOrganizationRoleDocId } from "../src/infrastructure/firestore/firestore-organization-role-repository";
+import { getRoleDocId } from "../src/infrastructure/firestore/firestore-role-repository";
 
 const ORGANIZATION_COLLECTION = FIRESTORE_COLLECTIONS.organizations;
-const ROLE_COLLECTION = FIRESTORE_COLLECTIONS.organizationRoles;
+const ROLE_COLLECTION = FIRESTORE_COLLECTIONS.roles;
 
 type RoleCreationResult = {
   roleId: string;
   created: boolean;
 };
 
-function createDefaultRoles(organizationId: string): OrganizationRole[] {
+function createDefaultRoles(organizationId: string): Role[] {
   return [
-    OrganizationRole.createSystemAdmin(organizationId),
-    OrganizationRole.createSystemOperator(organizationId),
+    Role.createSystemAdmin(organizationId),
+    Role.createSystemOperator(organizationId),
   ];
 }
 
@@ -30,12 +30,10 @@ async function ensureOrganizationExists(organizationId: string): Promise<void> {
   }
 }
 
-async function saveIfMissing(
-  role: OrganizationRole,
-): Promise<RoleCreationResult> {
+async function saveIfMissing(role: Role): Promise<RoleCreationResult> {
   const ref = db
     .collection(ROLE_COLLECTION)
-    .doc(getOrganizationRoleDocId(role.getOrganizationId(), role.getRoleId()));
+    .doc(getRoleDocId(role.getOrganizationId(), role.getRoleId()));
   const existing = await ref.get();
   if (existing.exists) {
     await ref.set(
@@ -71,7 +69,7 @@ async function main() {
 
   if (!organizationId) {
     console.error(
-      "Usage: pnpm dlx tsx --env-file=.env.local scripts/create-default-organization-roles.ts <organizationId>",
+      "Usage: pnpm dlx tsx --env-file=.env.local scripts/create-default-roles.ts <organizationId>",
     );
     process.exit(1);
   }

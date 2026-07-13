@@ -1,6 +1,6 @@
-import type { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
+import type { Settings } from "@/domain/settings/settings";
 
-export function toBookingSettingsResponse(settings: OrganizationSettings) {
+export function toBookingSettingsResponse(settings: Settings) {
   return {
     consultantSelectionEnabled: settings.getConsultantSelectionEnabled(),
     businessHours: settings.getBusinessHours().toJSON(),

@@ -1,11 +1,11 @@
 import type { Timestamp } from "firebase-admin/firestore";
-import { getOrganizationAccountDocId } from "@/infrastructure/auth/load-auth-context";
+import { getAccountDocId } from "@/infrastructure/auth/load-auth-context";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 import { db } from "@/infrastructure/firestore/firestore-customer";
 
-export const ACCOUNT_COLLECTION = FIRESTORE_COLLECTIONS.organizationAccounts;
+export const ACCOUNT_COLLECTION = FIRESTORE_COLLECTIONS.accounts;
 
-export async function listOrganizationAccounts(organizationId: string) {
+export async function listAccounts(organizationId: string) {
   const snapshot = await db
     .collection(ACCOUNT_COLLECTION)
     .where("organizationId", "==", organizationId)
@@ -25,7 +25,7 @@ export async function listOrganizationAccounts(organizationId: string) {
   }));
 }
 
-export async function getOrganizationAccount(
+export async function getAccount(
   organizationId: string,
   uid: string,
 ): Promise<{
@@ -34,7 +34,7 @@ export async function getOrganizationAccount(
   role: string;
   status: string;
 } | null> {
-  const docId = getOrganizationAccountDocId(organizationId, uid);
+  const docId = getAccountDocId(organizationId, uid);
   const doc = await db.collection(ACCOUNT_COLLECTION).doc(docId).get();
   if (!doc.exists) return null;
   return doc.data() as {

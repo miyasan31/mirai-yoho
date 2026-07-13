@@ -1,7 +1,7 @@
 import type { BusinessHoursProps } from "@mirai-yoho/shared/business-hours";
-import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
-import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
-import type { PricePlanRangeProps } from "@/domain/organization-settings/price-plan-range";
+import type { PricePlanRangeProps } from "@/domain/settings/price-plan-range";
+import { Settings } from "@/domain/settings/settings";
+import type { ISettingsRepository } from "@/domain/settings/settings-repository";
 
 interface UpdateBookingSettingsInput {
   organizationId: string;
@@ -18,26 +18,21 @@ interface UpdateBookingSettingsOutput {
 }
 
 export class UpdateBookingSettingsUseCase {
-  constructor(
-    private readonly organizationSettingsRepository: IOrganizationSettingsRepository,
-  ) {}
+  constructor(private readonly settingsRepository: ISettingsRepository) {}
 
   async execute(
     input: UpdateBookingSettingsInput,
   ): Promise<UpdateBookingSettingsOutput> {
     const { organizationId } = input;
     const existingSettings =
-      await this.organizationSettingsRepository.findByOrganizationId(
-        organizationId,
-      );
+      await this.settingsRepository.findByOrganizationId(organizationId);
 
-    const settings =
-      existingSettings ?? OrganizationSettings.createDefault(organizationId);
+    const settings = existingSettings ?? Settings.createDefault(organizationId);
     settings.updateConsultantSelectionEnabled(input.consultantSelectionEnabled);
     settings.updateBusinessHours(input.businessHours);
     settings.updatePricePlanRange(input.pricePlanRange);
 
-    await this.organizationSettingsRepository.save(settings);
+    await this.settingsRepository.save(settings);
 
     return {
       organizationId: settings.getOrganizationId(),

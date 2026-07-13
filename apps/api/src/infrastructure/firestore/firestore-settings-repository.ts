@@ -1,14 +1,14 @@
 import { BusinessHours } from "@mirai-yoho/shared/business-hours";
-import type { ConsultantStatusProps } from "@/domain/organization-settings/consultant-status";
-import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
-import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
-import { PricePlanRange } from "@/domain/organization-settings/price-plan-range";
+import type { ConsultantStatusProps } from "@/domain/settings/consultant-status";
+import { PricePlanRange } from "@/domain/settings/price-plan-range";
+import { Settings } from "@/domain/settings/settings";
+import type { ISettingsRepository } from "@/domain/settings/settings-repository";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 import { db } from "@/infrastructure/firestore/firestore-customer";
 
-const COLLECTION = FIRESTORE_COLLECTIONS.organizationSettings;
+const COLLECTION = FIRESTORE_COLLECTIONS.settings;
 
-interface OrganizationSettingsDoc {
+interface SettingsDoc {
   organizationId: string;
   consultantSelectionEnabled: boolean;
   businessHours?: ReturnType<BusinessHours["toJSON"]>;
@@ -17,8 +17,8 @@ interface OrganizationSettingsDoc {
   pricePlanRange?: ReturnType<PricePlanRange["toJSON"]>;
 }
 
-function toDomain(doc: OrganizationSettingsDoc): OrganizationSettings {
-  return OrganizationSettings.reconstruct({
+function toDomain(doc: SettingsDoc): Settings {
+  return Settings.reconstruct({
     organizationId: doc.organizationId,
     consultantSelectionEnabled: doc.consultantSelectionEnabled,
     businessHours: doc.businessHours ?? BusinessHours.createDefault().toJSON(),
@@ -29,7 +29,7 @@ function toDomain(doc: OrganizationSettingsDoc): OrganizationSettings {
   });
 }
 
-function toFirestore(settings: OrganizationSettings): OrganizationSettingsDoc {
+function toFirestore(settings: Settings): SettingsDoc {
   return {
     organizationId: settings.getOrganizationId(),
     consultantSelectionEnabled: settings.getConsultantSelectionEnabled(),
@@ -40,18 +40,14 @@ function toFirestore(settings: OrganizationSettings): OrganizationSettingsDoc {
   };
 }
 
-export class FirestoreOrganizationSettingsRepository
-  implements IOrganizationSettingsRepository
-{
-  async findByOrganizationId(
-    organizationId: string,
-  ): Promise<OrganizationSettings | null> {
+export class FirestoreSettingsRepository implements ISettingsRepository {
+  async findByOrganizationId(organizationId: string): Promise<Settings | null> {
     const doc = await db.collection(COLLECTION).doc(organizationId).get();
     if (!doc.exists) return null;
-    return toDomain(doc.data() as OrganizationSettingsDoc);
+    return toDomain(doc.data() as SettingsDoc);
   }
 
-  async save(settings: OrganizationSettings): Promise<void> {
+  async save(settings: Settings): Promise<void> {
     await db
       .collection(COLLECTION)
       .doc(settings.getOrganizationId())

@@ -15,8 +15,8 @@ import {
 import type { IConsultantPricePlanRepository } from "@/domain/consultant-price-plan/consultant-price-plan-repository";
 import { Customer } from "@/domain/customer/customer";
 import type { ICustomerRepository } from "@/domain/customer/customer-repository";
-import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
-import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
+import { Settings } from "@/domain/settings/settings";
+import type { ISettingsRepository } from "@/domain/settings/settings-repository";
 import { Slot } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import { TimeRange } from "@/domain/slot/time-range";
@@ -345,16 +345,12 @@ class InMemoryConsultantPricePlanRepository
   }
 }
 
-class InMemoryOrganizationSettingsRepository
-  implements IOrganizationSettingsRepository
-{
-  async findByOrganizationId(
-    organizationId: string,
-  ): Promise<OrganizationSettings | null> {
-    return OrganizationSettings.createDefault(organizationId);
+class InMemorySettingsRepository implements ISettingsRepository {
+  async findByOrganizationId(organizationId: string): Promise<Settings | null> {
+    return Settings.createDefault(organizationId);
   }
 
-  async save(_settings: OrganizationSettings): Promise<void> {}
+  async save(_settings: Settings): Promise<void> {}
 }
 
 const TEST_USER_ID = "user-1";
@@ -489,7 +485,7 @@ function createUseCase(
       zoomDailySessionRepository,
       consultantRepository,
       consultantPricePlanRepository,
-      new InMemoryOrganizationSettingsRepository(),
+      new InMemorySettingsRepository(),
       userRepository,
     ),
     bookingRepository,

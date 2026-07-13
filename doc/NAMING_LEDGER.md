@@ -1,8 +1,34 @@
 # 命名台帳 — Firestore / Domain / API
 
-> Version 1.0 | 2026-06-26（2026-07-12 追記: §6.5 のギャップ解消状況を更新）  
+> Version 2.0 | 2026-06-26（2026-07-12 追記: §6.5 更新 / **2026-07-14 改訂: `organization-` プレフィックス全廃。§6.3-B の混在許容方針を撤回。詳細は §0**）  
 > 対象: 策定時点の全11コレクション + 横断命名ルール（その後 `organization-roles`/`users`/`user-zoom-credentials`/`user-coupons` が追加され現行14コレクション。詳細は §6.5）  
 > 目的: 永続化・ドメイン・API の名称を整理し、今後の実装・リネームの基準とする
+
+---
+
+## 0. 改訂: `organization-` プレフィックス全廃（2026-07-14）
+
+**決定**: `organization-accounts` / `organization-roles` / `organization-settings` の `organization-` プレフィックスを全廃し、コレクション名・ドメインエンティティ名を単体名へ統一する。これに伴い §6.3-B の「意図的な混在を許容」方針（2026-06-26 合意）を **撤回** する。
+
+| 旧（〜2026-07-13） | 新（2026-07-14〜） | ドメインエンティティ |
+|---|---|---|
+| `organization-accounts` | **`accounts`** | `OrganizationAccount` → **`Account`** |
+| `organization-roles` | **`roles`** | `OrganizationRole` → **`Role`** |
+| `organization-settings` | **`settings`** | `OrganizationSettings` → **`Settings`** |
+
+**理由**: 全コレクションは既に `organizationId`（複合キー or フィールド）でテナント分離されており、`organization-` は所有関係を示す冗長な修飾でしかない。業務エンティティ（`bookings`, `consultants` 等）が単体名である以上、設定・所属だけ prefix を持つ必然性は薄く、命名の一貫性（prefix なしへの統一）を優先する。
+
+**適用範囲**:
+- Firestore コレクション（`FIRESTORE_COLLECTIONS` のキー・値）
+- ドメイン層のクラス／型／ディレクトリ、infrastructure / presentation の識別子・ファイル名
+- 組織スコープ認可ヘルパー: `requireOrganizationRole → requireRole`、`requireOrganizationPermission → requirePermission`、`hasOrganizationPermission → hasPermission`、認証コンテキスト版 `getOrganizationAccount → getAccount`、`firestore.rules` の `hasOrganizationRole → hasRole`（未使用の重複 `require-role.ts` は削除）
+
+**対象外（据え置き）**:
+- OpenAPI スキーマ名 `OrganizationRole*`（§1.1「API は用途に応じて別名を許容」に従う。必要なら別 PR で追随）
+- `organizations` コレクション本体（エンティティ名そのもの）
+- `user-*` プレフィックス（`user-zoom-credentials` / `user-coupons`。今回のスコープ外）
+
+**データ移行**: `apps/api/scripts/migrate-drop-organization-prefix.ts`（doc ID を保持してコピー → 新コードをデプロイ → `--delete-source` で旧コレクション削除）。`firestore.rules` の変更は terraform apply が必要（§4.4）。
 
 ---
 
@@ -94,8 +120,8 @@
 | 2 | `clients` | `customers` | **リネーム** | `customerId` |
 | 3 | `consultant-price-plans` | `price-plans` | **リネーム** | `pricePlanId` |
 | 4 | `consultants` | `consultants` | 維持 | `{organizationId}_{consultantId}` |
-| 5 | `organization-accounts` | `organization-accounts` | 維持 | `{organizationId}_{uid}` |
-| 6 | `organization-settings` | `organization-settings` | 維持 | `organizationId` |
+| 5 | `organization-accounts` | **`accounts`** | **リネーム（§0）** | `{organizationId}_{uid}` |
+| 6 | `organization-settings` | **`settings`** | **リネーム（§0）** | `organizationId` |
 | 7 | `organizations` | `organizations` | 維持 | `organizationId` |
 | 8 | `payments` | `payments` | 維持 | `paymentId` |
 | 9 | `slots` | `slots` | フィールドリネーム | `slotId` |
@@ -252,13 +278,13 @@
 
 ---
 
-### 3.5 `organization-accounts` ✅ 合意済み（2026-06-26）
+### 3.5 `organization-accounts` → `accounts` ✅ 合意済み（2026-06-26 / 2026-07-14 改訂 §0）
 
 **Doc ID**: `{organizationId}_{uid}`（維持）
 
 | プロパティ | Firestore（現状） | 正準名 | 判定 |
 |---|---|---|---|
-| コレクション | `organization-accounts` | `organization-accounts` | 維持 |
+| コレクション | `organization-accounts` | **`accounts`** | **リネーム（§0）** |
 | アカウント ID | `uid` | `uid` | 維持 |
 | 組織 ID | `organizationId` | `organizationId` | 維持 |
 | ロール | `role` | `role` | 維持 |
@@ -282,13 +308,13 @@
 
 ---
 
-### 3.6 `organization-settings` ✅ 合意済み（2026-06-26）
+### 3.6 `organization-settings` → `settings` ✅ 合意済み（2026-06-26 / 2026-07-14 改訂 §0）
 
 **Doc ID**: `organizationId`（維持）
 
 | プロパティ | 正準名 | 判定 |
 |---|---|---|
-| コレクション | `organization-settings` | 維持 |
+| コレクション | **`settings`** | **リネーム（§0）** |
 | 組織 ID | `organizationId` | 維持 |
 | 相談員選択可否 | `consultantSelectionEnabled` | 維持 |
 | 営業時間 | `businessHours`（ネスト維持） | 維持 |
@@ -313,7 +339,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 - `businessHours` / `pricePlanRange` のネスト構造も維持
 - `createdAt` / `updatedAt` を Repository 型・`toFirestore` に追加
 
-**根拠**: `firestore-organization-settings-repository.ts`, `scripts/create-organization.ts`
+**根拠**: `firestore-settings-repository.ts`, `scripts/create-organization.ts`
 
 ---
 
@@ -469,6 +495,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 
 | 変更 | 移行方法 |
 |---|---|
+| **`organization-{accounts,roles,settings}` → `{accounts,roles,settings}`（§0）** | `apps/api/scripts/migrate-drop-organization-prefix.ts` で doc ID 保持コピー → 新コードデプロイ → `--delete-source` で旧削除。`firestore.rules`（accounts / settings のパス, `hasRole`）変更は **terraform apply 必須** |
 | `clients` → `customers` コレクションリネーム | Firestore コレクションコピー + フィールド `clientId`→`customerId`, `memo`→`note` |
 | `slots` フィールドリネーム | `startsAt`/`endsAt`/`isAvailable` + インデックス再作成 |
 | `bookings` 時刻フィールド | `startsAt`, `cancelDeadlineAt` |
@@ -511,8 +538,9 @@ export const FIRESTORE_COLLECTIONS = {
   customers: "customers",           // was: clients
   pricePlans: "price-plans",        // was: consultant-price-plans
   consultants: "consultants",
-  organizationAccounts: "organization-accounts",
-  organizationSettings: "organization-settings",
+  accounts: "accounts",             // was: organization-accounts（§0）
+  roles: "roles",                   // was: organization-roles（§0）
+  settings: "settings",             // was: organization-settings（§0）
   organizations: "organizations",
   payments: "payments",
   slots: "slots",
@@ -574,15 +602,15 @@ export const FIRESTORE_COLLECTIONS = {
 
 **ルール**: API / Domain / FS すべて **`client*` 禁止**。詳細は §3.2。
 
-#### B. コレクション名の粒度（許容）
+#### B. コレクション名の粒度 ⚠️ 撤回（2026-07-14 · §0）
+
+> ~~2026-06-26 時点では `organization-*` プレフィックスと単体名の「意図的な混在」を許容としていた~~。**2026-07-14 に撤回**（§0）。全コレクションは `organizationId`（複合キー / フィールド）で分離済みであり、`organization-` は冗長な所有プレフィックスに過ぎないため、**単体名（prefix なし）に統一**する。
 
 | パターン | コレクション |
 |---|---|
-| `organization-*` プレフィックス | `organizations`, `organization-accounts`, `organization-settings` |
-| エンティティ単体名 | `bookings`, `customers`, `consultants`, `payments`, `slots`, `price-plans`, `zoom-sessions` |
+| エンティティ単体名（統一後） | `organizations`, `accounts`, `roles`, `settings`, `bookings`, `customers`, `consultants`, `payments`, `slots`, `price-plans`, `zoom-sessions` |
 
-**現状**: 意図的な混在。org スコープの設定・所属は `organization-*`、業務エンティティは単体名。  
-**判断**: 許容範囲だが、`price-plans` だけ `consultantId` を持ちながら `consultant-` を外している点は命名方針として文書化が必要。
+**ルール**: コレクション名はドメインエンティティ名の kebab-case 複数形とし、所有者を示す `organization-` / `consultant-` 等の prefix は付けない（`organizations` はエンティティ名そのもの）。`price-plans` が `consultant-` を持たないのも同ルールに合致する。
 
 #### C. 時刻・日付サフィックス ✅ 合意済み（§1.2 に昇格）
 

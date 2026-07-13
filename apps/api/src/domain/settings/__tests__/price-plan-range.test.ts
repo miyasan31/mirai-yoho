@@ -1,4 +1,4 @@
-import { PricePlanRange } from "@/domain/organization-settings/price-plan-range";
+import { PricePlanRange } from "@/domain/settings/price-plan-range";
 
 describe("PricePlanRange", () => {
   it("allows the configured 0 to 100000 yen range", () => {

@@ -15,8 +15,8 @@ import {
 import type { IConsultantPricePlanRepository } from "@/domain/consultant-price-plan/consultant-price-plan-repository";
 import { Customer } from "@/domain/customer/customer";
 import type { ICustomerRepository } from "@/domain/customer/customer-repository";
-import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
-import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
+import { Settings } from "@/domain/settings/settings";
+import type { ISettingsRepository } from "@/domain/settings/settings-repository";
 import type { Slot } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import type { IUserRepository } from "@/domain/user/user-repository";
@@ -73,7 +73,7 @@ export class CreateBookingUseCase {
     private readonly zoomDailySessionRepository: IZoomDailySessionRepository,
     private readonly consultantRepository: IConsultantRepository,
     private readonly consultantPricePlanRepository: IConsultantPricePlanRepository,
-    private readonly organizationSettingsRepository: IOrganizationSettingsRepository,
+    private readonly settingsRepository: ISettingsRepository,
     private readonly userRepository: IUserRepository,
   ) {}
 
@@ -241,9 +241,9 @@ export class CreateBookingUseCase {
       );
     }
     const settings =
-      (await this.organizationSettingsRepository.findByOrganizationId(
+      (await this.settingsRepository.findByOrganizationId(
         input.organizationId,
-      )) ?? OrganizationSettings.createDefault(input.organizationId);
+      )) ?? Settings.createDefault(input.organizationId);
     const pricePlanRange = settings.getPricePlanRange();
 
     if (input.slotId) {

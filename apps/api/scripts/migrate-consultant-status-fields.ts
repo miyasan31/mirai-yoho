@@ -2,8 +2,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore-collections";
 import { db } from "../src/infrastructure/firestore/firestore-customer";
 
-const ORGANIZATION_SETTINGS_COLLECTION =
-  FIRESTORE_COLLECTIONS.organizationSettings;
+const SETTINGS_COLLECTION = FIRESTORE_COLLECTIONS.settings;
 const CONSULTANT_COLLECTION = FIRESTORE_COLLECTIONS.consultants;
 const BATCH_DOC_SIZE = 200;
 
@@ -13,11 +12,11 @@ interface LegacyConsultantStatusItem {
   name?: string;
 }
 
-async function migrateOrganizationSettings(): Promise<{
+async function migrateSettings(): Promise<{
   migratedCount: number;
   skippedCount: number;
 }> {
-  const snapshot = await db.collection(ORGANIZATION_SETTINGS_COLLECTION).get();
+  const snapshot = await db.collection(SETTINGS_COLLECTION).get();
   let migratedCount = 0;
   let skippedCount = 0;
 
@@ -117,7 +116,7 @@ async function migrateConsultants(): Promise<{
 }
 
 async function main() {
-  const settingsResult = await migrateOrganizationSettings();
+  const settingsResult = await migrateSettings();
   console.log(
     `Organization settings migrated. migrated=${settingsResult.migratedCount}, skipped=${settingsResult.skippedCount}`,
   );

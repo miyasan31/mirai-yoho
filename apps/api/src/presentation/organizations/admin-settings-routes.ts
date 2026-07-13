@@ -1,12 +1,12 @@
 import { BusinessHours } from "@mirai-yoho/shared/business-hours";
 import { Hono } from "hono";
-import type { ConsultantStatusProps } from "@/domain/organization-settings/consultant-status";
-import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
-import { requireOrganizationPermission } from "@/infrastructure/auth/require-organization-permission";
+import type { ConsultantStatusProps } from "@/domain/settings/consultant-status";
+import { Settings } from "@/domain/settings/settings";
+import { requirePermission } from "@/infrastructure/auth/require-permission";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createConsultantRepository,
-  createOrganizationSettingsRepository,
+  createSettingsRepository,
   createSlotRepository,
 } from "@/infrastructure/container";
 import { toConsultantStatusesResponse } from "./consultant-status";
@@ -49,17 +49,10 @@ adminSettingsRoutes.get(
   "/admin/settings/booking",
   getRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
-      authUser,
-      organizationId,
-      "admin.settings.read",
-    );
+    requirePermission(authUser, organizationId, "admin.settings.read");
     const settings =
-      await createOrganizationSettingsRepository().findByOrganizationId(
-        organizationId,
-      );
-    const resolvedSettings =
-      settings ?? OrganizationSettings.createDefault(organizationId);
+      await createSettingsRepository().findByOrganizationId(organizationId);
+    const resolvedSettings = settings ?? Settings.createDefault(organizationId);
     return noStoreJson(toBookingSettingsResponse(resolvedSettings));
   }),
 );
@@ -68,17 +61,10 @@ adminSettingsRoutes.get(
   "/admin/settings/consultant-statuses",
   getRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
-      authUser,
-      organizationId,
-      "admin.settings.read",
-    );
+    requirePermission(authUser, organizationId, "admin.settings.read");
     const settings =
-      await createOrganizationSettingsRepository().findByOrganizationId(
-        organizationId,
-      );
-    const resolvedSettings =
-      settings ?? OrganizationSettings.createDefault(organizationId);
+      await createSettingsRepository().findByOrganizationId(organizationId);
+    const resolvedSettings = settings ?? Settings.createDefault(organizationId);
     return noStoreJson(toConsultantStatusesResponse(resolvedSettings));
   }),
 );
@@ -87,7 +73,7 @@ adminSettingsRoutes.patch(
   "/admin/settings/consultant-statuses",
   patchRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
+    requirePermission(
       authUser,
       organizationId,
       "admin.consultants.status.manage",
@@ -102,10 +88,10 @@ adminSettingsRoutes.patch(
       );
     }
 
-    const settingsRepository = createOrganizationSettingsRepository();
+    const settingsRepository = createSettingsRepository();
     const settings =
       (await settingsRepository.findByOrganizationId(organizationId)) ??
-      OrganizationSettings.createDefault(organizationId);
+      Settings.createDefault(organizationId);
     settings.updateConsultantStatuses(parsed.statuses, parsed.defaultStatusId);
     await settingsRepository.save(settings);
 
@@ -131,11 +117,7 @@ adminSettingsRoutes.patch(
   "/admin/settings/booking",
   patchRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
-      authUser,
-      organizationId,
-      "admin.settings.manage",
-    );
+    requirePermission(authUser, organizationId, "admin.settings.manage");
     const body = await request.json();
     if (typeof body.consultantSelectionEnabled !== "boolean") {
       return jsonError(
@@ -145,10 +127,10 @@ adminSettingsRoutes.patch(
       );
     }
 
-    const repository = createOrganizationSettingsRepository();
+    const repository = createSettingsRepository();
     const settings =
       (await repository.findByOrganizationId(organizationId)) ??
-      OrganizationSettings.createDefault(organizationId);
+      Settings.createDefault(organizationId);
     const nextBusinessHours = BusinessHours.create(
       (body.businessHours ??
         settings.getBusinessHours().toJSON()) as ReturnType<

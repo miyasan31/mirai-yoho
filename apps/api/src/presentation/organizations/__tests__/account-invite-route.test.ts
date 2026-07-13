@@ -16,9 +16,9 @@ const mocks = vi.hoisted(() => {
     AuthError: MockAuthError,
     verifyAuth: vi.fn(),
     verifyCloudSchedulerAuth: vi.fn(),
-    requireOrganizationPermission: vi.fn(),
+    requirePermission: vi.fn(),
     requireSystemAdminRole: vi.fn(),
-    requireOrganizationRole: vi.fn(),
+    requireRole: vi.fn(),
     accountDocGet: vi.fn(),
     accountDocSet: vi.fn(),
     createUser: vi.fn(),
@@ -26,12 +26,12 @@ const mocks = vi.hoisted(() => {
     getUserByEmail: vi.fn(),
     generatePasswordResetLink: vi.fn(),
     sendInvitation: vi.fn(),
-    organizationRoleFindById: vi.fn(),
-    createOrganizationRoleRepository: vi.fn(),
+    roleFindById: vi.fn(),
+    createRoleRepository: vi.fn(),
     consultantFindById: vi.fn(),
     consultantSave: vi.fn(),
     createConsultantRepository: vi.fn(),
-    createOrganizationSettingsRepository: vi.fn(),
+    createSettingsRepository: vi.fn(),
   };
 });
 
@@ -54,9 +54,8 @@ vi.mock("@/infrastructure/container", () => ({
   createCreateConsultantPricePlanUseCase: vi.fn(),
   createCustomerRepository: vi.fn(),
   createNotifyLateConsultantArrivalUseCase: vi.fn(),
-  createOrganizationRoleRepository: mocks.createOrganizationRoleRepository,
-  createOrganizationSettingsRepository:
-    mocks.createOrganizationSettingsRepository,
+  createRoleRepository: mocks.createRoleRepository,
+  createSettingsRepository: mocks.createSettingsRepository,
   createPaymentRepository: vi.fn(),
   createSendConsultationReminderUseCase: vi.fn(),
   createSetupPaymentUseCase: vi.fn(),
@@ -104,12 +103,12 @@ vi.mock("@/infrastructure/auth/verify-auth", () => ({
   verifyAuth: mocks.verifyAuth,
 }));
 
-vi.mock("@/infrastructure/auth/require-organization-role", () => ({
-  requireOrganizationRole: mocks.requireOrganizationRole,
+vi.mock("@/infrastructure/auth/require-role", () => ({
+  requireRole: mocks.requireRole,
 }));
 
-vi.mock("@/infrastructure/auth/require-organization-permission", () => ({
-  requireOrganizationPermission: mocks.requireOrganizationPermission,
+vi.mock("@/infrastructure/auth/require-permission", () => ({
+  requirePermission: mocks.requirePermission,
   requireSystemAdminRole: mocks.requireSystemAdminRole,
 }));
 
@@ -133,16 +132,16 @@ describe("account invite route", () => {
       currentDisplayName: "Admin",
     });
     mocks.requireSystemAdminRole.mockReturnValue({ role: "admin" });
-    mocks.createOrganizationRoleRepository.mockReturnValue({
-      findById: mocks.organizationRoleFindById,
+    mocks.createRoleRepository.mockReturnValue({
+      findById: mocks.roleFindById,
     });
-    mocks.organizationRoleFindById.mockResolvedValue({ roleId: "admin" });
+    mocks.roleFindById.mockResolvedValue({ roleId: "admin" });
     mocks.createConsultantRepository.mockReturnValue({
       findById: mocks.consultantFindById,
       save: mocks.consultantSave,
     });
     mocks.consultantFindById.mockResolvedValue(null);
-    mocks.createOrganizationSettingsRepository.mockReturnValue({
+    mocks.createSettingsRepository.mockReturnValue({
       findByOrganizationId: vi.fn().mockResolvedValue(null),
     });
     mocks.accountDocGet.mockResolvedValue({ exists: false });

@@ -1,8 +1,8 @@
 import type { BusinessHoursProps } from "@mirai-yoho/shared/business-hours";
 import { BusinessHours } from "@mirai-yoho/shared/business-hours";
-import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
-import type { PricePlanRangeProps } from "@/domain/organization-settings/price-plan-range";
-import { PricePlanRange } from "@/domain/organization-settings/price-plan-range";
+import type { PricePlanRangeProps } from "@/domain/settings/price-plan-range";
+import { PricePlanRange } from "@/domain/settings/price-plan-range";
+import type { ISettingsRepository } from "@/domain/settings/settings-repository";
 
 interface GetBookingSettingsInput {
   organizationId: string;
@@ -16,18 +16,14 @@ interface GetBookingSettingsOutput {
 }
 
 export class GetBookingSettingsUseCase {
-  constructor(
-    private readonly organizationSettingsRepository: IOrganizationSettingsRepository,
-  ) {}
+  constructor(private readonly settingsRepository: ISettingsRepository) {}
 
   async execute(
     input: GetBookingSettingsInput,
   ): Promise<GetBookingSettingsOutput> {
     const { organizationId } = input;
     const settings =
-      await this.organizationSettingsRepository.findByOrganizationId(
-        organizationId,
-      );
+      await this.settingsRepository.findByOrganizationId(organizationId);
 
     if (!settings) {
       return {

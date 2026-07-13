@@ -262,9 +262,9 @@ make create-organization:dev \
 
 1. `organizations/{organizationId}` に組織名と作成・更新時刻を保存する。
 2. `ADMIN_EMAIL` の Firebase Auth ユーザーを取得する。存在しない場合はランダムな一時パスワードで作成する。
-3. `organization-accounts/{organizationId}_{uid}` に `admin` ロールを保存する。未ログインのユーザーは `invited`、ログイン済みのユーザーは `active` になる。
+3. `accounts/{organizationId}_{uid}` に `admin` ロールを保存する。未ログインのユーザーは `invited`、ログイン済みのユーザーは `active` になる。
 4. `user-preferences/{uid}` の `lastOrganizationId` を新組織に設定する。
-5. `organization-settings/{organizationId}` に初期設定を作成する。相談員選択は有効、初期ステータスは `standard`（表示名: `標準`）である。
+5. `settings/{organizationId}` に初期設定を作成する。相談員選択は有効、初期ステータスは `standard`（表示名: `標準`）である。
 6. Firebase Auth のパスワード再設定リンクを出力する。新規ユーザーの場合は一時パスワードも標準出力に出る。
 
 出力されるパスワード再設定リンクと一時パスワードは認証情報です。運用記録に残さず、安全な経路で初期管理者に渡してください。初期管理者はリンクからパスワードを設定します。
@@ -273,7 +273,7 @@ make create-organization:dev \
 
 認証済み API 呼び出しのたびに、対象ユーザーの `invited` account は `active` に切り替わります。ログイン後に `/api/auth/me` で組織とロールを確認できます。
 
-組織ごとの認可は、Firebase カスタムクレームではなく Firestore の `organization-accounts` を参照します。通常の組織運用ではカスタムクレームの手動設定は不要です。
+組織ごとの認可は、Firebase カスタムクレームではなく Firestore の `accounts` を参照します。通常の組織運用ではカスタムクレームの手動設定は不要です。
 
 初期管理者は、組織の管理画面から admin / operator / consultant を招待できます。招待時は Firebase Auth ユーザー、account、必要に応じて consultant レコードが作られ、Resend によりパスワード再設定リンクを含む招待メールが送信されます。
 
@@ -309,9 +309,9 @@ make apply ENV=dev
 
 ## 5. 作成後の確認チェックリスト
 
-- [ ] `organizations`、`organization-accounts`、`organization-settings`、`user-preferences` に想定したドキュメントがある。
+- [ ] `organizations`、`accounts`、`settings`、`user-preferences` に想定したドキュメントがある。
 - [ ] 初期管理者がパスワードを設定し、ログイン後に対象組織へアクセスできる。
-- [ ] `organization-accounts/{organizationId}_{uid}` が `role: admin`、初回認証後に `status: active` になっている。
+- [ ] `accounts/{organizationId}_{uid}` が `role: admin`、初回認証後に `status: active` になっている。
 - [ ] 管理画面で営業時間、料金範囲、相談員ステータスなどを組織要件に合わせて設定した。
 - [ ] 公開 URL の `/<organizationId>/consultants` と `/<organizationId>/booking` が正しい組織として表示される。
 - [ ] Scheduler を利用する場合、`organization_ids` への追加と Terraform apply が完了し、3 種類のジョブがある。

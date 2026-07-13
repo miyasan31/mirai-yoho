@@ -1,6 +1,6 @@
 import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-permission";
 
-export interface OrganizationAccount {
+export interface Account {
   organizationId: string;
   name: string;
   role: string;

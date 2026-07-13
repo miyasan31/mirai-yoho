@@ -5,17 +5,17 @@ import {
 } from "@mirai-yoho/shared/authorization-permission";
 import { Hono } from "hono";
 import {
-  isSystemOrganizationRoleId,
-  OrganizationRole,
+  isSystemRoleId,
+  Role,
   SYSTEM_ADMIN_ROLE_ID,
-} from "@/domain/authorization/organization-role";
+} from "@/domain/authorization/role";
 import {
-  requireOrganizationPermission,
+  requirePermission,
   requireSystemAdminRole,
-} from "@/infrastructure/auth/require-organization-permission";
+} from "@/infrastructure/auth/require-permission";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
-import { createOrganizationRoleRepository } from "@/infrastructure/container";
-import { listOrganizationAccounts } from "./organization-accounts";
+import { createRoleRepository } from "@/infrastructure/container";
+import { listAccounts } from "./accounts";
 import {
   deleteRoute,
   getRoute,
@@ -25,7 +25,7 @@ import {
   postRoute,
 } from "./route-handler";
 
-function toOrganizationRoleResponse(role: OrganizationRole, assignedCount = 0) {
+function toRoleResponse(role: Role, assignedCount = 0) {
   return {
     roleId: role.getRoleId(),
     name: role.getName(),
@@ -42,7 +42,7 @@ function isValidCustomRoleId(roleId: string): boolean {
   return /^[a-z][a-z0-9-]{1,62}$/.test(roleId);
 }
 
-function parseOrganizationRoleBody(body: unknown): {
+function parseRoleBody(body: unknown): {
   roleId?: string;
   name: string;
   description: string;
@@ -83,10 +83,10 @@ adminRoleRoutes.get(
   "/admin/roles",
   getRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(authUser, organizationId, "admin.roles.read");
+    requirePermission(authUser, organizationId, "admin.roles.read");
     const [roles, accounts] = await Promise.all([
-      createOrganizationRoleRepository().findByOrganizationId(organizationId),
-      listOrganizationAccounts(organizationId),
+      createRoleRepository().findByOrganizationId(organizationId),
+      listAccounts(organizationId),
     ]);
     const assignedCountByRole = new Map<string, number>();
     for (const account of accounts) {
@@ -100,10 +100,7 @@ adminRoleRoutes.get(
     return noStoreJson({
       roles: roles
         .map((role) =>
-          toOrganizationRoleResponse(
-            role,
-            assignedCountByRole.get(role.getRoleId()) ?? 0,
-          ),
+          toRoleResponse(role, assignedCountByRole.get(role.getRoleId()) ?? 0),
         )
         .sort((left, right) => {
           if (left.roleId === SYSTEM_ADMIN_ROLE_ID) return -1;
@@ -120,7 +117,7 @@ adminRoleRoutes.post(
     const authUser = await verifyAuth(request);
     requireSystemAdminRole(authUser, organizationId);
     const body = await request.json();
-    const parsed = parseOrganizationRoleBody(body);
+    const parsed = parseRoleBody(body);
     if (!parsed?.roleId || !isValidCustomRoleId(parsed.roleId)) {
       return jsonError(
         400,
@@ -128,18 +125,15 @@ adminRoleRoutes.post(
         "roleId must be kebab-case and 2-63 characters",
       );
     }
-    if (
-      parsed.roleId === "consultant" ||
-      isSystemOrganizationRoleId(parsed.roleId)
-    ) {
+    if (parsed.roleId === "consultant" || isSystemRoleId(parsed.roleId)) {
       return jsonError(400, "VALIDATION_ERROR", "roleId is reserved");
     }
-    const repository = createOrganizationRoleRepository();
+    const repository = createRoleRepository();
     const existing = await repository.findById(organizationId, parsed.roleId);
     if (existing) {
       return jsonError(409, "ROLE_ALREADY_EXISTS", "Role already exists");
     }
-    const role = OrganizationRole.create({
+    const role = Role.create({
       organizationId,
       roleId: parsed.roleId,
       name: parsed.name,
@@ -148,7 +142,7 @@ adminRoleRoutes.post(
       isSystem: false,
     });
     await repository.save(role);
-    return Response.json(toOrganizationRoleResponse(role), {
+    return Response.json(toRoleResponse(role), {
       status: 201,
     });
   }),
@@ -161,11 +155,11 @@ adminRoleRoutes.patch(
     requireSystemAdminRole(authUser, organizationId);
     const roleId = param("roleId");
     const body = await request.json();
-    const parsed = parseOrganizationRoleBody(body);
+    const parsed = parseRoleBody(body);
     if (!parsed) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid role payload");
     }
-    const repository = createOrganizationRoleRepository();
+    const repository = createRoleRepository();
     const role = await repository.findById(organizationId, roleId);
     if (!role) {
       return jsonError(404, "NOT_FOUND", "Role not found");
@@ -183,7 +177,7 @@ adminRoleRoutes.patch(
       permissions: parsed.permissions,
     });
     await repository.save(role);
-    return Response.json(toOrganizationRoleResponse(role));
+    return Response.json(toRoleResponse(role));
   }),
 );
 
@@ -193,7 +187,7 @@ adminRoleRoutes.delete(
     const authUser = await verifyAuth(request);
     requireSystemAdminRole(authUser, organizationId);
     const roleId = param("roleId");
-    const repository = createOrganizationRoleRepository();
+    const repository = createRoleRepository();
     const role = await repository.findById(organizationId, roleId);
     if (!role) {
       return jsonError(404, "NOT_FOUND", "Role not found");
@@ -205,9 +199,9 @@ adminRoleRoutes.delete(
         "System role cannot be deleted",
       );
     }
-    const assignedAccounts = (
-      await listOrganizationAccounts(organizationId)
-    ).filter((account) => account.role === roleId);
+    const assignedAccounts = (await listAccounts(organizationId)).filter(
+      (account) => account.role === roleId,
+    );
     if (assignedAccounts.length > 0) {
       return jsonError(
         409,

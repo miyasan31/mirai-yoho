@@ -26,9 +26,9 @@ import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore
 import { FirestoreConsultantPricePlanRepository } from "@/infrastructure/firestore/firestore-consultant-price-plan-repository";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
 import { FirestoreCustomerRepository } from "@/infrastructure/firestore/firestore-customer-repository";
-import { FirestoreOrganizationRoleRepository } from "@/infrastructure/firestore/firestore-organization-role-repository";
-import { FirestoreOrganizationSettingsRepository } from "@/infrastructure/firestore/firestore-organization-settings-repository";
 import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore-payment-repository";
+import { FirestoreRoleRepository } from "@/infrastructure/firestore/firestore-role-repository";
+import { FirestoreSettingsRepository } from "@/infrastructure/firestore/firestore-settings-repository";
 import { FirestoreSlotRepository } from "@/infrastructure/firestore/firestore-slot-repository";
 import { FirestoreUnitOfWork } from "@/infrastructure/firestore/firestore-unit-of-work";
 import { FirestoreUserCouponRepository } from "@/infrastructure/firestore/firestore-user-coupon-repository";
@@ -56,12 +56,12 @@ export function createBookingRepository() {
   return new FirestoreBookingRepository();
 }
 
-export function createOrganizationSettingsRepository() {
-  return new FirestoreOrganizationSettingsRepository();
+export function createSettingsRepository() {
+  return new FirestoreSettingsRepository();
 }
 
-export function createOrganizationRoleRepository() {
-  return new FirestoreOrganizationRoleRepository();
+export function createRoleRepository() {
+  return new FirestoreRoleRepository();
 }
 
 export function createCreateBookingUseCase() {
@@ -75,7 +75,7 @@ export function createCreateBookingUseCase() {
     new FirestoreZoomDailySessionRepository(),
     new FirestoreConsultantRepository(),
     new FirestoreConsultantPricePlanRepository(),
-    new FirestoreOrganizationSettingsRepository(),
+    new FirestoreSettingsRepository(),
     new FirestoreUserRepository(),
   );
 }
@@ -92,7 +92,7 @@ export function createSetupPaymentUseCase() {
 export function createCreateConsultantPricePlanUseCase() {
   return new CreateConsultantPricePlanUseCase(
     new FirestoreConsultantPricePlanRepository(),
-    new FirestoreOrganizationSettingsRepository(),
+    new FirestoreSettingsRepository(),
   );
 }
 
