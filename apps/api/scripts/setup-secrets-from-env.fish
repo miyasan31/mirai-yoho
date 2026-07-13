@@ -1,5 +1,9 @@
 #!/usr/bin/env fish
 
+# .env ファイルを読み込み、SECRET_KEYS に列挙されたキーの値を
+# Secret Manager に新しいバージョンとして投入する汎用スクリプト。
+# 呼び出し側（Makefile）が PROJECT / ENV_FILE / SECRET_KEYS を渡す。
+
 if not set -q PROJECT
     echo "Error: PROJECT is required (example: set -gx PROJECT mirai-yoho-dev)"
     exit 1
@@ -9,36 +13,22 @@ if not set -q ENV_FILE
     set -gx ENV_FILE .env
 end
 
+if not set -q SECRET_KEYS
+    echo "Error: SECRET_KEYS is required (space separated secret key names)"
+    exit 1
+end
+
 if not test -f "$ENV_FILE"
     echo "Error: $ENV_FILE not found in current directory"
     exit 1
 end
 
-set -l secret_keys \
-    API_URL \
-    USER_APP_URL \
-    ADMIN_APP_URL \
-    CORS_ALLOWED_ORIGINS \
-    STRIPE_SECRET_KEY \
-    STRIPE_WEBHOOK_SECRET \
-    ZOOM_ACCOUNT_ID \
-    ZOOM_CLIENT_ID \
-    ZOOM_CLIENT_SECRET \
-    ZOOM_HOST_USER_ID \
-    ZOOM_USER_OAUTH_CLIENT_ID \
-    ZOOM_USER_OAUTH_CLIENT_SECRET \
-    ZOOM_OAUTH_STATE_SECRET \
-    ZOOM_CREDENTIAL_ENCRYPTION_KEY \
-    RESEND_API_KEY \
-    FIREBASE_CLIENT_EMAIL \
-    FIREBASE_PRIVATE_KEY \
-    CANCEL_TOKEN_SECRET \
-    COUPON_WEBHOOK_SECRET \
-    RESEND_FROM_EMAIL \
-    FIREBASE_PROJECT_ID \
-    FIREBASE_STORAGE_BUCKET \
-    LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL \
-    INVOICE_REGISTRATION_NUMBER
+set -l secret_keys (string split -n ' ' -- $SECRET_KEYS)
+
+if test (count $secret_keys) -eq 0
+    echo "Error: SECRET_KEYS is empty"
+    exit 1
+end
 
 for raw_line in (string split \n -- (string collect < "$ENV_FILE"))
     set -l line (string trim -- $raw_line)

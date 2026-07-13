@@ -72,7 +72,7 @@ cp .env.example .env.local
 
 - API（`pnpm dev:api`）: `tsx watch --env-file-if-exists=.env --env-file-if-exists=.env.local` で `apps/api/.env` / `apps/api/.env.local` を読みます。通常はローカル値を `.env.local` に置きます。
 - SPA（`pnpm dev:user` など）: Vite が `apps/<app>/.env*` の `VITE_*` を読み込み、ビルド時に埋め込みます。
-- Make コマンド: 多くのターゲットは `<command>:dev` / `<command>:prod` で環境を切り替えられます（例: `make setup-batch-worker-secrets:dev`）。`.env.dev` / `.env.prod` を自動で読み、`PROJECT` も `mirai-yoho-dev` / `mirai-yoho-prod` に固定されます。
+- Make コマンド: 多くのターゲットは `<command>:dev` / `<command>:prod` で環境を切り替えられます（例: `make setup-secrets-from-env:dev`）。`.env.dev` / `.env.prod` を自動で読み、`PROJECT` も `mirai-yoho-dev` / `mirai-yoho-prod` に固定されます。
 - 従来どおり `ENV=<local|dev|prod>` や `PROJECT=...` を明示する書き方も使えます。
 - `.env.dev` / `.env.prod` はアプリ起動時には自動読み込みされません。必要な場合は Make 経由で使います。
 
@@ -208,21 +208,15 @@ Terraform apply 後、各 Secret に値を登録します。Secret コンテナ�
 make setup-secrets:dev
 ```
 
-Secret version を環境別 env ファイルから一括投入する場合は、次を使います。
+Secret version を環境別 env ファイルから一括投入する場合は、次を使います。API サーバーと Cloud Run Job（batch worker）が参照するシークレットはすべて同じ共有リソースで、worker のキーは API の参照集合の部分集合なので、このコマンド 1 本で両方まかなえます（アクセス権限のスコープは terraform 側で個別に設定）。
 
 ```bash
-make setup-api-secrets-from-env:dev
+make setup-secrets-from-env:dev
 ```
 
 ```bash
 # fish
-make setup-api-secrets-from-env-fish:dev
-```
-
-Cloud Run Job が参照する最小セットだけ先に投入したい場合は、次も使えます。
-
-```bash
-make setup-batch-worker-secrets:dev
+make setup-secrets-from-env-fish:dev
 ```
 
 API サーバーが参照する Secret は `common/api` の `api_secret_ids`、batch worker が参照する Secret は `common/batch` で管理します。Secret を追加したら Terraform 側の参照リストと env ファイルの両方に追加してから apply・投入します。SPA のブラウザ公開値（`VITE_*`）は Secret ではなく GitHub Environment の variables として管理され、`deploy-hosting.yml` のビルド時に注入されます。

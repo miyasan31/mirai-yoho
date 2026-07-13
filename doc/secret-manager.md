@@ -35,24 +35,22 @@ version が必要です。
 make setup-secrets:dev
 ```
 
-環境別 env ファイル（`.env.dev` / `.env.prod`）から一括投入:
+環境別 env ファイル（`.env.dev` / `.env.prod`）から全シークレットを一括投入:
 
 ```bash
-make setup-api-secrets-from-env:dev
+make setup-secrets-from-env:dev
 # fish
-make setup-api-secrets-from-env-fish:dev
+make setup-secrets-from-env-fish:dev
 ```
+
+API サーバーと batch worker が参照するシークレットはすべて同じ Secret Manager の共有リソースです。
+batch worker が参照するキーは API サーバーの参照集合の部分集合なので、上記コマンド 1 本で両方まかなえます
+（アクセス権限のスコープは terraform 側で個別に設定されます）。
 
 単体登録（新規追加時）:
 
 ```bash
 make setup-secret:dev KEY=STRIPE_WEBHOOK_SECRET
-```
-
-batch worker が参照する最小セットだけ先に投入:
-
-```bash
-make setup-batch-worker-secrets:dev
 ```
 
 ## 3. 反映（再デプロイ）する
