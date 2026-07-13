@@ -41,7 +41,6 @@ function createConsultant(consultantId: string, name: string) {
     organizationId: ORGANIZATION_ID,
     consultantId,
     profile: ConsultantProfile.create(name, "", []),
-    zoomRoomIds: [],
     statusId: "standard",
   });
 }

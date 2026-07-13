@@ -198,7 +198,6 @@ adminAccountRoutes.post(
               [],
               typeof phone === "string" ? phone.trim() : "",
             ),
-            zoomRoomIds: [],
             statusId: settings.getDefaultConsultantStatusId(),
           }),
         );

@@ -75,7 +75,6 @@ function createConsultant(consultantId = "consultant-1"): Consultant {
     organizationId: ORGANIZATION_ID,
     consultantId,
     profile: ConsultantProfile.create("田中 相談員", "", []),
-    zoomRoomIds: [],
     statusId: "standard",
   });
 }

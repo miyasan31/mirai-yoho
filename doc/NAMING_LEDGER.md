@@ -238,7 +238,6 @@
 | 専門分野 | `specialties` | `specialties` | 維持 |
 | 電話 | `phone` | `phone` | 維持 |
 | 画像 URL | `imageUrl` | `imageUrl` | 維持 |
-| Zoom ルーム | `zoomRoomIds` | `zoomRoomIds` | 維持 |
 | ステータス（旧称: ランク） | `statusId` / API `status` オブジェクト | **`statusId`** | **API も statusId のみ。UI 表示・内部識別子ともに `status` に統一** |
 | 有効フラグ | `isActive` | `isActive` | 維持 |
 | 作成/更新 | `createdAt`, `updatedAt` | 同名 | 維持 |

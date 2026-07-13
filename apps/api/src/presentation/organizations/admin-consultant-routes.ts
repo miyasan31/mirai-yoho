@@ -66,7 +66,6 @@ adminConsultantRoutes.get(
         phone: c.getProfile().getPhone(),
         imageUrl: c.getProfile().getImageUrl(),
         specialties: [...c.getProfile().getSpecialties()],
-        zoomRoomIds: c.getZoomRoomIds(),
         status: toConsultantStatusResponse(
           resolveConsultantStatus(resolvedSettings, c.getStatusId()),
         ),
@@ -98,7 +97,7 @@ adminConsultantRoutes.post(
       "admin.consultants.manage",
     );
     const body = await request.json();
-    const { consultantId, name, bio, specialties, phone, zoomRoomIds } = body;
+    const { consultantId, name, bio, specialties, phone } = body;
     if (!consultantId || !name) {
       return jsonError(
         400,
@@ -135,7 +134,6 @@ adminConsultantRoutes.post(
         specialties ?? [],
         phone ?? "",
       ),
-      zoomRoomIds: zoomRoomIds ?? [],
       statusId,
     });
 
@@ -171,10 +169,6 @@ adminConsultantRoutes.patch(
           consultant.getProfile().getImageUrl(),
         ),
       );
-    }
-
-    if (body.zoomRoomIds) {
-      consultant.assignZoomRooms(body.zoomRoomIds);
     }
 
     if (body.statusId !== undefined) {

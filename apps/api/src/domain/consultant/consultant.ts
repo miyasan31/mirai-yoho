@@ -6,7 +6,6 @@ interface ConsultantCreateProps {
   organizationId: string;
   consultantId: string;
   profile: ConsultantProfile;
-  zoomRoomIds: string[];
   statusId: string;
   createdAt?: Date;
   updatedAt?: Date;
@@ -21,7 +20,6 @@ export class Consultant extends AggregateRoot {
     private readonly organizationId: string,
     private readonly consultantId: string,
     private profile: ConsultantProfile,
-    private zoomRoomIds: string[],
     private statusId: string,
     private isActive: boolean,
     private readonly createdAt: Date,
@@ -36,7 +34,6 @@ export class Consultant extends AggregateRoot {
       props.organizationId,
       props.consultantId,
       props.profile,
-      [...props.zoomRoomIds],
       props.statusId,
       true,
       props.createdAt ?? now,
@@ -50,7 +47,6 @@ export class Consultant extends AggregateRoot {
       props.organizationId,
       props.consultantId,
       props.profile,
-      [...props.zoomRoomIds],
       props.statusId,
       props.isActive,
       createdAt,
@@ -60,11 +56,6 @@ export class Consultant extends AggregateRoot {
 
   updateProfile(profile: ConsultantProfile): void {
     this.profile = profile;
-    this.updatedAt = new Date();
-  }
-
-  assignZoomRooms(roomIds: string[]): void {
-    this.zoomRoomIds = [...roomIds];
     this.updatedAt = new Date();
   }
 
@@ -94,10 +85,6 @@ export class Consultant extends AggregateRoot {
 
   getProfile(): ConsultantProfile {
     return this.profile;
-  }
-
-  getZoomRoomIds(): string[] {
-    return [...this.zoomRoomIds];
   }
 
   getStatusId(): string {

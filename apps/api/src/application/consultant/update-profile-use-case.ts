@@ -37,7 +37,6 @@ export class UpdateProfileUseCase {
         organizationId: input.organizationId,
         consultantId: input.consultantId,
         profile,
-        zoomRoomIds: [],
         statusId: DEFAULT_CONSULTANT_STATUS_ID,
       });
     }

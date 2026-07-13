@@ -108,7 +108,7 @@
 | `Booking` | `BookingStatus` `CancelDeadline` `ZoomUrl` `ConsultantMemo` | `confirm()` `cancel()` `complete()` `updateMemo()` | 予約作成・キャンセル・完了 |
 | `Slot` | `TimeRange` | `reserve()` `release()` | 予約作成・キャンセル |
 | `Payment` | `Money` `PaymentStatus` `PaymentStrategy` | `completeSetup()` `charge()` `refund()` `cancel()` `failCharge()` | 決済操作 |
-| `Consultant` | `ConsultantProfile` `ZoomRoomId[]` | `updateProfile()` `assignZoomRooms()` `deactivate()` | プロフィール更新・論理削除 |
+| `Consultant` | `ConsultantProfile` | `updateProfile()` `deactivate()` | プロフィール更新・論理削除 |
 | `Customer` | —（シンプルなデータ保持） | `updateInfo()` `updateNote()` `linkUser()` `mask()` | 顧客情報更新・退会時マスキング |
 
 ### 5.2 Booking 集約詳細
