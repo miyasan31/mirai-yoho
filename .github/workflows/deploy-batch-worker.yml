@@ -58,7 +58,7 @@ jobs:
           if [ -n "$missing" ]; then
             echo "::error::Secret Manager secrets without an enabled 'latest' version in $PROJECT_ID:$missing"
             echo "Populate the value(s) before deploying, e.g.:"
-            echo "  make setup-batch-worker-secrets:$ENV_ALIAS PROJECT=$PROJECT_ID"
+            echo "  make setup-secrets-from-env:$ENV_ALIAS PROJECT=$PROJECT_ID"
             echo "  make setup-secret:$ENV_ALIAS KEY=<SECRET_NAME>"
             exit 1
           fi

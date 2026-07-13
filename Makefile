@@ -1,6 +1,6 @@
 .PHONY: create-organization create-default-organization-roles seed-slots delete-slots
 .PHONY: auth-adc-organization-operator setup-secrets setup-secret
-.PHONY: setup-api-secrets-from-env setup-api-secrets-from-env-fish setup-batch-worker-secrets
+.PHONY: setup-secrets-from-env setup-secrets-from-env-fish
 .PHONY: describe-secret access-secret check-secret-value
 .PHONY: auth-adc-organization-operator\:dev auth-adc-organization-operator\:prod
 .PHONY: create-organization\:dev create-organization\:prod
@@ -9,9 +9,8 @@
 .PHONY: delete-slots\:dev delete-slots\:prod
 .PHONY: setup-secrets\:dev setup-secrets\:prod
 .PHONY: setup-secret\:dev setup-secret\:prod
-.PHONY: setup-api-secrets-from-env\:dev setup-api-secrets-from-env\:prod
-.PHONY: setup-api-secrets-from-env-fish\:dev setup-api-secrets-from-env-fish\:prod
-.PHONY: setup-batch-worker-secrets\:dev setup-batch-worker-secrets\:prod
+.PHONY: setup-secrets-from-env\:dev setup-secrets-from-env\:prod
+.PHONY: setup-secrets-from-env-fish\:dev setup-secrets-from-env-fish\:prod
 .PHONY: describe-secret\:dev describe-secret\:prod
 .PHONY: access-secret\:dev access-secret\:prod
 .PHONY: check-secret-value\:dev check-secret-value\:prod
@@ -78,9 +77,12 @@ delete-slots:
 # Secret Manager セットアップ（Cloud Run API / batch worker）
 # ============================================================
 
-# Cloud Run API サーバーがランタイムで参照するシークレット集合。
-# terraform の api_secret_ids（infra/terraform/gcp/common/api）と一致させる。
-API_SECRET_KEYS = \
+# プロジェクトで使う Secret Manager シークレットの全集合（env ファイルから一括投入する対象）。
+# Cloud Run API サーバーの参照集合（terraform の api_secret_ids / infra/terraform/gcp/common/api）と一致させる。
+# batch worker が参照するキー（common/batch の worker_secret_names）はこの集合の部分集合なので、
+# このリストを投入すれば worker 用シークレットも同じ実体が埋まる（シークレットは共有リソース）。
+# 新しいシークレットを追加したら terraform の参照リストとこのリストの両方に追加する。
+SECRET_KEYS = \
 	API_URL \
 	USER_APP_URL \
 	ADMIN_APP_URL \
@@ -106,23 +108,13 @@ API_SECRET_KEYS = \
 	LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL \
 	INVOICE_REGISTRATION_NUMBER
 
-BATCH_WORKER_SECRET_KEYS = \
-	FIREBASE_CLIENT_EMAIL \
-	FIREBASE_PRIVATE_KEY \
-	FIREBASE_PROJECT_ID \
-	RESEND_API_KEY \
-	RESEND_FROM_EMAIL \
-	STRIPE_SECRET_KEY \
-	LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL \
-	ADMIN_APP_URL
-
 # Usage: make setup-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
 # Usage: make setup-secrets:dev
 # Usage: make setup-secrets:prod
 # Example: make setup-secrets PROJECT=mirai-yoho-dev
 setup-secrets:
 	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
-	@for secret in $(API_SECRET_KEYS); do \
+	@for secret in $(SECRET_KEYS); do \
 		echo "Enter value for $$secret (end with Ctrl-D):"; \
 		gcloud secrets versions add $$secret --project $(PROJECT) --data-file=-; \
 	done
@@ -137,16 +129,19 @@ setup-secret:
 	@echo "Enter value for $(KEY) (end with Ctrl-D):"
 	gcloud secrets versions add $(KEY) --project $(PROJECT) --data-file=-
 
-# Usage: make setup-api-secrets-from-env PROJECT=<mirai-yoho-dev|mirai-yoho-prod> [ENV=<local|dev|prod>]
-# Usage: make setup-api-secrets-from-env:dev
-# Usage: make setup-api-secrets-from-env:prod
-# Required environment variables: API_SECRET_KEYS と同名の env を $(ENV_FILE) にすべて設定
-setup-api-secrets-from-env:
+# .env ファイルから Secret Manager へ全シークレット（$(SECRET_KEYS)）を一括投入する。
+# API サーバー / batch worker が参照するシークレットはすべてこの集合の共有リソースなので、
+# これ 1 本で両方まかなえる（IAM のアクセス範囲は terraform 側で個別にスコープする）。
+# Usage: make setup-secrets-from-env PROJECT=<mirai-yoho-dev|mirai-yoho-prod> [ENV=<local|dev|prod>]
+# Usage: make setup-secrets-from-env:dev
+# Usage: make setup-secrets-from-env:prod
+# Required environment variables: SECRET_KEYS と同名の env を $(ENV_FILE) にすべて設定
+setup-secrets-from-env:
 	@test "$(ENV)" = "local" || test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be one of local, dev, prod" && exit 1)
 	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
-	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-api-secrets-from-env PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-secrets-from-env PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
 	@set -a; . "$(ENV_FILE)"; set +a; \
-	for secret in $(API_SECRET_KEYS); do \
+	for secret in $(SECRET_KEYS); do \
 		value="$$(printenv $$secret)"; \
 		if [ -z "$$value" ]; then \
 			echo "Error: environment variable $$secret is required"; \
@@ -156,35 +151,14 @@ setup-api-secrets-from-env:
 		echo "Added new version for $$secret"; \
 	done
 
-# Usage: make setup-api-secrets-from-env-fish PROJECT=<mirai-yoho-dev|mirai-yoho-prod> [ENV=<local|dev|prod>]
-# Usage: make setup-api-secrets-from-env-fish:dev
-# Usage: make setup-api-secrets-from-env-fish:prod
-setup-api-secrets-from-env-fish:
+# Usage: make setup-secrets-from-env-fish PROJECT=<mirai-yoho-dev|mirai-yoho-prod> [ENV=<local|dev|prod>]
+# Usage: make setup-secrets-from-env-fish:dev
+# Usage: make setup-secrets-from-env-fish:prod
+setup-secrets-from-env-fish:
 	@test "$(ENV)" = "local" || test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be one of local, dev, prod" && exit 1)
 	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
-	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-api-secrets-from-env-fish PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
-	PROJECT="$(PROJECT)" ENV_FILE="$(ENV_FILE)" fish apps/api/scripts/setup-api-secrets-from-env.fish
-
-# Usage: make setup-batch-worker-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod> [ENV=<local|dev|prod>]
-# Usage: make setup-batch-worker-secrets:dev
-# Usage: make setup-batch-worker-secrets:prod
-# Required environment variables ($(ENV_FILE)):
-# FIREBASE_CLIENT_EMAIL FIREBASE_PRIVATE_KEY FIREBASE_PROJECT_ID RESEND_API_KEY
-# RESEND_FROM_EMAIL STRIPE_SECRET_KEY LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL NEXT_PUBLIC_APP_URL
-setup-batch-worker-secrets:
-	@test "$(ENV)" = "local" || test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be one of local, dev, prod" && exit 1)
-	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
-	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-batch-worker-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
-	@set -a; . "$(ENV_FILE)"; set +a; \
-	for secret in $(BATCH_WORKER_SECRET_KEYS); do \
-		value="$$(printenv $$secret)"; \
-		if [ -z "$$value" ]; then \
-			echo "Error: environment variable $$secret is required"; \
-			exit 1; \
-		fi; \
-		printf '%s' "$$value" | gcloud secrets versions add $$secret --project "$(PROJECT)" --data-file=- >/dev/null; \
-		echo "Added new version for $$secret"; \
-	done
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-secrets-from-env-fish PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
+	PROJECT="$(PROJECT)" ENV_FILE="$(ENV_FILE)" SECRET_KEYS="$(SECRET_KEYS)" fish apps/api/scripts/setup-secrets-from-env.fish
 
 # Usage: make describe-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>
 # Usage: make describe-secret:dev KEY=<SECRET_KEY>
@@ -266,23 +240,17 @@ setup-secret\:dev:
 setup-secret\:prod:
 	$(MAKE) setup-secret PROJECT=$(PROJECT_PROD) KEY=$(KEY)
 
-setup-api-secrets-from-env\:dev:
-	$(MAKE) setup-api-secrets-from-env ENV=dev PROJECT=$(PROJECT_DEV)
+setup-secrets-from-env\:dev:
+	$(MAKE) setup-secrets-from-env ENV=dev PROJECT=$(PROJECT_DEV)
 
-setup-api-secrets-from-env\:prod:
-	$(MAKE) setup-api-secrets-from-env ENV=prod PROJECT=$(PROJECT_PROD)
+setup-secrets-from-env\:prod:
+	$(MAKE) setup-secrets-from-env ENV=prod PROJECT=$(PROJECT_PROD)
 
-setup-api-secrets-from-env-fish\:dev:
-	$(MAKE) setup-api-secrets-from-env-fish ENV=dev PROJECT=$(PROJECT_DEV)
+setup-secrets-from-env-fish\:dev:
+	$(MAKE) setup-secrets-from-env-fish ENV=dev PROJECT=$(PROJECT_DEV)
 
-setup-api-secrets-from-env-fish\:prod:
-	$(MAKE) setup-api-secrets-from-env-fish ENV=prod PROJECT=$(PROJECT_PROD)
-
-setup-batch-worker-secrets\:dev:
-	$(MAKE) setup-batch-worker-secrets ENV=dev PROJECT=$(PROJECT_DEV)
-
-setup-batch-worker-secrets\:prod:
-	$(MAKE) setup-batch-worker-secrets ENV=prod PROJECT=$(PROJECT_PROD)
+setup-secrets-from-env-fish\:prod:
+	$(MAKE) setup-secrets-from-env-fish ENV=prod PROJECT=$(PROJECT_PROD)
 
 describe-secret\:dev:
 	$(MAKE) describe-secret PROJECT=$(PROJECT_DEV) KEY=$(KEY)

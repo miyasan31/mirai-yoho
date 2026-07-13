@@ -53,7 +53,7 @@
 
 ## リリース前に必要な運用作業（コード外）
 
-1. **Secret Manager へ値を投入**: Terraform apply 後、`make setup-secrets`（または `make setup-api-secrets-from-env-fish:{dev,prod}`）で `API_URL` / `ADMIN_APP_URL` / `USER_APP_URL` / `CORS_ALLOWED_ORIGINS` を含む全キー（`Makefile` の `API_SECRET_KEYS`）に値を設定してから Cloud Run（`deploy-api.yml`）を再デプロイする。
+1. **Secret Manager へ値を投入**: Terraform apply 後、`make setup-secrets`（または `make setup-secrets-from-env-fish:{dev,prod}`）で `API_URL` / `ADMIN_APP_URL` / `USER_APP_URL` / `CORS_ALLOWED_ORIGINS` を含む全キー（`Makefile` の `SECRET_KEYS`）に値を設定してから Cloud Run（`deploy-api.yml`）を再デプロイする。
 2. **GitHub Environments（dev / prod）の vars 追加**: `API_URL`, `STRIPE_PUBLISHABLE_KEY`, `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`（`GCP_PROJECT_NUMBER` は既存）。`deploy-hosting.yml` の SPA ビルドが参照する（`ADMIN_APP_URL` は SPA ビルド時の vars ではなく、API 側 Secret Manager の値としてのみ使用）。旧 `CONSOLE_APP_URL` var は廃止。
 3. **カスタムドメイン**: user / admin / consultant の Hosting サイト（prod: `user.miraiyohou.com` / `admin.console.miraiyohou.com` / `consultant.console.miraiyohou.com`、dev: `dev.user…` / `dev.admin.console…` / `dev.consultant.console…`）と Cloud Run service `api`（`api.miraiyohou.com`）のドメイン割り当ては Terraform 管理（`.tfvars` の `spa_hosting_custom_domains` / `api_custom_domain`）。terraform apply 後、`spa_hosting_custom_domain_dns_records_to_add` / `api_custom_domain_dns_records` output に出る DNS レコードを Xserver 側に登録する（`wait_dns_verification = false` のため apply は検証を待たない）。
 4. **Firebase Auth の Authorized domains** に `admin.console.miraiyohou.com` / `consultant.console.miraiyohou.com`（dev はそれぞれ `dev.admin.console…` / `dev.consultant.console…`）を追加（`.tfvars` の `authorized_domains` で管理）。
