@@ -127,9 +127,6 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 
 - 相談員の登録・編集・削除（論理削除。削除はスーパー管理者のみ）
 - 相談員ごとの担当可能日時（スロット）設定
-- Zoom ブレイクアウトルームとの紐づけ管理
-- ルーム状況パネル（Room ごとの担当相談員一覧）
-- 相談員は複数部屋に紐づけ可。移動は手動オペ・通知なし
 
 #### 3.3.4 予約管理
 
@@ -161,7 +158,6 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 | アカウント構成 | システム用 1 ホストアカウントで全ルームを管理 |
 | 顧客への URL | メインミーティング URL を発行（ブレイクアウトルーム URL ではない） |
 | 部屋割り | 当日オペレーターが手動でブレイクアウトルームに顧客を移動 |
-| 相談員の紐づけ | 1 人の相談員が複数部屋に紐づけ可（DB で管理） |
 | 相談員の移動 | 手動オペレーション（Zoom クライアントから直接移動・通知なし） |
 | URL 発行タイミング | Stripe 仮決済完了後に即時生成・Resend でメール送付 |
 
@@ -297,7 +293,6 @@ Firebase Auth（`super_admin` または `operator` クレーム）による認�
 | `bio` | `string` | — | 自己紹介・プロフィール文 |
 | `specialties` | `string[]` | — | 専門分野・得意分野 |
 | `displayOrder` | `number` | ○ | 一覧表示順 |
-| `zoomRoomIds` | `string[]` | ○ | 担当する Zoom ブレイクアウトルーム ID の配列 |
 | `isActive` | `boolean` | ○ | 有効 / 無効フラグ（論理削除） |
 | `createdAt` | `timestamp` | ○ | 登録日時 |
 | `updatedAt` | `timestamp` | ○ | 最終更新日時 |
@@ -486,7 +481,7 @@ pending ──── 仮決済失敗 or タイムアウト ───────
 | `/api/organizations/[organizationId]/admin/slots` | `GET` | 空き枠一覧取得 |
 | `/api/organizations/[organizationId]/admin/consultants` | `GET` | 相談員一覧取得（ページング対応） |
 | `/api/organizations/[organizationId]/admin/consultants` | `POST` | 相談員新規作成 |
-| `/api/organizations/[organizationId]/admin/consultants/[id]` | `PATCH` | 相談員更新（`name` / `bio` / `phone` / `specialties` / `zoomRoomIds` / `statusId`） |
+| `/api/organizations/[organizationId]/admin/consultants/[id]` | `PATCH` | 相談員更新（`name` / `bio` / `phone` / `specialties` / `statusId`） |
 | `/api/organizations/[organizationId]/admin/consultants/[id]` | `DELETE` | 相談員無効化 |
 | `/api/organizations/[organizationId]/admin/settings/booking` | `GET` | 予約設定取得 |
 | `/api/organizations/[organizationId]/admin/settings/booking` | `PATCH` | 予約設定更新 |

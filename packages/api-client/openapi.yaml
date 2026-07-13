@@ -862,10 +862,6 @@ paths:
                   type: array
                   items:
                     type: string
-                zoomRoomIds:
-                  type: array
-                  items:
-                    type: string
                 statusId:
                   type: string
       responses:
@@ -896,10 +892,6 @@ paths:
                 phone:
                   type: string
                 specialties:
-                  type: array
-                  items:
-                    type: string
-                zoomRoomIds:
                   type: array
                   items:
                     type: string
@@ -1657,10 +1649,6 @@ components:
           type: array
           items:
             type: string
-        zoomRoomIds:
-          type: array
-          items:
-            type: string
         status:
           $ref: "#/components/schemas/ConsultantStatus"
         isActive:
@@ -1687,10 +1675,6 @@ components:
         imageUrl:
           type: string
         specialties:
-          type: array
-          items:
-            type: string
-        zoomRoomIds:
           type: array
           items:
             type: string

@@ -56,7 +56,6 @@ function createConsultant() {
     organizationId: ORGANIZATION_ID,
     consultantId: "consultant-1",
     profile: ConsultantProfile.create("佐藤相談員", "", [], "090-1111-2222"),
-    zoomRoomIds: [],
     statusId: "standard",
   });
 }

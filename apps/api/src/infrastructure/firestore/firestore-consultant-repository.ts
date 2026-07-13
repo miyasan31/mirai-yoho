@@ -17,7 +17,6 @@ interface ConsultantDoc {
   specialties: string[];
   phone?: string;
   imageUrl?: string;
-  zoomRoomIds: string[];
   statusId?: string;
   isActive: boolean;
   createdAt?: Timestamp | Date;
@@ -42,7 +41,6 @@ function toDomain(doc: ConsultantDoc): Consultant {
       doc.phone ?? "",
       doc.imageUrl,
     ),
-    zoomRoomIds: doc.zoomRoomIds,
     statusId: doc.statusId ?? DEFAULT_CONSULTANT_STATUS_ID,
     isActive: doc.isActive,
     createdAt,
@@ -61,7 +59,6 @@ function toFirestore(consultant: Consultant): ConsultantDoc {
     specialties: [...profile.getSpecialties()],
     phone: profile.getPhone(),
     ...(imageUrl !== undefined && { imageUrl }),
-    zoomRoomIds: consultant.getZoomRoomIds(),
     statusId: consultant.getStatusId(),
     isActive: consultant.getIsActive(),
     createdAt: consultant.getCreatedAt(),

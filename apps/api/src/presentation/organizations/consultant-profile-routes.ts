@@ -84,7 +84,6 @@ consultantProfileRoutes.get(
         bio: "",
         phone: "",
         specialties: [],
-        zoomRoomIds: [],
         status: toConsultantStatusResponse(status),
         isActive: true,
       });
@@ -103,7 +102,6 @@ consultantProfileRoutes.get(
       phone: profile.getPhone(),
       imageUrl: profile.getImageUrl(),
       specialties: [...profile.getSpecialties()],
-      zoomRoomIds: consultant.getZoomRoomIds(),
       status: toConsultantStatusResponse(status),
       isActive: consultant.getIsActive(),
     });
