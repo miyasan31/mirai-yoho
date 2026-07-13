@@ -18,6 +18,7 @@ jobs:
     environment: ${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}
     env:
       PROJECT_ID: mirai-yoho-${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}
+      ENV_ALIAS: ${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}
       REGION: asia-northeast1
       IMAGE_TAG: ${{ github.sha }}
     steps:
@@ -27,6 +28,40 @@ jobs:
           workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-actions/providers/github
           service_account: github-deployer@mirai-yoho-${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}.iam.gserviceaccount.com
       - uses: google-github-actions/setup-gcloud@v2
+      # Cloud Run job が参照する Secret Manager シークレットに有効な latest バージョン（値）が
+      # 存在するか事前検証する。値未投入のシークレットがあると `gcloud run jobs update` が
+      # 「Secret ... versions/latest was not found」で失敗するため、ビルド前にまとめて検出して
+      # 修正手順を提示する。値は表示せず、有効バージョンの有無のみ確認する。
+      # リストは terraform の worker_secret_names（infra/terraform/gcp/common/batch/main.tf）の
+      # 全コマンド和集合と一致させる。
+      - name: Verify required secrets have a value
+        env:
+          REQUIRED_SECRETS: >-
+            FIREBASE_CLIENT_EMAIL FIREBASE_PRIVATE_KEY FIREBASE_PROJECT_ID
+            RESEND_API_KEY RESEND_FROM_EMAIL STRIPE_SECRET_KEY
+            LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL ADMIN_APP_URL
+        run: |
+          missing=""
+          for secret in $REQUIRED_SECRETS; do
+            enabled_version="$(gcloud secrets versions list "$secret" \
+              --project "$PROJECT_ID" \
+              --filter="state=ENABLED" \
+              --format="value(name)" \
+              --limit=1 2>/dev/null || true)"
+            if [ -z "$enabled_version" ]; then
+              echo "NG: $secret has no enabled version (or the secret does not exist)"
+              missing="$missing $secret"
+            else
+              echo "OK: $secret"
+            fi
+          done
+          if [ -n "$missing" ]; then
+            echo "::error::Secret Manager secrets without an enabled 'latest' version in $PROJECT_ID:$missing"
+            echo "Populate the value(s) before deploying, e.g.:"
+            echo "  make setup-batch-worker-secrets:$ENV_ALIAS PROJECT=$PROJECT_ID"
+            echo "  make setup-secret:$ENV_ALIAS KEY=<SECRET_NAME>"
+            exit 1
+          fi
       - name: Build and push worker image
         run: |
           gcloud builds submit \
