@@ -6,7 +6,7 @@
 
 | パッケージ | 役割 | デプロイ先 |
 | --- | --- | --- |
-| `apps/user` | 顧客向け予約 SPA（Vite + TanStack Router、認証なし） | Firebase Hosting（{hoge}.miraiyohou.com） |
+| `apps/user` | 顧客向け予約 SPA（Vite + TanStack Router、認証なし） | Firebase Hosting（user.miraiyohou.com、組織は URL パス /<organizationId>/... で判別） |
 | `apps/admin` | 管理者・オペレーター向けコンソール SPA（Vite + TanStack Router） | Firebase Hosting（admin.console.miraiyohou.com） |
 | `apps/consultant` | 相談員向けコンソール SPA（Vite + TanStack Router） | Firebase Hosting（consultant.console.miraiyohou.com） |
 | `apps/api` | API サーバー（Hono + DDD 4層） + batch worker | Cloud Run（api.miraiyohou.com）+ Cloud Run Job（batch worker） |

@@ -2,6 +2,8 @@
 
 > Version 1.0 | 2026-03-22 | PRD v0.5 + DDD設計 v1.0 対応
 
+> **注記（2026-07-12）**: Phase 1〜3 は策定当時（Next.js + API Route 構成）の実施記録であり、その後 API サーバーは Hono + Cloud Run へ移行し、決済用語も「本決済/capture」から「課金/charge」へ、認可方式も Firebase カスタムクレームから Firestore `organization-accounts` 参照へ変更されている（詳細は `doc/DDD_DESIGN.md` §2, `doc/system-setup-and-organization.md`）。チェックボックスは当時完了した作業の記録として残し、現行仕様と異なる箇所は個別に注記する。
+
 ---
 
 ## 凡例
@@ -56,7 +58,7 @@
 
 | | タスク | ツール |
 |---|---|---|
-| `[x]` | Firebase Auth カスタムクレーム設定（`super_admin` / `operator` / `consultant`） | |
+| `[x]` | Firebase Auth カスタムクレーム設定（`super_admin` / `operator` / `consultant`） | ※現在は Firestore `organization-accounts` 参照方式に置き換え済み（上部注記参照） |
 | `[x]` | 相談員向け 4 画面（ログイン・予約一覧・メモ入力・プロフィール編集） | `Claude Code` |
 | `[x]` | 管理者 CRM 9 画面（ダッシュボード〜権限管理） | `Claude Code` |
 | `[x]` | `POST /api/bookings/[id]/capture` — 手動本決済 API | `Claude Code` |
