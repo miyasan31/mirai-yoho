@@ -1,4 +1,4 @@
-.PHONY: help check-env create-state-bucket auth-adc init plan apply destroy validate fmt clean reset print-api-image
+.PHONY: help check-env create-state-bucket auth-adc init plan apply destroy validate fmt clean reset print-api-image print-worker-image
 
 ENV ?= dev
 REGION ?= asia-northeast1
@@ -41,6 +41,7 @@ help:
 	@echo "  make clean                       ローカルの .terraform / state を削除"
 	@echo "  make reset                       clean + init（やり直し）"
 	@echo "  make print-api-image             TF_VAR_api_image=<image URI> を出力（Git SHA タグ）"
+	@echo "  make print-worker-image          TF_VAR_worker_image=<image URI> を出力（Git SHA タグ）"
 	@echo ""
 	@echo "例:"
 	@echo "  make create-state-bucket ENV=dev"
@@ -76,6 +77,12 @@ init: check-env
 # SHA を省略すると HEAD のコミット SHA を使う（deploy-api.yml の IMAGE_TAG=github.sha と同じ形式）。
 print-api-image:
 	@echo $(REGION)-docker.pkg.dev/$(PROJECT_ID)/api/api:$(SHA)
+
+# Usage: make print-worker-image ENV=dev [SHA=<git-sha>]
+# TF_VAR_worker_image で使う Artifact Registry の worker イメージ URI を出力する。
+# SHA を省略すると HEAD のコミット SHA を使う（deploy-batch-worker.yml の IMAGE_TAG=github.sha と同じ形式）。
+print-worker-image:
+	@echo $(REGION)-docker.pkg.dev/$(PROJECT_ID)/batch-worker/worker:$(SHA)
 
 # Usage: make plan ENV=dev
 plan: check-env
