@@ -21,6 +21,17 @@
 - [Secret Manager 運用手順](doc/secret-manager.md)
 - [Cloud Scheduler バッチ運用](doc/cloud-scheduler.md)
 - [SPA 分割アーキテクチャと移行手順](doc/spa-split.md)
+- [API Cloud Run 移行記録](doc/api-cloud-run-migration.md)
+- [App Hosting 撤去記録](doc/app-hosting-teardown.md)
+- [環境変数一覧](doc/environment-variables.md)
+
+## 設計ドキュメント
+
+- [DDD 設計ドキュメント](doc/DDD_DESIGN.md)
+- [命名台帳（NAMING_LEDGER）](doc/NAMING_LEDGER.md)
+- [製品要件定義書（PRD、策定時の記録）](doc/PRD.md)
+- [開発ロードマップ](doc/ROADMAP.md)
+- [業界展開分析](doc/market-analysis.md)
 
 ## Getting Started
 

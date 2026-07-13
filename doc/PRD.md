@@ -2,6 +2,8 @@
 
 > Version 0.5 | 2026-03-22 | Draft（未決事項 0 件）
 
+> **注記（2026-07-13）**: 本書は策定当時（Next.js + API Route 構成、Stripe PaymentIntent 手動 capture、Firebase Auth カスタムクレーム認可）の要件記録であり、その後 API サーバーは Hono + Cloud Run（ルートは `[organizationId]` ではなく `:organizationId` 形式）へ移行し、決済フローは PaymentIntent 手動 capture から SetupIntent（与信登録）→ オフセッション課金へ、決済用語も「仮決済/authorized・本決済/capture」から「登録/setup・課金/charge」へ、認可方式も Firebase カスタムクレームから Firestore `organization-accounts` 参照へ、Firestore コレクション名も `clients`→`customers`・`admins`（廃止、`organization-accounts` に統合）へと変更されている。現行の正確な仕様は `doc/DDD_DESIGN.md`（ドメイン設計・ユビキタス言語）、`doc/NAMING_LEDGER.md`（命名・コレクション監査）、`doc/system-setup-and-organization.md`（認可方式）を参照すること。本書は要件定義の経緯・意図を残すための記録として保持する。
+
 ---
 
 ## 目次
