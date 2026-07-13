@@ -12,8 +12,13 @@ on:
           - prod
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: write
+
+# NOTE: リリース PR のマージはワークフローで自動実行しない（手動でマージする）。
+# GITHUB_TOKEN による push は他ワークフローをトリガーしない GitHub Actions の仕様のため、
+# 自動マージすると release/dev への push で deploy-* ワークフローが起動しなくなる。
+# 自動マージを復活させる場合は GitHub App / PAT でマージする必要がある。
 
 jobs:
   create-release-pr:
@@ -35,16 +40,11 @@ jobs:
 
           if [ -n "${existing_pr_url}" ]; then
             echo "An open release pull request already exists: ${existing_pr_url}"
-            pr_url="${existing_pr_url}"
-          else
-            pr_url="$(gh pr create \
-              --base "${base_branch}" \
-              --head main \
-              --title "chore: release main to ${TARGET_ENVIRONMENT}" \
-              --body "Creates a release pull request from \`main\` to \`${base_branch}\`.")"
+            exit 0
           fi
 
-          # マージコミットで取り込む（squash/rebase だと release ブランチの
-          # merge-base が進まず、次回リリース PR に既リリース分が重複表示されるため）。
-          # head は main なので --delete-branch は付けない。
-          gh pr merge "${pr_url}" --merge
+          gh pr create \
+            --base "${base_branch}" \
+            --head main \
+            --title "chore: release main to ${TARGET_ENVIRONMENT}" \
+            --body "Creates a release pull request from \`main\` to \`${base_branch}\`."
