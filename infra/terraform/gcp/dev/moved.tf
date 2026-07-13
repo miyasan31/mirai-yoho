@@ -29,11 +29,6 @@ moved {
 }
 
 moved {
-  from = google_service_account.app_hosting_compute
-  to   = module.service_accounts.google_service_account.app_hosting_compute
-}
-
-moved {
   from = google_service_account_iam_member.scheduler_can_mint_oidc_token
   to   = module.iam.google_service_account_iam_member.scheduler_can_mint_oidc_token
 }
@@ -84,11 +79,6 @@ moved {
 }
 
 moved {
-  from = google_project_iam_member.app_hosting_compute_roles
-  to   = module.iam.google_project_iam_member.app_hosting_compute_roles
-}
-
-moved {
   from = google_secret_manager_secret_iam_member.batch_worker_can_read_secrets
   to   = module.batch.google_secret_manager_secret_iam_member.batch_worker_can_read_secrets
 }
@@ -129,38 +119,8 @@ moved {
 }
 
 moved {
-  from = google_firebase_web_app.app_hosting
-  to   = module.firebase.google_firebase_web_app.app_hosting
-}
-
-moved {
-  from = google_developer_connect_connection.github
-  to   = module.firebase.google_developer_connect_connection.github
-}
-
-moved {
-  from = google_developer_connect_git_repository_link.app
-  to   = module.firebase.google_developer_connect_git_repository_link.app
-}
-
-moved {
-  from = google_firebase_app_hosting_backend.app
-  to   = module.firebase.google_firebase_app_hosting_backend.app
-}
-
-moved {
-  from = google_firebase_app_hosting_traffic.app
-  to   = module.firebase.google_firebase_app_hosting_traffic.app
-}
-
-moved {
   from = google_secret_manager_secret.app_hosting
   to   = module.firebase.google_secret_manager_secret.app_hosting
-}
-
-moved {
-  from = google_secret_manager_secret_iam_member.app_hosting_can_read_secrets
-  to   = module.firebase.google_secret_manager_secret_iam_member.app_hosting_can_read_secrets
 }
 
 moved {

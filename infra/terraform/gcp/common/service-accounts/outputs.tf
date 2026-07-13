@@ -38,11 +38,6 @@ output "organization_operator_service_account_email" {
   value       = google_service_account.organization_operator.email
 }
 
-output "app_hosting_compute_service_account_email" {
-  description = "Firebase App Hosting compute service account email."
-  value       = google_service_account.app_hosting_compute.email
-}
-
 output "api_server_service_account_name" {
   description = "Cloud Run API server runtime service account resource name."
   value       = google_service_account.api_server.name

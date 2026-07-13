@@ -1,7 +1,7 @@
 .PHONY: create-organization create-default-organization-roles seed-slots delete-slots
 .PHONY: auth-adc-organization-operator setup-secrets setup-secret
-.PHONY: setup-apphosting-secrets-from-env setup-apphosting-secrets-from-env-fish setup-batch-worker-secrets
-.PHONY: list-apphosting-backends describe-secret access-secret check-secret-value check-public-build-secrets
+.PHONY: setup-api-secrets-from-env setup-api-secrets-from-env-fish setup-batch-worker-secrets
+.PHONY: describe-secret access-secret check-secret-value
 .PHONY: auth-adc-organization-operator\:dev auth-adc-organization-operator\:prod
 .PHONY: create-organization\:dev create-organization\:prod
 .PHONY: create-default-organization-roles\:dev create-default-organization-roles\:prod
@@ -9,14 +9,12 @@
 .PHONY: delete-slots\:dev delete-slots\:prod
 .PHONY: setup-secrets\:dev setup-secrets\:prod
 .PHONY: setup-secret\:dev setup-secret\:prod
-.PHONY: setup-apphosting-secrets-from-env\:dev setup-apphosting-secrets-from-env\:prod
-.PHONY: setup-apphosting-secrets-from-env-fish\:dev setup-apphosting-secrets-from-env-fish\:prod
+.PHONY: setup-api-secrets-from-env\:dev setup-api-secrets-from-env\:prod
+.PHONY: setup-api-secrets-from-env-fish\:dev setup-api-secrets-from-env-fish\:prod
 .PHONY: setup-batch-worker-secrets\:dev setup-batch-worker-secrets\:prod
-.PHONY: list-apphosting-backends\:dev list-apphosting-backends\:prod
 .PHONY: describe-secret\:dev describe-secret\:prod
 .PHONY: access-secret\:dev access-secret\:prod
 .PHONY: check-secret-value\:dev check-secret-value\:prod
-.PHONY: check-public-build-secrets\:dev check-public-build-secrets\:prod
 
 ENV ?= local
 ENV_FILE = .env.$(ENV)
@@ -77,11 +75,12 @@ delete-slots:
 	pnpm dlx tsx --env-file=$(ENV_FILE) apps/api/scripts/delete-slots.ts
 
 # ============================================================
-# Firebase App Hosting セットアップ
+# Secret Manager セットアップ（Cloud Run API / batch worker）
 # ============================================================
 
-# apphosting.yaml と同じキーセット
-APPHOSTING_SECRET_KEYS = \
+# Cloud Run API サーバーがランタイムで参照するシークレット集合。
+# terraform の api_secret_ids（infra/terraform/gcp/common/api）と一致させる。
+API_SECRET_KEYS = \
 	API_URL \
 	USER_APP_URL \
 	ADMIN_APP_URL \
@@ -107,10 +106,6 @@ APPHOSTING_SECRET_KEYS = \
 	LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL \
 	INVOICE_REGISTRATION_NUMBER
 
-# SPA（apps/user, apps/console）のビルド用公開値は GitHub Actions の vars で管理する。
-# App Hosting のビルド時 secret は不要になった。
-PUBLIC_BUILD_SECRET_KEYS =
-
 BATCH_WORKER_SECRET_KEYS = \
 	FIREBASE_CLIENT_EMAIL \
 	FIREBASE_PRIVATE_KEY \
@@ -127,9 +122,9 @@ BATCH_WORKER_SECRET_KEYS = \
 # Example: make setup-secrets PROJECT=mirai-yoho-dev
 setup-secrets:
 	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
-	@for secret in $(APPHOSTING_SECRET_KEYS); do \
-		echo "Setting $$secret"; \
-		firebase apphosting:secrets:set $$secret --project $(PROJECT); \
+	@for secret in $(API_SECRET_KEYS); do \
+		echo "Enter value for $$secret (end with Ctrl-D):"; \
+		gcloud secrets versions add $$secret --project $(PROJECT) --data-file=-; \
 	done
 
 # Usage: make setup-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<OPENAI_API_KEY>
@@ -139,18 +134,19 @@ setup-secrets:
 setup-secret:
 	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>" && exit 1)
 	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make setup-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>" && exit 1)
-	firebase apphosting:secrets:set $(KEY) --project $(PROJECT)
+	@echo "Enter value for $(KEY) (end with Ctrl-D):"
+	gcloud secrets versions add $(KEY) --project $(PROJECT) --data-file=-
 
-# Usage: make setup-apphosting-secrets-from-env PROJECT=<mirai-yoho-dev|mirai-yoho-prod> [ENV=<local|dev|prod>]
-# Usage: make setup-apphosting-secrets-from-env:dev
-# Usage: make setup-apphosting-secrets-from-env:prod
-# Required environment variables: APPHOSTING_SECRET_KEYS と同名の env を $(ENV_FILE) にすべて設定
-setup-apphosting-secrets-from-env:
+# Usage: make setup-api-secrets-from-env PROJECT=<mirai-yoho-dev|mirai-yoho-prod> [ENV=<local|dev|prod>]
+# Usage: make setup-api-secrets-from-env:dev
+# Usage: make setup-api-secrets-from-env:prod
+# Required environment variables: API_SECRET_KEYS と同名の env を $(ENV_FILE) にすべて設定
+setup-api-secrets-from-env:
 	@test "$(ENV)" = "local" || test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be one of local, dev, prod" && exit 1)
 	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
-	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-apphosting-secrets-from-env PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-api-secrets-from-env PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
 	@set -a; . "$(ENV_FILE)"; set +a; \
-	for secret in $(APPHOSTING_SECRET_KEYS); do \
+	for secret in $(API_SECRET_KEYS); do \
 		value="$$(printenv $$secret)"; \
 		if [ -z "$$value" ]; then \
 			echo "Error: environment variable $$secret is required"; \
@@ -160,14 +156,14 @@ setup-apphosting-secrets-from-env:
 		echo "Added new version for $$secret"; \
 	done
 
-# Usage: make setup-apphosting-secrets-from-env-fish PROJECT=<mirai-yoho-dev|mirai-yoho-prod> [ENV=<local|dev|prod>]
-# Usage: make setup-apphosting-secrets-from-env-fish:dev
-# Usage: make setup-apphosting-secrets-from-env-fish:prod
-setup-apphosting-secrets-from-env-fish:
+# Usage: make setup-api-secrets-from-env-fish PROJECT=<mirai-yoho-dev|mirai-yoho-prod> [ENV=<local|dev|prod>]
+# Usage: make setup-api-secrets-from-env-fish:dev
+# Usage: make setup-api-secrets-from-env-fish:prod
+setup-api-secrets-from-env-fish:
 	@test "$(ENV)" = "local" || test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be one of local, dev, prod" && exit 1)
 	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
-	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-apphosting-secrets-from-env-fish PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
-	PROJECT="$(PROJECT)" ENV_FILE="$(ENV_FILE)" fish apps/api/scripts/setup-apphosting-secrets-from-env.fish
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-api-secrets-from-env-fish PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
+	PROJECT="$(PROJECT)" ENV_FILE="$(ENV_FILE)" fish apps/api/scripts/setup-api-secrets-from-env.fish
 
 # Usage: make setup-batch-worker-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod> [ENV=<local|dev|prod>]
 # Usage: make setup-batch-worker-secrets:dev
@@ -190,34 +186,24 @@ setup-batch-worker-secrets:
 		echo "Added new version for $$secret"; \
 	done
 
-# Usage: make grant-secret-access PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<OPENAI_API_KEY> BACKEND=<backendId>
-# Usage: make grant-secret-access PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<OPENAI_API_KEY> EMAILS=<sa1@example.iam.gserviceaccount.com,sa2@example.iam.gserviceaccount.com>
-# Secret Manager コンソールで作成した Secret を App Hosting から読めるようにする
-
-# Usage: make grant-secrets-access-all PROJECT=<mirai-yoho-dev|mirai-yoho-prod> BACKEND=<backendId>
-
-# Usage: make list-apphosting-backends PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
-# Usage: make list-apphosting-backends:dev
-# Usage: make list-apphosting-backends:prod
-list-apphosting-backends:
-	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make list-apphosting-backends PROJECT=<project>" && exit 1)
-	firebase apphosting:backends:list --project $(PROJECT)
-
 # Usage: make describe-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>
 # Usage: make describe-secret:dev KEY=<SECRET_KEY>
 # Usage: make describe-secret:prod KEY=<SECRET_KEY>
 describe-secret:
 	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make describe-secret PROJECT=<project> KEY=<SECRET_KEY>" && exit 1)
 	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make describe-secret PROJECT=<project> KEY=<SECRET_KEY>" && exit 1)
-	firebase apphosting:secrets:describe $(KEY) --project $(PROJECT)
+	gcloud secrets describe $(KEY) --project $(PROJECT)
 
 # Usage: make access-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY[@version]>
 # Usage: make access-secret:dev KEY=<SECRET_KEY[@version]>
 # Usage: make access-secret:prod KEY=<SECRET_KEY[@version]>
+# KEY は SECRET_KEY（latest）または SECRET_KEY@<version> を指定する
 access-secret:
 	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make access-secret PROJECT=<project> KEY=<SECRET_KEY[@version]>" && exit 1)
 	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make access-secret PROJECT=<project> KEY=<SECRET_KEY[@version]>" && exit 1)
-	firebase apphosting:secrets:access $(KEY) --project $(PROJECT)
+	@name="$(KEY)"; version="latest"; \
+	case "$$name" in *@*) version="$${name#*@}"; name="$${name%@*}";; esac; \
+	gcloud secrets versions access "$$version" --secret "$$name" --project $(PROJECT)
 
 # Usage: make check-secret-value PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>
 # Usage: make check-secret-value:dev KEY=<SECRET_KEY>
@@ -226,29 +212,13 @@ access-secret:
 check-secret-value:
 	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make check-secret-value PROJECT=<project> KEY=<SECRET_KEY>" && exit 1)
 	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make check-secret-value PROJECT=<project> KEY=<SECRET_KEY>" && exit 1)
-	@value="$$(firebase apphosting:secrets:access $(KEY) --project $(PROJECT))"; \
+	@value="$$(gcloud secrets versions access latest --secret $(KEY) --project $(PROJECT))"; \
 	if [ -z "$$value" ]; then \
 		echo "NG: $(KEY) latest is empty"; \
 		exit 1; \
 	else \
 		echo "OK: $(KEY) latest length=$${#value}"; \
 	fi
-
-# Usage: make check-public-build-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
-# Usage: make check-public-build-secrets:dev
-# Usage: make check-public-build-secrets:prod
-# build 用 secret が空でないかを一括確認（現在は対象なし）
-check-public-build-secrets:
-	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make check-public-build-secrets PROJECT=<project>" && exit 1)
-	@for secret in $(PUBLIC_BUILD_SECRET_KEYS); do \
-		value="$$(firebase apphosting:secrets:access $$secret --project $(PROJECT))"; \
-		if [ -z "$$value" ]; then \
-			echo "NG: $$secret latest is empty"; \
-			exit 1; \
-		else \
-			echo "OK: $$secret latest length=$${#value}"; \
-		fi; \
-	done
 
 # ============================================================
 # Environment aliases (dev / prod)
@@ -296,29 +266,23 @@ setup-secret\:dev:
 setup-secret\:prod:
 	$(MAKE) setup-secret PROJECT=$(PROJECT_PROD) KEY=$(KEY)
 
-setup-apphosting-secrets-from-env\:dev:
-	$(MAKE) setup-apphosting-secrets-from-env ENV=dev PROJECT=$(PROJECT_DEV)
+setup-api-secrets-from-env\:dev:
+	$(MAKE) setup-api-secrets-from-env ENV=dev PROJECT=$(PROJECT_DEV)
 
-setup-apphosting-secrets-from-env\:prod:
-	$(MAKE) setup-apphosting-secrets-from-env ENV=prod PROJECT=$(PROJECT_PROD)
+setup-api-secrets-from-env\:prod:
+	$(MAKE) setup-api-secrets-from-env ENV=prod PROJECT=$(PROJECT_PROD)
 
-setup-apphosting-secrets-from-env-fish\:dev:
-	$(MAKE) setup-apphosting-secrets-from-env-fish ENV=dev PROJECT=$(PROJECT_DEV)
+setup-api-secrets-from-env-fish\:dev:
+	$(MAKE) setup-api-secrets-from-env-fish ENV=dev PROJECT=$(PROJECT_DEV)
 
-setup-apphosting-secrets-from-env-fish\:prod:
-	$(MAKE) setup-apphosting-secrets-from-env-fish ENV=prod PROJECT=$(PROJECT_PROD)
+setup-api-secrets-from-env-fish\:prod:
+	$(MAKE) setup-api-secrets-from-env-fish ENV=prod PROJECT=$(PROJECT_PROD)
 
 setup-batch-worker-secrets\:dev:
 	$(MAKE) setup-batch-worker-secrets ENV=dev PROJECT=$(PROJECT_DEV)
 
 setup-batch-worker-secrets\:prod:
 	$(MAKE) setup-batch-worker-secrets ENV=prod PROJECT=$(PROJECT_PROD)
-
-list-apphosting-backends\:dev:
-	$(MAKE) list-apphosting-backends PROJECT=$(PROJECT_DEV)
-
-list-apphosting-backends\:prod:
-	$(MAKE) list-apphosting-backends PROJECT=$(PROJECT_PROD)
 
 describe-secret\:dev:
 	$(MAKE) describe-secret PROJECT=$(PROJECT_DEV) KEY=$(KEY)
@@ -337,9 +301,3 @@ check-secret-value\:dev:
 
 check-secret-value\:prod:
 	$(MAKE) check-secret-value PROJECT=$(PROJECT_PROD) KEY=$(KEY)
-
-check-public-build-secrets\:dev:
-	$(MAKE) check-public-build-secrets PROJECT=$(PROJECT_DEV)
-
-check-public-build-secrets\:prod:
-	$(MAKE) check-public-build-secrets PROJECT=$(PROJECT_PROD)

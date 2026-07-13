@@ -211,12 +211,12 @@ make setup-secrets:dev
 Secret version を環境別 env ファイルから一括投入する場合は、次を使います。
 
 ```bash
-make setup-apphosting-secrets-from-env:dev
+make setup-api-secrets-from-env:dev
 ```
 
 ```bash
 # fish
-make setup-apphosting-secrets-from-env-fish:dev
+make setup-api-secrets-from-env-fish:dev
 ```
 
 Cloud Run Job が参照する最小セットだけ先に投入したい場合は、次も使えます。

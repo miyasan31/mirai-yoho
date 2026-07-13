@@ -27,9 +27,3 @@ resource "google_service_account" "organization_operator" {
   account_id   = "organization-operator"
   display_name = "Organization setup operator"
 }
-
-resource "google_service_account" "app_hosting_compute" {
-  project      = var.project_id
-  account_id   = "firebase-app-hosting-compute"
-  display_name = "Firebase App Hosting compute service account"
-}

@@ -16,15 +16,8 @@ firebase_storage_cors_origins = [
   "https://dev.consultant.console.miraiyohou.com",
 ]
 
-firebase_web_app_id           = "1:173156005504:web:478232d812edccae4cd865"
-firebase_web_app_display_name = "みらい予報"
-app_hosting_backend_id        = "mirai-yoho"
-app_hosting_location          = "asia-east1"
-app_hosting_custom_domain     = "dev.api.miraiyohou.com"
-
-# API を App Hosting から Cloud Run に切り替える際に有効化する。
-# 有効化前は Cloud Run の run.app URL のみで稼働する（api_service_uri output を参照）。
-# 切替手順は doc/api-cloud-run-migration.md を参照。
+# Cloud Run API のカスタムドメイン。null（既定）だと run.app URL のみで稼働する
+# （api_service_uri output を参照）。切替手順は doc/api-cloud-run-migration.md を参照。
 # api_custom_domain = "dev.api.miraiyohou.com"
 
 # SPA サイトのカスタムドメイン。
@@ -33,11 +26,6 @@ spa_hosting_custom_domains = {
   admin      = "dev.admin.console.miraiyohou.com"
   consultant = "dev.consultant.console.miraiyohou.com"
 }
-
-developer_connect_connection_id              = "apphosting-github-conn-j9sh7s"
-developer_connect_repository_link_id         = "miyasan31-mirai-yoho"
-developer_connect_oauth_token_secret_version = "projects/mirai-yoho-dev/secrets/apphosting-github-conn-j9sh7s-github-oauthtoken-ac3d42/versions/latest"
-github_app_installation_id                   = "121530488"
 
 authorized_domains = [
   "localhost",

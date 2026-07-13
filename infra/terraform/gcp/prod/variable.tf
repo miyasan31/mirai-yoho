@@ -86,62 +86,10 @@ variable "firebase_storage_cors_origins" {
   type        = set(string)
 }
 
-variable "firebase_web_app_id" {
-  description = "Firebase Web App ID used by App Hosting."
-  type        = string
-}
-
-variable "firebase_web_app_display_name" {
-  description = "Display name of the Firebase Web App."
-  type        = string
-}
-
-variable "app_hosting_backend_id" {
-  description = "Firebase App Hosting backend ID."
-  type        = string
-}
-
-variable "app_hosting_location" {
-  description = "Firebase App Hosting and Developer Connect location."
-  type        = string
-}
-
-variable "app_hosting_custom_domain" {
-  description = "Custom domain associated with the Firebase App Hosting backend. Set to null to skip custom domain management."
-  type        = string
-  default     = null
-  nullable    = true
-
-  validation {
-    condition     = var.app_hosting_custom_domain == null || can(regex("^[a-z0-9][a-z0-9.-]*[a-z0-9]$", var.app_hosting_custom_domain))
-    error_message = "app_hosting_custom_domain must be a valid lowercase domain name, or null."
-  }
-}
-
 variable "spa_hosting_custom_domains" {
   description = "Custom domains for the SPA Firebase Hosting sites, keyed by site (user / admin / consultant). Omit a key to skip custom domain management for that site."
   type        = map(string)
   default     = {}
-}
-
-variable "developer_connect_connection_id" {
-  description = "Developer Connect GitHub connection ID used by App Hosting."
-  type        = string
-}
-
-variable "developer_connect_repository_link_id" {
-  description = "Developer Connect Git repository link ID."
-  type        = string
-}
-
-variable "developer_connect_oauth_token_secret_version" {
-  description = "Existing Secret Manager version resource name used by Developer Connect to authorize GitHub."
-  type        = string
-}
-
-variable "github_app_installation_id" {
-  description = "Firebase GitHub App installation ID."
-  type        = string
 }
 
 variable "authorized_domains" {
