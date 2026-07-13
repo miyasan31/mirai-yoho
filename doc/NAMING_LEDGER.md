@@ -22,10 +22,10 @@
 - Firestore コレクション（`FIRESTORE_COLLECTIONS` のキー・値）
 - ドメイン層のクラス／型／ディレクトリ、infrastructure / presentation の識別子・ファイル名
 - 組織スコープ認可ヘルパー: `requireOrganizationRole → requireRole`、`requireOrganizationPermission → requirePermission`、`hasOrganizationPermission → hasPermission`、認証コンテキスト版 `getOrganizationAccount → getAccount`、`firestore.rules` の `hasOrganizationRole → hasRole`（未使用の重複 `require-role.ts` は削除）
+- OpenAPI スキーマ名 `OrganizationRole* → Role*`（`RoleInput` / `RoleUpdateInput` 含む。`pnpm generate` でクライアント再生成。生成物は gitignore、パス `/admin/roles` 等は元から prefix なし）
 
 **対象外（据え置き）**:
-- OpenAPI スキーマ名 `OrganizationRole*`（§1.1「API は用途に応じて別名を許容」に従う。必要なら別 PR で追随）
-- `organizations` コレクション本体（エンティティ名そのもの）
+- `organizations` コレクション本体（エンティティ名そのもの）／ OpenAPI の `OrganizationIdParam`（組織 ID パラメータ）
 - `user-*` プレフィックス（`user-zoom-credentials` / `user-coupons`。今回のスコープ外）
 
 **データ移行**: `apps/api/scripts/migrate-drop-organization-prefix.ts`（doc ID を保持してコピー → 新コードをデプロイ → `--delete-source` で旧コレクション削除）。`firestore.rules` の変更は terraform apply が必要（§4.4）。

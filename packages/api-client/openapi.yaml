@@ -1131,7 +1131,7 @@ paths:
                   roles:
                     type: array
                     items:
-                      $ref: "#/components/schemas/OrganizationRole"
+                      $ref: "#/components/schemas/Role"
     post:
       operationId: createAdminRole
       summary: 組織ロール作成
@@ -1145,14 +1145,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OrganizationRoleInput"
+              $ref: "#/components/schemas/RoleInput"
       responses:
         "201":
           description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrganizationRole"
+                $ref: "#/components/schemas/Role"
 
   /organizations/{organizationId}/admin/roles/{roleId}:
     patch:
@@ -1173,14 +1173,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OrganizationRoleUpdateInput"
+              $ref: "#/components/schemas/RoleUpdateInput"
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OrganizationRole"
+                $ref: "#/components/schemas/Role"
     delete:
       operationId: deleteAdminRole
       summary: 組織ロール削除
@@ -1561,7 +1561,7 @@ components:
         - admin.roles.read
         - admin.roles.manage
 
-    OrganizationRole:
+    Role:
       type: object
       required:
         [roleId, name, description, permissions, isSystem, assignedCount, createdAt, updatedAt]
@@ -1587,7 +1587,7 @@ components:
           type: string
           format: date-time
 
-    OrganizationRoleInput:
+    RoleInput:
       type: object
       required: [roleId, name, permissions]
       properties:
@@ -1602,7 +1602,7 @@ components:
           items:
             $ref: "#/components/schemas/AuthorizationPermission"
 
-    OrganizationRoleUpdateInput:
+    RoleUpdateInput:
       type: object
       required: [name, permissions]
       properties:
