@@ -80,23 +80,51 @@
 
 ## admin → console 完全移行手順（2026-07 続編: env / API / permission）
 
-ドメイン移行に続き、`ADMIN_APP_URL` env / `/admin/*` API パス / `admin.*` 権限文字列などコード側の残った admin 参照を console に統一する際の運用手順。データ変更を伴うため段階的に実施する。
+ドメイン移行に続き、`ADMIN_APP_URL` env / `/admin/*` API パス / `admin.*` 権限文字列などコード側の残った admin 参照を console に統一する際の運用手順。データ変更（Secret Manager と Firestore roles）を伴うため、段階的に実施する。
 
-1. **Terraform apply**（dev → prod の順） — Secret Manager に `CONSOLE_APP_URL` が新規作成される。
-   - 旧 `ADMIN_APP_URL` シークレットは `deletion_protection = true` のため Terraform だけでは消えない。**保持したまま**次のステップに進む（Cloud Run の env 参照は新シークレットへ切替）。
-2. **`CONSOLE_APP_URL` の値を投入**: `make setup-secrets-from-env-fish:{dev,prod}` を実行（`SECRET_KEYS` は既に `CONSOLE_APP_URL` を含む）。値は `.env.dev` / `.env.prod` の `CONSOLE_APP_URL=https://[dev.]console.miraiyohou.com`。
-3. **`deploy-api.yml` / `deploy-batch-worker.yml` を再実行** — Cloud Run API と batch worker が新シークレット `CONSOLE_APP_URL` を env として取り込む。
-4. **`release/{dev,prod}` push** — `deploy-hosting.yml` が新しい `/console/*` API path を叩く console SPA をデプロイ。
-5. **Firestore 権限マイグレーション**（アプリ切替直後、旧 SPA キャッシュが消える前）:
+**設計方針**: `CONSOLE_APP_URL` シークレットは Terraform 管理**外**として作成する（`app_hosting_secret_ids` には含めない）。Cloud Run / batch worker 側の IAM と env mount のみ Terraform が管理する。この設計により、Terraform apply の前に operator が secret に値を投入することができ、Cloud Run rollout 時に値なしで失敗するリスクを避ける。旧 `ADMIN_APP_URL` シークレットは `deletion_protection = true` のため Terraform 管理下で残し、完全移行後に手動削除する。
+
+### 事前準備（PR マージ前 / Terraform apply 前）
+
+`{dev,prod}` 各環境で operator が実施:
+
+1. **`CONSOLE_APP_URL` シークレット作成 + 値投入**:
+   ```bash
+   PROJECT_ID=mirai-yoho-dev  # or mirai-yoho-prod
+   VALUE=https://dev.console.miraiyohou.com  # or https://console.miraiyohou.com
+   gcloud secrets create CONSOLE_APP_URL --project=$PROJECT_ID --replication-policy=automatic
+   printf '%s' "$VALUE" | gcloud secrets versions add CONSOLE_APP_URL --project=$PROJECT_ID --data-file=-
+   ```
+2. **`.env.dev` / `.env.prod` に `CONSOLE_APP_URL=...` 行を追加**（次回の `make setup-secrets-from-env-fish:{dev,prod}` に備える。`SECRET_KEYS` からは既に `ADMIN_APP_URL` を除外済み）。
+
+### 適用手順
+
+3. **PR マージ → `release/{dev,prod}` push** で以下が自動実行される:
+   - `terraform-apply.yml`: `CONSOLE_APP_URL` の IAM 付与（api-server / batch-worker）+ Cloud Run api の env から `ADMIN_APP_URL` → `CONSOLE_APP_URL` へ差し替え + batch worker `late-arrival-alerts` の env も同様に差し替え。事前準備 §1 で secret + version が存在するため、Cloud Run rollout は成功する。
+   - `deploy-api.yml` / `deploy-batch-worker.yml`: 新イメージ（`envServer.consoleAppUrl` で `CONSOLE_APP_URL` を読む）をデプロイ。
+   - `deploy-hosting.yml`: 新しい `/console/*` API path を叩く console SPA をデプロイ。
+4. **Firestore 権限マイグレーション**（アプリ切替直後、旧 SPA キャッシュが消える前）:
    - `pnpm dlx tsx --env-file=.env.dev apps/api/scripts/migrate-role-permissions-admin-to-console.ts --dry-run` で差分確認
    - 問題なければ `--dry-run` を外して実行
    - すべての `roles/{roleId}.permissions[]` の `admin.*` が `console.*` に書き換わる（`permissions` フィールドを直接上書き）
-6. **旧 `ADMIN_APP_URL` Secret 削除**（クリーンアップ）: `terraform state rm module.firebase.google_secret_manager_secret.app_hosting[\"ADMIN_APP_URL\"]` してから gcloud で手動削除（deletion_protection のため）。
-7. **確認**:
-   - Cloud Run API の env に `CONSOLE_APP_URL` が入っていて `ADMIN_APP_URL` は消えている
+5. **確認**:
+   - Cloud Run API の env に `CONSOLE_APP_URL` が入り、`ADMIN_APP_URL` は env として消えている（secret 自体は残存）
    - 遅延通知（LINE Works）の URL が `.../{organizationId}/bookings`（旧 `.../admin/bookings` ではない）になっている
    - Firestore roles の permissions が `console.*` 前置になっている
    - console SPA の各ページが 200、権限で保護されたページも roleId=admin ユーザーで開ける
+
+### クリーンアップ（動作確認後、別 PR で実施）
+
+6. **旧 `ADMIN_APP_URL` Secret 削除**:
+   - Terraform: `app_hosting_secret_ids` / `api_secret_ids` / `worker_secret_names_by_command.late-arrival-alerts` から `ADMIN_APP_URL` を削除する PR を作成
+   - Terraform apply は `deletion_protection = true` のため destroy に失敗する。手動で:
+     ```bash
+     cd infra/terraform/gcp/dev
+     terraform state rm 'module.firebase.google_secret_manager_secret.app_hosting["ADMIN_APP_URL"]'
+     gcloud secrets delete ADMIN_APP_URL --project=mirai-yoho-dev
+     terraform apply
+     ```
+   - prod も同様。
 
 ## デプロイフロー
 

@@ -1,8 +1,14 @@
 locals {
+  # NOTE: `CONSOLE_APP_URL` は ADMIN_APP_URL からの移行期のため、この set には含めない。
+  # 移行手順（doc/spa-split.md「admin → console 完全移行手順」）で、operator が
+  # 事前に `gcloud secrets create CONSOLE_APP_URL` + 値投入する（terraform-managed 外）。
+  # Cloud Run / batch worker 側は api_secret_ids / worker_secret_names で IAM + env mount のみ
+  # 追加する（既存 secret を参照するので、terraform は new create を試みない）。
+  # ADMIN_APP_URL は deletion_protection のため destroy 不可。完全移行完了後に手動削除する。
   app_hosting_secret_ids = toset([
     "API_URL",
     "USER_APP_URL",
-    "CONSOLE_APP_URL",
+    "ADMIN_APP_URL",
     "CANCEL_TOKEN_SECRET",
     "COUPON_WEBHOOK_SECRET",
     "CORS_ALLOWED_ORIGINS",

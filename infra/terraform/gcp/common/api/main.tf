@@ -4,6 +4,9 @@ locals {
   api_secret_ids = toset([
     "API_URL",
     "USER_APP_URL",
+    # ADMIN_APP_URL は Cloud Run 側 env としては使わないが、Secret の存続と IAM を維持する
+    # ためにここに残す。完全移行後に app_hosting_secret_ids と一緒に削除する。
+    "ADMIN_APP_URL",
     "CONSOLE_APP_URL",
     "CANCEL_TOKEN_SECRET",
     "COUPON_WEBHOOK_SECRET",
