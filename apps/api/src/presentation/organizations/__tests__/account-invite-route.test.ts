@@ -18,7 +18,8 @@ const mocks = vi.hoisted(() => {
     verifyCloudSchedulerAuth: vi.fn(),
     requirePermission: vi.fn(),
     requireSystemAdminRole: vi.fn(),
-    requireRole: vi.fn(),
+    requireRoleId: vi.fn(),
+    requireConsultant: vi.fn(),
     accountDocGet: vi.fn(),
     accountDocSet: vi.fn(),
     createUser: vi.fn(),
@@ -104,7 +105,8 @@ vi.mock("@/infrastructure/auth/verify-auth", () => ({
 }));
 
 vi.mock("@/infrastructure/auth/require-role", () => ({
-  requireRole: mocks.requireRole,
+  requireRoleId: mocks.requireRoleId,
+  requireConsultant: mocks.requireConsultant,
 }));
 
 vi.mock("@/infrastructure/auth/require-permission", () => ({
@@ -131,11 +133,14 @@ describe("account invite route", () => {
       currentOrganizationId: "org-1",
       currentDisplayName: "Admin",
     });
-    mocks.requireSystemAdminRole.mockReturnValue({ role: "admin" });
+    mocks.requireSystemAdminRole.mockReturnValue({ roleId: "admin" });
     mocks.createRoleRepository.mockReturnValue({
       findById: mocks.roleFindById,
     });
-    mocks.roleFindById.mockResolvedValue({ roleId: "admin" });
+    mocks.roleFindById.mockResolvedValue({
+      getRoleId: () => "admin",
+      getName: () => "管理者",
+    });
     mocks.createConsultantRepository.mockReturnValue({
       findById: mocks.consultantFindById,
       save: mocks.consultantSave,
@@ -158,7 +163,7 @@ describe("account invite route", () => {
   it("invites a new email address and creates the auth user", async () => {
     const response = await postInvite({
       email: "new@example.com",
-      role: "admin",
+      roleId: "admin",
       name: "新規 太郎",
     });
 
@@ -172,7 +177,7 @@ describe("account invite route", () => {
       expect.objectContaining({
         authUid: "new-auth-uid",
         organizationId: "org-1",
-        role: "admin",
+        roleId: "admin",
         status: "invited",
       }),
       { merge: true },
@@ -190,14 +195,14 @@ describe("account invite route", () => {
       data: () => ({
         authUid: "existing-auth-uid",
         organizationId: "org-1",
-        role: "operator",
+        roleId: "operator",
         status: "active",
       }),
     });
 
     const response = await postInvite({
       email: "member@example.com",
-      role: "admin",
+      roleId: "admin",
       name: "既存 花子",
     });
 
@@ -221,14 +226,15 @@ describe("account invite route", () => {
       data: () => ({
         authUid: "existing-auth-uid",
         organizationId: "org-1",
-        role: "consultant",
+        roleId: "admin",
         status: "invited",
       }),
     });
 
     const response = await postInvite({
       email: "consultant@example.com",
-      role: "consultant",
+      roleId: "admin",
+      isConsultant: true,
       name: "相談員 一郎",
     });
 
@@ -250,7 +256,7 @@ describe("account invite route", () => {
 
     const response = await postInvite({
       email: "member@example.com",
-      role: "admin",
+      roleId: "admin",
       name: "兼務 次郎",
     });
 
@@ -263,7 +269,7 @@ describe("account invite route", () => {
       expect.objectContaining({
         authUid: "other-org-auth-uid",
         organizationId: "org-1",
-        role: "admin",
+        roleId: "admin",
         status: "active",
       }),
       { merge: true },
@@ -271,7 +277,7 @@ describe("account invite route", () => {
     expect(mocks.sendInvitation).toHaveBeenCalledTimes(1);
   });
 
-  it("adds membership and creates the consultant when inviting a consultant from another organization", async () => {
+  it("adds membership and creates the consultant when isConsultant=true from another organization", async () => {
     mocks.getUserByEmail.mockResolvedValue({
       uid: "other-org-auth-uid",
       metadata: {},
@@ -280,7 +286,8 @@ describe("account invite route", () => {
 
     const response = await postInvite({
       email: "consultant@example.com",
-      role: "consultant",
+      roleId: "admin",
+      isConsultant: true,
       name: "相談員 二郎",
     });
 
@@ -291,7 +298,7 @@ describe("account invite route", () => {
       expect.objectContaining({
         authUid: "other-org-auth-uid",
         organizationId: "org-1",
-        role: "consultant",
+        roleId: "admin",
         status: "invited",
       }),
       { merge: true },

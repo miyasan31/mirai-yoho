@@ -27,12 +27,7 @@ import {
 } from "@/infrastructure/firebase/firebase-auth-admin";
 import { db } from "@/infrastructure/firestore/firestore-customer";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
-import {
-  ACCOUNT_COLLECTION,
-  getAccount,
-  isAdminPanelUserRole,
-  listAccounts,
-} from "./accounts";
+import { ACCOUNT_COLLECTION, getAccount, listAccounts } from "./accounts";
 import { deleteAdminUserWithAuthCleanup } from "./admin-user-deletion";
 import {
   canUpdateDisplayNameTarget,
@@ -65,9 +60,7 @@ adminAccountRoutes.get(
     if (!listQueryParams) {
       return jsonError(400, "VALIDATION_ERROR", INVALID_LIST_QUERY_MESSAGE);
     }
-    const accounts = (await listAccounts(organizationId)).filter((account) =>
-      isAdminPanelUserRole(account.role),
-    );
+    const accounts = await listAccounts(organizationId);
     const accountAuthUids = accounts.map((account) => account.authUid);
     const [userByAuthUid, roles] = await Promise.all([
       getUsersByUids(accountAuthUids),
@@ -87,8 +80,8 @@ adminAccountRoutes.get(
         authUid: account.authUid,
         email: userRecord?.email ?? "",
         name: name || userRecord?.email || "",
-        role: account.role,
-        roleName: roleNameById.get(account.role) ?? account.role,
+        roleId: account.roleId,
+        roleName: roleNameById.get(account.roleId) ?? account.roleId,
         status: account.status === "active" ? "registered" : "pending",
         createdAt: createdAtDate.toISOString(),
         updatedAt: updatedAtDate.toISOString(),
@@ -113,23 +106,21 @@ adminAccountRoutes.post(
     const authUser = await verifyAuth(request);
     const actorAccount = requireSystemAdminRole(authUser, organizationId);
     const body = await request.json();
-    const { email, role, name, phone } = body;
+    const { email, roleId, name, phone, isConsultant } = body;
 
     if (!email || typeof email !== "string") {
       return jsonError(400, "VALIDATION_ERROR", "email is required");
     }
-    if (typeof role !== "string" || role.trim().length === 0) {
-      return jsonError(400, "VALIDATION_ERROR", "role is required");
+    if (typeof roleId !== "string" || roleId.trim().length === 0) {
+      return jsonError(400, "VALIDATION_ERROR", "roleId is required");
     }
-    const normalizedRole = role.trim();
-    if (normalizedRole !== "consultant") {
-      const roleEntity = await createRoleRepository().findById(
-        organizationId,
-        normalizedRole,
-      );
-      if (!roleEntity) {
-        return jsonError(400, "VALIDATION_ERROR", "role is invalid");
-      }
+    const normalizedRoleId = roleId.trim();
+    const roleEntity = await createRoleRepository().findById(
+      organizationId,
+      normalizedRoleId,
+    );
+    if (!roleEntity) {
+      return jsonError(400, "VALIDATION_ERROR", "roleId is invalid");
     }
     if (!name || typeof name !== "string") {
       return jsonError(400, "VALIDATION_ERROR", "name is required");
@@ -138,6 +129,7 @@ adminAccountRoutes.post(
     if (!normalizedDisplayName) {
       return jsonError(400, "VALIDATION_ERROR", "name must not be empty");
     }
+    const shouldCreateConsultant = isConsultant === true;
 
     let authUid: string;
     let userRecord = await getUserByEmail(email).catch(() => null);
@@ -167,7 +159,7 @@ adminAccountRoutes.post(
         {
           authUid,
           organizationId,
-          role: normalizedRole,
+          roleId: normalizedRoleId,
           name: normalizedDisplayName,
           status: userRecord.metadata.lastSignInTime ? "active" : "invited",
           createdAt: new Date(),
@@ -176,7 +168,7 @@ adminAccountRoutes.post(
         { merge: true },
       );
 
-    if (normalizedRole === "consultant") {
+    if (shouldCreateConsultant) {
       const repo = createConsultantRepository();
       const existing = await repo.findById(organizationId, authUid);
       if (!existing) {
@@ -203,7 +195,8 @@ adminAccountRoutes.post(
     const passwordResetLink = await generatePasswordResetLink(email);
     await new ResendEmailService().sendInvitation({
       email,
-      role: normalizedRole,
+      roleName: roleEntity.getName(),
+      isConsultant: shouldCreateConsultant,
       passwordResetLink,
     });
 
@@ -212,9 +205,10 @@ adminAccountRoutes.post(
       endpoint: `POST ${requestUrl.pathname}`,
       organizationId,
       actorAuthUid: authUser.authUid,
-      actorRole: actorAccount.role,
+      actorRoleId: actorAccount.roleId,
       targetEmail: email,
-      targetRole: normalizedRole,
+      targetRoleId: normalizedRoleId,
+      targetIsConsultant: shouldCreateConsultant,
       invitedAt: new Date().toISOString(),
     });
 
@@ -233,13 +227,6 @@ adminAccountRoutes.post(
     if (!account) {
       return jsonError(404, "NOT_FOUND", "Account not found");
     }
-    if (!isAdminPanelUserRole(account.role)) {
-      return jsonError(
-        400,
-        "VALIDATION_ERROR",
-        "consultant must be managed from consultant management",
-      );
-    }
 
     if (!userRecord.email) {
       return jsonError(
@@ -249,9 +236,18 @@ adminAccountRoutes.post(
       );
     }
 
+    const roleEntity = await createRoleRepository().findById(
+      organizationId,
+      account.roleId,
+    );
+    const isConsultant =
+      (await createConsultantRepository().findById(organizationId, authUid)) !==
+      null;
+
     await new ResendEmailService().sendInvitation({
       email: userRecord.email,
-      role: account.role,
+      roleName: roleEntity?.getName() ?? account.roleId,
+      isConsultant,
       passwordResetLink: await generatePasswordResetLink(userRecord.email),
     });
 
@@ -272,13 +268,6 @@ adminAccountRoutes.post(
     const account = await getAccount(organizationId, authUid);
     if (!account) {
       return jsonError(404, "NOT_FOUND", "Account not found");
-    }
-    if (!isAdminPanelUserRole(account.role)) {
-      return jsonError(
-        400,
-        "VALIDATION_ERROR",
-        "consultant must be managed from consultant management",
-      );
     }
     const userRecord = await getUser(authUid);
     if (!userRecord.email) {
@@ -314,15 +303,12 @@ adminAccountRoutes.patch(
     if (!account) {
       return jsonError(404, "NOT_FOUND", "Account not found");
     }
-    if (account.role === "consultant") {
-      return jsonError(
-        400,
-        "VALIDATION_ERROR",
-        "consultant display name must be updated from consultant profile",
-      );
-    }
     if (
-      !canUpdateDisplayNameTarget(actorAccount.role, authUser.authUid, authUid)
+      !canUpdateDisplayNameTarget(
+        actorAccount.roleId,
+        authUser.authUid,
+        authUid,
+      )
     ) {
       return jsonError(
         403,
@@ -351,51 +337,44 @@ adminAccountRoutes.patch(
     requireSystemAdminRole(authUser, organizationId);
     const authUid = param("authUid");
     const body = await request.json();
-    if (typeof body.role !== "string" || body.role.trim().length === 0) {
-      return jsonError(400, "VALIDATION_ERROR", "role is required");
+    if (typeof body.roleId !== "string" || body.roleId.trim().length === 0) {
+      return jsonError(400, "VALIDATION_ERROR", "roleId is required");
     }
-    const nextRole = body.role.trim();
+    const nextRoleId = body.roleId.trim();
     const nextRoleEntity = await createRoleRepository().findById(
       organizationId,
-      nextRole,
+      nextRoleId,
     );
     if (!nextRoleEntity) {
-      return jsonError(400, "VALIDATION_ERROR", "role is invalid");
+      return jsonError(400, "VALIDATION_ERROR", "roleId is invalid");
     }
     const account = await getAccount(organizationId, authUid);
     if (!account) {
       return jsonError(404, "NOT_FOUND", "Account not found");
     }
-    if (!isAdminPanelUserRole(account.role)) {
-      return jsonError(
-        400,
-        "VALIDATION_ERROR",
-        "consultant must be managed from consultant management",
-      );
-    }
     const activeAdminCount = (await listAccounts(organizationId)).filter(
-      (account) => account.role === "admin" && account.status === "active",
+      (account) => account.roleId === "admin" && account.status === "active",
     ).length;
 
     if (
       isLastAdminSelfDemotion({
         actorAuthUid: authUser.authUid,
         targetAuthUid: authUid,
-        nextRole,
+        nextRoleId,
         activeAdminCount,
       })
     ) {
       return jsonError(
         400,
         "LAST_ADMIN_ROLE_CHANGE_FORBIDDEN",
-        "最後の管理者は自分自身をオペレーターに変更できません",
+        "最後の管理者は自分自身を別のロールに変更できません",
       );
     }
 
     const accountId = getAccountDocId(organizationId, authUid);
     await db.collection(ACCOUNT_COLLECTION).doc(accountId).set(
       {
-        role: nextRole,
+        roleId: nextRoleId,
         updatedAt: new Date(),
       },
       { merge: true },
@@ -419,7 +398,6 @@ adminAccountRoutes.delete(
     const deletionTargetValidation = validateAdminUserDeletionTarget(
       authUser.authUid,
       authUid,
-      account.role,
     );
     if (!deletionTargetValidation.isAllowed) {
       return jsonError(

@@ -19,7 +19,8 @@ const mocks = vi.hoisted(() => {
     createBatchChargeUseCase: vi.fn(),
     createSendConsultationReminderUseCase: vi.fn(),
     requirePermission: vi.fn(),
-    requireRole: vi.fn(),
+    requireRoleId: vi.fn(),
+    requireConsultant: vi.fn(),
     verifyAuth: vi.fn(),
     verifyCloudSchedulerAuth: vi.fn(),
   };
@@ -83,7 +84,8 @@ vi.mock("@/infrastructure/auth/verify-auth", () => ({
 }));
 
 vi.mock("@/infrastructure/auth/require-role", () => ({
-  requireRole: mocks.requireRole,
+  requireRoleId: mocks.requireRoleId,
+  requireConsultant: mocks.requireConsultant,
 }));
 
 vi.mock("@/infrastructure/auth/require-permission", () => ({

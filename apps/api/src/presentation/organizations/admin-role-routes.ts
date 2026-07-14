@@ -90,10 +90,9 @@ adminRoleRoutes.get(
     ]);
     const assignedCountByRole = new Map<string, number>();
     for (const account of accounts) {
-      if (account.role === "consultant") continue;
       assignedCountByRole.set(
-        account.role,
-        (assignedCountByRole.get(account.role) ?? 0) + 1,
+        account.roleId,
+        (assignedCountByRole.get(account.roleId) ?? 0) + 1,
       );
     }
 
@@ -125,7 +124,7 @@ adminRoleRoutes.post(
         "roleId must be kebab-case and 2-63 characters",
       );
     }
-    if (parsed.roleId === "consultant" || isSystemRoleId(parsed.roleId)) {
+    if (isSystemRoleId(parsed.roleId)) {
       return jsonError(400, "VALIDATION_ERROR", "roleId is reserved");
     }
     const repository = createRoleRepository();
@@ -200,7 +199,7 @@ adminRoleRoutes.delete(
       );
     }
     const assignedAccounts = (await listAccounts(organizationId)).filter(
-      (account) => account.role === roleId,
+      (account) => account.roleId === roleId,
     );
     if (assignedAccounts.length > 0) {
       return jsonError(

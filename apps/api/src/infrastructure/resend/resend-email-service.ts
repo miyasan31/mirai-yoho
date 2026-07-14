@@ -164,22 +164,20 @@ export class ResendEmailService implements IEmailService {
 
   async sendInvitation(params: {
     email: string;
-    role: string;
+    roleName: string;
+    isConsultant: boolean;
     passwordResetLink: string;
   }): Promise<void> {
-    const roleLabels: Record<string, string> = {
-      admin: "管理者",
-      operator: "オペレーター",
-      consultant: "相談員",
-    };
-    const roleLabel = roleLabels[params.role] ?? params.role;
+    const roleLine = params.isConsultant
+      ? `${params.roleName}（相談員）`
+      : params.roleName;
 
     const subject = "【みらい予報】アカウント招待のお知らせ";
     const html = `
 				<h2>みらい予報へご招待します</h2>
 				<p>あなたのアカウントが作成されました。</p>
 				<ul>
-					<li><strong>ロール:</strong> ${roleLabel}</li>
+					<li><strong>ロール:</strong> ${roleLine}</li>
 				</ul>
 				<p>以下のリンクからパスワードを設定してください。</p>
 				<p><a href="${params.passwordResetLink}">パスワードを設定する</a></p>

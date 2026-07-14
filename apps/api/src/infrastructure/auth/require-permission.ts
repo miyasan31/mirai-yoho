@@ -58,7 +58,7 @@ export function requireSystemAdminRole(
     );
   }
 
-  if (account.role !== SYSTEM_ADMIN_ROLE_ID) {
+  if (account.roleId !== SYSTEM_ADMIN_ROLE_ID) {
     throw new AuthError(403, "FORBIDDEN", "Built-in admin role is required");
   }
 

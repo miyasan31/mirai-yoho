@@ -12,7 +12,7 @@ export function useGetAdminSlots(
   params?: GetAdminSlotsParams,
   options?: Record<string, unknown>,
 ) {
-  const { hasPermission, role } = useAuth();
+  const { hasPermission, isConsultant } = useAuth();
   const { organizationId } = useOrganizationRouting();
   return useGeneratedGetAdminSlots<
     GetAdminSlotsQueryResult,
@@ -28,7 +28,7 @@ export function useGetAdminSlots(
         ((options?.query as { enabled?: boolean } | undefined)?.enabled ??
           true) &&
         Boolean(organizationId) &&
-        (role === "consultant" || hasPermission("admin.slots.read")),
+        (isConsultant || hasPermission("admin.slots.read")),
     },
   });
 }

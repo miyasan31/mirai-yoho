@@ -1,7 +1,7 @@
 import * as v from "valibot";
 
 export const accountEditRoleFormSchema = v.object({
-  role: v.pipe(
+  roleId: v.pipe(
     v.string(),
     v.trim(),
     v.minLength(1, "ロールを選択してください"),

@@ -1,6 +1,6 @@
 # 命名台帳 — Firestore / Domain / API
 
-> Version 2.0 | 2026-06-26（2026-07-12 追記: §6.5 更新 / **2026-07-14 改訂: `organization-` プレフィックス全廃。§6.3-B の混在許容方針を撤回。詳細は §0** / **2026-07-15 改訂: Firebase Auth uid の正準名を `authUid` に統一。§3.5 の `uid` 維持合意を撤回。詳細は §0.1**）  
+> Version 2.0 | 2026-06-26（2026-07-12 追記: §6.5 更新 / **2026-07-14 改訂: `organization-` プレフィックス全廃。§6.3-B の混在許容方針を撤回。詳細は §0** / **2026-07-15 改訂: Firebase Auth uid の正準名を `authUid` に統一。§3.5 の `uid` 維持合意を撤回。詳細は §0.1** / **2026-07-15 改訂: `accounts.role` → `accounts.roleId` にリネームし `consultant` ロールを廃止。詳細は §3.5**）  
 > 対象: 策定時点の全11コレクション + 横断命名ルール（その後 `organization-roles`/`users`/`user-zoom-credentials`/`user-coupons` が追加され現行14コレクション。詳細は §6.5）  
 > 目的: 永続化・ドメイン・API の名称を整理し、今後の実装・リネームの基準とする
 
@@ -301,7 +301,7 @@
 
 ---
 
-### 3.5 `organization-accounts` → `accounts` ✅ 合意済み（2026-06-26 / 2026-07-14 改訂 §0 / 2026-07-15 改訂 §0.1）
+### 3.5 `organization-accounts` → `accounts` ✅ 合意済み（2026-06-26 / 2026-07-14 改訂 §0 / 2026-07-15 改訂 §0.1 / **2026-07-15 改訂: `role` → `roleId` + `consultant` ロール廃止**）
 
 **Doc ID**: `{organizationId}_{authUid}`（形式・値は維持）
 
@@ -310,7 +310,7 @@
 | コレクション | `organization-accounts` | **`accounts`** | **リネーム（§0）** |
 | Firebase Auth uid | `uid` | **`authUid`** | **リネーム（§0.1）** |
 | 組織 ID | `organizationId` | `organizationId` | 維持 |
-| ロール | `role` | `role` | 維持 |
+| ロール ID | ~~`role`~~ | **`roleId`** | **リネーム（2026-07-15）** |
 | ステータス | `active` / `invited` / `disabled` | **同名（API も統一）** | **合意: FS 値に API 統一** |
 | 表示名 | `user-preferences` 参照 | **`name`（account へ移動）** | **移動 + consultants と統一** |
 | 作成/更新 | `createdAt`, `updatedAt` | 同名 | 維持 |
@@ -321,13 +321,43 @@
 - **`name`** を `user-preferences` から **account ドキュメントへ移動**（consultants と統一）
 - **Repository 化**（`OrganizationAccountRepository` + `OrganizationAccountDoc`）
 
+#### 2026-07-15 追加: `role` → `roleId` + `consultant` ロール廃止
+
+**決定**: `accounts.role` フィールドを **`accounts.roleId`** にリネームし、値は常に `roles` コレクション（および `admin` / `operator` のシステムロール）に解決される **roleId 参照** として純化する。従来の番兵値 `"consultant"` は廃止し、既存データは `roleId: "admin"` にマイグレートする。
+
+| 従来 | 新 |
+|---|---|
+| `role: "admin"` / `"operator"` / `<custom>` | 同じ値を `roleId` にリネーム |
+| `role: "consultant"`（番兵値、roles に不在） | **`roleId: "admin"`**（マイグレーション時に一括変換） |
+| 相談員判定 = `role === "consultant"` | **相談員判定 = `consultants` コレクションに doc が存在** |
+
+**理由**:
+- カスタムロール（`roles` コレクション）の導入により、`role` フィールドは実質「roleId への参照」だったが、`"consultant"` だけが roles に不在の番兵値として混在し、命名が正しくなかった。
+- `"consultant"` を実体化してもロールとしての権限を持たず、招待経路・削除経路も別動線のため、アカウント種別（相談員か否か）と権限ロールは直交させる方が正確。
+- 副産物として「管理者かつ相談員」が表現可能になる（オーナー兼相談員の小規模組織で有用）。
+
+**適用範囲**:
+- Firestore accounts 全ドキュメント: `role` → `roleId` へリネーム、`"consultant"` は `"admin"` に変換
+- API: `Account.role` → `Account.roleId` + `isConsultant: boolean` を追加（`consultants` から導出）。`requireRole(authUser, orgId, "consultant") → requireConsultant`、`requireRoleId` 新設、`requireSystemAdminRole` は `roleId` 参照
+- ルート: 招待ペイロード `{ role }` → `{ roleId, isConsultant? }`、ロール変更ペイロード `{ role }` → `{ roleId }`、`admin-role-routes` の `roleId === "consultant"` 予約語チェック削除、`admin-account-routes` の `isAdminPanelUserRole` チェック削除
+- Email: `sendInvitation({ role })` → `sendInvitation({ roleName, isConsultant })`
+- OpenAPI: `AdminAccount.role → roleId`、`inviteAccount` / `updateAccountRole` のリクエスト schema
+- SPA (console-core / admin / consultant): `useAuth().role → useAuth().roleId`、`currentRole → currentRoleId`、`isConsultant` フラグ追加。相談員 SPA ログインゲートは `currentIsConsultant` で判定
+- `firestore.rules`: `hasRole → hasRoleId`（`accountData.role → .roleId`）、`isOrganizationConsultant` は `consultants` doc の `exists()` で判定（**terraform apply 必須**）
+
+**マイグレーション**: `apps/api/scripts/migrate-account-role-to-role-id.ts`
+- 全 accounts ドキュメントの `role` を削除し `roleId` を追加
+- `role: "consultant"` は `roleId: "admin"` に変換（リリース前のため破壊的変更を許容）
+- 冪等（`roleId` が既に入っているドキュメントはスキップ）
+- 実行: `pnpm dlx tsx --env-file=.env.local apps/api/scripts/migrate-account-role-to-role-id.ts`
+
 **連鎖影響**
 - `openapi.yaml` AdminAccount.status enum 変更（`pending` / `registered`）
-- `load-auth-context.ts` の name 取得元変更
+- `load-auth-context.ts` の name 取得元変更、および consultants コレクションを uid で 1 クエリ引いて `isConsultant` を展開
 - AdminAccount API の `displayName` → **`name`** にリネーム
 - ~~`user-preferences`~~ 廃止（§3.10）
 
-**根拠**: `load-auth-context.ts`, `route.ts`, `openapi.yaml` (AdminAccount), `auth-types.ts`
+**根拠**: `load-auth-context.ts`, `admin-account-routes.ts`, `openapi.yaml` (AdminAccount), `auth-types.ts`, `firestore.rules`
 
 ---
 

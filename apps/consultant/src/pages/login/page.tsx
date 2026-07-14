@@ -29,10 +29,7 @@ export default function ConsultantLoginPage() {
   const onSubmit = async (values: LoginFormValues) => {
     try {
       const result = await signIn(values.email, values.password);
-      if (
-        !result.currentOrganizationId ||
-        result.currentRole !== "consultant"
-      ) {
+      if (!result.currentOrganizationId || !result.currentIsConsultant) {
         throw new Error("No consultant access");
       }
       void navigate({

@@ -7,11 +7,12 @@ import { FirestoreRoleRepository } from "@/infrastructure/firestore/firestore-ro
 
 const ACCOUNT_COLLECTION = FIRESTORE_COLLECTIONS.accounts;
 const ORGANIZATION_COLLECTION = FIRESTORE_COLLECTIONS.organizations;
+const CONSULTANT_COLLECTION = FIRESTORE_COLLECTIONS.consultants;
 
 interface AccountDoc {
   authUid: string;
   organizationId: string;
-  role: string;
+  roleId: string;
   status: "active" | "invited" | "disabled";
   createdAt: Timestamp;
   name?: string;
@@ -20,6 +21,11 @@ interface AccountDoc {
 interface OrganizationDoc {
   organizationId: string;
   name: string;
+}
+
+interface ConsultantDoc {
+  organizationId: string;
+  consultantId: string;
 }
 
 function toIsoString(value: Timestamp | Date | string): string {
@@ -113,16 +119,27 @@ export async function loadAuthUser(authUid: string): Promise<AuthUser> {
     }
   }
 
+  const consultantSnapshot = await db
+    .collection(CONSULTANT_COLLECTION)
+    .where("consultantId", "==", authUid)
+    .get();
+  const consultantOrganizationIds = new Set(
+    consultantSnapshot.docs.map(
+      (doc) => (doc.data() as ConsultantDoc).organizationId,
+    ),
+  );
+
   const accounts: Account[] = accountDocs.map((doc) => ({
     organizationId: doc.organizationId,
     name: nameById.get(doc.organizationId) ?? doc.organizationId,
-    role: doc.role,
+    roleId: doc.roleId,
     roleName:
-      roleByOrganizationAndRole.get(`${doc.organizationId}_${doc.role}`)
-        ?.name ?? doc.role,
+      roleByOrganizationAndRole.get(`${doc.organizationId}_${doc.roleId}`)
+        ?.name ?? doc.roleId,
     permissions:
-      roleByOrganizationAndRole.get(`${doc.organizationId}_${doc.role}`)
+      roleByOrganizationAndRole.get(`${doc.organizationId}_${doc.roleId}`)
         ?.permissions ?? [],
+    isConsultant: consultantOrganizationIds.has(doc.organizationId),
     status: doc.status,
     createdAt: toIsoString(doc.createdAt),
   }));

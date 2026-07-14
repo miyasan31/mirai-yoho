@@ -61,16 +61,10 @@ import {
   canResetPassword,
 } from "./account-permissions";
 
-const ROLE_LABELS: Record<string, string> = {
-  admin: "管理者",
-  operator: "オペレーター",
-  consultant: "相談員",
-};
-
 export default function AdminAccountsPage() {
   const { organizationId } = useOrganizationRouting();
   const resolvedOrganizationId = organizationId ?? "";
-  const { role, user, hasPermission, refreshAuthContext } = useAuth();
+  const { roleId, user, hasPermission, refreshAuthContext } = useAuth();
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
     useListQueryParams();
   const { data, isLoading } = useAdminAccounts({
@@ -104,10 +98,11 @@ export default function AdminAccountsPage() {
     defaultValues: {
       email: "",
       name: "",
-      role: roles.find((item) => item.roleId !== "admin")?.roleId ?? "operator",
+      roleId:
+        roles.find((item) => item.roleId !== "admin")?.roleId ?? "operator",
     },
   });
-  const inviteRole = watchInvite("role");
+  const inviteRoleId = watchInvite("roleId");
   const inviteAccount = useInviteAccount();
 
   const [editRoleOpen, setEditRoleOpen] = useState(false);
@@ -120,10 +115,10 @@ export default function AdminAccountsPage() {
   } = useForm<AccountEditRoleFormValues>({
     resolver: valibotResolver(accountEditRoleFormSchema),
     defaultValues: {
-      role: "operator",
+      roleId: "operator",
     },
   });
-  const editRoleValue = watchEditRole("role");
+  const editRoleValue = watchEditRole("roleId");
   const updateAccountRole = useUpdateAccountRole();
   const [editDisplayNameOpen, setEditDisplayNameOpen] = useState(false);
   const [editDisplayNameAuthUid, setEditDisplayNameAuthUid] = useState("");
@@ -148,9 +143,7 @@ export default function AdminAccountsPage() {
   const resendAccountInvite = useResendAccountInvite();
   const resetAccountPassword = useResetAccountPassword();
 
-  const accounts = (data?.data?.accounts ?? []).filter(
-    (account) => account.role !== "consultant",
-  );
+  const accounts = data?.data?.accounts ?? [];
   const pagination = data?.data?.pagination ?? {
     page,
     pageSize,
@@ -158,6 +151,9 @@ export default function AdminAccountsPage() {
     totalPages: 1,
   };
   const currentAuthUid = user?.uid;
+  const roleNameById = new Map(
+    roles.map((role) => [role.roleId, role.name] as const),
+  );
 
   if (!organizationId || !hasPermission("admin.accounts.read")) {
     return <Text>権限がありません</Text>;
@@ -177,7 +173,7 @@ export default function AdminAccountsPage() {
         data: {
           email: values.email,
           name: values.name,
-          role: values.role,
+          roleId: values.roleId,
         },
       });
       toaster.success({
@@ -197,11 +193,11 @@ export default function AdminAccountsPage() {
       await updateAccountRole.mutateAsync({
         organizationId: resolvedOrganizationId,
         authUid: editRoleAuthUid,
-        data: { role: values.role },
+        data: { roleId: values.roleId },
       });
       toaster.success({
         title: "成功",
-        description: `ロールを ${ROLE_LABELS[values.role] ?? values.role} に変更しました`,
+        description: `ロールを ${roleNameById.get(values.roleId) ?? values.roleId} に変更しました`,
       });
       setEditRoleOpen(false);
       await invalidate();
@@ -296,7 +292,7 @@ export default function AdminAccountsPage() {
           </Text>
         </styled.div>
 
-        {role === "admin" && (
+        {roleId === "admin" && (
           <Dialog.Root
             open={inviteOpen}
             onOpenChange={(e) => {
@@ -343,11 +339,11 @@ export default function AdminAccountsPage() {
                     </Field.Root>
                     <Select.Root
                       collection={roleCollection}
-                      value={[inviteRole]}
+                      value={[inviteRoleId]}
                       onValueChange={(details) =>
                         setInviteValue(
-                          "role",
-                          details.value[0] as AccountInviteFormValues["role"],
+                          "roleId",
+                          details.value[0] as AccountInviteFormValues["roleId"],
                         )
                       }
                     >
@@ -446,9 +442,7 @@ export default function AdminAccountsPage() {
                     </styled.div>
                   </Table.Cell>
                   <Table.Cell>
-                    {adminUser.roleName ??
-                      ROLE_LABELS[adminUser.role] ??
-                      adminUser.role}
+                    {adminUser.roleName ?? adminUser.roleId}
                   </Table.Cell>
                   <Table.Cell>
                     <AccountStatusBadge status={adminUser.status} />
@@ -457,7 +451,7 @@ export default function AdminAccountsPage() {
                     <styled.div display="flex" gap="1">
                       {hasPermission("admin.accounts.display-name.manage") &&
                         canEditDisplayName(
-                          role,
+                          roleId,
                           user?.uid,
                           adminUser.authUid,
                         ) && (
@@ -477,7 +471,7 @@ export default function AdminAccountsPage() {
                             </IconButton>
                           </Tooltip>
                         )}
-                      {role === "admin" && adminUser.status !== "pending" && (
+                      {roleId === "admin" && adminUser.status !== "pending" && (
                         <Tooltip content="ロール変更">
                           <IconButton
                             variant="subtle"
@@ -485,8 +479,8 @@ export default function AdminAccountsPage() {
                             onClick={() => {
                               setEditRoleAuthUid(adminUser.authUid);
                               setEditRoleValue(
-                                "role",
-                                adminUser.role as AccountEditRoleFormValues["role"],
+                                "roleId",
+                                adminUser.roleId as AccountEditRoleFormValues["roleId"],
                               );
                               setEditRoleOpen(true);
                             }}
@@ -496,7 +490,7 @@ export default function AdminAccountsPage() {
                         </Tooltip>
                       )}
                       {hasPermission("admin.accounts.invite.resend") &&
-                        canResendInvite(role, adminUser.status) && (
+                        canResendInvite(roleId, adminUser.status) && (
                           <Tooltip content="招待メール再送">
                             <IconButton
                               variant="subtle"
@@ -518,7 +512,7 @@ export default function AdminAccountsPage() {
                           </Tooltip>
                         )}
                       {hasPermission("admin.accounts.password-reset") &&
-                        canResetPassword(role, adminUser.status) && (
+                        canResetPassword(roleId, adminUser.status) && (
                           <Tooltip content="パスワードリセット">
                             <IconButton
                               variant="subtle"
@@ -540,7 +534,7 @@ export default function AdminAccountsPage() {
                           </Tooltip>
                         )}
                       {hasPermission("admin.accounts.delete") &&
-                        canDeleteAdminAccount(role) && (
+                        canDeleteAdminAccount(roleId) && (
                           <Tooltip content="削除">
                             <IconButton
                               variant="subtle"
@@ -581,7 +575,7 @@ export default function AdminAccountsPage() {
         onOpenChange={(e) => {
           setEditRoleOpen(e.open);
           if (!e.open) {
-            resetEditRoleForm({ role: "operator" });
+            resetEditRoleForm({ roleId: "operator" });
           }
         }}
       >
@@ -598,8 +592,8 @@ export default function AdminAccountsPage() {
                   value={[editRoleValue]}
                   onValueChange={(details) =>
                     setEditRoleValue(
-                      "role",
-                      details.value[0] as AccountEditRoleFormValues["role"],
+                      "roleId",
+                      details.value[0] as AccountEditRoleFormValues["roleId"],
                     )
                   }
                 >

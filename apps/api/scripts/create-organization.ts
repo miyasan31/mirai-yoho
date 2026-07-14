@@ -60,7 +60,7 @@ async function main() {
     .set({
       authUid: userRecord.uid,
       organizationId,
-      role: "admin",
+      roleId: "admin",
       status: userRecord.metadata.lastSignInTime ? "active" : "invited",
       createdAt: now,
       updatedAt: now,

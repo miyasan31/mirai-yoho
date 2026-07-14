@@ -30,7 +30,7 @@ slotRoutes.post(
         `User does not belong to organization '${organizationId}'`,
       );
     }
-    if (account.role !== "consultant") {
+    if (!account.isConsultant) {
       requirePermission(authUser, organizationId, "admin.slots.manage");
     }
 
@@ -44,7 +44,7 @@ slotRoutes.post(
       );
     }
 
-    if (account.role === "consultant" && authUser.authUid !== consultantId) {
+    if (account.isConsultant && authUser.authUid !== consultantId) {
       return jsonError(
         403,
         "FORBIDDEN",
@@ -118,7 +118,7 @@ slotRoutes.delete(
         `User does not belong to organization '${organizationId}'`,
       );
     }
-    if (account.role !== "consultant") {
+    if (!account.isConsultant) {
       requirePermission(authUser, organizationId, "admin.slots.manage");
     }
     const slotId = param("slotId");
@@ -127,10 +127,7 @@ slotRoutes.delete(
     if (!slot) {
       return jsonError(404, "NOT_FOUND", "Slot not found");
     }
-    if (
-      account.role === "consultant" &&
-      slot.getConsultantId() !== authUser.authUid
-    ) {
+    if (account.isConsultant && slot.getConsultantId() !== authUser.authUid) {
       return jsonError(
         403,
         "FORBIDDEN",

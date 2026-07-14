@@ -37,13 +37,14 @@ adminListingRoutes.get(
         `User does not belong to organization '${organizationId}'`,
       );
     }
-    if (account.role !== "consultant") {
+    if (!account.isConsultant) {
       requirePermission(authUser, organizationId, "admin.slots.read");
     }
 
     const requestedConsultantId = requestUrl.searchParams.get("consultantId");
-    const consultantId =
-      account.role === "consultant" ? authUser.authUid : requestedConsultantId;
+    const consultantId = account.isConsultant
+      ? authUser.authUid
+      : requestedConsultantId;
     const repository = createSlotRepository();
     const settings =
       (await createSettingsRepository().findByOrganizationId(organizationId)) ??

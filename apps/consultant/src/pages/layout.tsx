@@ -33,7 +33,7 @@ export default function ConsultantLayout({
 }) {
   const {
     user,
-    role,
+    isConsultant,
     accounts,
     currentOrganizationId,
     currentDisplayName,
@@ -73,10 +73,17 @@ export default function ConsultantLayout({
       return;
     }
 
-    if (role !== "consultant") {
+    if (!isConsultant) {
       void navigate({ href: "/404", replace: true });
     }
-  }, [currentOrganizationId, isLoading, navigate, organizationId, role, user]);
+  }, [
+    currentOrganizationId,
+    isConsultant,
+    isLoading,
+    navigate,
+    organizationId,
+    user,
+  ]);
 
   useEffect(() => {
     const handleUnauthorized = () => {
@@ -93,7 +100,7 @@ export default function ConsultantLayout({
     return <SidebarLayoutSkeleton navItemCount={NAV_ITEMS.length} />;
   }
 
-  if (!user || !organizationId || role !== "consultant") {
+  if (!user || !organizationId || !isConsultant) {
     return null;
   }
 
