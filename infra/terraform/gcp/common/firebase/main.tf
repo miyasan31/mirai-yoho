@@ -26,10 +26,10 @@ locals {
     "ZOOM_CREDENTIAL_ENCRYPTION_KEY",
   ])
 
-  # SPA サイトのカスタムドメイン用。site キー（user/admin/consultant）→ site_id。
+  # SPA サイトのカスタムドメイン用。site キー（user/console/consultant）→ site_id。
   spa_hosting_site_ids = {
     user       = google_firebase_hosting_site.user_spa.site_id
-    admin      = google_firebase_hosting_site.admin_spa.site_id
+    console    = google_firebase_hosting_site.console_spa.site_id
     consultant = google_firebase_hosting_site.consultant_spa.site_id
   }
 
@@ -207,10 +207,10 @@ resource "google_firebase_hosting_site" "user_spa" {
   site_id  = "${var.project_id}-user"
 }
 
-resource "google_firebase_hosting_site" "admin_spa" {
+resource "google_firebase_hosting_site" "console_spa" {
   provider = google-beta
   project  = var.project_id
-  site_id  = "${var.project_id}-admin"
+  site_id  = "${var.project_id}-console"
 }
 
 resource "google_firebase_hosting_site" "consultant_spa" {
@@ -219,14 +219,10 @@ resource "google_firebase_hosting_site" "consultant_spa" {
   site_id  = "${var.project_id}-consultant"
 }
 
-# NOTE: `${project}-console` サイトは admin / consultant への分割で廃止。
-# 既存サイトはカットオーバー完了後に手動削除する（Firebase Console もしくは
-# `firebase hosting:sites:delete`）。移行期間中に残しておいても課金影響は軽微。
-# resource "google_firebase_hosting_site" "console_spa" {
-#   provider = google-beta
-#   project  = var.project_id
-#   site_id  = "${var.project_id}-console"
-# }
+# NOTE: 旧 `${project}-admin` サイトは `${project}-console` へ再統合されたため廃止。
+# 旧サイトはカットオーバー完了後に手動削除する（Firebase Console もしくは
+# `firebase hosting:sites:delete`）。state 上は `moved` block で console_spa へ
+# 引き継ぐが、`site_id` が ForceNew のため実質は destroy + create となる。
 
 # SPA サイトのカスタムドメイン。App Hosting（api）と同じく Terraform で管理する。
 # DNS は外部（Xserver）管理のため、apply では検証を待たず（wait_dns_verification = false）、

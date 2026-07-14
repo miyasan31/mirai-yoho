@@ -35,13 +35,13 @@ variable "authorized_domains" {
 }
 
 variable "spa_hosting_custom_domains" {
-  description = "Custom domains for the SPA Firebase Hosting sites, keyed by site (user / admin / consultant). Omit a key to skip custom domain management for that site."
+  description = "Custom domains for the SPA Firebase Hosting sites, keyed by site (user / console / consultant). Omit a key to skip custom domain management for that site."
   type        = map(string)
   default     = {}
 
   validation {
-    condition     = alltrue([for site in keys(var.spa_hosting_custom_domains) : contains(["user", "admin", "consultant"], site)])
-    error_message = "spa_hosting_custom_domains keys must be one of: user, admin, consultant."
+    condition     = alltrue([for site in keys(var.spa_hosting_custom_domains) : contains(["user", "console", "consultant"], site)])
+    error_message = "spa_hosting_custom_domains keys must be one of: user, console, consultant."
   }
 
   validation {

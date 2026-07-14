@@ -2,11 +2,11 @@
 
 ## リポジトリ構成（pnpm workspace モノレポ）
 - `apps/user` … 顧客向け予約 SPA（Vite + TanStack Router、認証なし）
-- `apps/admin` … 管理者・オペレーター向けコンソール SPA（Vite + TanStack Router、`admin.console.miraiyohou.com`）
-- `apps/consultant` … 相談員向けコンソール SPA（Vite + TanStack Router、`consultant.console.miraiyohou.com`）
+- `apps/console` … 管理者・オペレーター向けコンソール SPA（Vite + TanStack Router、`console.miraiyohou.com`）
+- `apps/consultant` … 相談員向け SPA（Vite + TanStack Router、`consultant.miraiyohou.com`）
 - `apps/api` … API サーバー（Hono + @hono/node-server）+ batch worker。domain / application / infrastructure / presentation 層はここに置く
 - `packages/api-client` … OpenAPI スペックと Orval 生成の React Query hooks
-- `packages/console-core` … admin / consultant で共有する認証・API クライアント・組織ルーティング等のロジック（panda 非依存）
+- `packages/console-core` … console / consultant で共有する認証・API クライアント・組織ルーティング等のロジック（panda 非依存）
 - `packages/ui` … Panda CSS preset（panda.preset.ts）と Park UI / Ark UI ベースの共有 UI コンポーネント
 - `packages/shared` … フロントと API で共有する純粋ロジック
 
@@ -56,5 +56,5 @@
 - 集約の外から集約メンバーを直接変更しない
 - any 型を使わない
 - `packages/api-client/src/generated/` や各パッケージの `styled-system/` を手動編集しない（`pnpm generate` で再生成される）
-- SPA（apps/user, apps/admin, apps/consultant）から firebase-admin / stripe（サーバー SDK）/ domain 層を import しない
+- SPA（apps/user, apps/console, apps/consultant）から firebase-admin / stripe（サーバー SDK）/ domain 層を import しない
 - `firestore.rules` / `storage.rules` は Terraform 管理（`infra/terraform/gcp/common/firebase-rules`）。`firebase deploy --only firestore` / `--only storage` で配信しない（`deploy-hosting.yml` は `--only hosting` のみ。state ドリフトを防ぐため rules は必ず terraform apply 経由）
