@@ -44,7 +44,7 @@ async function main() {
   }
 
   const now = Timestamp.now();
-  const accountId = `${organizationId}_${userRecord.uid}`;
+  const accountDocId = `${organizationId}_${userRecord.uid}`;
   const defaultConsultantStatuses = createDefaultConsultantStatuses();
 
   await db.collection(ORGANIZATION_COLLECTION).doc(organizationId).set({
@@ -56,9 +56,9 @@ async function main() {
 
   await db
     .collection(ACCOUNT_COLLECTION)
-    .doc(accountId)
+    .doc(accountDocId)
     .set({
-      authUid: userRecord.uid,
+      accountId: userRecord.uid,
       organizationId,
       roleId: "admin",
       status: userRecord.metadata.lastSignInTime ? "active" : "invited",

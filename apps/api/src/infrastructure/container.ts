@@ -22,6 +22,7 @@ import { envServer } from "@/config/env.server";
 import { AesGcmTokenCipher } from "@/infrastructure/crypto/aes-gcm-token-cipher";
 import { FirebaseAuthAdminService } from "@/infrastructure/firebase/firebase-auth-admin-service";
 import { FirebaseUserContactService } from "@/infrastructure/firebase/firebase-user-contact-service";
+import { FirestoreAccountRepository } from "@/infrastructure/firestore/firestore-account-repository";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
 import { FirestoreCustomerRepository } from "@/infrastructure/firestore/firestore-customer-repository";
@@ -39,6 +40,10 @@ import { ResendEmailService } from "@/infrastructure/resend/resend-email-service
 import { StripeService } from "@/infrastructure/stripe/stripe-service";
 import { ZoomService } from "@/infrastructure/zoom/zoom-service";
 import { ZoomUserOAuthService } from "@/infrastructure/zoom/zoom-user-oauth-service";
+
+export function createAccountRepository() {
+  return new FirestoreAccountRepository();
+}
 
 export function createConsultantRepository() {
   return new FirestoreConsultantRepository();

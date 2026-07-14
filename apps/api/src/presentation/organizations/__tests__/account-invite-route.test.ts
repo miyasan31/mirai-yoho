@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { Account } from "@/domain/account/account";
 
 const mocks = vi.hoisted(() => {
   class MockAuthError extends Error {
@@ -20,8 +21,9 @@ const mocks = vi.hoisted(() => {
     requireSystemAdminRole: vi.fn(),
     requireRoleId: vi.fn(),
     requireConsultant: vi.fn(),
-    accountDocGet: vi.fn(),
-    accountDocSet: vi.fn(),
+    accountFindById: vi.fn(),
+    accountSave: vi.fn(),
+    createAccountRepository: vi.fn(),
     createUser: vi.fn(),
     getUser: vi.fn(),
     getUserByEmail: vi.fn(),
@@ -45,6 +47,7 @@ vi.mock("@/config/env.server", () => ({
 }));
 
 vi.mock("@/infrastructure/container", () => ({
+  createAccountRepository: mocks.createAccountRepository,
   createBatchChargeUseCase: vi.fn(),
   createBookingRepository: vi.fn(),
   createCancelBookingUseCase: vi.fn(),
@@ -69,8 +72,8 @@ vi.mock("@/infrastructure/firestore/firestore-customer", () => ({
   db: {
     collection: vi.fn(() => ({
       doc: vi.fn(() => ({
-        get: mocks.accountDocGet,
-        set: mocks.accountDocSet,
+        get: vi.fn(),
+        set: vi.fn(),
       })),
     })),
   },
@@ -124,6 +127,22 @@ function postInvite(body: Record<string, unknown>) {
   });
 }
 
+function makeExistingAccount(overrides: {
+  accountId: string;
+  roleId?: string;
+  status?: "active" | "invited" | "disabled";
+}): Account {
+  return Account.reconstruct({
+    organizationId: "org-1",
+    accountId: overrides.accountId,
+    roleId: overrides.roleId ?? "operator",
+    status: overrides.status ?? "active",
+    name: null,
+    createdAt: new Date("2026-01-01T00:00:00Z"),
+    updatedAt: new Date("2026-01-01T00:00:00Z"),
+  });
+}
+
 describe("account invite route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -149,8 +168,12 @@ describe("account invite route", () => {
     mocks.createSettingsRepository.mockReturnValue({
       findByOrganizationId: vi.fn().mockResolvedValue(null),
     });
-    mocks.accountDocGet.mockResolvedValue({ exists: false });
-    mocks.accountDocSet.mockResolvedValue(undefined);
+    mocks.createAccountRepository.mockReturnValue({
+      findById: mocks.accountFindById,
+      save: mocks.accountSave,
+    });
+    mocks.accountFindById.mockResolvedValue(null);
+    mocks.accountSave.mockResolvedValue(undefined);
     mocks.createUser.mockResolvedValue("new-auth-uid");
     mocks.getUser.mockResolvedValue({ uid: "new-auth-uid", metadata: {} });
     mocks.getUserByEmail.mockRejectedValue(new Error("not found"));
@@ -168,20 +191,19 @@ describe("account invite route", () => {
     });
 
     expect(response.status).toBe(201);
-    await expect(response.json()).resolves.toEqual({ authUid: "new-auth-uid" });
+    await expect(response.json()).resolves.toEqual({
+      accountId: "new-auth-uid",
+    });
     expect(mocks.createUser).toHaveBeenCalledWith(
       "new@example.com",
       expect.any(String),
     );
-    expect(mocks.accountDocSet).toHaveBeenCalledWith(
-      expect.objectContaining({
-        authUid: "new-auth-uid",
-        organizationId: "org-1",
-        roleId: "admin",
-        status: "invited",
-      }),
-      { merge: true },
-    );
+    expect(mocks.accountSave).toHaveBeenCalledTimes(1);
+    const savedAccount = mocks.accountSave.mock.calls[0][0] as Account;
+    expect(savedAccount.getAccountId()).toBe("new-auth-uid");
+    expect(savedAccount.getOrganizationId()).toBe("org-1");
+    expect(savedAccount.getRoleId()).toBe("admin");
+    expect(savedAccount.getStatus()).toBe("invited");
     expect(mocks.sendInvitation).toHaveBeenCalledTimes(1);
   });
 
@@ -190,15 +212,13 @@ describe("account invite route", () => {
       uid: "existing-auth-uid",
       metadata: { lastSignInTime: "2026-01-01T00:00:00Z" },
     });
-    mocks.accountDocGet.mockResolvedValue({
-      exists: true,
-      data: () => ({
-        authUid: "existing-auth-uid",
-        organizationId: "org-1",
+    mocks.accountFindById.mockResolvedValue(
+      makeExistingAccount({
+        accountId: "existing-auth-uid",
         roleId: "operator",
         status: "active",
       }),
-    });
+    );
 
     const response = await postInvite({
       email: "member@example.com",
@@ -212,7 +232,7 @@ describe("account invite route", () => {
       message: "このメールアドレスは既にこの組織に登録されています",
     });
     expect(mocks.createUser).not.toHaveBeenCalled();
-    expect(mocks.accountDocSet).not.toHaveBeenCalled();
+    expect(mocks.accountSave).not.toHaveBeenCalled();
     expect(mocks.sendInvitation).not.toHaveBeenCalled();
   });
 
@@ -221,15 +241,13 @@ describe("account invite route", () => {
       uid: "existing-auth-uid",
       metadata: {},
     });
-    mocks.accountDocGet.mockResolvedValue({
-      exists: true,
-      data: () => ({
-        authUid: "existing-auth-uid",
-        organizationId: "org-1",
+    mocks.accountFindById.mockResolvedValue(
+      makeExistingAccount({
+        accountId: "existing-auth-uid",
         roleId: "admin",
         status: "invited",
       }),
-    });
+    );
 
     const response = await postInvite({
       email: "consultant@example.com",
@@ -252,7 +270,7 @@ describe("account invite route", () => {
       uid: "other-org-auth-uid",
       metadata: { lastSignInTime: "2026-01-01T00:00:00Z" },
     });
-    mocks.accountDocGet.mockResolvedValue({ exists: false });
+    mocks.accountFindById.mockResolvedValue(null);
 
     const response = await postInvite({
       email: "member@example.com",
@@ -262,18 +280,15 @@ describe("account invite route", () => {
 
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toEqual({
-      authUid: "other-org-auth-uid",
+      accountId: "other-org-auth-uid",
     });
     expect(mocks.createUser).not.toHaveBeenCalled();
-    expect(mocks.accountDocSet).toHaveBeenCalledWith(
-      expect.objectContaining({
-        authUid: "other-org-auth-uid",
-        organizationId: "org-1",
-        roleId: "admin",
-        status: "active",
-      }),
-      { merge: true },
-    );
+    expect(mocks.accountSave).toHaveBeenCalledTimes(1);
+    const savedAccount = mocks.accountSave.mock.calls[0][0] as Account;
+    expect(savedAccount.getAccountId()).toBe("other-org-auth-uid");
+    expect(savedAccount.getOrganizationId()).toBe("org-1");
+    expect(savedAccount.getRoleId()).toBe("admin");
+    expect(savedAccount.getStatus()).toBe("active");
     expect(mocks.sendInvitation).toHaveBeenCalledTimes(1);
   });
 
@@ -282,7 +297,7 @@ describe("account invite route", () => {
       uid: "other-org-auth-uid",
       metadata: {},
     });
-    mocks.accountDocGet.mockResolvedValue({ exists: false });
+    mocks.accountFindById.mockResolvedValue(null);
 
     const response = await postInvite({
       email: "consultant@example.com",
@@ -294,15 +309,10 @@ describe("account invite route", () => {
     expect(response.status).toBe(201);
     expect(mocks.createUser).not.toHaveBeenCalled();
     expect(mocks.consultantSave).toHaveBeenCalledTimes(1);
-    expect(mocks.accountDocSet).toHaveBeenCalledWith(
-      expect.objectContaining({
-        authUid: "other-org-auth-uid",
-        organizationId: "org-1",
-        roleId: "admin",
-        status: "invited",
-      }),
-      { merge: true },
-    );
+    expect(mocks.accountSave).toHaveBeenCalledTimes(1);
+    const savedAccount = mocks.accountSave.mock.calls[0][0] as Account;
+    expect(savedAccount.getAccountId()).toBe("other-org-auth-uid");
+    expect(savedAccount.getStatus()).toBe("invited");
     expect(mocks.sendInvitation).toHaveBeenCalledTimes(1);
   });
 });

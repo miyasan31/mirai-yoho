@@ -14,8 +14,10 @@ import {
   requireSystemAdminRole,
 } from "@/infrastructure/auth/require-permission";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
-import { createRoleRepository } from "@/infrastructure/container";
-import { listAccounts } from "./accounts";
+import {
+  createAccountRepository,
+  createRoleRepository,
+} from "@/infrastructure/container";
 import {
   deleteRoute,
   getRoute,
@@ -86,13 +88,14 @@ adminRoleRoutes.get(
     requirePermission(authUser, organizationId, "admin.roles.read");
     const [roles, accounts] = await Promise.all([
       createRoleRepository().findByOrganizationId(organizationId),
-      listAccounts(organizationId),
+      createAccountRepository().findByOrganizationId(organizationId),
     ]);
     const assignedCountByRole = new Map<string, number>();
     for (const account of accounts) {
+      const accountRoleId = account.getRoleId();
       assignedCountByRole.set(
-        account.roleId,
-        (assignedCountByRole.get(account.roleId) ?? 0) + 1,
+        accountRoleId,
+        (assignedCountByRole.get(accountRoleId) ?? 0) + 1,
       );
     }
 
@@ -198,9 +201,9 @@ adminRoleRoutes.delete(
         "System role cannot be deleted",
       );
     }
-    const assignedAccounts = (await listAccounts(organizationId)).filter(
-      (account) => account.roleId === roleId,
-    );
+    const assignedAccounts = (
+      await createAccountRepository().findByOrganizationId(organizationId)
+    ).filter((account) => account.getRoleId() === roleId);
     if (assignedAccounts.length > 0) {
       return jsonError(
         409,

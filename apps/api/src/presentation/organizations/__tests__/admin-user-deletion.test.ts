@@ -1,38 +1,53 @@
 import { describe, expect, it, vi } from "vitest";
+import { Account } from "@/domain/account/account";
 import { deleteAdminUserWithAuthCleanup } from "../admin-user-deletion";
+
+function buildAccount(): Account {
+  return Account.reconstruct({
+    organizationId: "org-1",
+    accountId: "user-1",
+    roleId: "admin",
+    status: "active",
+    name: "Test",
+    createdAt: new Date("2026-01-01T00:00:00Z"),
+    updatedAt: new Date("2026-01-01T00:00:00Z"),
+  });
+}
 
 describe("admin-user-deletion", () => {
   it("deletes account and auth user when this is the last account", async () => {
-    const countAccountsByAuthUid = vi.fn().mockResolvedValue(1);
+    const account = buildAccount();
+    const countAccountsByAccountId = vi.fn().mockResolvedValue(1);
     const deleteAccount = vi.fn().mockResolvedValue(undefined);
     const restoreAccount = vi.fn().mockResolvedValue(undefined);
     const deleteAuthUser = vi.fn().mockResolvedValue(undefined);
 
     await deleteAdminUserWithAuthCleanup({
-      authUid: "user-1",
-      accountData: { authUid: "user-1", organizationId: "org-1" },
-      countAccountsByAuthUid,
+      accountId: "user-1",
+      account,
+      countAccountsByAccountId,
       deleteAccount,
       restoreAccount,
       deleteAuthUser,
     });
 
-    expect(countAccountsByAuthUid).toHaveBeenCalledWith("user-1");
+    expect(countAccountsByAccountId).toHaveBeenCalledWith("user-1");
     expect(deleteAccount).toHaveBeenCalledTimes(1);
     expect(deleteAuthUser).toHaveBeenCalledWith("user-1");
     expect(restoreAccount).not.toHaveBeenCalled();
   });
 
   it("deletes only account when user still belongs to other organizations", async () => {
-    const countAccountsByAuthUid = vi.fn().mockResolvedValue(2);
+    const account = buildAccount();
+    const countAccountsByAccountId = vi.fn().mockResolvedValue(2);
     const deleteAccount = vi.fn().mockResolvedValue(undefined);
     const restoreAccount = vi.fn().mockResolvedValue(undefined);
     const deleteAuthUser = vi.fn().mockResolvedValue(undefined);
 
     await deleteAdminUserWithAuthCleanup({
-      authUid: "user-1",
-      accountData: { authUid: "user-1", organizationId: "org-1" },
-      countAccountsByAuthUid,
+      accountId: "user-1",
+      account,
+      countAccountsByAccountId,
       deleteAccount,
       restoreAccount,
       deleteAuthUser,
@@ -44,19 +59,19 @@ describe("admin-user-deletion", () => {
   });
 
   it("restores account and rethrows when auth deletion fails", async () => {
-    const countAccountsByAuthUid = vi.fn().mockResolvedValue(1);
+    const account = buildAccount();
+    const countAccountsByAccountId = vi.fn().mockResolvedValue(1);
     const deleteAccount = vi.fn().mockResolvedValue(undefined);
     const restoreAccount = vi.fn().mockResolvedValue(undefined);
     const deleteAuthUser = vi
       .fn()
       .mockRejectedValue(new Error("firebase auth delete failed"));
-    const accountData = { authUid: "user-1", organizationId: "org-1" };
 
     await expect(
       deleteAdminUserWithAuthCleanup({
-        authUid: "user-1",
-        accountData,
-        countAccountsByAuthUid,
+        accountId: "user-1",
+        account,
+        countAccountsByAccountId,
         deleteAccount,
         restoreAccount,
         deleteAuthUser,
@@ -65,6 +80,6 @@ describe("admin-user-deletion", () => {
 
     expect(deleteAccount).toHaveBeenCalledTimes(1);
     expect(deleteAuthUser).toHaveBeenCalledWith("user-1");
-    expect(restoreAccount).toHaveBeenCalledWith(accountData);
+    expect(restoreAccount).toHaveBeenCalledWith(account);
   });
 });

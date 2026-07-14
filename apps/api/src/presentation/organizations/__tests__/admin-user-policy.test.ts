@@ -5,8 +5,8 @@ describe("admin user policy", () => {
   it("blocks the last admin from changing themself to any non-admin role", () => {
     expect(
       isLastAdminSelfDemotion({
-        actorAuthUid: "admin-1",
-        targetAuthUid: "admin-1",
+        actorAccountId: "admin-1",
+        targetAccountId: "admin-1",
         nextRoleId: "booking-manager",
         activeAdminCount: 1,
       }),
@@ -16,8 +16,8 @@ describe("admin user policy", () => {
   it("allows changing another admin when at least one admin remains", () => {
     expect(
       isLastAdminSelfDemotion({
-        actorAuthUid: "admin-1",
-        targetAuthUid: "admin-2",
+        actorAccountId: "admin-1",
+        targetAccountId: "admin-2",
         nextRoleId: "booking-manager",
         activeAdminCount: 2,
       }),

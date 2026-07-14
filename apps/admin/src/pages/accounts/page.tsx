@@ -106,7 +106,7 @@ export default function AdminAccountsPage() {
   const inviteAccount = useInviteAccount();
 
   const [editRoleOpen, setEditRoleOpen] = useState(false);
-  const [editRoleAuthUid, setEditRoleAuthUid] = useState("");
+  const [editRoleAccountId, setEditRoleAccountId] = useState<string>("");
   const {
     handleSubmit: handleEditRoleSubmit,
     setValue: setEditRoleValue,
@@ -121,7 +121,8 @@ export default function AdminAccountsPage() {
   const editRoleValue = watchEditRole("roleId");
   const updateAccountRole = useUpdateAccountRole();
   const [editDisplayNameOpen, setEditDisplayNameOpen] = useState(false);
-  const [editDisplayNameAuthUid, setEditDisplayNameAuthUid] = useState("");
+  const [editDisplayNameAccountId, setEditDisplayNameAccountId] =
+    useState<string>("");
   const {
     register: registerEditDisplayName,
     handleSubmit: handleEditDisplayNameSubmit,
@@ -136,7 +137,7 @@ export default function AdminAccountsPage() {
   const updateAccountDisplayName = useUpdateAccountDisplayName();
 
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteAuthUid, setDeleteAuthUid] = useState("");
+  const [deleteAccountId, setDeleteAccountId] = useState<string>("");
   const [deleteEmail, setDeleteEmail] = useState("");
   const deleteAdminAccount = useDeleteAdminAccount();
 
@@ -150,7 +151,7 @@ export default function AdminAccountsPage() {
     total: accounts.length,
     totalPages: 1,
   };
-  const currentAuthUid = user?.uid;
+  const currentAccountId = user?.uid;
   const roleNameById = new Map(
     roles.map((role) => [role.roleId, role.name] as const),
   );
@@ -192,7 +193,7 @@ export default function AdminAccountsPage() {
     try {
       await updateAccountRole.mutateAsync({
         organizationId: resolvedOrganizationId,
-        authUid: editRoleAuthUid,
+        accountId: editRoleAccountId,
         data: { roleId: values.roleId },
       });
       toaster.success({
@@ -213,7 +214,7 @@ export default function AdminAccountsPage() {
     try {
       await updateAccountDisplayName.mutateAsync({
         organizationId: resolvedOrganizationId,
-        authUid: editDisplayNameAuthUid,
+        accountId: editDisplayNameAccountId,
         data: { name: values.name },
       });
       toaster.success({
@@ -227,11 +228,11 @@ export default function AdminAccountsPage() {
     }
   };
 
-  const handleResendInvite = async (authUid: string, email: string) => {
+  const handleResendInvite = async (accountId: string, email: string) => {
     try {
       await resendAccountInvite.mutateAsync({
         organizationId: resolvedOrganizationId,
-        authUid,
+        accountId,
       });
       toaster.success({
         title: "成功",
@@ -242,11 +243,11 @@ export default function AdminAccountsPage() {
     }
   };
 
-  const handleResetPassword = async (authUid: string, email: string) => {
+  const handleResetPassword = async (accountId: string, email: string) => {
     try {
       await resetAccountPassword.mutateAsync({
         organizationId: resolvedOrganizationId,
-        authUid,
+        accountId,
       });
       toaster.success({
         title: "成功",
@@ -261,7 +262,7 @@ export default function AdminAccountsPage() {
     try {
       await deleteAdminAccount.mutateAsync({
         organizationId: resolvedOrganizationId,
-        authUid: deleteAuthUid,
+        accountId: deleteAccountId,
       });
       toaster.success({
         title: "成功",
@@ -408,9 +409,11 @@ export default function AdminAccountsPage() {
             <Table.Body>
               {accounts.map((adminUser) => (
                 <Table.Row
-                  key={adminUser.authUid}
+                  key={adminUser.accountId}
                   bg={
-                    currentAuthUid === adminUser.authUid ? "blue.2" : undefined
+                    currentAccountId === adminUser.accountId
+                      ? "blue.2"
+                      : undefined
                   }
                 >
                   <Table.Cell>{adminUser.email}</Table.Cell>
@@ -423,7 +426,7 @@ export default function AdminAccountsPage() {
                       <Text as="span">
                         {adminUser.name || adminUser.email || "-"}
                       </Text>
-                      {currentAuthUid === adminUser.authUid && (
+                      {currentAccountId === adminUser.accountId && (
                         <styled.div
                           display="inline-flex"
                           alignItems="center"
@@ -453,14 +456,16 @@ export default function AdminAccountsPage() {
                         canEditDisplayName(
                           roleId,
                           user?.uid,
-                          adminUser.authUid,
+                          adminUser.accountId,
                         ) && (
                           <Tooltip content="表示名変更">
                             <IconButton
                               variant="subtle"
                               size="sm"
                               onClick={() => {
-                                setEditDisplayNameAuthUid(adminUser.authUid);
+                                setEditDisplayNameAccountId(
+                                  adminUser.accountId,
+                                );
                                 resetEditDisplayNameForm({
                                   name: adminUser.name || adminUser.email || "",
                                 });
@@ -471,13 +476,13 @@ export default function AdminAccountsPage() {
                             </IconButton>
                           </Tooltip>
                         )}
-                      {roleId === "admin" && adminUser.status !== "pending" && (
+                      {roleId === "admin" && adminUser.status === "active" && (
                         <Tooltip content="ロール変更">
                           <IconButton
                             variant="subtle"
                             size="sm"
                             onClick={() => {
-                              setEditRoleAuthUid(adminUser.authUid);
+                              setEditRoleAccountId(adminUser.accountId);
                               setEditRoleValue(
                                 "roleId",
                                 adminUser.roleId as AccountEditRoleFormValues["roleId"],
@@ -497,14 +502,14 @@ export default function AdminAccountsPage() {
                               size="sm"
                               onClick={() =>
                                 handleResendInvite(
-                                  adminUser.authUid,
+                                  adminUser.accountId,
                                   adminUser.email,
                                 )
                               }
                               loading={
                                 resendAccountInvite.isPending &&
-                                resendAccountInvite.variables?.authUid ===
-                                  adminUser.authUid
+                                resendAccountInvite.variables?.accountId ===
+                                  adminUser.accountId
                               }
                             >
                               <Mail size={16} />
@@ -519,14 +524,14 @@ export default function AdminAccountsPage() {
                               size="sm"
                               onClick={() =>
                                 handleResetPassword(
-                                  adminUser.authUid,
+                                  adminUser.accountId,
                                   adminUser.email,
                                 )
                               }
                               loading={
                                 resetAccountPassword.isPending &&
-                                resetAccountPassword.variables?.authUid ===
-                                  adminUser.authUid
+                                resetAccountPassword.variables?.accountId ===
+                                  adminUser.accountId
                               }
                             >
                               <RotateCcwKey size={16} />
@@ -541,7 +546,7 @@ export default function AdminAccountsPage() {
                               size="sm"
                               colorPalette="red"
                               onClick={() => {
-                                setDeleteAuthUid(adminUser.authUid);
+                                setDeleteAccountId(adminUser.accountId);
                                 setDeleteEmail(adminUser.email);
                                 setDeleteOpen(true);
                               }}

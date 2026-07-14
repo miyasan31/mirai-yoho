@@ -53,8 +53,9 @@ const ACCOUNT_STATUS_MAP: Record<
   string,
   { label: string; colorPalette: string }
 > = {
-  pending: { label: "招待中", colorPalette: "yellow" },
-  registered: { label: "登録済み", colorPalette: "green" },
+  invited: { label: "招待中", colorPalette: "yellow" },
+  active: { label: "登録済み", colorPalette: "green" },
+  disabled: { label: "無効", colorPalette: "gray" },
 };
 
 export function AccountStatusBadge({ status }: { status: string }) {
