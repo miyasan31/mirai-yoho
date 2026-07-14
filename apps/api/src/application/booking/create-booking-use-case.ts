@@ -19,6 +19,7 @@ import { Settings } from "@/domain/settings/settings";
 import type { ISettingsRepository } from "@/domain/settings/settings-repository";
 import type { Slot } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
+import { SlotSelectionPolicy } from "@/domain/slot/slot-selection-policy";
 import type { IUserRepository } from "@/domain/user/user-repository";
 import { ZoomSession } from "@/domain/zoom-session/zoom-session";
 import type { IZoomSessionRepository } from "@/domain/zoom-session/zoom-session-repository";
@@ -40,17 +41,6 @@ interface CreateBookingInput {
 interface CreateBookingOutput {
   bookingId: string;
   joinUrl: string;
-}
-
-function toSessionDate(date: Date): string {
-  return date
-    .toLocaleDateString("ja-JP", {
-      timeZone: "Asia/Tokyo",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
-    .replace(/\//g, "-");
 }
 
 function toBreakoutRoomParams(
@@ -152,7 +142,9 @@ export class CreateBookingUseCase {
     }
     const consultantName = consultant.getProfile().getDisplayName();
 
-    const sessionDate = toSessionDate(slot.getTimeRange().getStartsAt());
+    const sessionDate = ZoomSession.sessionDateFromInstant(
+      slot.getTimeRange().getStartsAt(),
+    );
     const existingSession = await this.zoomSessionRepository.findByDate(
       input.organizationId,
       sessionDate,
@@ -307,32 +299,17 @@ export class CreateBookingUseCase {
       input.organizationId,
       input.startsAt,
     );
-    const availableCountByConsultant = new Map<string, number>();
+    const availableCountByConsultant =
+      SlotSelectionPolicy.countAvailableSlotsByConsultant(dailySlots);
 
-    for (const slot of dailySlots) {
-      const consultantId = slot.getConsultantId();
-      availableCountByConsultant.set(
-        consultantId,
-        (availableCountByConsultant.get(consultantId) ?? 0) + 1,
-      );
+    const selected = SlotSelectionPolicy.selectByConsultantAvailability(
+      selectableCandidates,
+      availableCountByConsultant,
+    );
+    if (!selected) {
+      throw new Error("Slot is no longer available");
     }
-
-    return [...selectableCandidates].sort((left, right) => {
-      const leftCount =
-        availableCountByConsultant.get(left.slot.getConsultantId()) ??
-        Number.MAX_SAFE_INTEGER;
-      const rightCount =
-        availableCountByConsultant.get(right.slot.getConsultantId()) ??
-        Number.MAX_SAFE_INTEGER;
-
-      if (leftCount !== rightCount) {
-        return leftCount - rightCount;
-      }
-
-      return left.slot
-        .getConsultantId()
-        .localeCompare(right.slot.getConsultantId());
-    })[0];
+    return selected;
   }
 
   private async findSelectablePricePlanForConsultant(params: {

@@ -1,12 +1,13 @@
 import { Hono } from "hono";
-import { Consultant } from "@/domain/consultant/consultant";
-import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import { Settings } from "@/domain/settings/settings";
 import { requirePermission } from "@/infrastructure/auth/require-permission";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createConsultantRepository,
+  createCreateConsultantUseCase,
+  createDeactivateConsultantUseCase,
   createSettingsRepository,
+  createUpdateConsultantUseCase,
 } from "@/infrastructure/container";
 import { getUsersByUids } from "@/infrastructure/firebase/firebase-auth-admin";
 import {
@@ -102,31 +103,16 @@ adminConsultantRoutes.post(
       );
     }
 
-    const settings =
-      (await createSettingsRepository().findByOrganizationId(organizationId)) ??
-      Settings.createDefault(organizationId);
-    const statusId = body.statusId ?? settings.getDefaultConsultantStatusId();
-    if (
-      typeof statusId !== "string" ||
-      !settings.findConsultantStatus(statusId)
-    ) {
-      return jsonError(400, "VALIDATION_ERROR", "statusId is invalid");
-    }
-
-    const consultant = Consultant.create({
+    const result = await createCreateConsultantUseCase().execute({
       organizationId,
       consultantId,
-      profile: ConsultantProfile.create(
-        name,
-        bio ?? "",
-        specialties ?? [],
-        phone ?? "",
-      ),
-      statusId,
+      name,
+      bio,
+      specialties,
+      phone,
+      statusId: body.statusId,
     });
-
-    await createConsultantRepository().save(consultant);
-    return Response.json({ consultantId }, { status: 201 });
+    return Response.json(result, { status: 201 });
   }),
 );
 
@@ -135,46 +121,23 @@ adminConsultantRoutes.patch(
   patchRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
     requirePermission(authUser, organizationId, "admin.consultants.manage");
-    const consultantId = param("consultantId");
     const body = await request.json();
-    const repo = createConsultantRepository();
-    const consultant = await repo.findById(organizationId, consultantId);
-    if (!consultant) {
-      return jsonError(404, "NOT_FOUND", "Consultant not found");
-    }
-
-    if (body.name) {
-      consultant.updateProfile(
-        ConsultantProfile.create(
-          body.name,
-          body.bio ?? consultant.getProfile().getBio(),
-          body.specialties ?? [...consultant.getProfile().getSpecialties()],
-          body.phone ?? consultant.getProfile().getPhone(),
-          consultant.getProfile().getImageUrl(),
-        ),
-      );
-    }
-
     if (body.statusId !== undefined) {
       requirePermission(
         authUser,
         organizationId,
         "admin.consultants.status.manage",
       );
-      const settings =
-        (await createSettingsRepository().findByOrganizationId(
-          organizationId,
-        )) ?? Settings.createDefault(organizationId);
-      if (
-        typeof body.statusId !== "string" ||
-        !settings.findConsultantStatus(body.statusId)
-      ) {
-        return jsonError(400, "VALIDATION_ERROR", "statusId is invalid");
-      }
-      consultant.changeStatus(body.statusId);
     }
-
-    await repo.save(consultant);
+    await createUpdateConsultantUseCase().execute({
+      organizationId,
+      consultantId: param("consultantId"),
+      name: body.name,
+      bio: body.bio,
+      specialties: body.specialties,
+      phone: body.phone,
+      statusId: body.statusId,
+    });
     return Response.json({ success: true });
   }),
 );
@@ -184,16 +147,10 @@ adminConsultantRoutes.delete(
   deleteRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
     requirePermission(authUser, organizationId, "admin.consultants.manage");
-    const repo = createConsultantRepository();
-    const consultant = await repo.findById(
+    await createDeactivateConsultantUseCase().execute({
       organizationId,
-      param("consultantId"),
-    );
-    if (!consultant) {
-      return jsonError(404, "NOT_FOUND", "Consultant not found");
-    }
-    consultant.deactivate();
-    await repo.save(consultant);
+      consultantId: param("consultantId"),
+    });
     return Response.json({ success: true });
   }),
 );

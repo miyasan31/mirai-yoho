@@ -1,13 +1,29 @@
+import { CreateRoleUseCase } from "@/application/authorization/create-role-use-case";
+import { DeleteRoleUseCase } from "@/application/authorization/delete-role-use-case";
+import { UpdateRoleUseCase } from "@/application/authorization/update-role-use-case";
 import { BatchChargeUseCase } from "@/application/booking/batch-charge-use-case";
 import { CancelBookingUseCase } from "@/application/booking/cancel-booking-use-case";
 import { ChargePaymentUseCase } from "@/application/booking/charge-payment-use-case";
 import { CompleteSetupUseCase } from "@/application/booking/complete-setup-use-case";
 import { CreateBookingUseCase } from "@/application/booking/create-booking-use-case";
+import { ListBookingsWithChargeEligibilityUseCase } from "@/application/booking/list-bookings-with-charge-eligibility-use-case";
 import { NotifyLateConsultantArrivalUseCase } from "@/application/booking/notify-late-consultant-arrival-use-case";
 import { SendConsultationReminderUseCase } from "@/application/booking/send-consultation-reminder-use-case";
 import { SetupPaymentUseCase } from "@/application/booking/setup-payment-use-case";
+import { CreateConsultantUseCase } from "@/application/consultant/create-consultant-use-case";
+import { DeactivateConsultantUseCase } from "@/application/consultant/deactivate-consultant-use-case";
+import { UpdateConsultantUseCase } from "@/application/consultant/update-consultant-use-case";
+import { GetDashboardUseCase } from "@/application/dashboard/get-dashboard-use-case";
+import { CancelPaymentUseCase } from "@/application/payment/cancel-payment-use-case";
+import { FailPaymentUseCase } from "@/application/payment/fail-payment-use-case";
 import { CreatePricePlanUseCase } from "@/application/price-plan/create-price-plan-use-case";
+import { DeletePricePlanUseCase } from "@/application/price-plan/delete-price-plan-use-case";
 import { UpdatePricePlanUseCase } from "@/application/price-plan/update-price-plan-use-case";
+import { UpdateBookingSettingsUseCase } from "@/application/settings/update-booking-settings-use-case";
+import { UpdateConsultantStatusesUseCase } from "@/application/settings/update-consultant-statuses-use-case";
+import { CreateSlotUseCase } from "@/application/slot/create-slot-use-case";
+import { DeleteSlotUseCase } from "@/application/slot/delete-slot-use-case";
+import { ListAvailableSlotsUseCase } from "@/application/slot/list-available-slots-use-case";
 import { ConnectZoomAccountUseCase } from "@/application/user/connect-zoom-account-use-case";
 import { DisconnectZoomAccountUseCase } from "@/application/user/disconnect-zoom-account-use-case";
 import { LinkExistingCustomersToUserUseCase } from "@/application/user/link-existing-customers-to-user-use-case";
@@ -26,6 +42,7 @@ import { FirestoreAccountRepository } from "@/infrastructure/firestore/firestore
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
 import { FirestoreCustomerRepository } from "@/infrastructure/firestore/firestore-customer-repository";
+import { FirestoreOrganizationRepository } from "@/infrastructure/firestore/firestore-organization-repository";
 import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore-payment-repository";
 import { FirestorePricePlanRepository } from "@/infrastructure/firestore/firestore-price-plan-repository";
 import { FirestoreRoleRepository } from "@/infrastructure/firestore/firestore-role-repository";
@@ -49,6 +66,24 @@ export function createConsultantRepository() {
   return new FirestoreConsultantRepository();
 }
 
+export function createCreateConsultantUseCase() {
+  return new CreateConsultantUseCase(
+    new FirestoreConsultantRepository(),
+    new FirestoreSettingsRepository(),
+  );
+}
+
+export function createUpdateConsultantUseCase() {
+  return new UpdateConsultantUseCase(
+    new FirestoreConsultantRepository(),
+    new FirestoreSettingsRepository(),
+  );
+}
+
+export function createDeactivateConsultantUseCase() {
+  return new DeactivateConsultantUseCase(new FirestoreConsultantRepository());
+}
+
 export function createPricePlanRepository() {
   return new FirestorePricePlanRepository();
 }
@@ -57,16 +92,84 @@ export function createSlotRepository() {
   return new FirestoreSlotRepository();
 }
 
+export function createCreateSlotUseCase() {
+  return new CreateSlotUseCase(
+    new FirestoreSlotRepository(),
+    new FirestoreSettingsRepository(),
+  );
+}
+
+export function createDeleteSlotUseCase() {
+  return new DeleteSlotUseCase(new FirestoreSlotRepository());
+}
+
+export function createListAvailableSlotsUseCase() {
+  return new ListAvailableSlotsUseCase(
+    new FirestoreSlotRepository(),
+    new FirestoreSettingsRepository(),
+  );
+}
+
 export function createBookingRepository() {
   return new FirestoreBookingRepository();
+}
+
+export function createListBookingsWithChargeEligibilityUseCase() {
+  return new ListBookingsWithChargeEligibilityUseCase(
+    new FirestoreBookingRepository(),
+    new FirestorePaymentRepository(),
+    new FirestoreCustomerRepository(),
+  );
 }
 
 export function createSettingsRepository() {
   return new FirestoreSettingsRepository();
 }
 
+export function createUpdateBookingSettingsUseCase() {
+  return new UpdateBookingSettingsUseCase(
+    new FirestoreSettingsRepository(),
+    new FirestoreSlotRepository(),
+  );
+}
+
+export function createUpdateConsultantStatusesUseCase() {
+  return new UpdateConsultantStatusesUseCase(
+    new FirestoreSettingsRepository(),
+    new FirestoreConsultantRepository(),
+  );
+}
+
 export function createRoleRepository() {
   return new FirestoreRoleRepository();
+}
+
+export function createOrganizationRepository() {
+  return new FirestoreOrganizationRepository();
+}
+
+export function createGetDashboardUseCase() {
+  return new GetDashboardUseCase(
+    new FirestoreBookingRepository(),
+    new FirestorePaymentRepository(),
+    new FirestoreCustomerRepository(),
+    new FirestoreConsultantRepository(),
+  );
+}
+
+export function createCreateRoleUseCase() {
+  return new CreateRoleUseCase(new FirestoreRoleRepository());
+}
+
+export function createUpdateRoleUseCase() {
+  return new UpdateRoleUseCase(new FirestoreRoleRepository());
+}
+
+export function createDeleteRoleUseCase() {
+  return new DeleteRoleUseCase(
+    new FirestoreRoleRepository(),
+    new FirestoreAccountRepository(),
+  );
 }
 
 export function createCreateBookingUseCase() {
@@ -105,6 +208,10 @@ export function createUpdatePricePlanUseCase() {
   return new UpdatePricePlanUseCase(new FirestorePricePlanRepository());
 }
 
+export function createDeletePricePlanUseCase() {
+  return new DeletePricePlanUseCase(new FirestorePricePlanRepository());
+}
+
 export function createCancelBookingUseCase() {
   return new CancelBookingUseCase(
     new FirestoreBookingRepository(),
@@ -130,6 +237,14 @@ export function createChargePaymentUseCase() {
 
 export function createCompleteSetupUseCase() {
   return new CompleteSetupUseCase(new FirestorePaymentRepository());
+}
+
+export function createCancelPaymentUseCase() {
+  return new CancelPaymentUseCase(new FirestorePaymentRepository());
+}
+
+export function createFailPaymentUseCase() {
+  return new FailPaymentUseCase(new FirestorePaymentRepository());
 }
 
 export function createCustomerRepository() {

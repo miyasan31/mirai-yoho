@@ -5,6 +5,7 @@ import { requireConsultant } from "@/infrastructure/auth/require-role";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createCreatePricePlanUseCase,
+  createDeletePricePlanUseCase,
   createPricePlanRepository,
   createSettingsRepository,
   createUpdatePricePlanUseCase,
@@ -105,15 +106,11 @@ pricePlanRoutes.delete(
   deleteRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
     requireConsultant(authUser, organizationId);
-    const pricePlan = await createPricePlanRepository().findById(
+    await createDeletePricePlanUseCase().execute({
       organizationId,
-      param("pricePlanId"),
-    );
-    if (!pricePlan || pricePlan.getConsultantId() !== authUser.authUid) {
-      return jsonError(404, "PRICE_PLAN_NOT_FOUND", "Plan not found");
-    }
-    pricePlan.delete();
-    await createPricePlanRepository().save(pricePlan);
+      consultantId: authUser.authUid,
+      pricePlanId: param("pricePlanId"),
+    });
     return Response.json({ success: true });
   }),
 );

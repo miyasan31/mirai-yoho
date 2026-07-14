@@ -1,14 +1,9 @@
 import { Hono } from "hono";
-import { evaluateChargeEligibility } from "@/application/booking/charge-eligibility";
 import { MarkConsultantJoinedUseCase } from "@/application/consultant/mark-consultant-joined-use-case";
 import { UpdateMemoUseCase } from "@/application/consultant/update-memo-use-case";
 import { requireConsultant } from "@/infrastructure/auth/require-role";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
-import {
-  createBookingRepository,
-  createCustomerRepository,
-  createPaymentRepository,
-} from "@/infrastructure/container";
+import { createListBookingsWithChargeEligibilityUseCase } from "@/infrastructure/container";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
 import {
   INVALID_LIST_QUERY_MESSAGE,
@@ -35,68 +30,43 @@ consultantBookingRoutes.get(
     if (!listQueryParams) {
       return jsonError(400, "VALIDATION_ERROR", INVALID_LIST_QUERY_MESSAGE);
     }
-    const bookingRepository = createBookingRepository();
-    const paymentRepository = createPaymentRepository();
-    const customerRepository = createCustomerRepository();
-    const [bookings, payments] = await Promise.all([
-      bookingRepository.findByConsultantId(organizationId, authUser.authUid),
-      paymentRepository.findAll(organizationId),
-    ]);
-    const paymentByBookingId = new Map(
-      payments.map((payment) => [payment.getBookingId(), payment]),
-    );
-    const uniqueCustomerIds = [
-      ...new Set(bookings.map((b) => b.getCustomerId())),
-    ];
-    const customers = await customerRepository.findByIds(
-      organizationId,
-      uniqueCustomerIds,
-    );
-    const customerById = new Map(
-      customers.map(
-        (customer) => [customer.getCustomerId(), customer] as const,
-      ),
-    );
-
+    const results =
+      await createListBookingsWithChargeEligibilityUseCase().execute({
+        organizationId,
+        scope: { kind: "consultant", consultantId: authUser.authUid },
+        includeCustomers: true,
+      });
     const bookingItems = sortByTimestampDesc(
-      bookings.map((b) => {
-        const eligibility = evaluateChargeEligibility({
-          booking: b,
-          payment: paymentByBookingId.get(b.getBookingId()) ?? null,
-        });
-        const customer = customerById.get(b.getCustomerId()) ?? null;
-
-        return {
-          bookingId: b.getBookingId(),
-          customerId: b.getCustomerId(),
-          consultantId: b.getConsultantId(),
-          slotId: b.getSlotId(),
-          startsAt: b.getStartsAt().toISOString(),
-          status: b.getStatus().getValue(),
-          joinUrl: b.getJoinUrl()?.getValue() ?? null,
-          consultantJoinedAt: b.getConsultantJoinedAt()?.toISOString() ?? null,
-          lateArrivalAlertSentAt:
-            b.getLateArrivalAlertSentAt()?.toISOString() ?? null,
-          consultantMemo: b.getConsultantMemo().getFreeMemo(),
-          memoCustomerName: b.getConsultantMemo().getCustomerName(),
-          memoBirthDate: b.getConsultantMemo().getBirthDate(),
-          memoAppraisalDate: b.getConsultantMemo().getAppraisalDate(),
-          consultationContent: b.getConsultationContent() ?? null,
-          chargeable: eligibility.chargeable,
-          chargeDisabledReason: eligibility.reason,
-          customer: customer
-            ? {
-                customerId: customer.getCustomerId(),
-                name: customer.getName(),
-                email: customer.getEmail(),
-                phone: customer.getPhone(),
-                memo: customer.getNote() ?? null,
-              }
-            : null,
-          createdAt: b.getCreatedAt().toISOString(),
-          updatedAt: b.getUpdatedAt().toISOString(),
-        };
-      }),
+      results.map(({ booking: b, eligibility, customer }) => ({
+        bookingId: b.getBookingId(),
+        customerId: b.getCustomerId(),
+        consultantId: b.getConsultantId(),
+        slotId: b.getSlotId(),
+        startsAt: b.getStartsAt().toISOString(),
+        status: b.getStatus().getValue(),
+        joinUrl: b.getJoinUrl()?.getValue() ?? null,
+        consultantJoinedAt: b.getConsultantJoinedAt()?.toISOString() ?? null,
+        lateArrivalAlertSentAt:
+          b.getLateArrivalAlertSentAt()?.toISOString() ?? null,
+        consultantMemo: b.getConsultantMemo().getFreeMemo(),
+        memoCustomerName: b.getConsultantMemo().getCustomerName(),
+        memoBirthDate: b.getConsultantMemo().getBirthDate(),
+        memoAppraisalDate: b.getConsultantMemo().getAppraisalDate(),
+        consultationContent: b.getConsultationContent() ?? null,
+        chargeable: eligibility.chargeable,
+        chargeDisabledReason: eligibility.reason,
+        customer: customer
+          ? {
+              customerId: customer.getCustomerId(),
+              name: customer.getName(),
+              email: customer.getEmail(),
+              phone: customer.getPhone(),
+              memo: customer.getNote() ?? null,
+            }
+          : null,
+        createdAt: b.getCreatedAt().toISOString(),
+        updatedAt: b.getUpdatedAt().toISOString(),
+      })),
       listQueryParams.sortBy,
     );
     const { items, pagination } = paginateArray(bookingItems, listQueryParams);

@@ -3,6 +3,7 @@ import { createPricePlanSelectionId } from "@/domain/price-plan/price-plan";
 import { Settings } from "@/domain/settings/settings";
 import {
   createConsultantRepository,
+  createListAvailableSlotsUseCase,
   createPricePlanRepository,
   createSettingsRepository,
   createSlotRepository,
@@ -63,65 +64,18 @@ publicRoutes.get(
     const consultantId = requestUrl.searchParams.get("consultantId");
     errorContext.endpoint = "GET /organizations/:organizationId/slots";
     errorContext.consultantId = consultantId;
-    const repository = createSlotRepository();
-    const settings =
-      (await createSettingsRepository().findByOrganizationId(organizationId)) ??
-      Settings.createDefault(organizationId);
-    const businessHours = settings.getBusinessHours();
-
-    if (consultantId) {
-      const availableSlots = await repository.findAvailableByConsultantId(
-        organizationId,
-        consultantId,
-      );
-      const filteredSlots = availableSlots.filter((slot) =>
-        businessHours.containsRange(
-          slot.getTimeRange().getStartsAt(),
-          slot.getTimeRange().getEndsAt(),
-        ),
-      );
-
+    const result = await createListAvailableSlotsUseCase().execute({
+      organizationId,
+      consultantId,
+    });
+    if (result.mode === "per-consultant") {
       return withPublicShortCache(
-        Response.json({
-          slots: filteredSlots.map((s) => ({
-            slotId: s.getSlotId(),
-            consultantId: s.getConsultantId(),
-            startsAt: s.getTimeRange().getStartsAt().toISOString(),
-            endsAt: s.getTimeRange().getEndsAt().toISOString(),
-            isAvailable: !s.getIsAvailable(),
-          })),
-        }),
+        Response.json({ slots: result.slots }),
         "slots",
       );
     }
-
-    const aggregatedSlots = await repository.findAllAvailable(organizationId);
-    const groupedSlots = new Map<
-      string,
-      { startsAt: string; endsAt: string }
-    >();
-
-    for (const slot of aggregatedSlots) {
-      if (
-        !businessHours.containsRange(
-          slot.getTimeRange().getStartsAt(),
-          slot.getTimeRange().getEndsAt(),
-        )
-      ) {
-        continue;
-      }
-      const startsAt = slot.getTimeRange().getStartsAt().toISOString();
-      const endsAt = slot.getTimeRange().getEndsAt().toISOString();
-      const key = `${startsAt}_${endsAt}`;
-      if (!groupedSlots.has(key)) {
-        groupedSlots.set(key, { startsAt, endsAt });
-      }
-    }
-
     return withPublicShortCache(
-      Response.json({
-        aggregatedSlots: [...groupedSlots.values()],
-      }),
+      Response.json({ aggregatedSlots: result.aggregatedSlots }),
       "slots",
     );
   }),

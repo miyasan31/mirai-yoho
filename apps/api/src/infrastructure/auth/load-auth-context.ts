@@ -1,22 +1,11 @@
 import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-permission";
 import type { Account, AuthUser } from "@/infrastructure/auth/auth-types";
-import { createAccountRepository } from "@/infrastructure/container";
-import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
-import { db } from "@/infrastructure/firestore/firestore-customer";
+import {
+  createAccountRepository,
+  createConsultantRepository,
+  createOrganizationRepository,
+} from "@/infrastructure/container";
 import { FirestoreRoleRepository } from "@/infrastructure/firestore/firestore-role-repository";
-
-const ORGANIZATION_COLLECTION = FIRESTORE_COLLECTIONS.organizations;
-const CONSULTANT_COLLECTION = FIRESTORE_COLLECTIONS.consultants;
-
-interface OrganizationDoc {
-  organizationId: string;
-  name: string;
-}
-
-interface ConsultantDoc {
-  organizationId: string;
-  consultantId: string;
-}
 
 export async function activateInvitedAccounts(
   accountId: string,
@@ -35,8 +24,11 @@ export async function activateInvitedAccounts(
 }
 
 export async function loadAuthUser(accountId: string): Promise<AuthUser> {
-  const repo = createAccountRepository();
-  const accounts = await repo.findByAccountId(accountId);
+  const accountRepository = createAccountRepository();
+  const organizationRepository = createOrganizationRepository();
+  const consultantRepository = createConsultantRepository();
+
+  const accounts = await accountRepository.findByAccountId(accountId);
   const activeAccounts = accounts
     .filter((account) => account.getStatus() === "active")
     .sort(
@@ -47,17 +39,10 @@ export async function loadAuthUser(accountId: string): Promise<AuthUser> {
   const organizationIds = [
     ...new Set(activeAccounts.map((account) => account.getOrganizationId())),
   ];
-  const organizationDocs = await Promise.all(
-    organizationIds.map((organizationId) =>
-      db.collection(ORGANIZATION_COLLECTION).doc(organizationId).get(),
-    ),
-  );
-
+  const organizations = await organizationRepository.findByIds(organizationIds);
   const nameById = new Map<string, string>();
-  for (const doc of organizationDocs) {
-    if (!doc.exists) continue;
-    const organization = doc.data() as OrganizationDoc;
-    nameById.set(organization.organizationId, organization.name);
+  for (const organization of organizations) {
+    nameById.set(organization.getOrganizationId(), organization.getName());
   }
 
   const roleRepository = new FirestoreRoleRepository();
@@ -80,14 +65,8 @@ export async function loadAuthUser(accountId: string): Promise<AuthUser> {
     }
   }
 
-  const consultantSnapshot = await db
-    .collection(CONSULTANT_COLLECTION)
-    .where("consultantId", "==", accountId)
-    .get();
   const consultantOrganizationIds = new Set(
-    consultantSnapshot.docs.map(
-      (doc) => (doc.data() as ConsultantDoc).organizationId,
-    ),
+    await consultantRepository.findOrganizationIdsByConsultantId(accountId),
   );
 
   const accountViews: Account[] = activeAccounts.map((account) => {

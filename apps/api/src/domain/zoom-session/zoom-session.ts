@@ -55,6 +55,17 @@ export class ZoomSession extends AggregateRoot {
     );
   }
 
+  static sessionDateFromInstant(instant: Date): string {
+    return instant
+      .toLocaleDateString("ja-JP", {
+        timeZone: "Asia/Tokyo",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      })
+      .replace(/\//g, "-");
+  }
+
   setMeetingDetails(zoomMeetingId: string, joinUrl: string): void {
     if (this.zoomMeetingId) {
       throw new DomainError(

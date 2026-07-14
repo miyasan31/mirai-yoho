@@ -133,6 +133,10 @@ class InMemoryConsultantRepository implements IConsultantRepository {
     return this.consultant ? [this.consultant] : [];
   }
 
+  async findOrganizationIdsByConsultantId(): Promise<string[]> {
+    return [];
+  }
+
   async save(): Promise<void> {}
 
   async delete(): Promise<void> {}

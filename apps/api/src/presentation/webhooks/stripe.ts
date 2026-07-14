@@ -1,7 +1,10 @@
 import Stripe from "stripe";
 import { envServer } from "@/config/env.server";
-import { createCompleteSetupUseCase } from "@/infrastructure/container";
-import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore-payment-repository";
+import {
+  createCancelPaymentUseCase,
+  createCompleteSetupUseCase,
+  createFailPaymentUseCase,
+} from "@/infrastructure/container";
 import { withNoStore } from "../cache-control";
 
 let stripeCustomer: Stripe | null = null;
@@ -66,26 +69,17 @@ export async function POST(request: Request) {
 
     case "setup_intent.setup_failed": {
       const setupIntent = event.data.object as Stripe.SetupIntent;
-      const paymentRepo = new FirestorePaymentRepository();
-      const payment = await paymentRepo.findBySetupIntentId(setupIntent.id);
-      if (payment && payment.getStatus().getValue() === "setup_pending") {
-        payment.cancel();
-        await paymentRepo.save(payment);
-      }
+      await createCancelPaymentUseCase().execute({
+        setupIntentId: setupIntent.id,
+      });
       break;
     }
 
     case "payment_intent.payment_failed": {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      const paymentRepo = new FirestorePaymentRepository();
-      const payment = await paymentRepo.findByPaymentIntentId(paymentIntent.id);
-      if (payment) {
-        const status = payment.getStatus().getValue();
-        if (status === "setup_complete") {
-          payment.failCharge();
-          await paymentRepo.save(payment);
-        }
-      }
+      await createFailPaymentUseCase().execute({
+        paymentIntentId: paymentIntent.id,
+      });
       break;
     }
   }
