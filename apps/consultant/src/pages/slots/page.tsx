@@ -19,7 +19,7 @@ import { Skeleton } from "@mirai-yoho/ui/components/ui/skeleton";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { styled } from "styled-system/jsx";
-import { useGetAdminSlots } from "@/hooks/use-admin-slots";
+import { useGetConsoleSlots } from "@/hooks/use-console-slots";
 import { useConsultantCalendarQueryParams } from "@/hooks/use-consultant-calendar-query-params";
 import { useCreateSlot, useDeleteSlot } from "@/hooks/use-slots";
 
@@ -100,7 +100,7 @@ export default function ConsultantSlotsPage() {
     useConsultantCalendarQueryParams();
   const [deleteTarget, setDeleteTarget] = useState<CalendarEvent | null>(null);
 
-  const { data, isLoading, refetch } = useGetAdminSlots(
+  const { data, isLoading, refetch } = useGetConsoleSlots(
     { consultantId: user?.uid ?? "" },
     {
       query: { enabled: !!user?.uid },

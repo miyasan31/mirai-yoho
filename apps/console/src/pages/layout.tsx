@@ -8,9 +8,9 @@ import {
   SidebarLayout,
   SidebarLayoutSkeleton,
 } from "@/components/sidebar-layout";
-import { ADMIN_NAV_PERMISSIONS, NAV_ITEMS } from "./nav-items";
+import { CONSOLE_NAV_PERMISSIONS, NAV_ITEMS } from "./nav-items";
 
-export default function AdminLayout({ children }: { children: ReactNode }) {
+export default function ConsoleLayout({ children }: { children: ReactNode }) {
   const {
     user,
     hasAnyPermission,
@@ -48,7 +48,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       return;
     }
 
-    if (!hasAnyPermission(ADMIN_NAV_PERMISSIONS)) {
+    if (!hasAnyPermission(CONSOLE_NAV_PERMISSIONS)) {
       void navigate({ href: "/404", replace: true });
     }
   }, [
@@ -84,7 +84,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
     return <SidebarLayoutSkeleton navItemCount={NAV_ITEMS.length} />;
   }
 
-  if (!user || !organizationId || !hasAnyPermission(ADMIN_NAV_PERMISSIONS)) {
+  if (!user || !organizationId || !hasAnyPermission(CONSOLE_NAV_PERMISSIONS)) {
     return null;
   }
 

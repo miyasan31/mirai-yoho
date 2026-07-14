@@ -171,7 +171,7 @@ describe("late arrival alert route", () => {
     expect(mocks.requirePermission).toHaveBeenCalledWith(
       expect.objectContaining({ authUid: "admin-1" }),
       "org-1",
-      "admin.payments.charge",
+      "console.payments.charge",
     );
     expect(mocks.execute).toHaveBeenCalledTimes(1);
   });

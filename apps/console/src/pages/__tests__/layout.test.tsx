@@ -48,9 +48,9 @@ vi.mock("@mirai-yoho/console-core/hooks/use-organization-routing", () => ({
   }),
 }));
 
-import AdminLayout from "../layout";
+import ConsoleLayout from "../layout";
 
-describe("AdminLayout", () => {
+describe("ConsoleLayout", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -63,9 +63,9 @@ describe("AdminLayout", () => {
       hasAnyPermission: (permissions: string[]) =>
         permissions.some((permission) =>
           [
-            "admin.dashboard.read",
-            "admin.accounts.read",
-            "admin.bookings.read",
+            "console.dashboard.read",
+            "console.accounts.read",
+            "console.bookings.read",
           ].includes(permission),
         ),
       accounts: [
@@ -82,9 +82,9 @@ describe("AdminLayout", () => {
     });
 
     render(
-      <AdminLayout>
+      <ConsoleLayout>
         <div>content</div>
-      </AdminLayout>,
+      </ConsoleLayout>,
     );
 
     expect(screen.getByText("アカウント管理")).toBeInTheDocument();

@@ -120,7 +120,7 @@ vi.mock("@/infrastructure/auth/require-permission", () => ({
 import { createOrganizationRoutes } from "../organization-router";
 
 function postInvite(body: Record<string, unknown>) {
-  return createOrganizationRoutes().request("/org-1/admin/accounts/invite", {
+  return createOrganizationRoutes().request("/org-1/console/accounts/invite", {
     method: "POST",
     headers: { "content-type": "application/json" },
     body: JSON.stringify(body),

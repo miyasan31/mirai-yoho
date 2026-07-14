@@ -43,7 +43,7 @@ export class LineWorksLateArrivalAlertService
         },
         button: {
           label: "予約管理を開く",
-          url: params.adminBookingsUrl,
+          url: params.consoleBookingsUrl,
         },
       }),
     });

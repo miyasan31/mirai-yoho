@@ -27,12 +27,12 @@ import { Pencil, ShieldCheck, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
 import {
-  useAdminRoles,
-  useAdminRolesQueryKey,
-  useCreateAdminRole,
-  useDeleteAdminRole,
-  useUpdateAdminRole,
-} from "@/hooks/use-admin-roles";
+  useConsoleRoles,
+  useConsoleRolesQueryKey,
+  useCreateConsoleRole,
+  useDeleteConsoleRole,
+  useUpdateConsoleRole,
+} from "@/hooks/use-console-roles";
 
 const PERMISSION_GROUPS: Array<{
   label: string;
@@ -40,44 +40,44 @@ const PERMISSION_GROUPS: Array<{
 }> = [
   {
     label: "ホーム・集計",
-    permissions: ["admin.dashboard.read"],
+    permissions: ["console.dashboard.read"],
   },
   {
     label: "予約・決済",
     permissions: [
-      "admin.bookings.read",
-      "admin.bookings.cancel",
-      "admin.payments.read",
-      "admin.payments.charge",
+      "console.bookings.read",
+      "console.bookings.cancel",
+      "console.payments.read",
+      "console.payments.charge",
     ],
   },
   {
     label: "顧客・相談員",
     permissions: [
-      "admin.customers.read",
-      "admin.consultants.read",
-      "admin.consultants.manage",
-      "admin.consultants.status.manage",
+      "console.customers.read",
+      "console.consultants.read",
+      "console.consultants.manage",
+      "console.consultants.status.manage",
     ],
   },
   {
     label: "予約枠・設定",
     permissions: [
-      "admin.slots.read",
-      "admin.slots.manage",
-      "admin.settings.read",
-      "admin.settings.manage",
+      "console.slots.read",
+      "console.slots.manage",
+      "console.settings.read",
+      "console.settings.manage",
     ],
   },
   {
     label: "アカウント・ロール",
     permissions: [
-      "admin.accounts.read",
-      "admin.accounts.display-name.manage",
-      "admin.accounts.invite.resend",
-      "admin.accounts.password-reset",
-      "admin.accounts.delete",
-      "admin.roles.read",
+      "console.accounts.read",
+      "console.accounts.display-name.manage",
+      "console.accounts.invite.resend",
+      "console.accounts.password-reset",
+      "console.accounts.delete",
+      "console.roles.read",
     ],
   },
 ];
@@ -105,16 +105,16 @@ function isPermissionRequired(
   );
 }
 
-export default function AdminRolesPage() {
+export default function ConsoleRolesPage() {
   const { organizationId } = useOrganizationRouting();
   const resolvedOrganizationId = organizationId ?? "";
   const { roleId, hasPermission, refreshAuthContext } = useAuth();
-  const { data, isLoading } = useAdminRoles();
-  const createRole = useCreateAdminRole();
-  const updateRole = useUpdateAdminRole();
-  const deleteRole = useDeleteAdminRole();
+  const { data, isLoading } = useConsoleRoles();
+  const createRole = useCreateConsoleRole();
+  const updateRole = useUpdateConsoleRole();
+  const deleteRole = useDeleteConsoleRole();
   const queryClient = useQueryClient();
-  const rolesQueryKey = useAdminRolesQueryKey();
+  const rolesQueryKey = useConsoleRolesQueryKey();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editRoleId, setEditRoleId] = useState<string | null>(null);
@@ -126,7 +126,7 @@ export default function AdminRolesPage() {
   const deletingRole =
     roles.find((item) => item.roleId === deleteRoleId) ?? null;
 
-  if (!organizationId || !hasPermission("admin.roles.read")) {
+  if (!organizationId || !hasPermission("console.roles.read")) {
     return <Text>権限がありません</Text>;
   }
 

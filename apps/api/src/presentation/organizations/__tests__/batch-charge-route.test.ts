@@ -191,7 +191,7 @@ describe("batch charge / consultation reminder routes", () => {
     expect(mocks.requirePermission).toHaveBeenCalledWith(
       expect.objectContaining({ authUid: "admin-1" }),
       "org-charge-admin",
-      "admin.payments.charge",
+      "console.payments.charge",
     );
     expect(mocks.executeCharge).toHaveBeenCalledTimes(1);
   });

@@ -5,7 +5,7 @@ import { useCallback } from "react";
 import { styled } from "styled-system/jsx";
 import { ConsultantEditForm } from "./consultant-edit-form";
 
-export default function AdminConsultantEditModalPage() {
+export default function ConsoleConsultantEditModalPage() {
   const params = useParams({ strict: false });
   const navigate = useNavigate();
   const consultantId = params.id ?? "";

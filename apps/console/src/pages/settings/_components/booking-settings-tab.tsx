@@ -1,5 +1,5 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { useUpdateAdminBookingSettings } from "@mirai-yoho/console-core/hooks/use-booking-settings";
+import { useUpdateConsoleBookingSettings } from "@mirai-yoho/console-core/hooks/use-booking-settings";
 import { Checkbox } from "@mirai-yoho/ui/components/ui";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
@@ -30,7 +30,7 @@ export function BookingSettingsTab({
   pricePlanRange,
   onConsultantSelectionChange,
 }: BookingSettingsTabProps) {
-  const updateBookingSettings = useUpdateAdminBookingSettings();
+  const updateBookingSettings = useUpdateConsoleBookingSettings();
   const form = useForm<BookingSettingsFormValues>({
     resolver: valibotResolver(bookingSettingsFormSchema),
     defaultValues: {

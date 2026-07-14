@@ -1,7 +1,7 @@
 import { createListCollection } from "@ark-ui/react/select";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { getGetAdminConsultantsQueryKey } from "@mirai-yoho/api-client/api/admin/admin";
-import { useAdminConsultantStatuses } from "@mirai-yoho/console-core/hooks/use-booking-settings";
+import { getGetConsoleConsultantsQueryKey } from "@mirai-yoho/api-client/api/console/console";
+import { useConsoleConsultantStatuses } from "@mirai-yoho/console-core/hooks/use-booking-settings";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Dialog from "@mirai-yoho/ui/components/ui/dialog";
@@ -15,10 +15,10 @@ import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import {
-  useAdminConsultants,
-  useDeleteAdminConsultant,
-  useUpdateAdminConsultant,
-} from "@/hooks/use-admin-consultants";
+  useConsoleConsultants,
+  useDeleteConsoleConsultant,
+  useUpdateConsoleConsultant,
+} from "@/hooks/use-console-consultants";
 import {
   type ConsultantFormValues,
   consultantFormSchema,
@@ -55,16 +55,16 @@ export function ConsultantEditForm({
     },
   });
 
-  const { data, isLoading } = useAdminConsultants({
+  const { data, isLoading } = useConsoleConsultants({
     page: 1,
     pageSize: 100,
     sortBy: "createdAt",
     sortOrder: "desc",
   });
   const { data: statusData, isLoading: isLoadingStatuses } =
-    useAdminConsultantStatuses();
-  const updateConsultant = useUpdateAdminConsultant();
-  const deleteConsultant = useDeleteAdminConsultant();
+    useConsoleConsultantStatuses();
+  const updateConsultant = useUpdateConsoleConsultant();
+  const deleteConsultant = useDeleteConsoleConsultant();
   const consultants = data?.data?.consultants ?? [];
   const statuses = statusData?.data?.consultantStatuses ?? [];
   const statusCollection = createListCollection({
@@ -101,7 +101,7 @@ export function ConsultantEditForm({
       return;
     }
     await queryCustomer.invalidateQueries({
-      queryKey: getGetAdminConsultantsQueryKey(organizationId),
+      queryKey: getGetConsoleConsultantsQueryKey(organizationId),
     });
   };
 

@@ -6,12 +6,12 @@ import * as Table from "@mirai-yoho/ui/components/ui/table";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { Building2 } from "lucide-react";
 import { styled } from "styled-system/jsx";
-import { useAdminCustomers } from "@/hooks/use-admin-customers";
+import { useConsoleCustomers } from "@/hooks/use-console-customers";
 
-export default function AdminCustomersPage() {
+export default function ConsoleCustomersPage() {
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
     useListQueryParams();
-  const { data, isLoading } = useAdminCustomers({
+  const { data, isLoading } = useConsoleCustomers({
     page,
     pageSize,
     sortBy,

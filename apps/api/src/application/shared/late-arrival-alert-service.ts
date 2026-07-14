@@ -7,7 +7,7 @@ export interface LateArrivalAlertParams {
   customerName: string;
   startsAt: Date;
   elapsedMinutes: number;
-  adminBookingsUrl: string;
+  consoleBookingsUrl: string;
 }
 
 export interface ILateArrivalAlertService {

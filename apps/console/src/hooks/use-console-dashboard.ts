@@ -1,15 +1,15 @@
-import { useGetAdminDashboard } from "@mirai-yoho/api-client/api/admin/admin";
+import { useGetConsoleDashboard } from "@mirai-yoho/api-client/api/console/console";
 import { QUERY_STALE_TIME } from "@mirai-yoho/console-core/hooks/query-cache-policy";
 import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 
-export function useAdminDashboard() {
+export function useConsoleDashboard() {
   const { token, hasPermission } = useAuth();
   const { organizationId } = useOrganizationRouting();
-  return useGetAdminDashboard(organizationId ?? "", {
+  return useGetConsoleDashboard(organizationId ?? "", {
     query: {
       enabled:
-        !!token && !!organizationId && hasPermission("admin.dashboard.read"),
+        !!token && !!organizationId && hasPermission("console.dashboard.read"),
       staleTime: QUERY_STALE_TIME.normal,
     },
   });

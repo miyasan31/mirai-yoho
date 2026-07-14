@@ -2,9 +2,9 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import type { ReactNode } from "react";
 
-const mockUseAdminBookings = vi.fn();
-const mockUseAdminCustomers = vi.fn();
-const mockUseAdminConsultants = vi.fn();
+const mockUseConsoleBookings = vi.fn();
+const mockUseConsoleCustomers = vi.fn();
+const mockUseConsoleConsultants = vi.fn();
 const mockMutateAsync = vi.fn();
 const mockUseChargePayment = vi.fn();
 
@@ -19,26 +19,26 @@ vi.mock("@mirai-yoho/console-core/hooks/use-list-query-params", () => ({
   }),
 }));
 
-vi.mock("@/hooks/use-admin-bookings", () => ({
-  useAdminBookings: () => mockUseAdminBookings(),
+vi.mock("@/hooks/use-console-bookings", () => ({
+  useConsoleBookings: () => mockUseConsoleBookings(),
 }));
 
 vi.mock("@/hooks/use-booking", () => ({
   useChargePayment: () => mockUseChargePayment(),
 }));
 
-vi.mock("@/hooks/use-admin-customers", () => ({
-  useAdminCustomers: (
+vi.mock("@/hooks/use-console-customers", () => ({
+  useConsoleCustomers: (
     params?: Record<string, unknown>,
     options?: { enabled?: boolean },
-  ) => mockUseAdminCustomers(params, options),
+  ) => mockUseConsoleCustomers(params, options),
 }));
 
-vi.mock("@/hooks/use-admin-consultants", () => ({
-  useAdminConsultants: (
+vi.mock("@/hooks/use-console-consultants", () => ({
+  useConsoleConsultants: (
     params?: Record<string, unknown>,
     options?: { enabled?: boolean },
-  ) => mockUseAdminConsultants(params, options),
+  ) => mockUseConsoleConsultants(params, options),
 }));
 
 vi.mock("@mirai-yoho/ui/components/list-controls", () => ({
@@ -158,16 +158,16 @@ vi.mock("lucide-react", () => ({
   CircleXIcon: () => <span>CircleXIcon</span>,
 }));
 
-import AdminBookingsPage from "../page";
+import ConsoleBookingsPage from "../page";
 
-describe("AdminBookingsPage", () => {
+describe("ConsoleBookingsPage", () => {
   afterEach(() => {
     cleanup();
     vi.resetAllMocks();
   });
 
   it("disables charge button and shows reason when booking is not chargeable", () => {
-    mockUseAdminBookings.mockReturnValue({
+    mockUseConsoleBookings.mockReturnValue({
       data: {
         data: {
           bookings: [
@@ -195,18 +195,18 @@ describe("AdminBookingsPage", () => {
       isPending: false,
       variables: null,
     });
-    mockUseAdminCustomers.mockReturnValue({
+    mockUseConsoleCustomers.mockReturnValue({
       data: { data: { customers: [] } },
       isLoading: false,
       error: null,
     });
-    mockUseAdminConsultants.mockReturnValue({
+    mockUseConsoleConsultants.mockReturnValue({
       data: { data: { consultants: [] } },
       isLoading: false,
       error: null,
     });
 
-    render(<AdminBookingsPage />);
+    render(<ConsoleBookingsPage />);
 
     expect(
       (screen.getByRole("button", { name: "課金" }) as HTMLButtonElement)
@@ -217,7 +217,7 @@ describe("AdminBookingsPage", () => {
   });
 
   it("calls charge API when booking is chargeable", () => {
-    mockUseAdminBookings.mockReturnValue({
+    mockUseConsoleBookings.mockReturnValue({
       data: {
         data: {
           bookings: [
@@ -245,18 +245,18 @@ describe("AdminBookingsPage", () => {
       isPending: false,
       variables: null,
     });
-    mockUseAdminCustomers.mockReturnValue({
+    mockUseConsoleCustomers.mockReturnValue({
       data: { data: { customers: [] } },
       isLoading: false,
       error: null,
     });
-    mockUseAdminConsultants.mockReturnValue({
+    mockUseConsoleConsultants.mockReturnValue({
       data: { data: { consultants: [] } },
       isLoading: false,
       error: null,
     });
 
-    render(<AdminBookingsPage />);
+    render(<ConsoleBookingsPage />);
 
     expect(screen.getByText("2026/04/19 10:30")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "課金" }));

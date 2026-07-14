@@ -4,19 +4,19 @@ import { Role } from "@/domain/authorization/role";
 
 describe("authorization permissions", () => {
   it("adds read permissions required by write permissions", () => {
-    expect(normalizePermissions(["admin.payments.charge"])).toEqual([
-      "admin.payments.read",
-      "admin.payments.charge",
+    expect(normalizePermissions(["console.payments.charge"])).toEqual([
+      "console.payments.read",
+      "console.payments.charge",
     ]);
   });
 
   it("adds dashboard read dependencies", () => {
-    expect(normalizePermissions(["admin.dashboard.read"])).toEqual([
-      "admin.dashboard.read",
-      "admin.bookings.read",
-      "admin.payments.read",
-      "admin.customers.read",
-      "admin.consultants.read",
+    expect(normalizePermissions(["console.dashboard.read"])).toEqual([
+      "console.dashboard.read",
+      "console.bookings.read",
+      "console.payments.read",
+      "console.customers.read",
+      "console.consultants.read",
     ]);
   });
 
@@ -25,7 +25,7 @@ describe("authorization permissions", () => {
 
     expect(role.getRoleId()).toBe("admin");
     expect(role.getIsSystem()).toBe(true);
-    expect(role.getPermissions()).toContain("admin.roles.manage");
-    expect(role.getPermissions()).toContain("admin.accounts.role.manage");
+    expect(role.getPermissions()).toContain("console.roles.manage");
+    expect(role.getPermissions()).toContain("console.accounts.role.manage");
   });
 });

@@ -767,11 +767,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/AvatarPublishResponse"
 
-  /organizations/{organizationId}/admin/dashboard:
+  /organizations/{organizationId}/console/dashboard:
     get:
-      operationId: getAdminDashboard
+      operationId: getConsoleDashboard
       summary: 管理ダッシュボード取得
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -784,11 +784,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardData"
 
-  /organizations/{organizationId}/admin/slots:
+  /organizations/{organizationId}/console/slots:
     get:
-      operationId: getAdminSlots
+      operationId: getConsoleSlots
       summary: 空き枠一覧取得（管理画面）
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -806,11 +806,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/GetSlots200"
 
-  /organizations/{organizationId}/admin/consultants:
+  /organizations/{organizationId}/console/consultants:
     get:
-      operationId: getAdminConsultants
+      operationId: getConsoleConsultants
       summary: 相談員一覧取得（管理者）
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -835,9 +835,9 @@ paths:
                   pagination:
                     $ref: "#/components/schemas/PaginationMeta"
     post:
-      operationId: createAdminConsultant
+      operationId: createConsoleConsultant
       summary: 相談員作成
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -868,11 +868,11 @@ paths:
         "201":
           description: Created
 
-  /organizations/{organizationId}/admin/consultants/{id}:
+  /organizations/{organizationId}/console/consultants/{id}:
     patch:
-      operationId: updateAdminConsultant
+      operationId: updateConsoleConsultant
       summary: 相談員更新
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -901,9 +901,9 @@ paths:
         "200":
           description: OK
     delete:
-      operationId: deleteAdminConsultant
+      operationId: deleteConsoleConsultant
       summary: 相談員無効化
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -913,11 +913,11 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/settings/booking:
+  /organizations/{organizationId}/console/settings/booking:
     get:
-      operationId: getAdminBookingSettings
+      operationId: getConsoleBookingSettings
       summary: 予約設定取得（管理者・オペレーター）
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -930,9 +930,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/BookingSettings"
     patch:
-      operationId: updateAdminBookingSettings
+      operationId: updateConsoleBookingSettings
       summary: 予約設定更新（管理者のみ）
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -947,11 +947,11 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/settings/consultant-statuses:
+  /organizations/{organizationId}/console/settings/consultant-statuses:
     get:
-      operationId: getAdminConsultantStatuses
+      operationId: getConsoleConsultantStatuses
       summary: 相談員ステータス設定取得（管理者・オペレーター）
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -964,9 +964,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/ConsultantStatusSettings"
     patch:
-      operationId: updateAdminConsultantStatuses
+      operationId: updateConsoleConsultantStatuses
       summary: 相談員ステータス設定更新（管理者のみ）
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -981,11 +981,11 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/bookings:
+  /organizations/{organizationId}/console/bookings:
     get:
-      operationId: getAdminBookings
+      operationId: getConsoleBookings
       summary: 予約一覧取得（管理者）
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -1015,11 +1015,11 @@ paths:
                   pagination:
                     $ref: "#/components/schemas/PaginationMeta"
 
-  /organizations/{organizationId}/admin/payments:
+  /organizations/{organizationId}/console/payments:
     get:
-      operationId: getAdminPayments
+      operationId: getConsolePayments
       summary: 決済一覧取得（管理者）
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -1044,11 +1044,11 @@ paths:
                   pagination:
                     $ref: "#/components/schemas/PaginationMeta"
 
-  /organizations/{organizationId}/admin/customers:
+  /organizations/{organizationId}/console/customers:
     get:
-      operationId: getAdminCustomers
+      operationId: getConsoleCustomers
       summary: 顧客一覧取得（管理者）
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -1073,11 +1073,11 @@ paths:
                   pagination:
                     $ref: "#/components/schemas/PaginationMeta"
 
-  /organizations/{organizationId}/admin/accounts:
+  /organizations/{organizationId}/console/accounts:
     get:
-      operationId: getAdminAccounts
+      operationId: getConsoleAccounts
       summary: 組織アカウント一覧取得（管理者・オペレーター）
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -1098,15 +1098,15 @@ paths:
                   accounts:
                     type: array
                     items:
-                      $ref: "#/components/schemas/AdminAccount"
+                      $ref: "#/components/schemas/ConsoleAccount"
                   pagination:
                     $ref: "#/components/schemas/PaginationMeta"
 
-  /organizations/{organizationId}/admin/roles:
+  /organizations/{organizationId}/console/roles:
     get:
-      operationId: getAdminRoles
+      operationId: getConsoleRoles
       summary: 組織ロール一覧取得
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -1125,9 +1125,9 @@ paths:
                     items:
                       $ref: "#/components/schemas/Role"
     post:
-      operationId: createAdminRole
+      operationId: createConsoleRole
       summary: 組織ロール作成
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -1146,11 +1146,11 @@ paths:
               schema:
                 $ref: "#/components/schemas/Role"
 
-  /organizations/{organizationId}/admin/roles/{roleId}:
+  /organizations/{organizationId}/console/roles/{roleId}:
     patch:
-      operationId: updateAdminRole
+      operationId: updateConsoleRole
       summary: 組織ロール更新
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -1174,9 +1174,9 @@ paths:
               schema:
                 $ref: "#/components/schemas/Role"
     delete:
-      operationId: deleteAdminRole
+      operationId: deleteConsoleRole
       summary: 組織ロール削除
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -1190,11 +1190,11 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/accounts/invite:
+  /organizations/{organizationId}/console/accounts/invite:
     post:
       operationId: inviteAccount
       summary: 組織アカウント招待（roleId で権限ロールを指定、isConsultant=true で相談員も同時作成）
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -1230,11 +1230,11 @@ paths:
                   accountId:
                     type: string
 
-  /organizations/{organizationId}/admin/accounts/{accountId}:
+  /organizations/{organizationId}/console/accounts/{accountId}:
     delete:
-      operationId: deleteAdminAccount
+      operationId: deleteConsoleAccount
       summary: 組織アカウント削除
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -1244,11 +1244,11 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/accounts/{accountId}/role:
+  /organizations/{organizationId}/console/accounts/{accountId}/role:
     patch:
       operationId: updateAccountRole
       summary: 組織アカウントロール更新
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -1268,11 +1268,11 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/accounts/{accountId}/display-name:
+  /organizations/{organizationId}/console/accounts/{accountId}/display-name:
     patch:
       operationId: updateAccountDisplayName
       summary: 組織アカウント表示名更新（管理者、またはオペレーター本人）
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -1292,11 +1292,11 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/accounts/{accountId}/resend-invite:
+  /organizations/{organizationId}/console/accounts/{accountId}/resend-invite:
     post:
       operationId: resendAccountInvite
       summary: 招待メール再送（管理者・オペレーター）
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -1306,11 +1306,11 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/accounts/{accountId}/reset-password:
+  /organizations/{organizationId}/console/accounts/{accountId}/reset-password:
     post:
       operationId: resetAccountPassword
       summary: パスワードリセットメール送信（管理者・オペレーター）
-      tags: [admin]
+      tags: [console]
       security:
         - bearerAuth: []
       parameters:
@@ -1504,7 +1504,7 @@ components:
         pricePlanTotalJPY:
           type: number
           nullable: true
-    AdminAccount:
+    ConsoleAccount:
       type: object
       required: [accountId, email, name, roleId, roleName, status, createdAt, updatedAt]
       properties:
@@ -1532,28 +1532,28 @@ components:
     AuthorizationPermission:
       type: string
       enum:
-        - admin.dashboard.read
-        - admin.bookings.read
-        - admin.bookings.cancel
-        - admin.payments.read
-        - admin.payments.charge
-        - admin.customers.read
-        - admin.consultants.read
-        - admin.consultants.manage
-        - admin.consultants.status.manage
-        - admin.slots.read
-        - admin.slots.manage
-        - admin.settings.read
-        - admin.settings.manage
-        - admin.accounts.read
-        - admin.accounts.invite
-        - admin.accounts.display-name.manage
-        - admin.accounts.role.manage
-        - admin.accounts.delete
-        - admin.accounts.invite.resend
-        - admin.accounts.password-reset
-        - admin.roles.read
-        - admin.roles.manage
+        - console.dashboard.read
+        - console.bookings.read
+        - console.bookings.cancel
+        - console.payments.read
+        - console.payments.charge
+        - console.customers.read
+        - console.consultants.read
+        - console.consultants.manage
+        - console.consultants.status.manage
+        - console.slots.read
+        - console.slots.manage
+        - console.settings.read
+        - console.settings.manage
+        - console.accounts.read
+        - console.accounts.invite
+        - console.accounts.display-name.manage
+        - console.accounts.role.manage
+        - console.accounts.delete
+        - console.accounts.invite.resend
+        - console.accounts.password-reset
+        - console.roles.read
+        - console.roles.manage
 
     Role:
       type: object

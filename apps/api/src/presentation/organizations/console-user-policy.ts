@@ -25,7 +25,7 @@ export function isLastAdminSelfDemotion(params: {
   );
 }
 
-export function validateAdminUserDeletionTarget(
+export function validateConsoleUserDeletionTarget(
   actorAccountId: string,
   targetAccountId: string,
 ): { isAllowed: boolean; message?: string } {

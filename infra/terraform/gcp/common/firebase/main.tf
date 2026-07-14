@@ -2,7 +2,7 @@ locals {
   app_hosting_secret_ids = toset([
     "API_URL",
     "USER_APP_URL",
-    "ADMIN_APP_URL",
+    "CONSOLE_APP_URL",
     "CANCEL_TOKEN_SECRET",
     "COUPON_WEBHOOK_SECRET",
     "CORS_ALLOWED_ORIGINS",

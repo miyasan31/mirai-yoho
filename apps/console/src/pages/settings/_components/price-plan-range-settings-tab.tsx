@@ -1,4 +1,4 @@
-import { useUpdateAdminBookingSettings } from "@mirai-yoho/console-core/hooks/use-booking-settings";
+import { useUpdateConsoleBookingSettings } from "@mirai-yoho/console-core/hooks/use-booking-settings";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
@@ -25,7 +25,7 @@ export function PricePlanRangeSettingsTab({
   initialPricePlanRange,
   onPricePlanRangeSaved,
 }: PricePlanRangeSettingsTabProps) {
-  const updateBookingSettings = useUpdateAdminBookingSettings();
+  const updateBookingSettings = useUpdateConsoleBookingSettings();
   const form = useForm<PricePlanRange>({
     defaultValues: initialPricePlanRange,
   });

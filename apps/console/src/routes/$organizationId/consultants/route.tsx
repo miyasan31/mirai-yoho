@@ -1,15 +1,15 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import AdminConsultantsPage from "@/pages/consultants/page";
+import ConsoleConsultantsPage from "@/pages/consultants/page";
 
-function AdminConsultantsRoute() {
+function ConsoleConsultantsRoute() {
   return (
     <>
-      <AdminConsultantsPage />
+      <ConsoleConsultantsPage />
       <Outlet />
     </>
   );
 }
 
 export const Route = createFileRoute("/$organizationId/consultants")({
-  component: AdminConsultantsRoute,
+  component: ConsoleConsultantsRoute,
 });

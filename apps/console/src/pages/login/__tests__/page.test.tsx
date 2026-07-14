@@ -105,16 +105,16 @@ vi.mock("@mirai-yoho/ui/components/ui/text", () => ({
   },
 }));
 
-import AdminLoginPage from "../page";
+import ConsoleLoginPage from "../page";
 
-describe("AdminLoginPage", () => {
+describe("ConsoleLoginPage", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
   });
 
   it("shows password reset link", () => {
-    render(<AdminLoginPage />);
+    render(<ConsoleLoginPage />);
 
     const link = screen.getByRole("link", {
       name: "パスワードをお忘れですか？",
@@ -128,10 +128,10 @@ describe("AdminLoginPage", () => {
     mockSignIn.mockResolvedValue({
       currentOrganizationId: "org-test",
       currentRoleId: "admin",
-      currentPermissions: ["admin.dashboard.read"],
+      currentPermissions: ["console.dashboard.read"],
     });
 
-    const { container } = render(<AdminLoginPage />);
+    const { container } = render(<ConsoleLoginPage />);
 
     fireEvent.change(container.querySelector("#email") as HTMLInputElement, {
       target: { value: "admin@example.com" },
@@ -155,10 +155,10 @@ describe("AdminLoginPage", () => {
     mockSignIn.mockResolvedValue({
       currentOrganizationId: "org-test",
       currentRoleId: "reception-custom-role",
-      currentPermissions: ["admin.bookings.read"],
+      currentPermissions: ["console.bookings.read"],
     });
 
-    const { container } = render(<AdminLoginPage />);
+    const { container } = render(<ConsoleLoginPage />);
 
     fireEvent.change(container.querySelector("#email") as HTMLInputElement, {
       target: { value: "reception@example.com" },
@@ -186,7 +186,7 @@ describe("AdminLoginPage", () => {
       currentPermissions: [],
     });
 
-    const { container } = render(<AdminLoginPage />);
+    const { container } = render(<ConsoleLoginPage />);
 
     fireEvent.change(container.querySelector("#email") as HTMLInputElement, {
       target: { value: "consultant@example.com" },

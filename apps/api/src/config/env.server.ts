@@ -48,8 +48,8 @@ export const envServer = {
   get apiUrl(): string {
     return requireServerEnv("API_URL");
   },
-  get adminAppUrl(): string {
-    return requireServerEnv("ADMIN_APP_URL");
+  get consoleAppUrl(): string {
+    return requireServerEnv("CONSOLE_APP_URL");
   },
   get userAppUrl(): string {
     return requireServerEnv("USER_APP_URL");

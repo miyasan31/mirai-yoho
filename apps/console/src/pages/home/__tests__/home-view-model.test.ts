@@ -3,7 +3,7 @@ import type {
   CustomerDetail,
   PaymentDetail,
 } from "@mirai-yoho/api-client/schemas";
-import { buildAdminHomeViewModel } from "../home-view-model";
+import { buildConsoleHomeViewModel } from "../home-view-model";
 
 function createBooking(overrides: Partial<BookingDetail> = {}): BookingDetail {
   return {
@@ -56,11 +56,11 @@ function createCustomer(
   };
 }
 
-describe("buildAdminHomeViewModel", () => {
+describe("buildConsoleHomeViewModel", () => {
   it("today + 24h の未対応予約件数を集計し、開始時刻順に並べる", () => {
     const now = new Date("2026-04-22T09:00:00+09:00");
 
-    const viewModel = buildAdminHomeViewModel({
+    const viewModel = buildConsoleHomeViewModel({
       bookings: [
         createBooking({
           bookingId: "in-window-late",
@@ -97,7 +97,7 @@ describe("buildAdminHomeViewModel", () => {
   it("completed かつ当日メモ空白のみをメモ未入力として集計する", () => {
     const now = new Date("2026-04-22T09:00:00+09:00");
 
-    const viewModel = buildAdminHomeViewModel({
+    const viewModel = buildConsoleHomeViewModel({
       bookings: [
         createBooking({
           bookingId: "missing-today",
@@ -135,7 +135,7 @@ describe("buildAdminHomeViewModel", () => {
   it("本決済待ち件数を chargeable で集計し、支払いステータスを紐付ける", () => {
     const now = new Date("2026-04-22T09:00:00+09:00");
 
-    const viewModel = buildAdminHomeViewModel({
+    const viewModel = buildConsoleHomeViewModel({
       bookings: [
         createBooking({
           bookingId: "chargeable-a",
