@@ -3,9 +3,10 @@ import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-p
 export interface Account {
   organizationId: string;
   name: string;
-  role: string;
+  roleId: string;
   roleName: string;
   permissions: AuthorizationPermission[];
+  isConsultant: boolean;
   status: "active" | "invited" | "disabled";
   createdAt: string;
 }

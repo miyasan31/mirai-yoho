@@ -1193,7 +1193,7 @@ paths:
   /organizations/{organizationId}/admin/accounts/invite:
     post:
       operationId: inviteAccount
-      summary: 組織アカウント招待（管理者・オペレーター・相談員）
+      summary: 組織アカウント招待（roleId で権限ロールを指定、isConsultant=true で相談員も同時作成）
       tags: [admin]
       security:
         - bearerAuth: []
@@ -1205,7 +1205,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [email, role, name]
+              required: [email, roleId, name]
               properties:
                 email:
                   type: string
@@ -1214,8 +1214,10 @@ paths:
                   type: string
                 phone:
                   type: string
-                role:
+                roleId:
                   type: string
+                isConsultant:
+                  type: boolean
       responses:
         "201":
           description: Created
@@ -1258,9 +1260,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [role]
+              required: [roleId]
               properties:
-                role:
+                roleId:
                   type: string
       responses:
         "200":
@@ -1504,7 +1506,7 @@ components:
           nullable: true
     AdminAccount:
       type: object
-      required: [uid, email, name, role, roleName, status, createdAt, updatedAt]
+      required: [uid, email, name, roleId, roleName, status, createdAt, updatedAt]
       properties:
         uid:
           type: string
@@ -1513,7 +1515,7 @@ components:
           format: email
         name:
           type: string
-        role:
+        roleId:
           type: string
         roleName:
           type: string

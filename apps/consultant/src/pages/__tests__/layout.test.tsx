@@ -71,7 +71,7 @@ describe("ConsultantLayout", () => {
   function mockAuthorizedConsultantAuth() {
     mockUseAuth.mockReturnValue({
       user: { email: "consultant@example.com" },
-      role: "consultant",
+      isConsultant: true,
       accounts: [
         {
           name: "Org Test",
@@ -110,7 +110,7 @@ describe("ConsultantLayout", () => {
   it("falls back to user email when consultant profile name is empty", () => {
     mockUseAuth.mockReturnValue({
       user: { email: "consultant@example.com" },
-      role: "consultant",
+      isConsultant: true,
       accounts: [
         {
           name: "Org Test",

@@ -25,21 +25,26 @@ service cloud.firestore {
         && accountData(organizationId).status == 'active';
     }
 
-    function hasRole(organizationId, roles) {
+    function hasRoleId(organizationId, roleIds) {
       return isActiveMember(organizationId)
-        && accountData(organizationId).role in roles;
+        && accountData(organizationId).roleId in roleIds;
     }
 
-    function isOrganizationAdmin(organizationId) {
-      return hasRole(organizationId, ['admin', 'operator']);
-    }
-
-    function isOrganizationSuperAdmin(organizationId) {
-      return hasRole(organizationId, ['admin']);
+    function consultantDocPath(organizationId) {
+      return /databases/$(database)/documents/consultants/$(organizationId + "_" + request.auth.uid);
     }
 
     function isOrganizationConsultant(organizationId) {
-      return hasRole(organizationId, ['consultant']);
+      return isActiveMember(organizationId)
+        && exists(consultantDocPath(organizationId));
+    }
+
+    function isOrganizationAdmin(organizationId) {
+      return hasRoleId(organizationId, ['admin', 'operator']);
+    }
+
+    function isOrganizationSuperAdmin(organizationId) {
+      return hasRoleId(organizationId, ['admin']);
     }
 
     match /organizations/{organizationId} {
@@ -65,7 +70,7 @@ service cloud.firestore {
       allow read: if isActiveMember(resource.data.organizationId);
       allow create: if isOrganizationAdmin(request.resource.data.organizationId)
         || (
-          hasRole(request.resource.data.organizationId, ['consultant'])
+          isOrganizationConsultant(request.resource.data.organizationId)
           && request.resource.data.consultantId == request.auth.uid
         );
       allow update, delete: if isOrganizationAdmin(resource.data.organizationId)
@@ -79,12 +84,12 @@ service cloud.firestore {
       allow read: if isActiveMember(resource.data.organizationId);
       allow create: if isOrganizationAdmin(request.resource.data.organizationId)
         || (
-          hasRole(request.resource.data.organizationId, ['consultant'])
+          isOrganizationConsultant(request.resource.data.organizationId)
           && request.resource.data.consultantId == request.auth.uid
         );
       allow update, delete: if isOrganizationAdmin(resource.data.organizationId)
         || (
-          hasRole(resource.data.organizationId, ['consultant'])
+          isOrganizationConsultant(resource.data.organizationId)
           && resource.data.consultantId == request.auth.uid
         );
     }

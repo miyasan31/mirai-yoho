@@ -24,8 +24,10 @@ export interface AuthState {
   accounts: Account[];
   currentOrganizationId: string | null;
   currentDisplayName: string | null;
-  currentRole: string | null;
-  role: string | null;
+  currentRoleId: string | null;
+  roleId: string | null;
+  currentIsConsultant: boolean;
+  isConsultant: boolean;
   permissions: AuthorizationPermission[];
   hasPermission: (permission: AuthorizationPermission) => boolean;
   hasAnyPermission: (permissions: AuthorizationPermission[]) => boolean;
@@ -35,7 +37,8 @@ export interface AuthState {
     password: string,
   ) => Promise<{
     currentOrganizationId: string | null;
-    currentRole: string | null;
+    currentRoleId: string | null;
+    currentIsConsultant: boolean;
     currentPermissions: AuthorizationPermission[];
   }>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
@@ -142,7 +145,8 @@ export function useAuthState(): AuthState {
 
       return {
         currentOrganizationId: data.currentOrganizationId,
-        currentRole: currentAccount?.role ?? null,
+        currentRoleId: currentAccount?.roleId ?? null,
+        currentIsConsultant: currentAccount?.isConsultant ?? false,
         currentPermissions: currentAccount?.permissions ?? [],
       };
     },
@@ -204,12 +208,12 @@ export function useAuthState(): AuthState {
     }
   }, []);
 
-  const currentRole =
-    accounts.find((account) => account.organizationId === currentOrganizationId)
-      ?.role ?? null;
-  const permissions =
-    accounts.find((account) => account.organizationId === currentOrganizationId)
-      ?.permissions ?? [];
+  const currentAccount = accounts.find(
+    (account) => account.organizationId === currentOrganizationId,
+  );
+  const currentRoleId = currentAccount?.roleId ?? null;
+  const currentIsConsultant = currentAccount?.isConsultant ?? false;
+  const permissions = currentAccount?.permissions ?? [];
 
   const hasPermission = useCallback(
     (permission: AuthorizationPermission) => permissions.includes(permission),
@@ -228,8 +232,10 @@ export function useAuthState(): AuthState {
       accounts,
       currentOrganizationId,
       currentDisplayName,
-      currentRole,
-      role: currentRole,
+      currentRoleId,
+      roleId: currentRoleId,
+      currentIsConsultant,
+      isConsultant: currentIsConsultant,
       permissions,
       hasPermission,
       hasAnyPermission,
@@ -246,7 +252,8 @@ export function useAuthState(): AuthState {
       accounts,
       currentOrganizationId,
       currentDisplayName,
-      currentRole,
+      currentRoleId,
+      currentIsConsultant,
       permissions,
       hasPermission,
       hasAnyPermission,

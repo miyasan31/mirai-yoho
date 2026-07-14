@@ -35,9 +35,10 @@ describe("PATCH /api/auth/organization", () => {
       currentDisplayName: "User",
     });
     vi.mocked(getAccount).mockReturnValueOnce({
-      role: "admin",
+      roleId: "admin",
       roleName: "管理者",
       permissions: [],
+      isConsultant: false,
       organizationId: "org-1",
       name: "テスト組織",
       status: "active",

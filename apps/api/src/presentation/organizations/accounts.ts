@@ -16,7 +16,7 @@ export async function listAccounts(organizationId: string) {
     ...(doc.data() as {
       uid: string;
       organizationId: string;
-      role: string;
+      roleId: string;
       status: string;
       name?: string;
       createdAt?: Timestamp;
@@ -31,7 +31,7 @@ export async function getAccount(
 ): Promise<{
   uid: string;
   organizationId: string;
-  role: string;
+  roleId: string;
   status: string;
 } | null> {
   const docId = getAccountDocId(organizationId, uid);
@@ -40,11 +40,7 @@ export async function getAccount(
   return doc.data() as {
     uid: string;
     organizationId: string;
-    role: string;
+    roleId: string;
     status: string;
   };
-}
-
-export function isAdminPanelUserRole(role: unknown): role is string {
-  return typeof role === "string" && role !== "consultant";
 }

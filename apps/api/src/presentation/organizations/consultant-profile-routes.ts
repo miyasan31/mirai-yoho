@@ -3,7 +3,7 @@ import { Hono } from "hono";
 import { UpdateProfileUseCase } from "@/application/consultant/update-profile-use-case";
 import { envServer } from "@/config/env.server";
 import { Settings } from "@/domain/settings/settings";
-import { requireRole } from "@/infrastructure/auth/require-role";
+import { requireConsultant } from "@/infrastructure/auth/require-role";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createConsultantRepository,
@@ -63,7 +63,7 @@ consultantProfileRoutes.get(
   "/consultant/profile",
   getRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireRole(authUser, organizationId, "consultant");
+    requireConsultant(authUser, organizationId);
     const consultant = await createConsultantRepository().findById(
       organizationId,
       authUser.uid,
@@ -111,7 +111,7 @@ consultantProfileRoutes.patch(
   "/consultant/profile",
   patchRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireRole(authUser, organizationId, "consultant");
+    requireConsultant(authUser, organizationId);
     const body = await request.json();
     if (!body.name || !Array.isArray(body.specialties)) {
       return jsonError(
@@ -141,7 +141,7 @@ consultantProfileRoutes.post(
   "/consultant/profile/avatar-upload-url",
   postRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireRole(authUser, organizationId, "consultant");
+    requireConsultant(authUser, organizationId);
     const body = await request.json();
     const contentType = body.contentType;
     const fileSize = body.fileSize;
@@ -191,7 +191,7 @@ consultantProfileRoutes.post(
   "/consultant/profile/avatar-publish",
   postRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireRole(authUser, organizationId, "consultant");
+    requireConsultant(authUser, organizationId);
     const body = await request.json();
     const objectPath = body.objectPath;
 

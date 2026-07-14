@@ -1,52 +1,49 @@
-export type AdminActorRole = string | null;
+const SYSTEM_ADMIN_ROLE_ID = "admin";
+
+export type AdminActorRoleId = string | null;
 
 export type AdminPanelAccountStatus = "pending" | "registered";
 
-export function canManageAdminAccounts(actorRole: AdminActorRole): boolean {
-  return !!actorRole && actorRole !== "consultant";
+export function canManageAdminAccounts(actorRoleId: AdminActorRoleId): boolean {
+  return !!actorRoleId;
 }
 
-export function canInviteAdminAccounts(actorRole: AdminActorRole): boolean {
-  return canManageAdminAccounts(actorRole);
+export function canInviteAdminAccounts(actorRoleId: AdminActorRoleId): boolean {
+  return canManageAdminAccounts(actorRoleId);
 }
 
 export function canEditDisplayName(
-  actorRole: AdminActorRole,
+  actorRoleId: AdminActorRoleId,
   actorUid: string | undefined,
   targetUid: string,
 ): boolean {
-  if (actorRole === "admin") {
+  if (actorRoleId === SYSTEM_ADMIN_ROLE_ID) {
     return true;
   }
-
-  if (actorRole === "operator") {
-    return !!actorUid && actorUid === targetUid;
-  }
-
-  return true;
+  return !!actorUid && actorUid === targetUid;
 }
 
 export function canEditRole(
-  actorRole: AdminActorRole,
+  actorRoleId: AdminActorRoleId,
   targetStatus: AdminPanelAccountStatus,
 ): boolean {
-  return actorRole === "admin" && targetStatus !== "pending";
+  return actorRoleId === SYSTEM_ADMIN_ROLE_ID && targetStatus !== "pending";
 }
 
 export function canResendInvite(
-  actorRole: AdminActorRole,
+  actorRoleId: AdminActorRoleId,
   targetStatus: AdminPanelAccountStatus,
 ): boolean {
-  return canManageAdminAccounts(actorRole) && targetStatus === "pending";
+  return canManageAdminAccounts(actorRoleId) && targetStatus === "pending";
 }
 
 export function canResetPassword(
-  actorRole: AdminActorRole,
+  actorRoleId: AdminActorRoleId,
   targetStatus: AdminPanelAccountStatus,
 ): boolean {
-  return canManageAdminAccounts(actorRole) && targetStatus !== "pending";
+  return canManageAdminAccounts(actorRoleId) && targetStatus !== "pending";
 }
 
-export function canDeleteAdminAccount(actorRole: AdminActorRole): boolean {
-  return canManageAdminAccounts(actorRole);
+export function canDeleteAdminAccount(actorRoleId: AdminActorRoleId): boolean {
+  return canManageAdminAccounts(actorRoleId);
 }

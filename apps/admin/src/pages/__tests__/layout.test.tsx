@@ -59,7 +59,7 @@ describe("AdminLayout", () => {
   it("shows account management nav item for operator", () => {
     mockUseAuth.mockReturnValue({
       user: { email: "operator@example.com" },
-      role: "operator",
+      roleId: "operator",
       hasAnyPermission: (permissions: string[]) =>
         permissions.some((permission) =>
           [

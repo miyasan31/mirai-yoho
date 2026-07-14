@@ -127,7 +127,7 @@ describe("AdminLoginPage", () => {
   it("redirects to admin home when the account has admin permissions", async () => {
     mockSignIn.mockResolvedValue({
       currentOrganizationId: "org-test",
-      currentRole: "admin",
+      currentRoleId: "admin",
       currentPermissions: ["admin.dashboard.read"],
     });
 
@@ -154,7 +154,7 @@ describe("AdminLoginPage", () => {
   it("redirects to admin home when a custom role has admin permissions", async () => {
     mockSignIn.mockResolvedValue({
       currentOrganizationId: "org-test",
-      currentRole: "reception-custom-role",
+      currentRoleId: "reception-custom-role",
       currentPermissions: ["admin.bookings.read"],
     });
 
@@ -181,7 +181,8 @@ describe("AdminLoginPage", () => {
   it("does not navigate when the account has no admin permissions", async () => {
     mockSignIn.mockResolvedValue({
       currentOrganizationId: "org-test",
-      currentRole: "consultant",
+      currentRoleId: "consultant-only",
+      currentIsConsultant: true,
       currentPermissions: [],
     });
 

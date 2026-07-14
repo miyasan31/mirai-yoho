@@ -108,7 +108,7 @@ function isPermissionRequired(
 export default function AdminRolesPage() {
   const { organizationId } = useOrganizationRouting();
   const resolvedOrganizationId = organizationId ?? "";
-  const { role, hasPermission, refreshAuthContext } = useAuth();
+  const { roleId, hasPermission, refreshAuthContext } = useAuth();
   const { data, isLoading } = useAdminRoles();
   const createRole = useCreateAdminRole();
   const updateRole = useUpdateAdminRole();
@@ -311,7 +311,7 @@ export default function AdminRolesPage() {
             ロールごとの管理画面権限を設定します。
           </Text>
         </styled.div>
-        {role === "admin" && (
+        {roleId === "admin" && (
           <Dialog.Root
             open={createOpen}
             onOpenChange={(event) => {
@@ -388,7 +388,7 @@ export default function AdminRolesPage() {
                 </Table.Cell>
                 <Table.Cell>{item.assignedCount}</Table.Cell>
                 <Table.Cell>
-                  {role === "admin" && (
+                  {roleId === "admin" && (
                     <styled.div display="flex" gap="1">
                       {!item.isSystem && (
                         <Tooltip content="編集">

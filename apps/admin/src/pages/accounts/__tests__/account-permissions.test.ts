@@ -9,15 +9,16 @@ import {
 } from "../account-permissions";
 
 describe("account permissions", () => {
-  it("allows admin and operator to access account management and invite", () => {
+  it("allows any assigned roleId to access account management and invite", () => {
     expect(canManageAdminAccounts("admin")).toBe(true);
     expect(canManageAdminAccounts("operator")).toBe(true);
+    expect(canManageAdminAccounts("custom-role")).toBe(true);
     expect(canManageAdminAccounts(null)).toBe(false);
     expect(canInviteAdminAccounts("admin")).toBe(true);
     expect(canInviteAdminAccounts("operator")).toBe(true);
   });
 
-  it("allows operator display name edit only for self", () => {
+  it("allows non-admin roles to edit display name only for self", () => {
     expect(canEditDisplayName("admin", "admin-1", "target-1")).toBe(true);
     expect(canEditDisplayName("operator", "operator-1", "operator-1")).toBe(
       true,
@@ -27,7 +28,7 @@ describe("account permissions", () => {
     );
   });
 
-  it("limits role change to admin and leaves delete status checks to permissions", () => {
+  it("limits role change to system admin and requires target not to be pending", () => {
     expect(canEditRole("admin", "registered")).toBe(true);
     expect(canEditRole("admin", "pending")).toBe(false);
     expect(canEditRole("operator", "registered")).toBe(false);

@@ -31,7 +31,7 @@ import {
 
 export default function AdminConsultantsPage() {
   const { buildPath, organizationId } = useOrganizationRouting();
-  const { role } = useAuth();
+  const { roleId } = useAuth();
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
     useListQueryParams();
   const queryCustomer = useQueryClient();
@@ -65,7 +65,7 @@ export default function AdminConsultantsPage() {
     total: consultants.length,
     totalPages: 1,
   };
-  const isAdmin = role === "admin";
+  const isAdmin = roleId === "admin";
 
   const onInviteConsultant = async (values: ConsultantInviteFormValues) => {
     if (!organizationId) {
@@ -78,7 +78,8 @@ export default function AdminConsultantsPage() {
           email: values.email,
           name: values.name,
           phone: values.phone,
-          role: "consultant",
+          roleId: "admin",
+          isConsultant: true,
         },
       });
       toaster.success({

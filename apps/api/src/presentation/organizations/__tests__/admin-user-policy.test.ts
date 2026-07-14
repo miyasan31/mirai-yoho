@@ -7,7 +7,7 @@ describe("admin user policy", () => {
       isLastAdminSelfDemotion({
         actorUid: "admin-1",
         targetUid: "admin-1",
-        nextRole: "booking-manager",
+        nextRoleId: "booking-manager",
         activeAdminCount: 1,
       }),
     ).toBe(true);
@@ -18,7 +18,7 @@ describe("admin user policy", () => {
       isLastAdminSelfDemotion({
         actorUid: "admin-1",
         targetUid: "admin-2",
-        nextRole: "booking-manager",
+        nextRoleId: "booking-manager",
         activeAdminCount: 2,
       }),
     ).toBe(false);

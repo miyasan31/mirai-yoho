@@ -70,7 +70,8 @@ describe("ResendEmailService", () => {
 
     await service.sendInvitation({
       email: "invitee@example.com",
-      role: "consultant",
+      roleName: "管理者",
+      isConsultant: true,
       passwordResetLink: "https://example.com/reset",
     });
 

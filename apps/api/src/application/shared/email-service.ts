@@ -34,7 +34,8 @@ export interface IEmailService {
 
   sendInvitation(params: {
     email: string;
-    role: string;
+    roleName: string;
+    isConsultant: boolean;
     passwordResetLink: string;
   }): Promise<void>;
 

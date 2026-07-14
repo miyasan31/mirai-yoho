@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { toPricePlanOutput } from "@/application/price-plan/create-price-plan-use-case";
 import { Settings } from "@/domain/settings/settings";
-import { requireRole } from "@/infrastructure/auth/require-role";
+import { requireConsultant } from "@/infrastructure/auth/require-role";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createCreatePricePlanUseCase,
@@ -24,7 +24,7 @@ pricePlanRoutes.get(
   "/consultant/price-plans",
   getRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireRole(authUser, organizationId, "consultant");
+    requireConsultant(authUser, organizationId);
     const settings =
       (await createSettingsRepository().findByOrganizationId(organizationId)) ??
       Settings.createDefault(organizationId);
@@ -52,7 +52,7 @@ pricePlanRoutes.post(
   "/consultant/price-plans",
   postRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireRole(authUser, organizationId, "consultant");
+    requireConsultant(authUser, organizationId);
     const body = await request.json();
     if (typeof body.name !== "string" || body.name.trim().length === 0) {
       return jsonError(400, "VALIDATION_ERROR", "name is required");
@@ -76,7 +76,7 @@ pricePlanRoutes.patch(
   "/consultant/price-plans/:pricePlanId",
   patchRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requireRole(authUser, organizationId, "consultant");
+    requireConsultant(authUser, organizationId);
     const body = await request.json();
     if (
       body.name !== undefined &&
@@ -104,7 +104,7 @@ pricePlanRoutes.delete(
   "/consultant/price-plans/:pricePlanId",
   deleteRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requireRole(authUser, organizationId, "consultant");
+    requireConsultant(authUser, organizationId);
     const pricePlan = await createPricePlanRepository().findById(
       organizationId,
       param("pricePlanId"),

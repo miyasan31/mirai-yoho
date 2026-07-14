@@ -149,7 +149,7 @@ import AdminSettingsPage from "../page";
 describe("AdminSettingsPage", () => {
   beforeEach(() => {
     mockUseAuth.mockReturnValue({
-      role: "admin",
+      roleId: "admin",
       hasPermission: () => true,
     });
   });
@@ -238,7 +238,7 @@ describe("AdminSettingsPage", () => {
   });
 
   it("saves booking tab with persisted business hours", async () => {
-    mockUseAuth.mockReturnValue({ role: "admin", hasPermission: () => true });
+    mockUseAuth.mockReturnValue({ roleId: "admin", hasPermission: () => true });
     mockMutateAsync.mockResolvedValue({
       data: {
         consultantSelectionEnabled: false,
@@ -271,7 +271,7 @@ describe("AdminSettingsPage", () => {
   });
 
   it("saves business-hours tab with edited exception", async () => {
-    mockUseAuth.mockReturnValue({ role: "admin", hasPermission: () => true });
+    mockUseAuth.mockReturnValue({ roleId: "admin", hasPermission: () => true });
     mockMutateAsync.mockResolvedValue({
       data: {
         consultantSelectionEnabled: true,
@@ -325,7 +325,7 @@ describe("AdminSettingsPage", () => {
   });
 
   it("shows validation error on invalid business-hours range", async () => {
-    mockUseAuth.mockReturnValue({ role: "admin", hasPermission: () => true });
+    mockUseAuth.mockReturnValue({ roleId: "admin", hasPermission: () => true });
     const user = userEvent.setup();
     render(<AdminSettingsPage />);
 
@@ -357,7 +357,7 @@ describe("AdminSettingsPage", () => {
 
   it("operator cannot edit settings", async () => {
     mockUseAuth.mockReturnValue({
-      role: "operator",
+      roleId: "operator",
       hasPermission: () => false,
     });
     const user = userEvent.setup();

@@ -1,28 +1,26 @@
+import { SYSTEM_ADMIN_ROLE_ID } from "@/domain/authorization/role";
+
 export function canUpdateDisplayNameTarget(
-  actorRole: string,
+  actorRoleId: string,
   actorUid: string,
   targetUid: string,
 ): boolean {
-  if (actorRole === "admin") {
+  if (actorRoleId === SYSTEM_ADMIN_ROLE_ID) {
     return true;
   }
 
-  if (actorRole === "operator") {
-    return actorUid === targetUid;
-  }
-
-  return true;
+  return actorUid === targetUid;
 }
 
 export function isLastAdminSelfDemotion(params: {
   actorUid: string;
   targetUid: string;
-  nextRole: string;
+  nextRoleId: string;
   activeAdminCount: number;
 }): boolean {
   return (
     params.actorUid === params.targetUid &&
-    params.nextRole !== "admin" &&
+    params.nextRoleId !== SYSTEM_ADMIN_ROLE_ID &&
     params.activeAdminCount <= 1
   );
 }
@@ -30,19 +28,11 @@ export function isLastAdminSelfDemotion(params: {
 export function validateAdminUserDeletionTarget(
   actorUid: string,
   targetUid: string,
-  targetRole: string,
 ): { isAllowed: boolean; message?: string } {
   if (actorUid === targetUid) {
     return {
       isAllowed: false,
       message: "自分自身は削除できません",
-    };
-  }
-
-  if (targetRole === "consultant") {
-    return {
-      isAllowed: false,
-      message: "consultant must be managed from consultant management",
     };
   }
 
