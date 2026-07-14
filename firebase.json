@@ -34,7 +34,7 @@
     },
     {
       "target": "console",
-      "public": "apps/admin/dist",
+      "public": "apps/console/dist",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "cleanUrls": true,
       "rewrites": [

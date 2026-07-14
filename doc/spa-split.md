@@ -1,14 +1,14 @@
 # SPA 分割アーキテクチャと移行手順
 
 2026-07 に単一 Next.js アプリを 3 サービス構成へ分割した際のアーキテクチャと、リリースに必要な運用作業のメモ。
-さらに同月、コンソール SPA（`apps/console`）を管理者向け（`apps/admin`）と相談員向け（`apps/consultant`）の 2 アプリへ分割し、共有ロジックを `packages/console-core` に切り出した。
+さらに同月、コンソール SPA を管理者・オペレーター向け（`apps/console`）と相談員向け（`apps/consultant`）の 2 アプリへ分割し、共有ロジックを `packages/console-core` に切り出した。
 
 ## 構成
 
 ```
                     ┌──────────────────────────────┐
  user.miraiyohou.com               →  apps/user       （Firebase Hosting / 静的 SPA、組織は URL パス /<organizationId>/... で判別）
- console.miraiyohou.com            →  apps/admin      （Firebase Hosting / 静的 SPA）
+ console.miraiyohou.com            →  apps/console    （Firebase Hosting / 静的 SPA）
  consultant.miraiyohou.com         →  apps/consultant （Firebase Hosting / 静的 SPA）
                     │            │ fetch (CORS + Bearer token)
                     ▼            ▼
@@ -33,19 +33,19 @@
 | （新規） | `CORS_ALLOWED_ORIGINS` | CORS 許可オリジン |
 | `NEXT_PUBLIC_FIREBASE_*` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | 廃止（SPA 側 `VITE_*` へ移動） | - |
 
-> 旧 `CONSOLE_APP_URL`（コンソール共通 URL）は admin / consultant の分割に伴い `ADMIN_APP_URL` に置き換えた。`apps/api/env.d.ts` には型定義として `CONSULTANT_APP_URL` も残っているが、Secret Manager（`infra/terraform/gcp/common/api/main.tf` の `api_secret_ids`）にも `env.server.ts` のアクセサにも存在せず、実際には未使用。
+> 旧 `CONSOLE_APP_URL`（コンソール共通 URL）は分割時に `ADMIN_APP_URL` に置き換えた（apps/console = 旧 admin アプリを指すが env 名は互換のため据え置き）。`apps/api/env.d.ts` には型定義として `CONSULTANT_APP_URL` も残っているが、Secret Manager（`infra/terraform/gcp/common/api/main.tf` の `api_secret_ids`）にも `env.server.ts` のアクセサにも存在せず、実際には未使用。
 
 ### SPA（ビルド時に GitHub Actions の environment vars から注入）
 
 - `apps/user`: `VITE_API_URL`, `VITE_STRIPE_PUBLISHABLE_KEY`
-- `apps/admin`: `VITE_API_URL`, `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`
+- `apps/console`: `VITE_API_URL`, `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`
 - `apps/consultant`: `VITE_API_URL`, `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`
 
 ## Terraform が管理するもの（release ブランチ push で自動 apply）
 
 - Cloud Run service `api`（`common/api`。イメージは Terraform 管理外で `deploy-api.yml` が差し替える。`asia-northeast1`）
 - Secret Manager の新シークレット `API_URL` / `ADMIN_APP_URL` / `USER_APP_URL` / `CORS_ALLOWED_ORIGINS`（作成と IAM。**値の投入は手動**: `make setup-secrets`。全キーは `infra/terraform/gcp/common/api/main.tf` の `api_secret_ids` 参照）
-- SPA 用 Firebase Hosting サイト `{project}-user` / `{project}-console` / `{project}-consultant`（`.firebaserc` の targets と一致。`console` は admin アプリ（`apps/admin`）のデプロイ先）
+- SPA 用 Firebase Hosting サイト `{project}-user` / `{project}-console` / `{project}-consultant`（`.firebaserc` の targets と一致）
 - SPA サイトのカスタムドメイン（`spa_hosting_custom_domains`。現状 console / consultant。DNS は外部管理のため `wait_dns_verification = false` で apply し、追加すべきレコードは output で提示）
 - Firestore / Storage のセキュリティルール（`firestore.rules` / `storage.rules` を `google_firebaserules_ruleset/release` が読み込む。CLI では配信しない）
 - batch worker の `ADMIN_APP_URL` シークレット参照
@@ -62,7 +62,7 @@
 
 ## ドメイン移行手順（2026-07: `admin.console` / `consultant.console` → `console` / `consultant`）
 
-`apps/admin` を `admin.console.miraiyohou.com` → `console.miraiyohou.com`、`apps/consultant` を `consultant.console.miraiyohou.com` → `consultant.miraiyohou.com` へ移行する際の手順。同時に Firebase Hosting site `${project}-admin` を廃止し `${project}-console` を新規作成する。
+`apps/console`（旧 `apps/admin`）を `admin.console.miraiyohou.com` → `console.miraiyohou.com`、`apps/consultant` を `consultant.console.miraiyohou.com` → `consultant.miraiyohou.com` へ移行する際の手順。同時に Firebase Hosting site `${project}-admin` を廃止し `${project}-console` を新規作成する。apps ディレクトリも `apps/admin` → `apps/console` にリネームされる。
 
 1. **Terraform apply**（dev → prod の順）で以下がまとめて実行される:
    - 旧 hosting site `${project}-admin` を destroy（`google_firebase_hosting_site.admin_spa` を config から削除済み）
@@ -81,13 +81,13 @@
 ## デプロイフロー
 
 - `release/dev` / `release/prod` への push で:
-  - `.github/workflows/deploy-hosting.yml` … SPA 3 つ（user / admin=console / consultant）をビルドして Firebase Hosting にデプロイ
+  - `.github/workflows/deploy-hosting.yml` … SPA 3 つ（user / console / consultant）をビルドして Firebase Hosting にデプロイ
   - `.github/workflows/deploy-batch-worker.yml` … worker イメージビルド + Terraform apply
   - `.github/workflows/deploy-api.yml` … API イメージ（`apps/api/Dockerfile`）をビルドして Cloud Run service `api` を更新
 
 ## 開発メモ
 
-- ローカルは `pnpm dev`（全サービス同時起動）または `pnpm dev:api`（:3000）/ `pnpm dev:user`（:3010）/ `pnpm dev:admin`（:3020）/ `pnpm dev:consultant`（:3030）。API 側 `.env.local` の `CORS_ALLOWED_ORIGINS` に各 SPA のオリジンを入れる。
-- `apps/admin` と `apps/consultant` の共有ロジック（認証 `use-auth`、API クライアント初期化、組織ルーティング、共有クエリ hooks 等）は `packages/console-core` に集約。UI（`sidebar-layout` / `not-found` 等）は各アプリが所有し、将来のモバイル/PWA 対応で相談員側が乖離できるようにしている。
+- ローカルは `pnpm dev`（全サービス同時起動）または `pnpm dev:api`（:3000）/ `pnpm dev:user`（:3010）/ `pnpm dev:console`（:3020）/ `pnpm dev:consultant`（:3030）。API 側 `.env.local` の `CORS_ALLOWED_ORIGINS` に各 SPA のオリジンを入れる。
+- `apps/console` と `apps/consultant` の共有ロジック（認証 `use-auth`、API クライアント初期化、組織ルーティング、共有クエリ hooks 等）は `packages/console-core` に集約。UI（`sidebar-layout` / `not-found` 等）は各アプリが所有し、将来のモバイル/PWA 対応で相談員側が乖離できるようにしている。
 - Panda CSS のテーマは `packages/ui/panda.preset.ts` に集約。各アプリの `panda.config.ts` が preset を読み込み、自アプリ + `packages/ui/src` を include して styled-system を生成する。
 - `styled-system` は各パッケージ内で codegen される生成物（gitignore 済み）。`pnpm generate` で再生成。
