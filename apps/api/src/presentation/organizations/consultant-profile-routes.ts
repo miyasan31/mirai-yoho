@@ -2,12 +2,12 @@ import { getStorage } from "firebase-admin/storage";
 import { Hono } from "hono";
 import { UpdateProfileUseCase } from "@/application/consultant/update-profile-use-case";
 import { envServer } from "@/config/env.server";
-import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
-import { requireOrganizationRole } from "@/infrastructure/auth/require-organization-role";
+import { Settings } from "@/domain/settings/settings";
+import { requireRole } from "@/infrastructure/auth/require-role";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createConsultantRepository,
-  createOrganizationSettingsRepository,
+  createSettingsRepository,
 } from "@/infrastructure/container";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
 import { app } from "@/infrastructure/firestore/firestore-customer";
@@ -63,7 +63,7 @@ consultantProfileRoutes.get(
   "/consultant/profile",
   getRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationRole(authUser, organizationId, "consultant");
+    requireRole(authUser, organizationId, "consultant");
     const consultant = await createConsultantRepository().findById(
       organizationId,
       authUser.uid,
@@ -71,9 +71,9 @@ consultantProfileRoutes.get(
 
     if (!consultant) {
       const settings =
-        (await createOrganizationSettingsRepository().findByOrganizationId(
+        (await createSettingsRepository().findByOrganizationId(
           organizationId,
-        )) ?? OrganizationSettings.createDefault(organizationId);
+        )) ?? Settings.createDefault(organizationId);
       const status = resolveConsultantStatus(
         settings,
         settings.getDefaultConsultantStatusId(),
@@ -90,9 +90,8 @@ consultantProfileRoutes.get(
     }
 
     const settings =
-      (await createOrganizationSettingsRepository().findByOrganizationId(
-        organizationId,
-      )) ?? OrganizationSettings.createDefault(organizationId);
+      (await createSettingsRepository().findByOrganizationId(organizationId)) ??
+      Settings.createDefault(organizationId);
     const profile = consultant.getProfile();
     const status = resolveConsultantStatus(settings, consultant.getStatusId());
     return noStoreJson({
@@ -112,7 +111,7 @@ consultantProfileRoutes.patch(
   "/consultant/profile",
   patchRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationRole(authUser, organizationId, "consultant");
+    requireRole(authUser, organizationId, "consultant");
     const body = await request.json();
     if (!body.name || !Array.isArray(body.specialties)) {
       return jsonError(
@@ -142,7 +141,7 @@ consultantProfileRoutes.post(
   "/consultant/profile/avatar-upload-url",
   postRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationRole(authUser, organizationId, "consultant");
+    requireRole(authUser, organizationId, "consultant");
     const body = await request.json();
     const contentType = body.contentType;
     const fileSize = body.fileSize;
@@ -192,7 +191,7 @@ consultantProfileRoutes.post(
   "/consultant/profile/avatar-publish",
   postRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationRole(authUser, organizationId, "consultant");
+    requireRole(authUser, organizationId, "consultant");
     const body = await request.json();
     const objectPath = body.objectPath;
 

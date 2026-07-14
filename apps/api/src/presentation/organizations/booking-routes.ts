@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { AppError } from "@/application/shared/app-error";
-import { requireOrganizationPermission } from "@/infrastructure/auth/require-organization-permission";
+import { requirePermission } from "@/infrastructure/auth/require-permission";
 import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
 import { verifyCustomerAuth } from "@/infrastructure/auth/verify-customer-auth";
 import {
@@ -188,11 +188,7 @@ bookingRoutes.post(
       }
     } else {
       const authUser = await verifyAuth(request);
-      requireOrganizationPermission(
-        authUser,
-        organizationId,
-        "admin.bookings.cancel",
-      );
+      requirePermission(authUser, organizationId, "admin.bookings.cancel");
     }
 
     await createCancelBookingUseCase().execute({
@@ -209,11 +205,7 @@ bookingRoutes.post(
   "/bookings/:bookingId/charge",
   postRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
-      authUser,
-      organizationId,
-      "admin.payments.charge",
-    );
+    requirePermission(authUser, organizationId, "admin.payments.charge");
 
     const body = await request.json();
     if (body.method !== "manual") {

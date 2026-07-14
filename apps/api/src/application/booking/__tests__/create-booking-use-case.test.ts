@@ -8,15 +8,15 @@ import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
-import {
-  ConsultantPricePlan,
-  createPricePlanSelectionId,
-} from "@/domain/consultant-price-plan/consultant-price-plan";
-import type { IConsultantPricePlanRepository } from "@/domain/consultant-price-plan/consultant-price-plan-repository";
 import { Customer } from "@/domain/customer/customer";
 import type { ICustomerRepository } from "@/domain/customer/customer-repository";
-import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
-import type { IOrganizationSettingsRepository } from "@/domain/organization-settings/organization-settings-repository";
+import {
+  createPricePlanSelectionId,
+  PricePlan,
+} from "@/domain/price-plan/price-plan";
+import type { IPricePlanRepository } from "@/domain/price-plan/price-plan-repository";
+import { Settings } from "@/domain/settings/settings";
+import type { ISettingsRepository } from "@/domain/settings/settings-repository";
 import { Slot } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import { TimeRange } from "@/domain/slot/time-range";
@@ -25,8 +25,8 @@ import { BirthDate } from "@/domain/user/birth-date";
 import { User } from "@/domain/user/user";
 import type { IUserRepository } from "@/domain/user/user-repository";
 import { UserZoomConnection } from "@/domain/user/user-zoom-connection";
-import type { ZoomDailySession } from "@/domain/zoom-session/zoom-daily-session";
-import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
+import type { ZoomSession } from "@/domain/zoom-session/zoom-session";
+import type { IZoomSessionRepository } from "@/domain/zoom-session/zoom-session-repository";
 
 const ORGANIZATION_ID = "org-1";
 const DEFAULT_PRICE_PLAN_NAME = "通常鑑定";
@@ -244,19 +244,17 @@ class InMemoryBookingRepository implements IBookingRepository {
   }
 }
 
-class InMemoryZoomDailySessionRepository
-  implements IZoomDailySessionRepository
-{
-  public session: ZoomDailySession | null = null;
+class InMemoryZoomSessionRepository implements IZoomSessionRepository {
+  public session: ZoomSession | null = null;
 
   async findByDate(
     _organizationId: string,
     _sessionDate: string,
-  ): Promise<ZoomDailySession | null> {
+  ): Promise<ZoomSession | null> {
     return this.session;
   }
 
-  async save(session: ZoomDailySession): Promise<void> {
+  async save(session: ZoomSession): Promise<void> {
     this.session = session;
   }
 }
@@ -288,15 +286,13 @@ class InMemoryConsultantRepository implements IConsultantRepository {
   async delete(_organizationId: string, _consultantId: string): Promise<void> {}
 }
 
-class InMemoryConsultantPricePlanRepository
-  implements IConsultantPricePlanRepository
-{
-  constructor(private readonly pricePlans: ConsultantPricePlan[]) {}
+class InMemoryPricePlanRepository implements IPricePlanRepository {
+  constructor(private readonly pricePlans: PricePlan[]) {}
 
   async findById(
     _organizationId: string,
     pricePlanId: string,
-  ): Promise<ConsultantPricePlan | null> {
+  ): Promise<PricePlan | null> {
     return (
       this.pricePlans.find(
         (pricePlan) => pricePlan.getPricePlanId() === pricePlanId,
@@ -307,7 +303,7 @@ class InMemoryConsultantPricePlanRepository
   async findByConsultantId(
     _organizationId: string,
     consultantId: string,
-  ): Promise<ConsultantPricePlan[]> {
+  ): Promise<PricePlan[]> {
     return this.pricePlans.filter(
       (pricePlan) => pricePlan.getConsultantId() === consultantId,
     );
@@ -316,7 +312,7 @@ class InMemoryConsultantPricePlanRepository
   async findActiveByConsultantId(
     organizationId: string,
     consultantId: string,
-  ): Promise<ConsultantPricePlan[]> {
+  ): Promise<PricePlan[]> {
     return (await this.findByConsultantId(organizationId, consultantId)).filter(
       (pricePlan) => pricePlan.isActive(),
     );
@@ -327,7 +323,7 @@ class InMemoryConsultantPricePlanRepository
     consultantId: string;
     normalizedName: string;
     totalJPY: number;
-  }): Promise<ConsultantPricePlan | null> {
+  }): Promise<PricePlan | null> {
     return (
       this.pricePlans.find(
         (pricePlan) =>
@@ -339,21 +335,17 @@ class InMemoryConsultantPricePlanRepository
     );
   }
 
-  async save(pricePlan: ConsultantPricePlan): Promise<void> {
+  async save(pricePlan: PricePlan): Promise<void> {
     this.pricePlans.push(pricePlan);
   }
 }
 
-class InMemoryOrganizationSettingsRepository
-  implements IOrganizationSettingsRepository
-{
-  async findByOrganizationId(
-    organizationId: string,
-  ): Promise<OrganizationSettings | null> {
-    return OrganizationSettings.createDefault(organizationId);
+class InMemorySettingsRepository implements ISettingsRepository {
+  async findByOrganizationId(organizationId: string): Promise<Settings | null> {
+    return Settings.createDefault(organizationId);
   }
 
-  async save(_settings: OrganizationSettings): Promise<void> {}
+  async save(_settings: Settings): Promise<void> {}
 }
 
 const TEST_USER_ID = "user-1";
@@ -417,7 +409,7 @@ function createBookingTestUser(): User {
 }
 
 function createPricePlan(consultantId: string) {
-  return ConsultantPricePlan.create({
+  return PricePlan.create({
     organizationId: ORGANIZATION_ID,
     consultantId,
     pricePlanId: `plan-${consultantId}`,
@@ -432,26 +424,25 @@ function createUseCase(
     consultants?: Consultant[];
     zoomService?: IZoomService;
     emailService?: IEmailService;
-    pricePlans?: ConsultantPricePlan[];
+    pricePlans?: PricePlan[];
   },
 ) {
   const slotRepository = new InMemorySlotRepository(slots);
   const customerRepository = new InMemoryCustomerRepository();
   const bookingRepository = new InMemoryBookingRepository();
-  const zoomDailySessionRepository = new InMemoryZoomDailySessionRepository();
+  const zoomSessionRepository = new InMemoryZoomSessionRepository();
   const consultantRepository = new InMemoryConsultantRepository([
     ...(options?.consultants ?? [
       createConsultant("consultant-1", "田中"),
       createConsultant("consultant-2", "佐藤"),
     ]),
   ]);
-  const consultantPricePlanRepository =
-    new InMemoryConsultantPricePlanRepository(
-      options?.pricePlans ??
-        [...new Set(slots.map((slot) => slot.getConsultantId()))].map(
-          createPricePlan,
-        ),
-    );
+  const pricePlanRepository = new InMemoryPricePlanRepository(
+    options?.pricePlans ??
+      [...new Set(slots.map((slot) => slot.getConsultantId()))].map(
+        createPricePlan,
+      ),
+  );
 
   const defaultZoomService: IZoomService = {
     createDailyMeeting: vi.fn().mockResolvedValue({
@@ -485,10 +476,10 @@ function createUseCase(
       options?.zoomService ?? defaultZoomService,
       unitOfWork,
       options?.emailService ?? defaultEmailService,
-      zoomDailySessionRepository,
+      zoomSessionRepository,
       consultantRepository,
-      consultantPricePlanRepository,
-      new InMemoryOrganizationSettingsRepository(),
+      pricePlanRepository,
+      new InMemorySettingsRepository(),
       userRepository,
     ),
     bookingRepository,

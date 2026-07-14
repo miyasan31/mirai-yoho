@@ -2,7 +2,7 @@ import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-p
 
 export type UserRole = "admin" | "operator" | "consultant";
 
-export interface OrganizationAccount {
+export interface Account {
   organizationId: string;
   name: string;
   role: string;
@@ -14,7 +14,7 @@ export interface OrganizationAccount {
 
 export interface AuthUser {
   uid: string;
-  accounts: OrganizationAccount[];
+  accounts: Account[];
   currentOrganizationId: string | null;
   currentDisplayName: string | null;
 }

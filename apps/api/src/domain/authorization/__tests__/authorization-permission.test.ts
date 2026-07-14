@@ -1,6 +1,6 @@
 import { normalizePermissions } from "@mirai-yoho/shared/authorization-permission";
 import { describe, expect, it } from "vitest";
-import { OrganizationRole } from "@/domain/authorization/organization-role";
+import { Role } from "@/domain/authorization/role";
 
 describe("authorization permissions", () => {
   it("adds read permissions required by write permissions", () => {
@@ -21,7 +21,7 @@ describe("authorization permissions", () => {
   });
 
   it("creates protected admin role with all permissions", () => {
-    const role = OrganizationRole.createSystemAdmin("org-1");
+    const role = Role.createSystemAdmin("org-1");
 
     expect(role.getRoleId()).toBe("admin");
     expect(role.getIsSystem()).toBe(true);

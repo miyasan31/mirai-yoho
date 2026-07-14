@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { setLastOrganizationId } from "@/infrastructure/auth/load-auth-context";
-import { getOrganizationAccount } from "@/infrastructure/auth/require-organization-role";
+import { getAccount } from "@/infrastructure/auth/require-role";
 import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
 import { PATCH } from "../organization";
 
@@ -18,8 +18,8 @@ vi.mock("@/infrastructure/auth/verify-auth", () => ({
   },
 }));
 
-vi.mock("@/infrastructure/auth/require-organization-role", () => ({
-  getOrganizationAccount: vi.fn(),
+vi.mock("@/infrastructure/auth/require-role", () => ({
+  getAccount: vi.fn(),
 }));
 
 vi.mock("@/infrastructure/auth/load-auth-context", () => ({
@@ -34,7 +34,7 @@ describe("PATCH /api/auth/organization", () => {
       currentOrganizationId: "org-1",
       currentDisplayName: "User",
     });
-    vi.mocked(getOrganizationAccount).mockReturnValueOnce({
+    vi.mocked(getAccount).mockReturnValueOnce({
       role: "admin",
       roleName: "管理者",
       permissions: [],

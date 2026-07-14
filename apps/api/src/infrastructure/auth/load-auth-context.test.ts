@@ -59,7 +59,7 @@ describe("activateInvitedAccounts", () => {
 
     await activateInvitedAccounts("u1");
 
-    expect(mockCollection).toHaveBeenCalledWith("organization-accounts");
+    expect(mockCollection).toHaveBeenCalledWith("accounts");
     expect(mockWhereUid).toHaveBeenCalledWith("uid", "==", "u1");
     expect(mockWhereStatus).toHaveBeenCalledWith("status", "==", "invited");
     expect(mockBatch).toHaveBeenCalledTimes(1);

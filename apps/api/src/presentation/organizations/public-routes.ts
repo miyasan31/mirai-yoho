@@ -1,10 +1,10 @@
 import { Hono } from "hono";
-import { createPricePlanSelectionId } from "@/domain/consultant-price-plan/consultant-price-plan";
-import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
+import { createPricePlanSelectionId } from "@/domain/price-plan/price-plan";
+import { Settings } from "@/domain/settings/settings";
 import {
-  createConsultantPricePlanRepository,
   createConsultantRepository,
-  createOrganizationSettingsRepository,
+  createPricePlanRepository,
+  createSettingsRepository,
   createSlotRepository,
 } from "@/infrastructure/container";
 import { withNoStore, withPublicShortCache } from "../cache-control";
@@ -31,12 +31,9 @@ publicRoutes.get(
     const repo = createConsultantRepository();
     const [consultants, settings] = await Promise.all([
       repo.findAllActive(organizationId),
-      createOrganizationSettingsRepository().findByOrganizationId(
-        organizationId,
-      ),
+      createSettingsRepository().findByOrganizationId(organizationId),
     ]);
-    const resolvedSettings =
-      settings ?? OrganizationSettings.createDefault(organizationId);
+    const resolvedSettings = settings ?? Settings.createDefault(organizationId);
 
     return withNoStore(
       Response.json({
@@ -68,9 +65,8 @@ publicRoutes.get(
     errorContext.consultantId = consultantId;
     const repository = createSlotRepository();
     const settings =
-      (await createOrganizationSettingsRepository().findByOrganizationId(
-        organizationId,
-      )) ?? OrganizationSettings.createDefault(organizationId);
+      (await createSettingsRepository().findByOrganizationId(organizationId)) ??
+      Settings.createDefault(organizationId);
     const businessHours = settings.getBusinessHours();
 
     if (consultantId) {
@@ -134,10 +130,10 @@ publicRoutes.get(
 publicRoutes.get(
   "/settings/public",
   getRoute(async ({ organizationId }) => {
-    const repository = createOrganizationSettingsRepository();
+    const repository = createSettingsRepository();
     const settings =
       (await repository.findByOrganizationId(organizationId)) ??
-      OrganizationSettings.createDefault(organizationId);
+      Settings.createDefault(organizationId);
 
     return withPublicShortCache(
       Response.json(toBookingSettingsResponse(settings)),
@@ -153,11 +149,10 @@ publicRoutes.get(
     const startsAt = requestUrl.searchParams.get("startsAt");
     const endsAt = requestUrl.searchParams.get("endsAt");
     const settings =
-      (await createOrganizationSettingsRepository().findByOrganizationId(
-        organizationId,
-      )) ?? OrganizationSettings.createDefault(organizationId);
+      (await createSettingsRepository().findByOrganizationId(organizationId)) ??
+      Settings.createDefault(organizationId);
     const pricePlanRange = settings.getPricePlanRange();
-    const pricePlanRepository = createConsultantPricePlanRepository();
+    const pricePlanRepository = createPricePlanRepository();
 
     if (slotId) {
       const slot = await createSlotRepository().findById(

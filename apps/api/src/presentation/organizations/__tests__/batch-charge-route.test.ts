@@ -18,8 +18,8 @@ const mocks = vi.hoisted(() => {
     executeReminder: vi.fn(),
     createBatchChargeUseCase: vi.fn(),
     createSendConsultationReminderUseCase: vi.fn(),
-    requireOrganizationPermission: vi.fn(),
-    requireOrganizationRole: vi.fn(),
+    requirePermission: vi.fn(),
+    requireRole: vi.fn(),
     verifyAuth: vi.fn(),
     verifyCloudSchedulerAuth: vi.fn(),
   };
@@ -42,8 +42,8 @@ vi.mock("@/infrastructure/container", () => ({
   createConsultantRepository: vi.fn(),
   createCreateBookingUseCase: vi.fn(),
   createNotifyLateConsultantArrivalUseCase: vi.fn(),
-  createOrganizationRoleRepository: vi.fn(),
-  createOrganizationSettingsRepository: vi.fn(),
+  createRoleRepository: vi.fn(),
+  createSettingsRepository: vi.fn(),
   createPaymentRepository: vi.fn(),
   createSendConsultationReminderUseCase:
     mocks.createSendConsultationReminderUseCase,
@@ -82,12 +82,12 @@ vi.mock("@/infrastructure/auth/verify-auth", () => ({
   verifyAuth: mocks.verifyAuth,
 }));
 
-vi.mock("@/infrastructure/auth/require-organization-role", () => ({
-  requireOrganizationRole: mocks.requireOrganizationRole,
+vi.mock("@/infrastructure/auth/require-role", () => ({
+  requireRole: mocks.requireRole,
 }));
 
-vi.mock("@/infrastructure/auth/require-organization-permission", () => ({
-  requireOrganizationPermission: mocks.requireOrganizationPermission,
+vi.mock("@/infrastructure/auth/require-permission", () => ({
+  requirePermission: mocks.requirePermission,
   requireSystemAdminRole: vi.fn(),
 }));
 
@@ -186,7 +186,7 @@ describe("batch charge / consultation reminder routes", () => {
     });
 
     expect(response.status).toBe(200);
-    expect(mocks.requireOrganizationPermission).toHaveBeenCalledWith(
+    expect(mocks.requirePermission).toHaveBeenCalledWith(
       expect.objectContaining({ uid: "admin-1" }),
       "org-charge-admin",
       "admin.payments.charge",

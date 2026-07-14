@@ -9,7 +9,7 @@ service cloud.firestore {
     }
 
     function accountDocPath(organizationId) {
-      return /databases/$(database)/documents/organization-accounts/$(organizationId + "_" + request.auth.uid);
+      return /databases/$(database)/documents/accounts/$(organizationId + "_" + request.auth.uid);
     }
 
     function accountExists(organizationId) {
@@ -25,21 +25,21 @@ service cloud.firestore {
         && accountData(organizationId).status == 'active';
     }
 
-    function hasOrganizationRole(organizationId, roles) {
+    function hasRole(organizationId, roles) {
       return isActiveMember(organizationId)
         && accountData(organizationId).role in roles;
     }
 
     function isOrganizationAdmin(organizationId) {
-      return hasOrganizationRole(organizationId, ['admin', 'operator']);
+      return hasRole(organizationId, ['admin', 'operator']);
     }
 
     function isOrganizationSuperAdmin(organizationId) {
-      return hasOrganizationRole(organizationId, ['admin']);
+      return hasRole(organizationId, ['admin']);
     }
 
     function isOrganizationConsultant(organizationId) {
-      return hasOrganizationRole(organizationId, ['consultant']);
+      return hasRole(organizationId, ['consultant']);
     }
 
     match /organizations/{organizationId} {
@@ -47,7 +47,7 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    match /organization-accounts/{accountId} {
+    match /accounts/{accountId} {
       allow read: if isAuthenticated()
         && (
           resource.data.uid == request.auth.uid
@@ -56,7 +56,7 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    match /organization-settings/{organizationId} {
+    match /settings/{organizationId} {
       allow read: if isOrganizationAdmin(organizationId);
       allow write: if isOrganizationSuperAdmin(organizationId);
     }
@@ -65,7 +65,7 @@ service cloud.firestore {
       allow read: if isActiveMember(resource.data.organizationId);
       allow create: if isOrganizationAdmin(request.resource.data.organizationId)
         || (
-          hasOrganizationRole(request.resource.data.organizationId, ['consultant'])
+          hasRole(request.resource.data.organizationId, ['consultant'])
           && request.resource.data.consultantId == request.auth.uid
         );
       allow update, delete: if isOrganizationAdmin(resource.data.organizationId)
@@ -79,12 +79,12 @@ service cloud.firestore {
       allow read: if isActiveMember(resource.data.organizationId);
       allow create: if isOrganizationAdmin(request.resource.data.organizationId)
         || (
-          hasOrganizationRole(request.resource.data.organizationId, ['consultant'])
+          hasRole(request.resource.data.organizationId, ['consultant'])
           && request.resource.data.consultantId == request.auth.uid
         );
       allow update, delete: if isOrganizationAdmin(resource.data.organizationId)
         || (
-          hasOrganizationRole(resource.data.organizationId, ['consultant'])
+          hasRole(resource.data.organizationId, ['consultant'])
           && resource.data.consultantId == request.auth.uid
         );
     }

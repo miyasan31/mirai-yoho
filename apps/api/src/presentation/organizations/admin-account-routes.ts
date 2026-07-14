@@ -2,20 +2,20 @@ import crypto from "node:crypto";
 import { Hono } from "hono";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
-import { OrganizationSettings } from "@/domain/organization-settings/organization-settings";
+import { Settings } from "@/domain/settings/settings";
 import {
-  getOrganizationAccountDocId,
+  getAccountDocId,
   setUserDisplayName,
 } from "@/infrastructure/auth/load-auth-context";
 import {
-  requireOrganizationPermission,
+  requirePermission,
   requireSystemAdminRole,
-} from "@/infrastructure/auth/require-organization-permission";
+} from "@/infrastructure/auth/require-permission";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createConsultantRepository,
-  createOrganizationRoleRepository,
-  createOrganizationSettingsRepository,
+  createRoleRepository,
+  createSettingsRepository,
 } from "@/infrastructure/container";
 import {
   createUser,
@@ -27,6 +27,12 @@ import {
 } from "@/infrastructure/firebase/firebase-auth-admin";
 import { db } from "@/infrastructure/firestore/firestore-customer";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
+import {
+  ACCOUNT_COLLECTION,
+  getAccount,
+  isAdminPanelUserRole,
+  listAccounts,
+} from "./accounts";
 import { deleteAdminUserWithAuthCleanup } from "./admin-user-deletion";
 import {
   canUpdateDisplayNameTarget,
@@ -39,12 +45,6 @@ import {
   parseListQueryParams,
   sortByTimestampDesc,
 } from "./list-query";
-import {
-  ACCOUNT_COLLECTION,
-  getOrganizationAccount,
-  isAdminPanelUserRole,
-  listOrganizationAccounts,
-} from "./organization-accounts";
 import {
   deleteRoute,
   getRoute,
@@ -60,28 +60,24 @@ adminAccountRoutes.get(
   "/admin/accounts",
   getRoute(async ({ organizationId, request, requestUrl }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
-      authUser,
-      organizationId,
-      "admin.accounts.read",
-    );
+    requirePermission(authUser, organizationId, "admin.accounts.read");
     const listQueryParams = parseListQueryParams(requestUrl.searchParams);
     if (!listQueryParams) {
       return jsonError(400, "VALIDATION_ERROR", INVALID_LIST_QUERY_MESSAGE);
     }
-    const organizationAccounts = (
-      await listOrganizationAccounts(organizationId)
-    ).filter((account) => isAdminPanelUserRole(account.role));
-    const accountUids = organizationAccounts.map((account) => account.uid);
+    const accounts = (await listAccounts(organizationId)).filter((account) =>
+      isAdminPanelUserRole(account.role),
+    );
+    const accountUids = accounts.map((account) => account.uid);
     const [userByUid, roles] = await Promise.all([
       getUsersByUids(accountUids),
-      createOrganizationRoleRepository().findByOrganizationId(organizationId),
+      createRoleRepository().findByOrganizationId(organizationId),
     ]);
     const roleNameById = new Map(
       roles.map((role) => [role.getRoleId(), role.getName()] as const),
     );
 
-    const accounts = organizationAccounts.map((account) => {
+    const accountResponses = accounts.map((account) => {
       const userRecord = userByUid.get(account.uid) ?? null;
       const name = account.name ?? "";
       const createdAtDate = account.createdAt?.toDate() ?? new Date(0);
@@ -99,7 +95,7 @@ adminAccountRoutes.get(
       };
     });
     const sortedAccounts = sortByTimestampDesc(
-      accounts,
+      accountResponses,
       listQueryParams.sortBy,
     );
     const { items, pagination } = paginateArray(
@@ -127,7 +123,7 @@ adminAccountRoutes.post(
     }
     const normalizedRole = role.trim();
     if (normalizedRole !== "consultant") {
-      const roleEntity = await createOrganizationRoleRepository().findById(
+      const roleEntity = await createRoleRepository().findById(
         organizationId,
         normalizedRole,
       );
@@ -150,7 +146,7 @@ adminAccountRoutes.post(
       uid = userRecord.uid;
       // 同一組織に既にアカウントがある場合は招待失敗。
       // 別組織にのみ存在する場合はこの組織への所属を追加する（後続の set で作成）
-      const existingAccount = await getOrganizationAccount(organizationId, uid);
+      const existingAccount = await getAccount(organizationId, uid);
       if (existingAccount) {
         return jsonError(
           409,
@@ -163,7 +159,7 @@ adminAccountRoutes.post(
       userRecord = await getUser(uid);
     }
 
-    const accountId = getOrganizationAccountDocId(organizationId, uid);
+    const accountId = getAccountDocId(organizationId, uid);
     await db
       .collection(ACCOUNT_COLLECTION)
       .doc(accountId)
@@ -185,9 +181,9 @@ adminAccountRoutes.post(
       const existing = await repo.findById(organizationId, uid);
       if (!existing) {
         const settings =
-          (await createOrganizationSettingsRepository().findByOrganizationId(
+          (await createSettingsRepository().findByOrganizationId(
             organizationId,
-          )) ?? OrganizationSettings.createDefault(organizationId);
+          )) ?? Settings.createDefault(organizationId);
         await repo.save(
           Consultant.create({
             organizationId,
@@ -230,14 +226,10 @@ adminAccountRoutes.post(
   "/admin/accounts/:uid/resend-invite",
   postRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
-      authUser,
-      organizationId,
-      "admin.accounts.invite.resend",
-    );
+    requirePermission(authUser, organizationId, "admin.accounts.invite.resend");
     const uid = param("uid");
     const userRecord = await getUser(uid);
-    const account = await getOrganizationAccount(organizationId, uid);
+    const account = await getAccount(organizationId, uid);
     if (!account) {
       return jsonError(404, "NOT_FOUND", "Account not found");
     }
@@ -271,13 +263,13 @@ adminAccountRoutes.post(
   "/admin/accounts/:uid/reset-password",
   postRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
+    requirePermission(
       authUser,
       organizationId,
       "admin.accounts.password-reset",
     );
     const uid = param("uid");
-    const account = await getOrganizationAccount(organizationId, uid);
+    const account = await getAccount(organizationId, uid);
     if (!account) {
       return jsonError(404, "NOT_FOUND", "Account not found");
     }
@@ -310,14 +302,14 @@ adminAccountRoutes.patch(
   "/admin/accounts/:uid/display-name",
   patchRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    const actorAccount = requireOrganizationPermission(
+    const actorAccount = requirePermission(
       authUser,
       organizationId,
       "admin.accounts.display-name.manage",
     );
     const uid = param("uid");
     const body = await request.json();
-    const account = await getOrganizationAccount(organizationId, uid);
+    const account = await getAccount(organizationId, uid);
 
     if (!account) {
       return jsonError(404, "NOT_FOUND", "Account not found");
@@ -361,14 +353,14 @@ adminAccountRoutes.patch(
       return jsonError(400, "VALIDATION_ERROR", "role is required");
     }
     const nextRole = body.role.trim();
-    const nextRoleEntity = await createOrganizationRoleRepository().findById(
+    const nextRoleEntity = await createRoleRepository().findById(
       organizationId,
       nextRole,
     );
     if (!nextRoleEntity) {
       return jsonError(400, "VALIDATION_ERROR", "role is invalid");
     }
-    const account = await getOrganizationAccount(organizationId, uid);
+    const account = await getAccount(organizationId, uid);
     if (!account) {
       return jsonError(404, "NOT_FOUND", "Account not found");
     }
@@ -379,12 +371,8 @@ adminAccountRoutes.patch(
         "consultant must be managed from consultant management",
       );
     }
-    const activeAdminCount = (
-      await listOrganizationAccounts(organizationId)
-    ).filter(
-      (organizationAccount) =>
-        organizationAccount.role === "admin" &&
-        organizationAccount.status === "active",
+    const activeAdminCount = (await listAccounts(organizationId)).filter(
+      (account) => account.role === "admin" && account.status === "active",
     ).length;
 
     if (
@@ -402,7 +390,7 @@ adminAccountRoutes.patch(
       );
     }
 
-    const accountId = getOrganizationAccountDocId(organizationId, uid);
+    const accountId = getAccountDocId(organizationId, uid);
     await db.collection(ACCOUNT_COLLECTION).doc(accountId).set(
       {
         role: nextRole,
@@ -419,14 +407,10 @@ adminAccountRoutes.delete(
   "/admin/accounts/:uid",
   deleteRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requireOrganizationPermission(
-      authUser,
-      organizationId,
-      "admin.accounts.delete",
-    );
+    requirePermission(authUser, organizationId, "admin.accounts.delete");
     const uid = param("uid");
-    const accountId = getOrganizationAccountDocId(organizationId, uid);
-    const account = await getOrganizationAccount(organizationId, uid);
+    const accountId = getAccountDocId(organizationId, uid);
+    const account = await getAccount(organizationId, uid);
     if (!account) {
       return jsonError(404, "NOT_FOUND", "Account not found");
     }

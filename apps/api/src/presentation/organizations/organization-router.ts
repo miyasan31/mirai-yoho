@@ -7,9 +7,9 @@ import { adminSettingsRoutes } from "./admin-settings-routes";
 import { batchRoutes } from "./batch-routes";
 import { bookingRoutes } from "./booking-routes";
 import { consultantBookingRoutes } from "./consultant-booking-routes";
-import { consultantPricePlanRoutes } from "./consultant-price-plan-routes";
 import { consultantProfileRoutes } from "./consultant-profile-routes";
 import { customerBookingRoutes } from "./customer-bookings";
+import { pricePlanRoutes } from "./price-plan-routes";
 import { publicRoutes } from "./public-routes";
 import { slotRoutes } from "./slot-routes";
 
@@ -24,7 +24,7 @@ export function createOrganizationRoutes(): Hono {
   routes.route("/:organizationId", slotRoutes);
   routes.route("/:organizationId", batchRoutes);
   routes.route("/:organizationId", consultantBookingRoutes);
-  routes.route("/:organizationId", consultantPricePlanRoutes);
+  routes.route("/:organizationId", pricePlanRoutes);
   routes.route("/:organizationId", consultantProfileRoutes);
   routes.route("/:organizationId", adminListingRoutes);
   routes.route("/:organizationId", adminConsultantRoutes);

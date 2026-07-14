@@ -1,7 +1,7 @@
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
-import { DEFAULT_CONSULTANT_STATUS_ID } from "@/domain/organization-settings/consultant-status";
+import { DEFAULT_CONSULTANT_STATUS_ID } from "@/domain/settings/consultant-status";
 
 interface UpdateProfileInput {
   organizationId: string;

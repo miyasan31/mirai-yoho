@@ -15,13 +15,13 @@ import {
   useState,
 } from "react";
 import { envClient } from "../config/env.client";
-import type { OrganizationAccount } from "../lib/auth-types";
+import type { Account } from "../lib/auth-types";
 import { auth } from "../lib/firebase";
 
 export interface AuthState {
   user: User | null;
   token: string | null;
-  accounts: OrganizationAccount[];
+  accounts: Account[];
   currentOrganizationId: string | null;
   currentDisplayName: string | null;
   currentRole: string | null;
@@ -49,7 +49,7 @@ export const AuthContext = createContext<AuthState | null>(null);
 export function useAuthState(): AuthState {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [accounts, setAccounts] = useState<OrganizationAccount[]>([]);
+  const [accounts, setAccounts] = useState<Account[]>([]);
   const [currentOrganizationId, setCurrentOrganizationIdState] = useState<
     string | null
   >(null);
@@ -104,7 +104,7 @@ export function useAuthState(): AuthState {
     }
 
     const data = (await response.json()) as {
-      accounts: OrganizationAccount[];
+      accounts: Account[];
       currentOrganizationId: string | null;
       currentDisplayName: string | null;
     };

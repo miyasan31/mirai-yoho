@@ -247,7 +247,7 @@ apps/api/src/
 │   │   └── payment-repository.ts
 │   ├── consultant/ · consultant-price-plan/
 │   ├── customer/ · user/ · user-coupon/
-│   ├── organization-settings/ · authorization/
+│   ├── settings/ · authorization/
 │   └── zoom-session/
 │
 ├── application/
