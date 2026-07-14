@@ -10,7 +10,7 @@ const ORGANIZATION_COLLECTION = FIRESTORE_COLLECTIONS.organizations;
 const CONSULTANT_COLLECTION = FIRESTORE_COLLECTIONS.consultants;
 
 interface AccountDoc {
-  uid: string;
+  authUid: string;
   organizationId: string;
   roleId: string;
   status: "active" | "invited" | "disabled";
@@ -38,14 +38,17 @@ function toIsoString(value: Timestamp | Date | string): string {
   return value;
 }
 
-export function getAccountDocId(organizationId: string, uid: string): string {
-  return `${organizationId}_${uid}`;
+export function getAccountDocId(
+  organizationId: string,
+  authUid: string,
+): string {
+  return `${organizationId}_${authUid}`;
 }
 
-export async function activateInvitedAccounts(uid: string): Promise<void> {
+export async function activateInvitedAccounts(authUid: string): Promise<void> {
   const invitedSnapshot = await db
     .collection(ACCOUNT_COLLECTION)
-    .where("uid", "==", uid)
+    .where("authUid", "==", authUid)
     .where("status", "==", "invited")
     .get();
 
@@ -64,10 +67,10 @@ export async function activateInvitedAccounts(uid: string): Promise<void> {
   await batch.commit();
 }
 
-export async function loadAuthUser(uid: string): Promise<AuthUser> {
+export async function loadAuthUser(authUid: string): Promise<AuthUser> {
   const accountSnapshot = await db
     .collection(ACCOUNT_COLLECTION)
-    .where("uid", "==", uid)
+    .where("authUid", "==", authUid)
     .where("status", "==", "active")
     .get();
 
@@ -118,7 +121,7 @@ export async function loadAuthUser(uid: string): Promise<AuthUser> {
 
   const consultantSnapshot = await db
     .collection(CONSULTANT_COLLECTION)
-    .where("consultantId", "==", uid)
+    .where("consultantId", "==", authUid)
     .get();
   const consultantOrganizationIds = new Set(
     consultantSnapshot.docs.map(
@@ -147,7 +150,7 @@ export async function loadAuthUser(uid: string): Promise<AuthUser> {
   );
 
   return {
-    uid,
+    authUid,
     accounts,
     currentOrganizationId,
     currentDisplayName: currentAccountDoc?.name ?? null,
@@ -155,7 +158,7 @@ export async function loadAuthUser(uid: string): Promise<AuthUser> {
 }
 
 export async function setLastOrganizationId(
-  _uid: string,
+  _authUid: string,
   _organizationId: string,
 ): Promise<void> {
   // 組織選択の保持はフロント側で行う
@@ -163,10 +166,10 @@ export async function setLastOrganizationId(
 
 export async function setUserDisplayName(
   organizationId: string,
-  uid: string,
+  authUid: string,
   name: string,
 ): Promise<void> {
-  const docId = getAccountDocId(organizationId, uid);
+  const docId = getAccountDocId(organizationId, authUid);
   await db
     .collection(ACCOUNT_COLLECTION)
     .doc(docId)

@@ -1,6 +1,6 @@
 # 命名台帳 — Firestore / Domain / API
 
-> Version 2.0 | 2026-06-26（2026-07-12 追記: §6.5 更新 / **2026-07-14 改訂: `organization-` プレフィックス全廃。§6.3-B の混在許容方針を撤回。詳細は §0** / **2026-07-15 改訂: `accounts.role` → `accounts.roleId` にリネームし `consultant` ロールを廃止。詳細は §3.5**）  
+> Version 2.0 | 2026-06-26（2026-07-12 追記: §6.5 更新 / **2026-07-14 改訂: `organization-` プレフィックス全廃。§6.3-B の混在許容方針を撤回。詳細は §0** / **2026-07-15 改訂: Firebase Auth uid の正準名を `authUid` に統一。§3.5 の `uid` 維持合意を撤回。詳細は §0.1** / **2026-07-15 改訂: `accounts.role` → `accounts.roleId` にリネームし `consultant` ロールを廃止。詳細は §3.5**）  
 > 対象: 策定時点の全11コレクション + 横断命名ルール（その後 `organization-roles`/`users`/`user-zoom-credentials`/`user-coupons` が追加され現行14コレクション。詳細は §6.5）  
 > 目的: 永続化・ドメイン・API の名称を整理し、今後の実装・リネームの基準とする
 
@@ -31,6 +31,27 @@
   - `user-zoom-credentials` は user-scoped（doc ID = `userId`）で、org-scoped の `zoom-sessions` と対になる。スコープ区別のため `user-` を残す。
 
 **データ移行**: `apps/api/scripts/migrate-drop-organization-prefix.ts`（doc ID を保持してコピー → 新コードをデプロイ → `--delete-source` で旧コレクション削除）。`firestore.rules` の変更は terraform apply が必要（§4.4）。
+
+---
+
+## 0.1 改訂: Firebase Auth uid の正準名を `authUid` に統一（2026-07-15）
+
+**決定**: Firebase Auth の uid を指すフィールド・識別子の正準名を **`authUid`** に統一する。`accounts` の `uid` フィールドを `authUid` にリネームし、§3.5 の「`uid` 維持」合意（2026-06-26）を **撤回** する。
+
+**理由**: 後発の `users` コレクションはドメイン ID（`userId` = 独自 UUID）と Firebase Auth uid（`authUid`）を分離して保持しており、同一概念が `accounts` では `uid`、`users` では `authUid` と別名になっていた（§1.1「同一概念に複数の別名を持たせない」違反）。素の `uid` は `users.userId` と紛らわしく、user 系の認証コード（`verify-customer-auth.ts` / `zoom-oauth-state.ts` 等）は既に `authUid` を採用済み。`users` 側を正として `accounts` を追随させる。
+
+**適用範囲**:
+- Firestore: `accounts.uid` → **`authUid`**（doc ID `{organizationId}_{authUid}` の形式・値は不変）
+- 認証コンテキスト: `AuthUser.uid` → **`authUid`**（`load-auth-context.ts` のクエリ・`getAccountDocId` 引数含む）
+- API: `/auth/me` レスポンス・招待レスポンス・`AdminAccount` スキーマの `uid` → **`authUid`**、パスパラメータ `/admin/accounts/{uid}` → **`{authUid}`**（`UserIdParam` → `AuthUidParam`。`pnpm generate` でクライアント再生成）
+- admin UI（accounts ページ）・監査ログ等の修飾付き複合名: `actorUid` / `targetUid` / `countAccountsByUid` → **`actorAuthUid` / `targetAuthUid` / `countAccountsByAuthUid`**
+
+**対象外（据え置き）**:
+- firebase-admin / firebase クライアント SDK のプロパティ参照（`decoded.uid`, `userRecord.uid`, `user.uid`）と SDK 薄ラッパー `firebase-auth-admin.ts` 内部のパラメータ名 … SDK 語彙のまま（境界の外は `authUid`）
+- `providerUid`（User 集約）… 認証プロバイダ発行の uid で **別概念**
+- `consultantId`（値は Firebase Auth uid）… §3.4 の合意どおり維持
+
+**データ移行**: `apps/api/scripts/migrate-accounts-auth-uid.ts`（`uid` → `authUid` を複製 → 新コードをデプロイ → `--delete-source` で旧フィールド削除）。`firestore.rules` / Firestore インデックスへの影響なし（accounts のクエリは等価フィルタのみ）。
 
 ---
 
@@ -109,6 +130,7 @@
 | 顧客参照 | **`customer*` に統一**。API / Domain / FS すべて `client*` 禁止（§3.2, §6.3-A 合意） |
 | アカウント参照 | 管理画面文言は **`アカウント`** を使用（`ユーザー管理` ではなく `アカウント管理`） |
 | ドキュメント ID | エンティティ ID 単体を原則。複合 ID は `{organizationId}_{entityId}` 形式 |
+| Firebase Auth uid | **`authUid`** に統一（§0.1）。修飾時も `*AuthUid`（例: `actorAuthUid`）。SDK プロパティ参照（`decoded.uid` 等）のみ `uid` |
 | null / omit | optional フィールドは Repository 層で方針統一（booking/payment: `null`、customer: omit） |
 | 真偽値 | 状態は `is*` プレフィックス（例: `isActive`, `isAvailable`, `isClosed`）。意味反転の別名は持たない |
 
@@ -122,7 +144,7 @@
 | 2 | `clients` | `customers` | **リネーム** | `customerId` |
 | 3 | `consultant-price-plans` | `price-plans` | **リネーム** | `pricePlanId` |
 | 4 | `consultants` | `consultants` | 維持 | `{organizationId}_{consultantId}` |
-| 5 | `organization-accounts` | **`accounts`** | **リネーム（§0）** | `{organizationId}_{uid}` |
+| 5 | `organization-accounts` | **`accounts`** | **リネーム（§0）** | `{organizationId}_{authUid}` |
 | 6 | `organization-settings` | **`settings`** | **リネーム（§0）** | `organizationId` |
 | 7 | `organizations` | `organizations` | 維持 | `organizationId` |
 | 8 | `payments` | `payments` | 維持 | `paymentId` |
@@ -279,14 +301,14 @@
 
 ---
 
-### 3.5 `organization-accounts` → `accounts` ✅ 合意済み（2026-06-26 / 2026-07-14 改訂 §0 / **2026-07-15 改訂: `role` → `roleId` + `consultant` ロール廃止**）
+### 3.5 `organization-accounts` → `accounts` ✅ 合意済み（2026-06-26 / 2026-07-14 改訂 §0 / 2026-07-15 改訂 §0.1 / **2026-07-15 改訂: `role` → `roleId` + `consultant` ロール廃止**）
 
-**Doc ID**: `{organizationId}_{uid}`（維持）
+**Doc ID**: `{organizationId}_{authUid}`（形式・値は維持）
 
 | プロパティ | Firestore（現状） | 正準名 | 判定 |
 |---|---|---|---|
 | コレクション | `organization-accounts` | **`accounts`** | **リネーム（§0）** |
-| アカウント ID | `uid` | `uid` | 維持 |
+| Firebase Auth uid | `uid` | **`authUid`** | **リネーム（§0.1）** |
 | 組織 ID | `organizationId` | `organizationId` | 維持 |
 | ロール ID | ~~`role`~~ | **`roleId`** | **リネーム（2026-07-15）** |
 | ステータス | `active` / `invited` / `disabled` | **同名（API も統一）** | **合意: FS 値に API 統一** |
@@ -527,6 +549,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 | 変更 | 移行方法 |
 |---|---|
 | **`organization-{accounts,roles,settings}` → `{accounts,roles,settings}`（§0）** | `apps/api/scripts/migrate-drop-organization-prefix.ts` で doc ID 保持コピー → 新コードデプロイ → `--delete-source` で旧削除。`firestore.rules`（accounts / settings のパス, `hasRole`）変更は **terraform apply 必須** |
+| **`accounts.uid` → `authUid`（§0.1）** | `apps/api/scripts/migrate-accounts-auth-uid.ts` で `authUid` を複製 → 新コードデプロイ → `--delete-source` で旧 `uid` フィールド削除。rules / インデックス影響なし |
 | `clients` → `customers` コレクションリネーム | Firestore コレクションコピー + フィールド `clientId`→`customerId`, `memo`→`note` |
 | `slots` フィールドリネーム | `startsAt`/`endsAt`/`isAvailable` + インデックス再作成 |
 | `bookings` 時刻フィールド | `startsAt`, `cancelDeadlineAt` |

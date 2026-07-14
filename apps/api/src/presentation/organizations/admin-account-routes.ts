@@ -61,9 +61,9 @@ adminAccountRoutes.get(
       return jsonError(400, "VALIDATION_ERROR", INVALID_LIST_QUERY_MESSAGE);
     }
     const accounts = await listAccounts(organizationId);
-    const accountUids = accounts.map((account) => account.uid);
-    const [userByUid, roles] = await Promise.all([
-      getUsersByUids(accountUids),
+    const accountAuthUids = accounts.map((account) => account.authUid);
+    const [userByAuthUid, roles] = await Promise.all([
+      getUsersByUids(accountAuthUids),
       createRoleRepository().findByOrganizationId(organizationId),
     ]);
     const roleNameById = new Map(
@@ -71,13 +71,13 @@ adminAccountRoutes.get(
     );
 
     const accountResponses = accounts.map((account) => {
-      const userRecord = userByUid.get(account.uid) ?? null;
+      const userRecord = userByAuthUid.get(account.authUid) ?? null;
       const name = account.name ?? "";
       const createdAtDate = account.createdAt?.toDate() ?? new Date(0);
       const updatedAtDate = account.updatedAt?.toDate() ?? createdAtDate;
 
       return {
-        uid: account.uid,
+        authUid: account.authUid,
         email: userRecord?.email ?? "",
         name: name || userRecord?.email || "",
         roleId: account.roleId,
@@ -131,14 +131,14 @@ adminAccountRoutes.post(
     }
     const shouldCreateConsultant = isConsultant === true;
 
-    let uid: string;
+    let authUid: string;
     let userRecord = await getUserByEmail(email).catch(() => null);
 
     if (userRecord) {
-      uid = userRecord.uid;
+      authUid = userRecord.uid;
       // 同一組織に既にアカウントがある場合は招待失敗。
       // 別組織にのみ存在する場合はこの組織への所属を追加する（後続の set で作成）
-      const existingAccount = await getAccount(organizationId, uid);
+      const existingAccount = await getAccount(organizationId, authUid);
       if (existingAccount) {
         return jsonError(
           409,
@@ -147,17 +147,17 @@ adminAccountRoutes.post(
         );
       }
     } else {
-      uid = await createUser(email, crypto.randomUUID());
-      userRecord = await getUser(uid);
+      authUid = await createUser(email, crypto.randomUUID());
+      userRecord = await getUser(authUid);
     }
 
-    const accountId = getAccountDocId(organizationId, uid);
+    const accountId = getAccountDocId(organizationId, authUid);
     await db
       .collection(ACCOUNT_COLLECTION)
       .doc(accountId)
       .set(
         {
-          uid,
+          authUid,
           organizationId,
           roleId: normalizedRoleId,
           name: normalizedDisplayName,
@@ -170,7 +170,7 @@ adminAccountRoutes.post(
 
     if (shouldCreateConsultant) {
       const repo = createConsultantRepository();
-      const existing = await repo.findById(organizationId, uid);
+      const existing = await repo.findById(organizationId, authUid);
       if (!existing) {
         const settings =
           (await createSettingsRepository().findByOrganizationId(
@@ -179,7 +179,7 @@ adminAccountRoutes.post(
         await repo.save(
           Consultant.create({
             organizationId,
-            consultantId: uid,
+            consultantId: authUid,
             profile: ConsultantProfile.create(
               normalizedDisplayName,
               "",
@@ -204,7 +204,7 @@ adminAccountRoutes.post(
       category: "security-audit",
       endpoint: `POST ${requestUrl.pathname}`,
       organizationId,
-      actorUid: authUser.uid,
+      actorAuthUid: authUser.authUid,
       actorRoleId: actorAccount.roleId,
       targetEmail: email,
       targetRoleId: normalizedRoleId,
@@ -212,18 +212,18 @@ adminAccountRoutes.post(
       invitedAt: new Date().toISOString(),
     });
 
-    return Response.json({ uid }, { status: 201 });
+    return Response.json({ authUid }, { status: 201 });
   }),
 );
 
 adminAccountRoutes.post(
-  "/admin/accounts/:uid/resend-invite",
+  "/admin/accounts/:authUid/resend-invite",
   postRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
     requirePermission(authUser, organizationId, "admin.accounts.invite.resend");
-    const uid = param("uid");
-    const userRecord = await getUser(uid);
-    const account = await getAccount(organizationId, uid);
+    const authUid = param("authUid");
+    const userRecord = await getUser(authUid);
+    const account = await getAccount(organizationId, authUid);
     if (!account) {
       return jsonError(404, "NOT_FOUND", "Account not found");
     }
@@ -241,7 +241,7 @@ adminAccountRoutes.post(
       account.roleId,
     );
     const isConsultant =
-      (await createConsultantRepository().findById(organizationId, uid)) !==
+      (await createConsultantRepository().findById(organizationId, authUid)) !==
       null;
 
     await new ResendEmailService().sendInvitation({
@@ -256,7 +256,7 @@ adminAccountRoutes.post(
 );
 
 adminAccountRoutes.post(
-  "/admin/accounts/:uid/reset-password",
+  "/admin/accounts/:authUid/reset-password",
   postRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
     requirePermission(
@@ -264,12 +264,12 @@ adminAccountRoutes.post(
       organizationId,
       "admin.accounts.password-reset",
     );
-    const uid = param("uid");
-    const account = await getAccount(organizationId, uid);
+    const authUid = param("authUid");
+    const account = await getAccount(organizationId, authUid);
     if (!account) {
       return jsonError(404, "NOT_FOUND", "Account not found");
     }
-    const userRecord = await getUser(uid);
+    const userRecord = await getUser(authUid);
     if (!userRecord.email) {
       return jsonError(
         400,
@@ -288,7 +288,7 @@ adminAccountRoutes.post(
 );
 
 adminAccountRoutes.patch(
-  "/admin/accounts/:uid/display-name",
+  "/admin/accounts/:authUid/display-name",
   patchRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
     const actorAccount = requirePermission(
@@ -296,14 +296,20 @@ adminAccountRoutes.patch(
       organizationId,
       "admin.accounts.display-name.manage",
     );
-    const uid = param("uid");
+    const authUid = param("authUid");
     const body = await request.json();
-    const account = await getAccount(organizationId, uid);
+    const account = await getAccount(organizationId, authUid);
 
     if (!account) {
       return jsonError(404, "NOT_FOUND", "Account not found");
     }
-    if (!canUpdateDisplayNameTarget(actorAccount.roleId, authUser.uid, uid)) {
+    if (
+      !canUpdateDisplayNameTarget(
+        actorAccount.roleId,
+        authUser.authUid,
+        authUid,
+      )
+    ) {
       return jsonError(
         403,
         "FORBIDDEN",
@@ -319,17 +325,17 @@ adminAccountRoutes.patch(
       return jsonError(400, "VALIDATION_ERROR", "name must not be empty");
     }
 
-    await setUserDisplayName(organizationId, uid, normalizedDisplayName);
+    await setUserDisplayName(organizationId, authUid, normalizedDisplayName);
     return Response.json({ success: true });
   }),
 );
 
 adminAccountRoutes.patch(
-  "/admin/accounts/:uid/role",
+  "/admin/accounts/:authUid/role",
   patchRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
     requireSystemAdminRole(authUser, organizationId);
-    const uid = param("uid");
+    const authUid = param("authUid");
     const body = await request.json();
     if (typeof body.roleId !== "string" || body.roleId.trim().length === 0) {
       return jsonError(400, "VALIDATION_ERROR", "roleId is required");
@@ -342,7 +348,7 @@ adminAccountRoutes.patch(
     if (!nextRoleEntity) {
       return jsonError(400, "VALIDATION_ERROR", "roleId is invalid");
     }
-    const account = await getAccount(organizationId, uid);
+    const account = await getAccount(organizationId, authUid);
     if (!account) {
       return jsonError(404, "NOT_FOUND", "Account not found");
     }
@@ -352,8 +358,8 @@ adminAccountRoutes.patch(
 
     if (
       isLastAdminSelfDemotion({
-        actorUid: authUser.uid,
-        targetUid: uid,
+        actorAuthUid: authUser.authUid,
+        targetAuthUid: authUid,
         nextRoleId,
         activeAdminCount,
       })
@@ -365,7 +371,7 @@ adminAccountRoutes.patch(
       );
     }
 
-    const accountId = getAccountDocId(organizationId, uid);
+    const accountId = getAccountDocId(organizationId, authUid);
     await db.collection(ACCOUNT_COLLECTION).doc(accountId).set(
       {
         roleId: nextRoleId,
@@ -379,19 +385,19 @@ adminAccountRoutes.patch(
 );
 
 adminAccountRoutes.delete(
-  "/admin/accounts/:uid",
+  "/admin/accounts/:authUid",
   deleteRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
     requirePermission(authUser, organizationId, "admin.accounts.delete");
-    const uid = param("uid");
-    const accountId = getAccountDocId(organizationId, uid);
-    const account = await getAccount(organizationId, uid);
+    const authUid = param("authUid");
+    const accountId = getAccountDocId(organizationId, authUid);
+    const account = await getAccount(organizationId, authUid);
     if (!account) {
       return jsonError(404, "NOT_FOUND", "Account not found");
     }
     const deletionTargetValidation = validateAdminUserDeletionTarget(
-      authUser.uid,
-      uid,
+      authUser.authUid,
+      authUid,
     );
     if (!deletionTargetValidation.isAllowed) {
       return jsonError(
@@ -408,12 +414,12 @@ adminAccountRoutes.delete(
     }
 
     await deleteAdminUserWithAuthCleanup({
-      uid,
+      authUid,
       accountData,
-      countAccountsByUid: async (targetUid) => {
+      countAccountsByAuthUid: async (targetAuthUid) => {
         const accounts = await db
           .collection(ACCOUNT_COLLECTION)
-          .where("uid", "==", targetUid)
+          .where("authUid", "==", targetAuthUid)
           .get();
         return accounts.size;
       },

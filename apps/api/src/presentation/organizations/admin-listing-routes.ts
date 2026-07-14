@@ -43,7 +43,7 @@ adminListingRoutes.get(
 
     const requestedConsultantId = requestUrl.searchParams.get("consultantId");
     const consultantId = account.isConsultant
-      ? authUser.uid
+      ? authUser.authUid
       : requestedConsultantId;
     const repository = createSlotRepository();
     const settings =

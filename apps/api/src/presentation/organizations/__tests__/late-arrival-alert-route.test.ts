@@ -157,7 +157,7 @@ describe("late arrival alert route", () => {
 
   it("executes the batch for an admin manually", async () => {
     mocks.verifyAuth.mockResolvedValue({
-      uid: "admin-1",
+      authUid: "admin-1",
       accounts: [],
       currentOrganizationId: "org-1",
       currentDisplayName: "Admin",
@@ -169,7 +169,7 @@ describe("late arrival alert route", () => {
 
     expect(response.status).toBe(200);
     expect(mocks.requirePermission).toHaveBeenCalledWith(
-      expect.objectContaining({ uid: "admin-1" }),
+      expect.objectContaining({ authUid: "admin-1" }),
       "org-1",
       "admin.payments.charge",
     );

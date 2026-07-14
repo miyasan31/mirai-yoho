@@ -128,7 +128,7 @@ describe("account invite route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.verifyAuth.mockResolvedValue({
-      uid: "admin-1",
+      authUid: "admin-1",
       accounts: [],
       currentOrganizationId: "org-1",
       currentDisplayName: "Admin",
@@ -151,8 +151,8 @@ describe("account invite route", () => {
     });
     mocks.accountDocGet.mockResolvedValue({ exists: false });
     mocks.accountDocSet.mockResolvedValue(undefined);
-    mocks.createUser.mockResolvedValue("new-uid");
-    mocks.getUser.mockResolvedValue({ uid: "new-uid", metadata: {} });
+    mocks.createUser.mockResolvedValue("new-auth-uid");
+    mocks.getUser.mockResolvedValue({ uid: "new-auth-uid", metadata: {} });
     mocks.getUserByEmail.mockRejectedValue(new Error("not found"));
     mocks.generatePasswordResetLink.mockResolvedValue(
       "https://example.com/reset",
@@ -168,14 +168,14 @@ describe("account invite route", () => {
     });
 
     expect(response.status).toBe(201);
-    await expect(response.json()).resolves.toEqual({ uid: "new-uid" });
+    await expect(response.json()).resolves.toEqual({ authUid: "new-auth-uid" });
     expect(mocks.createUser).toHaveBeenCalledWith(
       "new@example.com",
       expect.any(String),
     );
     expect(mocks.accountDocSet).toHaveBeenCalledWith(
       expect.objectContaining({
-        uid: "new-uid",
+        authUid: "new-auth-uid",
         organizationId: "org-1",
         roleId: "admin",
         status: "invited",
@@ -187,13 +187,13 @@ describe("account invite route", () => {
 
   it("fails with 409 when the email already belongs to the same organization", async () => {
     mocks.getUserByEmail.mockResolvedValue({
-      uid: "existing-uid",
+      uid: "existing-auth-uid",
       metadata: { lastSignInTime: "2026-01-01T00:00:00Z" },
     });
     mocks.accountDocGet.mockResolvedValue({
       exists: true,
       data: () => ({
-        uid: "existing-uid",
+        authUid: "existing-auth-uid",
         organizationId: "org-1",
         roleId: "operator",
         status: "active",
@@ -218,13 +218,13 @@ describe("account invite route", () => {
 
   it("fails with 409 for a consultant invite when the email already belongs to the same organization", async () => {
     mocks.getUserByEmail.mockResolvedValue({
-      uid: "existing-uid",
+      uid: "existing-auth-uid",
       metadata: {},
     });
     mocks.accountDocGet.mockResolvedValue({
       exists: true,
       data: () => ({
-        uid: "existing-uid",
+        authUid: "existing-auth-uid",
         organizationId: "org-1",
         roleId: "admin",
         status: "invited",
@@ -249,7 +249,7 @@ describe("account invite route", () => {
 
   it("adds organization membership when the email belongs to another organization", async () => {
     mocks.getUserByEmail.mockResolvedValue({
-      uid: "other-org-uid",
+      uid: "other-org-auth-uid",
       metadata: { lastSignInTime: "2026-01-01T00:00:00Z" },
     });
     mocks.accountDocGet.mockResolvedValue({ exists: false });
@@ -261,11 +261,13 @@ describe("account invite route", () => {
     });
 
     expect(response.status).toBe(201);
-    await expect(response.json()).resolves.toEqual({ uid: "other-org-uid" });
+    await expect(response.json()).resolves.toEqual({
+      authUid: "other-org-auth-uid",
+    });
     expect(mocks.createUser).not.toHaveBeenCalled();
     expect(mocks.accountDocSet).toHaveBeenCalledWith(
       expect.objectContaining({
-        uid: "other-org-uid",
+        authUid: "other-org-auth-uid",
         organizationId: "org-1",
         roleId: "admin",
         status: "active",
@@ -277,7 +279,7 @@ describe("account invite route", () => {
 
   it("adds membership and creates the consultant when isConsultant=true from another organization", async () => {
     mocks.getUserByEmail.mockResolvedValue({
-      uid: "other-org-uid",
+      uid: "other-org-auth-uid",
       metadata: {},
     });
     mocks.accountDocGet.mockResolvedValue({ exists: false });
@@ -294,7 +296,7 @@ describe("account invite route", () => {
     expect(mocks.consultantSave).toHaveBeenCalledTimes(1);
     expect(mocks.accountDocSet).toHaveBeenCalledWith(
       expect.objectContaining({
-        uid: "other-org-uid",
+        authUid: "other-org-auth-uid",
         organizationId: "org-1",
         roleId: "admin",
         status: "invited",

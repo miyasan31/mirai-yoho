@@ -45,12 +45,12 @@ adminConsultantRoutes.get(
       createSettingsRepository().findByOrganizationId(organizationId),
     ]);
     const resolvedSettings = settings ?? Settings.createDefault(organizationId);
-    const userByUid = await getUsersByUids(
+    const userByAuthUid = await getUsersByUids(
       consultants.map((consultant) => consultant.getConsultantId()),
     );
 
     const consultantsWithEmail = consultants.map((c) => {
-      const userRecord = userByUid.get(c.getConsultantId()) ?? null;
+      const userRecord = userByAuthUid.get(c.getConsultantId()) ?? null;
       return {
         consultantId: c.getConsultantId(),
         email: userRecord?.email ?? "",

@@ -58,7 +58,7 @@ async function main() {
     .collection(ACCOUNT_COLLECTION)
     .doc(accountId)
     .set({
-      uid: userRecord.uid,
+      authUid: userRecord.uid,
       organizationId,
       roleId: "admin",
       status: userRecord.metadata.lastSignInTime ? "active" : "invited",

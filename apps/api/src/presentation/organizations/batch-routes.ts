@@ -38,7 +38,7 @@ async function authorizeBatchExecution(
 
   const authUser = await verifyAuth(request);
   requirePermission(authUser, organizationId, "admin.payments.charge");
-  return { type: "user", principal: authUser.uid };
+  return { type: "user", principal: authUser.authUid };
 }
 
 function getBatchChargeRateLimitState(organizationId: string): {

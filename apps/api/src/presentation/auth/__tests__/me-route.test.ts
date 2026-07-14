@@ -19,7 +19,7 @@ vi.mock("@/infrastructure/auth/verify-auth", () => ({
 describe("GET /api/auth/me", () => {
   it("returns no-store for success response", async () => {
     vi.mocked(verifyAuth).mockResolvedValueOnce({
-      uid: "uid-1",
+      authUid: "authUid-1",
       accounts: [],
       currentOrganizationId: "org-1",
       currentDisplayName: "User",

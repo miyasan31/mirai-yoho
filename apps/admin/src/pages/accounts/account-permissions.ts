@@ -14,13 +14,13 @@ export function canInviteAdminAccounts(actorRoleId: AdminActorRoleId): boolean {
 
 export function canEditDisplayName(
   actorRoleId: AdminActorRoleId,
-  actorUid: string | undefined,
-  targetUid: string,
+  actorAuthUid: string | undefined,
+  targetAuthUid: string,
 ): boolean {
   if (actorRoleId === SYSTEM_ADMIN_ROLE_ID) {
     return true;
   }
-  return !!actorUid && actorUid === targetUid;
+  return !!actorAuthUid && actorAuthUid === targetAuthUid;
 }
 
 export function canEditRole(

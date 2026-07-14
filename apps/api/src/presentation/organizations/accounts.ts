@@ -14,7 +14,7 @@ export async function listAccounts(organizationId: string) {
   return snapshot.docs.map((doc) => ({
     id: doc.id,
     ...(doc.data() as {
-      uid: string;
+      authUid: string;
       organizationId: string;
       roleId: string;
       status: string;
@@ -27,18 +27,18 @@ export async function listAccounts(organizationId: string) {
 
 export async function getAccount(
   organizationId: string,
-  uid: string,
+  authUid: string,
 ): Promise<{
-  uid: string;
+  authUid: string;
   organizationId: string;
   roleId: string;
   status: string;
 } | null> {
-  const docId = getAccountDocId(organizationId, uid);
+  const docId = getAccountDocId(organizationId, authUid);
   const doc = await db.collection(ACCOUNT_COLLECTION).doc(docId).get();
   if (!doc.exists) return null;
   return doc.data() as {
-    uid: string;
+    authUid: string;
     organizationId: string;
     roleId: string;
     status: string;

@@ -61,18 +61,6 @@ export function PricePlanRangeSettingsTab({
       <styled.div display="grid" gridTemplateColumns="1fr 1fr" gap="3">
         <styled.div>
           <Text textStyle="sm" mb="1">
-            下限
-          </Text>
-          <Input
-            type="number"
-            min={0}
-            max={100000}
-            {...form.register("minTotalJPY", { valueAsNumber: true })}
-            disabled={isDisabled}
-          />
-        </styled.div>
-        <styled.div>
-          <Text textStyle="sm" mb="1">
             上限
           </Text>
           <Input
@@ -80,6 +68,18 @@ export function PricePlanRangeSettingsTab({
             min={0}
             max={100000}
             {...form.register("maxTotalJPY", { valueAsNumber: true })}
+            disabled={isDisabled}
+          />
+        </styled.div>
+        <styled.div>
+          <Text textStyle="sm" mb="1">
+            下限
+          </Text>
+          <Input
+            type="number"
+            min={0}
+            max={100000}
+            {...form.register("minTotalJPY", { valueAsNumber: true })}
             disabled={isDisabled}
           />
         </styled.div>

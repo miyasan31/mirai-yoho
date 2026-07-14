@@ -31,7 +31,7 @@ pricePlanRoutes.get(
     const pricePlanRange = settings.getPricePlanRange();
     const pricePlans = await createPricePlanRepository().findByConsultantId(
       organizationId,
-      authUser.uid,
+      authUser.authUid,
     );
 
     return noStoreJson({
@@ -63,7 +63,7 @@ pricePlanRoutes.post(
 
     const result = await createCreatePricePlanUseCase().execute({
       organizationId,
-      consultantId: authUser.uid,
+      consultantId: authUser.authUid,
       name: body.name,
       totalJPY: body.totalJPY,
     });
@@ -90,7 +90,7 @@ pricePlanRoutes.patch(
 
     await createUpdatePricePlanUseCase().execute({
       organizationId,
-      consultantId: authUser.uid,
+      consultantId: authUser.authUid,
       pricePlanId: param("pricePlanId"),
       name: body.name,
       restore: body.restore,
@@ -109,7 +109,7 @@ pricePlanRoutes.delete(
       organizationId,
       param("pricePlanId"),
     );
-    if (!pricePlan || pricePlan.getConsultantId() !== authUser.uid) {
+    if (!pricePlan || pricePlan.getConsultantId() !== authUser.authUid) {
       return jsonError(404, "PRICE_PLAN_NOT_FOUND", "Plan not found");
     }
     pricePlan.delete();

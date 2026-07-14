@@ -1,5 +1,5 @@
 export interface UserContact {
-  uid: string;
+  authUid: string;
   email: string;
 }
 
