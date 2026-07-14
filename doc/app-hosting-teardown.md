@@ -31,7 +31,7 @@ Terraform state 操作と apply が必要**なため、その手順を以下に�
 | --- | --- |
 | `module.firebase.google_secret_manager_secret.app_hosting` | シークレット実体。Cloud Run `api`（`common/api`）と batch worker（`common/batch`）が参照する。**削除不可** |
 | `local.app_hosting_secret_ids` / `moved` ブロック（同シークレット） | 上記の定義・state 互換のため保持 |
-| `firebase.json`（`hosting`） | SPA（user/admin/consultant）の静的ホスティング。`deploy-hosting.yml --only hosting` で現役 |
+| `firebase.json`（`hosting`） | SPA（user/console/consultant）の静的ホスティング。`deploy-hosting.yml --only hosting` で現役 |
 
 ## GCP 上の実リソースを消す手順（dev → prod の順）
 
