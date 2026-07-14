@@ -1,16 +1,18 @@
+import type { Account } from "@/domain/account/account";
+
 interface DeleteAdminUserWithAuthCleanupParams {
-  authUid: string;
-  accountData: Record<string, unknown>;
-  countAccountsByAuthUid: (authUid: string) => Promise<number>;
+  accountId: string;
+  account: Account;
+  countAccountsByAccountId: (accountId: string) => Promise<number>;
   deleteAccount: () => Promise<void>;
-  restoreAccount: (accountData: Record<string, unknown>) => Promise<void>;
-  deleteAuthUser: (authUid: string) => Promise<void>;
+  restoreAccount: (account: Account) => Promise<void>;
+  deleteAuthUser: (accountId: string) => Promise<void>;
 }
 
 export async function deleteAdminUserWithAuthCleanup(
   params: DeleteAdminUserWithAuthCleanupParams,
 ): Promise<void> {
-  const accountCount = await params.countAccountsByAuthUid(params.authUid);
+  const accountCount = await params.countAccountsByAccountId(params.accountId);
   const isLastAccount = accountCount <= 1;
 
   await params.deleteAccount();
@@ -20,9 +22,9 @@ export async function deleteAdminUserWithAuthCleanup(
   }
 
   try {
-    await params.deleteAuthUser(params.authUid);
+    await params.deleteAuthUser(params.accountId);
   } catch (error) {
-    await params.restoreAccount(params.accountData);
+    await params.restoreAccount(params.account);
     throw error;
   }
 }

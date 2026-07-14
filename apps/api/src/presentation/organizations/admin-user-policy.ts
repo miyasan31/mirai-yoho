@@ -2,34 +2,34 @@ import { SYSTEM_ADMIN_ROLE_ID } from "@/domain/authorization/role";
 
 export function canUpdateDisplayNameTarget(
   actorRoleId: string,
-  actorAuthUid: string,
-  targetAuthUid: string,
+  actorAccountId: string,
+  targetAccountId: string,
 ): boolean {
   if (actorRoleId === SYSTEM_ADMIN_ROLE_ID) {
     return true;
   }
 
-  return actorAuthUid === targetAuthUid;
+  return actorAccountId === targetAccountId;
 }
 
 export function isLastAdminSelfDemotion(params: {
-  actorAuthUid: string;
-  targetAuthUid: string;
+  actorAccountId: string;
+  targetAccountId: string;
   nextRoleId: string;
   activeAdminCount: number;
 }): boolean {
   return (
-    params.actorAuthUid === params.targetAuthUid &&
+    params.actorAccountId === params.targetAccountId &&
     params.nextRoleId !== SYSTEM_ADMIN_ROLE_ID &&
     params.activeAdminCount <= 1
   );
 }
 
 export function validateAdminUserDeletionTarget(
-  actorAuthUid: string,
-  targetAuthUid: string,
+  actorAccountId: string,
+  targetAccountId: string,
 ): { isAllowed: boolean; message?: string } {
-  if (actorAuthUid === targetAuthUid) {
+  if (actorAccountId === targetAccountId) {
     return {
       isAllowed: false,
       message: "自分自身は削除できません",

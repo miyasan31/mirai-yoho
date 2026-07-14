@@ -1225,12 +1225,12 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [authUid]
+                required: [accountId]
                 properties:
-                  authUid:
+                  accountId:
                     type: string
 
-  /organizations/{organizationId}/admin/accounts/{authUid}:
+  /organizations/{organizationId}/admin/accounts/{accountId}:
     delete:
       operationId: deleteAdminAccount
       summary: 組織アカウント削除
@@ -1239,12 +1239,12 @@ paths:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
-        - $ref: "#/components/parameters/AuthUidParam"
+        - $ref: "#/components/parameters/AccountIdParam"
       responses:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/accounts/{authUid}/role:
+  /organizations/{organizationId}/admin/accounts/{accountId}/role:
     patch:
       operationId: updateAccountRole
       summary: 組織アカウントロール更新
@@ -1253,7 +1253,7 @@ paths:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
-        - $ref: "#/components/parameters/AuthUidParam"
+        - $ref: "#/components/parameters/AccountIdParam"
       requestBody:
         required: true
         content:
@@ -1268,7 +1268,7 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/accounts/{authUid}/display-name:
+  /organizations/{organizationId}/admin/accounts/{accountId}/display-name:
     patch:
       operationId: updateAccountDisplayName
       summary: 組織アカウント表示名更新（管理者、またはオペレーター本人）
@@ -1277,7 +1277,7 @@ paths:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
-        - $ref: "#/components/parameters/AuthUidParam"
+        - $ref: "#/components/parameters/AccountIdParam"
       requestBody:
         required: true
         content:
@@ -1292,7 +1292,7 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/accounts/{authUid}/resend-invite:
+  /organizations/{organizationId}/admin/accounts/{accountId}/resend-invite:
     post:
       operationId: resendAccountInvite
       summary: 招待メール再送（管理者・オペレーター）
@@ -1301,12 +1301,12 @@ paths:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
-        - $ref: "#/components/parameters/AuthUidParam"
+        - $ref: "#/components/parameters/AccountIdParam"
       responses:
         "200":
           description: OK
 
-  /organizations/{organizationId}/admin/accounts/{authUid}/reset-password:
+  /organizations/{organizationId}/admin/accounts/{accountId}/reset-password:
     post:
       operationId: resetAccountPassword
       summary: パスワードリセットメール送信（管理者・オペレーター）
@@ -1315,7 +1315,7 @@ paths:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
-        - $ref: "#/components/parameters/AuthUidParam"
+        - $ref: "#/components/parameters/AccountIdParam"
       responses:
         "200":
           description: OK
@@ -1340,8 +1340,8 @@ components:
       required: true
       schema:
         type: string
-    AuthUidParam:
-      name: authUid
+    AccountIdParam:
+      name: accountId
       in: path
       required: true
       schema:
@@ -1506,9 +1506,9 @@ components:
           nullable: true
     AdminAccount:
       type: object
-      required: [authUid, email, name, roleId, roleName, status, createdAt, updatedAt]
+      required: [accountId, email, name, roleId, roleName, status, createdAt, updatedAt]
       properties:
-        authUid:
+        accountId:
           type: string
         email:
           type: string
@@ -1521,7 +1521,7 @@ components:
           type: string
         status:
           type: string
-          enum: [pending, registered]
+          enum: [active, invited, disabled]
         createdAt:
           type: string
           format: date-time

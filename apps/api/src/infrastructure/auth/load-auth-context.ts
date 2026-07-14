@@ -1,22 +1,12 @@
 import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-permission";
-import { Timestamp } from "firebase-admin/firestore";
 import type { Account, AuthUser } from "@/infrastructure/auth/auth-types";
+import { createAccountRepository } from "@/infrastructure/container";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 import { db } from "@/infrastructure/firestore/firestore-customer";
 import { FirestoreRoleRepository } from "@/infrastructure/firestore/firestore-role-repository";
 
-const ACCOUNT_COLLECTION = FIRESTORE_COLLECTIONS.accounts;
 const ORGANIZATION_COLLECTION = FIRESTORE_COLLECTIONS.organizations;
 const CONSULTANT_COLLECTION = FIRESTORE_COLLECTIONS.consultants;
-
-interface AccountDoc {
-  authUid: string;
-  organizationId: string;
-  roleId: string;
-  status: "active" | "invited" | "disabled";
-  createdAt: Timestamp;
-  name?: string;
-}
 
 interface OrganizationDoc {
   organizationId: string;
@@ -28,63 +18,34 @@ interface ConsultantDoc {
   consultantId: string;
 }
 
-function toIsoString(value: Timestamp | Date | string): string {
-  if (value instanceof Timestamp) {
-    return value.toDate().toISOString();
-  }
-  if (value instanceof Date) {
-    return value.toISOString();
-  }
-  return value;
-}
-
-export function getAccountDocId(
-  organizationId: string,
-  authUid: string,
-): string {
-  return `${organizationId}_${authUid}`;
-}
-
-export async function activateInvitedAccounts(authUid: string): Promise<void> {
-  const invitedSnapshot = await db
-    .collection(ACCOUNT_COLLECTION)
-    .where("authUid", "==", authUid)
-    .where("status", "==", "invited")
-    .get();
-
-  if (invitedSnapshot.empty) {
-    return;
-  }
-
-  const batch = db.batch();
-  for (const invitedDoc of invitedSnapshot.docs) {
-    batch.update(invitedDoc.ref, {
-      status: "active",
-      updatedAt: new Date(),
-    });
-  }
-
-  await batch.commit();
-}
-
-export async function loadAuthUser(authUid: string): Promise<AuthUser> {
-  const accountSnapshot = await db
-    .collection(ACCOUNT_COLLECTION)
-    .where("authUid", "==", authUid)
-    .where("status", "==", "active")
-    .get();
-
-  const accountDocs = accountSnapshot.docs.map(
-    (doc) => doc.data() as AccountDoc,
+export async function activateInvitedAccounts(
+  accountId: string,
+): Promise<void> {
+  const repo = createAccountRepository();
+  const accounts = await repo.findByAccountId(accountId);
+  const invited = accounts.filter(
+    (account) => account.getStatus() === "invited",
   );
-  accountDocs.sort(
-    (left, right) =>
-      new Date(toIsoString(left.createdAt)).getTime() -
-      new Date(toIsoString(right.createdAt)).getTime(),
-  );
+  if (invited.length === 0) return;
+
+  for (const account of invited) {
+    account.activate();
+  }
+  await repo.saveAll(invited);
+}
+
+export async function loadAuthUser(accountId: string): Promise<AuthUser> {
+  const repo = createAccountRepository();
+  const accounts = await repo.findByAccountId(accountId);
+  const activeAccounts = accounts
+    .filter((account) => account.getStatus() === "active")
+    .sort(
+      (left, right) =>
+        left.getCreatedAt().getTime() - right.getCreatedAt().getTime(),
+    );
 
   const organizationIds = [
-    ...new Set(accountDocs.map((doc) => doc.organizationId)),
+    ...new Set(activeAccounts.map((account) => account.getOrganizationId())),
   ];
   const organizationDocs = await Promise.all(
     organizationIds.map((organizationId) =>
@@ -121,7 +82,7 @@ export async function loadAuthUser(authUid: string): Promise<AuthUser> {
 
   const consultantSnapshot = await db
     .collection(CONSULTANT_COLLECTION)
-    .where("consultantId", "==", authUid)
+    .where("consultantId", "==", accountId)
     .get();
   const consultantOrganizationIds = new Set(
     consultantSnapshot.docs.map(
@@ -129,49 +90,38 @@ export async function loadAuthUser(authUid: string): Promise<AuthUser> {
     ),
   );
 
-  const accounts: Account[] = accountDocs.map((doc) => ({
-    organizationId: doc.organizationId,
-    name: nameById.get(doc.organizationId) ?? doc.organizationId,
-    roleId: doc.roleId,
-    roleName:
-      roleByOrganizationAndRole.get(`${doc.organizationId}_${doc.roleId}`)
-        ?.name ?? doc.roleId,
-    permissions:
-      roleByOrganizationAndRole.get(`${doc.organizationId}_${doc.roleId}`)
-        ?.permissions ?? [],
-    isConsultant: consultantOrganizationIds.has(doc.organizationId),
-    status: doc.status,
-    createdAt: toIsoString(doc.createdAt),
-  }));
+  const accountViews: Account[] = activeAccounts.map((account) => {
+    const organizationId = account.getOrganizationId();
+    const roleKey = `${organizationId}_${account.getRoleId()}`;
+    return {
+      organizationId,
+      name: nameById.get(organizationId) ?? organizationId,
+      roleId: account.getRoleId(),
+      roleName:
+        roleByOrganizationAndRole.get(roleKey)?.name ?? account.getRoleId(),
+      permissions: roleByOrganizationAndRole.get(roleKey)?.permissions ?? [],
+      isConsultant: consultantOrganizationIds.has(organizationId),
+      status: account.getStatus(),
+      createdAt: account.getCreatedAt().toISOString(),
+    };
+  });
 
-  const currentOrganizationId = accounts[0]?.organizationId ?? null;
-  const currentAccountDoc = accountDocs.find(
-    (doc) => doc.organizationId === currentOrganizationId,
+  const currentOrganizationId = accountViews[0]?.organizationId ?? null;
+  const currentAccount = activeAccounts.find(
+    (account) => account.getOrganizationId() === currentOrganizationId,
   );
 
   return {
-    authUid,
-    accounts,
+    authUid: accountId,
+    accounts: accountViews,
     currentOrganizationId,
-    currentDisplayName: currentAccountDoc?.name ?? null,
+    currentDisplayName: currentAccount?.getName() ?? null,
   };
 }
 
 export async function setLastOrganizationId(
-  _authUid: string,
+  _accountId: string,
   _organizationId: string,
 ): Promise<void> {
   // 組織選択の保持はフロント側で行う
-}
-
-export async function setUserDisplayName(
-  organizationId: string,
-  authUid: string,
-  name: string,
-): Promise<void> {
-  const docId = getAccountDocId(organizationId, authUid);
-  await db
-    .collection(ACCOUNT_COLLECTION)
-    .doc(docId)
-    .set({ name, updatedAt: new Date() }, { merge: true });
 }

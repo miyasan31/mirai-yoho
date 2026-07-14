@@ -28,21 +28,22 @@ describe("account permissions", () => {
     );
   });
 
-  it("limits role change to system admin and requires target not to be pending", () => {
-    expect(canEditRole("admin", "registered")).toBe(true);
-    expect(canEditRole("admin", "pending")).toBe(false);
-    expect(canEditRole("operator", "registered")).toBe(false);
+  it("limits role change to system admin and requires target to be active", () => {
+    expect(canEditRole("admin", "active")).toBe(true);
+    expect(canEditRole("admin", "invited")).toBe(false);
+    expect(canEditRole("admin", "disabled")).toBe(false);
+    expect(canEditRole("operator", "active")).toBe(false);
     expect(canDeleteAdminAccount("admin")).toBe(true);
     expect(canDeleteAdminAccount("operator")).toBe(true);
   });
 
-  it("allows resend invite only for pending accounts and reset password only for registered accounts", () => {
-    expect(canResendInvite("admin", "pending")).toBe(true);
-    expect(canResendInvite("operator", "pending")).toBe(true);
-    expect(canResendInvite("operator", "registered")).toBe(false);
+  it("allows resend invite only for invited accounts and reset password only for active accounts", () => {
+    expect(canResendInvite("admin", "invited")).toBe(true);
+    expect(canResendInvite("operator", "invited")).toBe(true);
+    expect(canResendInvite("operator", "active")).toBe(false);
 
-    expect(canResetPassword("admin", "registered")).toBe(true);
-    expect(canResetPassword("operator", "registered")).toBe(true);
-    expect(canResetPassword("operator", "pending")).toBe(false);
+    expect(canResetPassword("admin", "active")).toBe(true);
+    expect(canResetPassword("operator", "active")).toBe(true);
+    expect(canResetPassword("operator", "invited")).toBe(false);
   });
 });

@@ -1,6 +1,6 @@
 # 命名台帳 — Firestore / Domain / API
 
-> Version 2.0 | 2026-06-26（2026-07-12 追記: §6.5 更新 / **2026-07-14 改訂: `organization-` プレフィックス全廃。§6.3-B の混在許容方針を撤回。詳細は §0** / **2026-07-15 改訂: Firebase Auth uid の正準名を `authUid` に統一。§3.5 の `uid` 維持合意を撤回。詳細は §0.1** / **2026-07-15 改訂: `accounts.role` → `accounts.roleId` にリネームし `consultant` ロールを廃止。詳細は §3.5**）  
+> Version 2.0 | 2026-06-26（2026-07-12 追記: §6.5 更新 / **2026-07-14 改訂: `organization-` プレフィックス全廃。§6.3-B の混在許容方針を撤回。詳細は §0** / **2026-07-15 改訂: Firebase Auth uid の正準名を `authUid` に統一。§3.5 の `uid` 維持合意を撤回。詳細は §0.1** / **2026-07-15 改訂: `accounts.role` → `accounts.roleId` にリネームし `consultant` ロールを廃止。詳細は §3.5** / **2026-07-15 改訂: `accounts.authUid` → `accounts.accountId` にリネーム。accounts 集約主識別子命名を他集約 (consultantId / roleId / userId) に揃える。§0.1 の accounts 側 authUid 採用を撤回。詳細は §0.2**）  
 > 対象: 策定時点の全11コレクション + 横断命名ルール（その後 `organization-roles`/`users`/`user-zoom-credentials`/`user-coupons` が追加され現行14コレクション。詳細は §6.5）  
 > 目的: 永続化・ドメイン・API の名称を整理し、今後の実装・リネームの基準とする
 
@@ -31,6 +31,33 @@
   - `user-zoom-credentials` は user-scoped（doc ID = `userId`）で、org-scoped の `zoom-sessions` と対になる。スコープ区別のため `user-` を残す。
 
 **データ移行**: `apps/api/scripts/migrate-drop-organization-prefix.ts`（doc ID を保持してコピー → 新コードをデプロイ → `--delete-source` で旧コレクション削除）。`firestore.rules` の変更は terraform apply が必要（§4.4）。
+
+---
+
+## 0.2 改訂: `accounts.authUid` → `accounts.accountId`（2026-07-15）
+
+**決定**: `accounts` コレクションの Firebase Auth uid 参照フィールドを **`accountId`** にリネームする。§0.1 の「`accounts` は `authUid` に統一」を **撤回** し、accounts 集約の主識別子を「集約名 + Id」の慣習（`consultantId`, `roleId`, `userId`）に揃える。値は Firebase Auth uid のまま変わらない。Doc ID の形式 `{organizationId}_{accountId}` も同じ物理 ID（値が同じため）。
+
+**理由**: §0.1 は「users と語彙を揃える」目的で `authUid` を採用したが、`users.authUid` は「外部参照フィールド」（`users.userId` とは別値）、`accounts.authUid` は「集約主識別子」（Doc ID の後半 = 値の同一物）で意味が異なる。同じ名前で違う概念を指していた。他集約（`consultants.consultantId`, `roles.roleId`）は主識別子を「集約名 + Id」で表現しており、accounts だけ慣習から外れていた。集約主識別子は集約名を冠する方針に統一する。
+
+**適用範囲**:
+- Firestore: `accounts.authUid` → **`accountId`**（値は同じ、Doc ID の形式・値も不変）
+- Domain: 新規 `Account` エンティティ + `IAccountRepository`（§3.5 の Repository 化 TODO を同時に解消）
+- 認証コンテキスト: `AuthUser.authUid` は **維持**（これは「認証セッションの Firebase Auth uid」で、accounts 集約のフィールドではないため）。ただし内部変数・関数引数のうち accounts 集約に紐づく `targetAuthUid` などは `targetAccountId` にリネーム
+- API: `AdminAccount.authUid` → **`accountId`**、`AuthUidParam` → **`AccountIdParam`**、path `/admin/accounts/{authUid}/*` → **`/admin/accounts/{accountId}/*`**、招待レスポンス `{ authUid }` → **`{ accountId }`**（`pnpm generate` でクライアント再生成）
+- 併せて `AdminAccount.status` の enum を `pending`/`registered` から Firestore と揃えた **`active`/`invited`/`disabled`** に変更（§3.5 の合意を実装に反映）
+
+**触らないもの**:
+- `users.authUid`（別集約の外部参照フィールド）
+- `AuthUser.authUid`（認証セッションの Firebase Auth uid）
+- firebase-admin SDK 由来のプロパティ参照（`decoded.uid`, `userRecord.uid`）
+
+**データ移行**: `apps/api/scripts/migrate-accounts-account-id.ts`
+- `--dry-run`（対象件数のみ確認）
+- デフォルト: `authUid` を持つ doc に `accountId` を複製（冪等、`authUid` は温存）
+- `--delete-source`: 新コードデプロイ後、旧 `authUid` フィールドを削除
+
+`firestore.rules` は uid フィールドを参照していないため Terraform 影響なし。
 
 ---
 
@@ -301,25 +328,25 @@
 
 ---
 
-### 3.5 `organization-accounts` → `accounts` ✅ 合意済み（2026-06-26 / 2026-07-14 改訂 §0 / 2026-07-15 改訂 §0.1 / **2026-07-15 改訂: `role` → `roleId` + `consultant` ロール廃止**）
+### 3.5 `organization-accounts` → `accounts` ✅ 合意済み（2026-06-26 / 2026-07-14 改訂 §0 / 2026-07-15 改訂 §0.1 / **2026-07-15 改訂: `role` → `roleId` + `consultant` ロール廃止** / **2026-07-15 改訂: `authUid` → `accountId`（§0.2）**）
 
-**Doc ID**: `{organizationId}_{authUid}`（形式・値は維持）
+**Doc ID**: `{organizationId}_{accountId}`（形式・値は維持。`accountId` の値 = Firebase Auth uid）
 
 | プロパティ | Firestore（現状） | 正準名 | 判定 |
 |---|---|---|---|
 | コレクション | `organization-accounts` | **`accounts`** | **リネーム（§0）** |
-| Firebase Auth uid | `uid` | **`authUid`** | **リネーム（§0.1）** |
+| 主識別子 | ~~`uid`~~ / ~~`authUid`~~ | **`accountId`** | **リネーム（§0.2、値は Firebase Auth uid のまま）** |
 | 組織 ID | `organizationId` | `organizationId` | 維持 |
 | ロール ID | ~~`role`~~ | **`roleId`** | **リネーム（2026-07-15）** |
-| ステータス | `active` / `invited` / `disabled` | **同名（API も統一）** | **合意: FS 値に API 統一** |
+| ステータス | `active` / `invited` / `disabled` | **同名（API も統一）** | **合意: FS 値に API 統一（実装済み）** |
 | 表示名 | `user-preferences` 参照 | **`name`（account へ移動）** | **移動 + consultants と統一** |
 | 作成/更新 | `createdAt`, `updatedAt` | 同名 | 維持 |
 
 **合意サマリー**
-- コレクション名・複合 Doc ID は維持
-- API の `registered`/`pending` を廃止し、FS と同じ **`active`/`invited`/`disabled`** に統一
+- コレクション名・複合 Doc ID の形式は維持（値も同じ）
+- API の `registered`/`pending` を廃止し、FS と同じ **`active`/`invited`/`disabled`** に統一（§0.2 で実装済み）
 - **`name`** を `user-preferences` から **account ドキュメントへ移動**（consultants と統一）
-- **Repository 化**（`OrganizationAccountRepository` + `OrganizationAccountDoc`）
+- **Repository 化 ✅ 実装済み**（`IAccountRepository` + `FirestoreAccountRepository` + `Account` 集約、§0.2）
 
 #### 2026-07-15 追加: `role` → `roleId` + `consultant` ロール廃止
 
