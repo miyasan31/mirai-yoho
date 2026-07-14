@@ -1,19 +1,19 @@
 import { useGetBookingPricePlans } from "@mirai-yoho/api-client/api/booking/booking";
 import {
-  useCreateConsultantPricePlan,
-  useDeleteConsultantPricePlan,
-  useListConsultantPricePlans,
-  useUpdateConsultantPricePlan,
+  useCreatePricePlan,
+  useDeletePricePlan,
+  useListPricePlans,
+  useUpdatePricePlan,
 } from "@mirai-yoho/api-client/api/consultant/consultant";
 import type { GetBookingPricePlansParams } from "@mirai-yoho/api-client/schemas";
 import { QUERY_STALE_TIME } from "@mirai-yoho/console-core/hooks/query-cache-policy";
 import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 
-export function useConsultantPricePlans() {
+export function usePricePlans() {
   const { token } = useAuth();
   const { organizationId } = useOrganizationRouting();
-  return useListConsultantPricePlans(organizationId ?? "", {
+  return useListPricePlans(organizationId ?? "", {
     query: {
       enabled: !!token && !!organizationId,
       staleTime: QUERY_STALE_TIME.normal,
@@ -34,8 +34,4 @@ export function useBookingPricePlans(
   });
 }
 
-export {
-  useCreateConsultantPricePlan,
-  useDeleteConsultantPricePlan,
-  useUpdateConsultantPricePlan,
-};
+export { useCreatePricePlan, useDeletePricePlan, useUpdatePricePlan };

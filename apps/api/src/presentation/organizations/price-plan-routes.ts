@@ -1,13 +1,13 @@
 import { Hono } from "hono";
-import { toConsultantPricePlanOutput } from "@/application/consultant-price-plan/create-consultant-price-plan-use-case";
+import { toPricePlanOutput } from "@/application/price-plan/create-price-plan-use-case";
 import { Settings } from "@/domain/settings/settings";
 import { requireRole } from "@/infrastructure/auth/require-role";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
-  createConsultantPricePlanRepository,
-  createCreateConsultantPricePlanUseCase,
+  createCreatePricePlanUseCase,
+  createPricePlanRepository,
   createSettingsRepository,
-  createUpdateConsultantPricePlanUseCase,
+  createUpdatePricePlanUseCase,
 } from "@/infrastructure/container";
 import {
   deleteRoute,
@@ -18,9 +18,9 @@ import {
   postRoute,
 } from "./route-handler";
 
-export const consultantPricePlanRoutes = new Hono();
+export const pricePlanRoutes = new Hono();
 
-consultantPricePlanRoutes.get(
+pricePlanRoutes.get(
   "/consultant/price-plans",
   getRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
@@ -29,15 +29,14 @@ consultantPricePlanRoutes.get(
       (await createSettingsRepository().findByOrganizationId(organizationId)) ??
       Settings.createDefault(organizationId);
     const pricePlanRange = settings.getPricePlanRange();
-    const pricePlans =
-      await createConsultantPricePlanRepository().findByConsultantId(
-        organizationId,
-        authUser.uid,
-      );
+    const pricePlans = await createPricePlanRepository().findByConsultantId(
+      organizationId,
+      authUser.uid,
+    );
 
     return noStoreJson({
       pricePlans: pricePlans.map((pricePlan) =>
-        toConsultantPricePlanOutput({
+        toPricePlanOutput({
           pricePlan,
           isWithinCurrentRange: pricePlanRange.contains(
             pricePlan.getTotalJPY(),
@@ -49,7 +48,7 @@ consultantPricePlanRoutes.get(
   }),
 );
 
-consultantPricePlanRoutes.post(
+pricePlanRoutes.post(
   "/consultant/price-plans",
   postRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
@@ -62,7 +61,7 @@ consultantPricePlanRoutes.post(
       return jsonError(400, "VALIDATION_ERROR", "totalJPY must be an integer");
     }
 
-    const result = await createCreateConsultantPricePlanUseCase().execute({
+    const result = await createCreatePricePlanUseCase().execute({
       organizationId,
       consultantId: authUser.uid,
       name: body.name,
@@ -73,7 +72,7 @@ consultantPricePlanRoutes.post(
   }),
 );
 
-consultantPricePlanRoutes.patch(
+pricePlanRoutes.patch(
   "/consultant/price-plans/:pricePlanId",
   patchRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
@@ -89,7 +88,7 @@ consultantPricePlanRoutes.patch(
       return jsonError(400, "VALIDATION_ERROR", "restore must be a boolean");
     }
 
-    await createUpdateConsultantPricePlanUseCase().execute({
+    await createUpdatePricePlanUseCase().execute({
       organizationId,
       consultantId: authUser.uid,
       pricePlanId: param("pricePlanId"),
@@ -101,12 +100,12 @@ consultantPricePlanRoutes.patch(
   }),
 );
 
-consultantPricePlanRoutes.delete(
+pricePlanRoutes.delete(
   "/consultant/price-plans/:pricePlanId",
   deleteRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
     requireRole(authUser, organizationId, "consultant");
-    const pricePlan = await createConsultantPricePlanRepository().findById(
+    const pricePlan = await createPricePlanRepository().findById(
       organizationId,
       param("pricePlanId"),
     );
@@ -114,7 +113,7 @@ consultantPricePlanRoutes.delete(
       return jsonError(404, "PRICE_PLAN_NOT_FOUND", "Plan not found");
     }
     pricePlan.delete();
-    await createConsultantPricePlanRepository().save(pricePlan);
+    await createPricePlanRepository().save(pricePlan);
     return Response.json({ success: true });
   }),
 );

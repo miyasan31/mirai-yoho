@@ -8,20 +8,20 @@ import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
-import {
-  type ConsultantPricePlan,
-  parsePricePlanSelectionId,
-} from "@/domain/consultant-price-plan/consultant-price-plan";
-import type { IConsultantPricePlanRepository } from "@/domain/consultant-price-plan/consultant-price-plan-repository";
 import { Customer } from "@/domain/customer/customer";
 import type { ICustomerRepository } from "@/domain/customer/customer-repository";
+import {
+  type PricePlan,
+  parsePricePlanSelectionId,
+} from "@/domain/price-plan/price-plan";
+import type { IPricePlanRepository } from "@/domain/price-plan/price-plan-repository";
 import { Settings } from "@/domain/settings/settings";
 import type { ISettingsRepository } from "@/domain/settings/settings-repository";
 import type { Slot } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import type { IUserRepository } from "@/domain/user/user-repository";
-import { ZoomDailySession } from "@/domain/zoom-session/zoom-daily-session";
-import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
+import { ZoomSession } from "@/domain/zoom-session/zoom-session";
+import type { IZoomSessionRepository } from "@/domain/zoom-session/zoom-session-repository";
 
 interface CreateBookingInput {
   organizationId: string;
@@ -54,7 +54,7 @@ function toSessionDate(date: Date): string {
 }
 
 function toBreakoutRoomParams(
-  session: ZoomDailySession,
+  session: ZoomSession,
 ): Array<{ name: string; participants: string[] }> {
   return session.getBreakoutRooms().map((r) => ({
     name: r.getRoomName(),
@@ -70,9 +70,9 @@ export class CreateBookingUseCase {
     private readonly zoomService: IZoomService,
     private readonly unitOfWork: IUnitOfWork,
     private readonly emailService: IEmailService,
-    private readonly zoomDailySessionRepository: IZoomDailySessionRepository,
+    private readonly zoomSessionRepository: IZoomSessionRepository,
     private readonly consultantRepository: IConsultantRepository,
-    private readonly consultantPricePlanRepository: IConsultantPricePlanRepository,
+    private readonly pricePlanRepository: IPricePlanRepository,
     private readonly settingsRepository: ISettingsRepository,
     private readonly userRepository: IUserRepository,
   ) {}
@@ -153,12 +153,12 @@ export class CreateBookingUseCase {
     const consultantName = consultant.getProfile().getDisplayName();
 
     const sessionDate = toSessionDate(slot.getTimeRange().getStartsAt());
-    const existingSession = await this.zoomDailySessionRepository.findByDate(
+    const existingSession = await this.zoomSessionRepository.findByDate(
       input.organizationId,
       sessionDate,
     );
 
-    let session: ZoomDailySession;
+    let session: ZoomSession;
 
     try {
       if (existingSession) {
@@ -173,7 +173,7 @@ export class CreateBookingUseCase {
           breakoutRooms: toBreakoutRoomParams(session),
         });
       } else {
-        session = ZoomDailySession.create({
+        session = ZoomSession.create({
           organizationId: input.organizationId,
           sessionId: crypto.randomUUID(),
           sessionDate,
@@ -223,7 +223,7 @@ export class CreateBookingUseCase {
       await this.customerRepository.save(customer);
       await this.slotRepository.save(slot);
       await this.bookingRepository.save(booking);
-      await this.zoomDailySessionRepository.save(session);
+      await this.zoomSessionRepository.save(session);
     });
 
     return { bookingId, joinUrl: session.getJoinUrl() };
@@ -231,7 +231,7 @@ export class CreateBookingUseCase {
 
   private async resolveSlotAndPricePlan(
     input: CreateBookingInput,
-  ): Promise<{ slot: Slot; pricePlan: ConsultantPricePlan }> {
+  ): Promise<{ slot: Slot; pricePlan: PricePlan }> {
     const selection = parsePricePlanSelectionId(input.selectionId);
     if (!selection) {
       throw new AppError(
@@ -295,9 +295,7 @@ export class CreateBookingUseCase {
       }),
     );
     const selectableCandidates = candidateSlotsWithPricePlans.filter(
-      (
-        candidate,
-      ): candidate is { slot: Slot; pricePlan: ConsultantPricePlan } =>
+      (candidate): candidate is { slot: Slot; pricePlan: PricePlan } =>
         candidate !== null,
     );
 
@@ -342,9 +340,8 @@ export class CreateBookingUseCase {
     consultantId: string;
     normalizedName: string;
     totalJPY: number;
-  }): Promise<ConsultantPricePlan | null> {
-    const pricePlan =
-      await this.consultantPricePlanRepository.findBySignature(params);
+  }): Promise<PricePlan | null> {
+    const pricePlan = await this.pricePlanRepository.findBySignature(params);
     if (!pricePlan || !pricePlan.isActive()) {
       return null;
     }

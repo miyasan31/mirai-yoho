@@ -1,21 +1,21 @@
 import { DomainError } from "@mirai-yoho/shared/domain-error";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 
-export type ConsultantPricePlanStatus = "active" | "deleted";
+export type PricePlanStatus = "active" | "deleted";
 
-export interface ConsultantPricePlanProps {
+export interface PricePlanProps {
   organizationId: string;
   consultantId: string;
   pricePlanId: string;
   name: string;
   totalJPY: number;
-  status: ConsultantPricePlanStatus;
+  status: PricePlanStatus;
   createdAt?: Date;
   updatedAt?: Date;
   deletedAt?: Date;
 }
 
-interface ConsultantPricePlanCreateProps {
+interface PricePlanCreateProps {
   organizationId: string;
   consultantId: string;
   pricePlanId: string;
@@ -50,7 +50,7 @@ function validateTotalJPY(totalJPY: number): void {
   }
 }
 
-export function getConsultantPricePlanSignature(params: {
+export function getPricePlanSignature(params: {
   name: string;
   totalJPY: number;
 }): string {
@@ -81,14 +81,14 @@ export function parsePricePlanSelectionId(
   }
 }
 
-export class ConsultantPricePlan extends AggregateRoot {
+export class PricePlan extends AggregateRoot {
   private constructor(
     private readonly organizationId: string,
     private readonly consultantId: string,
     private readonly pricePlanId: string,
     private name: string,
     private readonly totalJPY: number,
-    private status: ConsultantPricePlanStatus,
+    private status: PricePlanStatus,
     private readonly createdAt: Date,
     private updatedAt: Date,
     private deletedAt: Date | undefined,
@@ -96,10 +96,10 @@ export class ConsultantPricePlan extends AggregateRoot {
     super();
   }
 
-  static create(props: ConsultantPricePlanCreateProps): ConsultantPricePlan {
+  static create(props: PricePlanCreateProps): PricePlan {
     const now = new Date();
     validateTotalJPY(props.totalJPY);
-    return new ConsultantPricePlan(
+    return new PricePlan(
       props.organizationId,
       props.consultantId,
       props.pricePlanId,
@@ -112,9 +112,9 @@ export class ConsultantPricePlan extends AggregateRoot {
     );
   }
 
-  static reconstruct(props: ConsultantPricePlanProps): ConsultantPricePlan {
+  static reconstruct(props: PricePlanProps): PricePlan {
     const createdAt = props.createdAt ?? new Date(0);
-    return new ConsultantPricePlan(
+    return new PricePlan(
       props.organizationId,
       props.consultantId,
       props.pricePlanId,
@@ -175,12 +175,12 @@ export class ConsultantPricePlan extends AggregateRoot {
     return this.totalJPY;
   }
 
-  getStatus(): ConsultantPricePlanStatus {
+  getStatus(): PricePlanStatus {
     return this.status;
   }
 
   getSignature(): string {
-    return getConsultantPricePlanSignature({
+    return getPricePlanSignature({
       name: this.name,
       totalJPY: this.totalJPY,
     });

@@ -1,8 +1,8 @@
 import type { Timestamp } from "firebase-admin/firestore";
 import { BreakoutRoom } from "@/domain/zoom-session/breakout-room";
-import type { ZoomDailySession } from "@/domain/zoom-session/zoom-daily-session";
-import { ZoomDailySession as ZoomDailySessionEntity } from "@/domain/zoom-session/zoom-daily-session";
-import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
+import type { ZoomSession } from "@/domain/zoom-session/zoom-session";
+import { ZoomSession as ZoomSessionEntity } from "@/domain/zoom-session/zoom-session";
+import type { IZoomSessionRepository } from "@/domain/zoom-session/zoom-session-repository";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 import { db } from "@/infrastructure/firestore/firestore-customer";
 
@@ -14,7 +14,7 @@ interface BreakoutRoomDoc {
   participantEmails: string[];
 }
 
-interface ZoomDailySessionDoc {
+interface ZoomSessionDoc {
   organizationId: string;
   sessionId: string;
   sessionDate: string;
@@ -24,8 +24,8 @@ interface ZoomDailySessionDoc {
   createdAt: Timestamp;
 }
 
-function toDomain(doc: ZoomDailySessionDoc): ZoomDailySession {
-  return ZoomDailySessionEntity.reconstruct({
+function toDomain(doc: ZoomSessionDoc): ZoomSession {
+  return ZoomSessionEntity.reconstruct({
     organizationId: doc.organizationId,
     sessionId: doc.sessionId,
     sessionDate: doc.sessionDate,
@@ -42,7 +42,7 @@ function toDomain(doc: ZoomDailySessionDoc): ZoomDailySession {
   });
 }
 
-function toFirestore(session: ZoomDailySession): Record<string, unknown> {
+function toFirestore(session: ZoomSession): Record<string, unknown> {
   return {
     organizationId: session.getOrganizationId(),
     sessionId: session.getSessionId(),
@@ -58,22 +58,20 @@ function toFirestore(session: ZoomDailySession): Record<string, unknown> {
   };
 }
 
-export class FirestoreZoomDailySessionRepository
-  implements IZoomDailySessionRepository
-{
+export class FirestoreZoomSessionRepository implements IZoomSessionRepository {
   async findByDate(
     organizationId: string,
     sessionDate: string,
-  ): Promise<ZoomDailySession | null> {
+  ): Promise<ZoomSession | null> {
     const doc = await db
       .collection(COLLECTION)
       .doc(`${organizationId}_${sessionDate}`)
       .get();
     if (!doc.exists) return null;
-    return toDomain(doc.data() as ZoomDailySessionDoc);
+    return toDomain(doc.data() as ZoomSessionDoc);
   }
 
-  async save(session: ZoomDailySession): Promise<void> {
+  async save(session: ZoomSession): Promise<void> {
     await db
       .collection(COLLECTION)
       .doc(`${session.getOrganizationId()}_${session.getSessionDate()}`)

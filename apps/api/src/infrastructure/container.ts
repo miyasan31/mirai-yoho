@@ -6,8 +6,8 @@ import { CreateBookingUseCase } from "@/application/booking/create-booking-use-c
 import { NotifyLateConsultantArrivalUseCase } from "@/application/booking/notify-late-consultant-arrival-use-case";
 import { SendConsultationReminderUseCase } from "@/application/booking/send-consultation-reminder-use-case";
 import { SetupPaymentUseCase } from "@/application/booking/setup-payment-use-case";
-import { CreateConsultantPricePlanUseCase } from "@/application/consultant-price-plan/create-consultant-price-plan-use-case";
-import { UpdateConsultantPricePlanUseCase } from "@/application/consultant-price-plan/update-consultant-price-plan-use-case";
+import { CreatePricePlanUseCase } from "@/application/price-plan/create-price-plan-use-case";
+import { UpdatePricePlanUseCase } from "@/application/price-plan/update-price-plan-use-case";
 import { ConnectZoomAccountUseCase } from "@/application/user/connect-zoom-account-use-case";
 import { DisconnectZoomAccountUseCase } from "@/application/user/disconnect-zoom-account-use-case";
 import { LinkExistingCustomersToUserUseCase } from "@/application/user/link-existing-customers-to-user-use-case";
@@ -23,17 +23,17 @@ import { AesGcmTokenCipher } from "@/infrastructure/crypto/aes-gcm-token-cipher"
 import { FirebaseAuthAdminService } from "@/infrastructure/firebase/firebase-auth-admin-service";
 import { FirebaseUserContactService } from "@/infrastructure/firebase/firebase-user-contact-service";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
-import { FirestoreConsultantPricePlanRepository } from "@/infrastructure/firestore/firestore-consultant-price-plan-repository";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
 import { FirestoreCustomerRepository } from "@/infrastructure/firestore/firestore-customer-repository";
 import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore-payment-repository";
+import { FirestorePricePlanRepository } from "@/infrastructure/firestore/firestore-price-plan-repository";
 import { FirestoreRoleRepository } from "@/infrastructure/firestore/firestore-role-repository";
 import { FirestoreSettingsRepository } from "@/infrastructure/firestore/firestore-settings-repository";
 import { FirestoreSlotRepository } from "@/infrastructure/firestore/firestore-slot-repository";
 import { FirestoreUnitOfWork } from "@/infrastructure/firestore/firestore-unit-of-work";
 import { FirestoreUserCouponRepository } from "@/infrastructure/firestore/firestore-user-coupon-repository";
 import { FirestoreUserRepository } from "@/infrastructure/firestore/firestore-user-repository";
-import { FirestoreZoomDailySessionRepository } from "@/infrastructure/firestore/firestore-zoom-daily-session-repository";
+import { FirestoreZoomSessionRepository } from "@/infrastructure/firestore/firestore-zoom-session-repository";
 import { LineWorksLateArrivalAlertService } from "@/infrastructure/line-works/line-works-late-arrival-alert-service";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
 import { StripeService } from "@/infrastructure/stripe/stripe-service";
@@ -44,8 +44,8 @@ export function createConsultantRepository() {
   return new FirestoreConsultantRepository();
 }
 
-export function createConsultantPricePlanRepository() {
-  return new FirestoreConsultantPricePlanRepository();
+export function createPricePlanRepository() {
+  return new FirestorePricePlanRepository();
 }
 
 export function createSlotRepository() {
@@ -72,9 +72,9 @@ export function createCreateBookingUseCase() {
     new ZoomService(),
     new FirestoreUnitOfWork(),
     new ResendEmailService(),
-    new FirestoreZoomDailySessionRepository(),
+    new FirestoreZoomSessionRepository(),
     new FirestoreConsultantRepository(),
-    new FirestoreConsultantPricePlanRepository(),
+    new FirestorePricePlanRepository(),
     new FirestoreSettingsRepository(),
     new FirestoreUserRepository(),
   );
@@ -89,17 +89,15 @@ export function createSetupPaymentUseCase() {
   );
 }
 
-export function createCreateConsultantPricePlanUseCase() {
-  return new CreateConsultantPricePlanUseCase(
-    new FirestoreConsultantPricePlanRepository(),
+export function createCreatePricePlanUseCase() {
+  return new CreatePricePlanUseCase(
+    new FirestorePricePlanRepository(),
     new FirestoreSettingsRepository(),
   );
 }
 
-export function createUpdateConsultantPricePlanUseCase() {
-  return new UpdateConsultantPricePlanUseCase(
-    new FirestoreConsultantPricePlanRepository(),
-  );
+export function createUpdatePricePlanUseCase() {
+  return new UpdatePricePlanUseCase(new FirestorePricePlanRepository());
 }
 
 export function createCancelBookingUseCase() {
@@ -109,7 +107,7 @@ export function createCancelBookingUseCase() {
     new FirestoreSlotRepository(),
     new StripeService(),
     new ResendEmailService(),
-    new FirestoreZoomDailySessionRepository(),
+    new FirestoreZoomSessionRepository(),
     new ZoomService(),
     new FirestoreCustomerRepository(),
   );

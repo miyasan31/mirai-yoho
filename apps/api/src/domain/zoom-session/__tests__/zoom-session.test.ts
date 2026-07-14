@@ -1,6 +1,6 @@
 import { DomainError } from "@mirai-yoho/shared/domain-error";
 import { BreakoutRoom } from "@/domain/zoom-session/breakout-room";
-import { ZoomDailySession } from "@/domain/zoom-session/zoom-daily-session";
+import { ZoomSession } from "@/domain/zoom-session/zoom-session";
 
 const ORGANIZATION_ID = "org-1";
 
@@ -58,9 +58,9 @@ describe("BreakoutRoom", () => {
   });
 });
 
-describe("ZoomDailySession", () => {
+describe("ZoomSession", () => {
   function createSession() {
-    return ZoomDailySession.create({
+    return ZoomSession.create({
       organizationId: ORGANIZATION_ID,
       sessionId: "session-1",
       sessionDate: "2026-04-01",
@@ -165,7 +165,7 @@ describe("ZoomDailySession", () => {
 
   describe("reconstruct", () => {
     it("永続化から復元できる", () => {
-      const session = ZoomDailySession.reconstruct({
+      const session = ZoomSession.reconstruct({
         organizationId: ORGANIZATION_ID,
         sessionId: "session-1",
         sessionDate: "2026-04-01",

@@ -1,20 +1,20 @@
 import { AppError } from "@/application/shared/app-error";
 import {
-  ConsultantPricePlan,
+  PricePlan,
   parsePricePlanSelectionId,
-} from "@/domain/consultant-price-plan/consultant-price-plan";
-import type { IConsultantPricePlanRepository } from "@/domain/consultant-price-plan/consultant-price-plan-repository";
+} from "@/domain/price-plan/price-plan";
+import type { IPricePlanRepository } from "@/domain/price-plan/price-plan-repository";
 import { Settings } from "@/domain/settings/settings";
 import type { ISettingsRepository } from "@/domain/settings/settings-repository";
 
-interface CreateConsultantPricePlanInput {
+interface CreatePricePlanInput {
   organizationId: string;
   consultantId: string;
   name: string;
   totalJPY: number;
 }
 
-export interface ConsultantPricePlanOutput {
+export interface PricePlanOutput {
   pricePlanId: string;
   name: string;
   totalJPY: number;
@@ -26,10 +26,10 @@ export interface ConsultantPricePlanOutput {
   deletedAt: string | null;
 }
 
-export function toConsultantPricePlanOutput(params: {
-  pricePlan: ConsultantPricePlan;
+export function toPricePlanOutput(params: {
+  pricePlan: PricePlan;
   isWithinCurrentRange: boolean;
-}): ConsultantPricePlanOutput {
+}): PricePlanOutput {
   return {
     pricePlanId: params.pricePlan.getPricePlanId(),
     name: params.pricePlan.getName(),
@@ -43,15 +43,13 @@ export function toConsultantPricePlanOutput(params: {
   };
 }
 
-export class CreateConsultantPricePlanUseCase {
+export class CreatePricePlanUseCase {
   constructor(
-    private readonly consultantPricePlanRepository: IConsultantPricePlanRepository,
+    private readonly pricePlanRepository: IPricePlanRepository,
     private readonly settingsRepository: ISettingsRepository,
   ) {}
 
-  async execute(
-    input: CreateConsultantPricePlanInput,
-  ): Promise<ConsultantPricePlanOutput> {
+  async execute(input: CreatePricePlanInput): Promise<PricePlanOutput> {
     const settings =
       (await this.settingsRepository.findByOrganizationId(
         input.organizationId,
@@ -66,7 +64,7 @@ export class CreateConsultantPricePlanUseCase {
     }
 
     const selection = parsePricePlanSelectionId(
-      ConsultantPricePlan.create({
+      PricePlan.create({
         organizationId: input.organizationId,
         consultantId: input.consultantId,
         pricePlanId: "validation-only",
@@ -78,14 +76,12 @@ export class CreateConsultantPricePlanUseCase {
       throw new AppError(400, "VALIDATION_ERROR", "Invalid price plan");
     }
 
-    const duplicated = await this.consultantPricePlanRepository.findBySignature(
-      {
-        organizationId: input.organizationId,
-        consultantId: input.consultantId,
-        normalizedName: selection.normalizedName,
-        totalJPY: selection.totalJPY,
-      },
-    );
+    const duplicated = await this.pricePlanRepository.findBySignature({
+      organizationId: input.organizationId,
+      consultantId: input.consultantId,
+      normalizedName: selection.normalizedName,
+      totalJPY: selection.totalJPY,
+    });
     if (duplicated) {
       throw new AppError(
         duplicated.isActive() ? 409 : 409,
@@ -98,7 +94,7 @@ export class CreateConsultantPricePlanUseCase {
       );
     }
 
-    const pricePlan = ConsultantPricePlan.create({
+    const pricePlan = PricePlan.create({
       organizationId: input.organizationId,
       consultantId: input.consultantId,
       pricePlanId: crypto.randomUUID(),
@@ -106,9 +102,9 @@ export class CreateConsultantPricePlanUseCase {
       totalJPY: input.totalJPY,
     });
 
-    await this.consultantPricePlanRepository.save(pricePlan);
+    await this.pricePlanRepository.save(pricePlan);
 
-    return toConsultantPricePlanOutput({
+    return toPricePlanOutput({
       pricePlan,
       isWithinCurrentRange: true,
     });

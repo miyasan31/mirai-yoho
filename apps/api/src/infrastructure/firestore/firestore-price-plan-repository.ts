@@ -1,22 +1,22 @@
 import type { Timestamp } from "firebase-admin/firestore";
 import {
-  ConsultantPricePlan,
-  type ConsultantPricePlanStatus,
-} from "@/domain/consultant-price-plan/consultant-price-plan";
-import type { IConsultantPricePlanRepository } from "@/domain/consultant-price-plan/consultant-price-plan-repository";
+  PricePlan,
+  type PricePlanStatus,
+} from "@/domain/price-plan/price-plan";
+import type { IPricePlanRepository } from "@/domain/price-plan/price-plan-repository";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.pricePlans;
 
-interface ConsultantPricePlanDoc {
+interface PricePlanDoc {
   organizationId: string;
   consultantId: string;
   pricePlanId: string;
   name: string;
   normalizedName: string;
   totalJPY: number;
-  status: ConsultantPricePlanStatus;
+  status: PricePlanStatus;
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;
   deletedAt?: Timestamp | Date | null;
@@ -28,8 +28,8 @@ function toDate(value?: Timestamp | Date | null): Date | undefined {
   return value.toDate();
 }
 
-function toDomain(doc: ConsultantPricePlanDoc): ConsultantPricePlan {
-  return ConsultantPricePlan.reconstruct({
+function toDomain(doc: PricePlanDoc): PricePlan {
+  return PricePlan.reconstruct({
     organizationId: doc.organizationId,
     consultantId: doc.consultantId,
     pricePlanId: doc.pricePlanId,
@@ -42,7 +42,7 @@ function toDomain(doc: ConsultantPricePlanDoc): ConsultantPricePlan {
   });
 }
 
-function toFirestore(pricePlan: ConsultantPricePlan): ConsultantPricePlanDoc {
+function toFirestore(pricePlan: PricePlan): PricePlanDoc {
   return {
     organizationId: pricePlan.getOrganizationId(),
     consultantId: pricePlan.getConsultantId(),
@@ -57,46 +57,40 @@ function toFirestore(pricePlan: ConsultantPricePlan): ConsultantPricePlanDoc {
   };
 }
 
-export class FirestoreConsultantPricePlanRepository
-  implements IConsultantPricePlanRepository
-{
+export class FirestorePricePlanRepository implements IPricePlanRepository {
   async findById(
     organizationId: string,
     pricePlanId: string,
-  ): Promise<ConsultantPricePlan | null> {
+  ): Promise<PricePlan | null> {
     const doc = await db.collection(COLLECTION).doc(pricePlanId).get();
     if (!doc.exists) return null;
-    const pricePlan = toDomain(doc.data() as ConsultantPricePlanDoc);
+    const pricePlan = toDomain(doc.data() as PricePlanDoc);
     return pricePlan.getOrganizationId() === organizationId ? pricePlan : null;
   }
 
   async findByConsultantId(
     organizationId: string,
     consultantId: string,
-  ): Promise<ConsultantPricePlan[]> {
+  ): Promise<PricePlan[]> {
     const snapshot = await db
       .collection(COLLECTION)
       .where("organizationId", "==", organizationId)
       .where("consultantId", "==", consultantId)
       .get();
-    return snapshot.docs.map((doc) =>
-      toDomain(doc.data() as ConsultantPricePlanDoc),
-    );
+    return snapshot.docs.map((doc) => toDomain(doc.data() as PricePlanDoc));
   }
 
   async findActiveByConsultantId(
     organizationId: string,
     consultantId: string,
-  ): Promise<ConsultantPricePlan[]> {
+  ): Promise<PricePlan[]> {
     const snapshot = await db
       .collection(COLLECTION)
       .where("organizationId", "==", organizationId)
       .where("consultantId", "==", consultantId)
       .where("status", "==", "active")
       .get();
-    return snapshot.docs.map((doc) =>
-      toDomain(doc.data() as ConsultantPricePlanDoc),
-    );
+    return snapshot.docs.map((doc) => toDomain(doc.data() as PricePlanDoc));
   }
 
   async findBySignature(params: {
@@ -104,7 +98,7 @@ export class FirestoreConsultantPricePlanRepository
     consultantId: string;
     normalizedName: string;
     totalJPY: number;
-  }): Promise<ConsultantPricePlan | null> {
+  }): Promise<PricePlan | null> {
     const snapshot = await db
       .collection(COLLECTION)
       .where("organizationId", "==", params.organizationId)
@@ -114,10 +108,10 @@ export class FirestoreConsultantPricePlanRepository
       .limit(1)
       .get();
     if (snapshot.empty) return null;
-    return toDomain(snapshot.docs[0].data() as ConsultantPricePlanDoc);
+    return toDomain(snapshot.docs[0].data() as PricePlanDoc);
   }
 
-  async save(pricePlan: ConsultantPricePlan): Promise<void> {
+  async save(pricePlan: PricePlan): Promise<void> {
     await db
       .collection(COLLECTION)
       .doc(pricePlan.getPricePlanId())

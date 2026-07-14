@@ -1,8 +1,8 @@
 import { AppError } from "@/application/shared/app-error";
-import { parsePricePlanSelectionId } from "@/domain/consultant-price-plan/consultant-price-plan";
-import type { IConsultantPricePlanRepository } from "@/domain/consultant-price-plan/consultant-price-plan-repository";
+import { parsePricePlanSelectionId } from "@/domain/price-plan/price-plan";
+import type { IPricePlanRepository } from "@/domain/price-plan/price-plan-repository";
 
-interface UpdateConsultantPricePlanInput {
+interface UpdatePricePlanInput {
   organizationId: string;
   consultantId: string;
   pricePlanId: string;
@@ -10,13 +10,11 @@ interface UpdateConsultantPricePlanInput {
   restore?: boolean;
 }
 
-export class UpdateConsultantPricePlanUseCase {
-  constructor(
-    private readonly consultantPricePlanRepository: IConsultantPricePlanRepository,
-  ) {}
+export class UpdatePricePlanUseCase {
+  constructor(private readonly pricePlanRepository: IPricePlanRepository) {}
 
-  async execute(input: UpdateConsultantPricePlanInput): Promise<void> {
-    const pricePlan = await this.consultantPricePlanRepository.findById(
+  async execute(input: UpdatePricePlanInput): Promise<void> {
+    const pricePlan = await this.pricePlanRepository.findById(
       input.organizationId,
       input.pricePlanId,
     );
@@ -34,13 +32,12 @@ export class UpdateConsultantPricePlanUseCase {
       if (!currentSelection || !renamedSelection) {
         throw new AppError(400, "VALIDATION_ERROR", "Invalid plan name");
       }
-      const duplicated =
-        await this.consultantPricePlanRepository.findBySignature({
-          organizationId: input.organizationId,
-          consultantId: input.consultantId,
-          normalizedName: renamedSelection.normalizedName,
-          totalJPY: renamedSelection.totalJPY,
-        });
+      const duplicated = await this.pricePlanRepository.findBySignature({
+        organizationId: input.organizationId,
+        consultantId: input.consultantId,
+        normalizedName: renamedSelection.normalizedName,
+        totalJPY: renamedSelection.totalJPY,
+      });
       if (
         duplicated &&
         duplicated.getPricePlanId() !== pricePlan.getPricePlanId()
@@ -62,6 +59,6 @@ export class UpdateConsultantPricePlanUseCase {
       pricePlan.restore();
     }
 
-    await this.consultantPricePlanRepository.save(pricePlan);
+    await this.pricePlanRepository.save(pricePlan);
   }
 }

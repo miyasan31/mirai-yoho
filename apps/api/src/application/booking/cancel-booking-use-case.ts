@@ -6,7 +6,7 @@ import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
-import type { IZoomDailySessionRepository } from "@/domain/zoom-session/zoom-daily-session-repository";
+import type { IZoomSessionRepository } from "@/domain/zoom-session/zoom-session-repository";
 
 interface CancelBookingInput {
   organizationId: string;
@@ -32,7 +32,7 @@ export class CancelBookingUseCase {
     private readonly slotRepository: ISlotRepository,
     private readonly stripeService: IStripeService,
     private readonly emailService: IEmailService,
-    private readonly zoomDailySessionRepository: IZoomDailySessionRepository,
+    private readonly zoomSessionRepository: IZoomSessionRepository,
     private readonly zoomService: IZoomService,
     private readonly customerRepository: ICustomerRepository,
   ) {}
@@ -79,7 +79,7 @@ export class CancelBookingUseCase {
     }
 
     const sessionDate = toSessionDate(booking.getStartsAt());
-    const session = await this.zoomDailySessionRepository.findByDate(
+    const session = await this.zoomSessionRepository.findByDate(
       input.organizationId,
       sessionDate,
     );
@@ -104,7 +104,7 @@ export class CancelBookingUseCase {
       this.bookingRepository.save(booking),
       ...(payment ? [this.paymentRepository.save(payment)] : []),
       ...(slot ? [this.slotRepository.save(slot)] : []),
-      ...(session ? [this.zoomDailySessionRepository.save(session)] : []),
+      ...(session ? [this.zoomSessionRepository.save(session)] : []),
     ]);
 
     const events = booking.pullDomainEvents();

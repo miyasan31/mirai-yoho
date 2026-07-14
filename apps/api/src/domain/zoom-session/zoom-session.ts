@@ -2,13 +2,13 @@ import { DomainError } from "@mirai-yoho/shared/domain-error";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 import { BreakoutRoom } from "@/domain/zoom-session/breakout-room";
 
-interface ZoomDailySessionCreateProps {
+interface ZoomSessionCreateProps {
   organizationId: string;
   sessionId: string;
   sessionDate: string;
 }
 
-interface ZoomDailySessionProps {
+interface ZoomSessionProps {
   organizationId: string;
   sessionId: string;
   sessionDate: string;
@@ -18,7 +18,7 @@ interface ZoomDailySessionProps {
   createdAt: Date;
 }
 
-export class ZoomDailySession extends AggregateRoot {
+export class ZoomSession extends AggregateRoot {
   private constructor(
     private readonly organizationId: string,
     private readonly sessionId: string,
@@ -31,8 +31,8 @@ export class ZoomDailySession extends AggregateRoot {
     super();
   }
 
-  static create(props: ZoomDailySessionCreateProps): ZoomDailySession {
-    return new ZoomDailySession(
+  static create(props: ZoomSessionCreateProps): ZoomSession {
+    return new ZoomSession(
       props.organizationId,
       props.sessionId,
       props.sessionDate,
@@ -43,8 +43,8 @@ export class ZoomDailySession extends AggregateRoot {
     );
   }
 
-  static reconstruct(props: ZoomDailySessionProps): ZoomDailySession {
-    return new ZoomDailySession(
+  static reconstruct(props: ZoomSessionProps): ZoomSession {
+    return new ZoomSession(
       props.organizationId,
       props.sessionId,
       props.sessionDate,

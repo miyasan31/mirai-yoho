@@ -579,7 +579,7 @@ paths:
 
   /organizations/{organizationId}/consultant/price-plans:
     get:
-      operationId: listConsultantPricePlans
+      operationId: listPricePlans
       summary: 相談員料金プラン一覧取得
       tags: [consultant]
       security:
@@ -598,11 +598,11 @@ paths:
                   pricePlans:
                     type: array
                     items:
-                      $ref: "#/components/schemas/ConsultantPricePlan"
+                      $ref: "#/components/schemas/PricePlan"
                   pricePlanRange:
                     $ref: "#/components/schemas/PricePlanRange"
     post:
-      operationId: createConsultantPricePlan
+      operationId: createPricePlan
       summary: 相談員料金プラン作成
       tags: [consultant]
       security:
@@ -614,18 +614,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/CreateConsultantPricePlanRequest"
+              $ref: "#/components/schemas/CreatePricePlanRequest"
       responses:
         "201":
           description: Created
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ConsultantPricePlan"
+                $ref: "#/components/schemas/PricePlan"
 
   /organizations/{organizationId}/consultant/price-plans/{pricePlanId}:
     patch:
-      operationId: updateConsultantPricePlan
+      operationId: updatePricePlan
       summary: 相談員料金プラン更新
       tags: [consultant]
       security:
@@ -642,12 +642,12 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/UpdateConsultantPricePlanRequest"
+              $ref: "#/components/schemas/UpdatePricePlanRequest"
       responses:
         "200":
           description: OK
     delete:
-      operationId: deleteConsultantPricePlan
+      operationId: deletePricePlan
       summary: 相談員料金プラン削除
       tags: [consultant]
       security:
@@ -2133,7 +2133,7 @@ components:
           type: integer
           minimum: 0
 
-    ConsultantPricePlan:
+    PricePlan:
       type: object
       required:
         [
@@ -2174,7 +2174,7 @@ components:
             - "null"
           format: date-time
 
-    CreateConsultantPricePlanRequest:
+    CreatePricePlanRequest:
       type: object
       required: [name, totalJPY]
       properties:
@@ -2184,7 +2184,7 @@ components:
           type: integer
           minimum: 0
 
-    UpdateConsultantPricePlanRequest:
+    UpdatePricePlanRequest:
       type: object
       properties:
         name:

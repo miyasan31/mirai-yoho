@@ -1,21 +1,19 @@
-import { CreateConsultantPricePlanUseCase } from "@/application/consultant-price-plan/create-consultant-price-plan-use-case";
-import { ConsultantPricePlan } from "@/domain/consultant-price-plan/consultant-price-plan";
-import type { IConsultantPricePlanRepository } from "@/domain/consultant-price-plan/consultant-price-plan-repository";
+import { CreatePricePlanUseCase } from "@/application/price-plan/create-price-plan-use-case";
+import { PricePlan } from "@/domain/price-plan/price-plan";
+import type { IPricePlanRepository } from "@/domain/price-plan/price-plan-repository";
 import { Settings } from "@/domain/settings/settings";
 import type { ISettingsRepository } from "@/domain/settings/settings-repository";
 
 const ORGANIZATION_ID = "org-1";
 const CONSULTANT_ID = "consultant-1";
 
-class InMemoryConsultantPricePlanRepository
-  implements IConsultantPricePlanRepository
-{
-  constructor(public readonly pricePlans: ConsultantPricePlan[] = []) {}
+class InMemoryPricePlanRepository implements IPricePlanRepository {
+  constructor(public readonly pricePlans: PricePlan[] = []) {}
 
   async findById(
     _organizationId: string,
     pricePlanId: string,
-  ): Promise<ConsultantPricePlan | null> {
+  ): Promise<PricePlan | null> {
     return (
       this.pricePlans.find(
         (pricePlan) => pricePlan.getPricePlanId() === pricePlanId,
@@ -26,7 +24,7 @@ class InMemoryConsultantPricePlanRepository
   async findByConsultantId(
     _organizationId: string,
     consultantId: string,
-  ): Promise<ConsultantPricePlan[]> {
+  ): Promise<PricePlan[]> {
     return this.pricePlans.filter(
       (pricePlan) => pricePlan.getConsultantId() === consultantId,
     );
@@ -35,7 +33,7 @@ class InMemoryConsultantPricePlanRepository
   async findActiveByConsultantId(
     organizationId: string,
     consultantId: string,
-  ): Promise<ConsultantPricePlan[]> {
+  ): Promise<PricePlan[]> {
     return (await this.findByConsultantId(organizationId, consultantId)).filter(
       (pricePlan) => pricePlan.isActive(),
     );
@@ -46,7 +44,7 @@ class InMemoryConsultantPricePlanRepository
     consultantId: string;
     normalizedName: string;
     totalJPY: number;
-  }): Promise<ConsultantPricePlan | null> {
+  }): Promise<PricePlan | null> {
     return (
       this.pricePlans.find(
         (pricePlan) =>
@@ -58,7 +56,7 @@ class InMemoryConsultantPricePlanRepository
     );
   }
 
-  async save(pricePlan: ConsultantPricePlan): Promise<void> {
+  async save(pricePlan: PricePlan): Promise<void> {
     this.pricePlans.push(pricePlan);
   }
 }
@@ -73,13 +71,13 @@ class InMemorySettingsRepository implements ISettingsRepository {
   async save(_settings: Settings): Promise<void> {}
 }
 
-function createUseCase(pricePlans: ConsultantPricePlan[] = []): {
-  useCase: CreateConsultantPricePlanUseCase;
-  repository: InMemoryConsultantPricePlanRepository;
+function createUseCase(pricePlans: PricePlan[] = []): {
+  useCase: CreatePricePlanUseCase;
+  repository: InMemoryPricePlanRepository;
 } {
-  const repository = new InMemoryConsultantPricePlanRepository(pricePlans);
+  const repository = new InMemoryPricePlanRepository(pricePlans);
   return {
-    useCase: new CreateConsultantPricePlanUseCase(
+    useCase: new CreatePricePlanUseCase(
       repository,
       new InMemorySettingsRepository(),
     ),
@@ -88,7 +86,7 @@ function createUseCase(pricePlans: ConsultantPricePlan[] = []): {
 }
 
 function createExistingPlan() {
-  return ConsultantPricePlan.create({
+  return PricePlan.create({
     organizationId: ORGANIZATION_ID,
     consultantId: CONSULTANT_ID,
     pricePlanId: "plan-1",
@@ -97,7 +95,7 @@ function createExistingPlan() {
   });
 }
 
-describe("CreateConsultantPricePlanUseCase", () => {
+describe("CreatePricePlanUseCase", () => {
   it("rejects amounts outside the configured range", async () => {
     const { useCase } = createUseCase();
 

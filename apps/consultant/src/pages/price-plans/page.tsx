@@ -15,23 +15,23 @@ import type { FormEvent } from "react";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
 import {
-  useConsultantPricePlans,
-  useCreateConsultantPricePlan,
-  useDeleteConsultantPricePlan,
-  useUpdateConsultantPricePlan,
+  useCreatePricePlan,
+  useDeletePricePlan,
+  usePricePlans,
+  useUpdatePricePlan,
 } from "@/hooks/use-price-plans";
 
 function getPricePlansQueryKey(organizationId: string) {
   return [`/organizations/${organizationId}/consultant/price-plans`] as const;
 }
 
-export default function ConsultantPricePlansPage() {
+export default function PricePlansPage() {
   const queryCustomer = useQueryClient();
   const { organizationId } = useOrganizationRouting();
-  const { data, isLoading } = useConsultantPricePlans();
-  const createPricePlan = useCreateConsultantPricePlan();
-  const updatePricePlan = useUpdateConsultantPricePlan();
-  const deletePricePlan = useDeleteConsultantPricePlan();
+  const { data, isLoading } = usePricePlans();
+  const createPricePlan = useCreatePricePlan();
+  const updatePricePlan = useUpdatePricePlan();
+  const deletePricePlan = useDeletePricePlan();
   const [name, setName] = useState("");
   const [totalJPY, setTotalJPY] = useState("");
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);

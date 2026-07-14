@@ -48,10 +48,10 @@ vi.mock("@/infrastructure/container", () => ({
   createBookingRepository: vi.fn(),
   createCancelBookingUseCase: vi.fn(),
   createChargePaymentUseCase: vi.fn(),
-  createConsultantPricePlanRepository: vi.fn(),
+  createPricePlanRepository: vi.fn(),
   createConsultantRepository: mocks.createConsultantRepository,
   createCreateBookingUseCase: vi.fn(),
-  createCreateConsultantPricePlanUseCase: vi.fn(),
+  createCreatePricePlanUseCase: vi.fn(),
   createCustomerRepository: vi.fn(),
   createNotifyLateConsultantArrivalUseCase: vi.fn(),
   createRoleRepository: mocks.createRoleRepository,
@@ -60,7 +60,7 @@ vi.mock("@/infrastructure/container", () => ({
   createSendConsultationReminderUseCase: vi.fn(),
   createSetupPaymentUseCase: vi.fn(),
   createSlotRepository: vi.fn(),
-  createUpdateConsultantPricePlanUseCase: vi.fn(),
+  createUpdatePricePlanUseCase: vi.fn(),
 }));
 
 vi.mock("@/infrastructure/firestore/firestore-customer", () => ({

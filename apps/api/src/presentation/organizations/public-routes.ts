@@ -1,9 +1,9 @@
 import { Hono } from "hono";
-import { createPricePlanSelectionId } from "@/domain/consultant-price-plan/consultant-price-plan";
+import { createPricePlanSelectionId } from "@/domain/price-plan/price-plan";
 import { Settings } from "@/domain/settings/settings";
 import {
-  createConsultantPricePlanRepository,
   createConsultantRepository,
+  createPricePlanRepository,
   createSettingsRepository,
   createSlotRepository,
 } from "@/infrastructure/container";
@@ -152,7 +152,7 @@ publicRoutes.get(
       (await createSettingsRepository().findByOrganizationId(organizationId)) ??
       Settings.createDefault(organizationId);
     const pricePlanRange = settings.getPricePlanRange();
-    const pricePlanRepository = createConsultantPricePlanRepository();
+    const pricePlanRepository = createPricePlanRepository();
 
     if (slotId) {
       const slot = await createSlotRepository().findById(

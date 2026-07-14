@@ -1,7 +1,7 @@
-import { ConsultantPricePlan } from "@/domain/consultant-price-plan/consultant-price-plan";
+import { PricePlan } from "@/domain/price-plan/price-plan";
 
 function createPricePlan() {
-  return ConsultantPricePlan.create({
+  return PricePlan.create({
     organizationId: "org-1",
     consultantId: "consultant-1",
     pricePlanId: "plan-1",
@@ -10,7 +10,7 @@ function createPricePlan() {
   });
 }
 
-describe("ConsultantPricePlan", () => {
+describe("PricePlan", () => {
   it("normalizes the name signature and keeps the amount immutable", () => {
     const pricePlan = createPricePlan();
 

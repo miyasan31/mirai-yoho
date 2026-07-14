@@ -626,15 +626,18 @@ export const FIRESTORE_COLLECTIONS = {
 | `sessionDate`, 休業 `startDate`/`endDate` | 維持（`*Date` + 文字列） |
 | businessHours `startTime`/`endTime` | 維持（`*Time` + `HH:mm`） |
 
-#### D. Domain 集約名 vs コレクション名（優先度: 低・許容）
+#### D. Domain 集約名 vs コレクション名 ⚠️ 一部解消（2026-07-14 · §0）
 
-| Domain 集約 | コレクション | ズレ |
+> ~~2026-06-26 時点では「コレクション名は短く Domain は明示的」を許容とし、リネーム不要としていた~~。**2026-07-14 に方針変更**し、ドメイン集約名 = コレクション名（kebab 複数形）へ**アライン**。`Consultant`（スコープ修飾）/ `Daily`（粒度修飾）は冗長として削除した。
+
+| Domain 集約 | コレクション | 状態 |
 |---|---|---|
-| `Customer` | `customers` | なし |
-| `ConsultantPricePlan` | `price-plans` | Domain に consultant 残存 |
-| `ZoomDailySession` | `zoom-sessions` | Domain に Daily 残存 |
+| `PricePlan`（旧 `ConsultantPricePlan`） | `price-plans` | ✅ アライン（OpenAPI スキーマ `PricePlan` / operationId `*PricePlan*` も追随・再生成） |
+| `ZoomSession`（旧 `ZoomDailySession`） | `zoom-sessions` | ✅ アライン（API 非公開） |
+| `UserZoomConnection` | `user-zoom-credentials` | 維持（`Connection` vs `Credentials`。`user-` は意味あり・§0 参照） |
+| `Customer` ほか | `customers` ほか | 一致 |
 
-**判断**: コレクション名は短く、Domain は明示的 — DDD では一般的。リネーム不要。
+**ルール（現行）**: ドメイン集約名の kebab-case 複数形＝コレクション名。ただし `UserZoomConnection`（User 集約の一部で名詞も異なる）のような明確な意図がある場合のみ差異を許容。
 
 #### E. メモ系フィールド（優先度: 低・意図的分離）
 
