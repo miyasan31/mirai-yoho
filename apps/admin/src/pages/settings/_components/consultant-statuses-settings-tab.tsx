@@ -126,18 +126,18 @@ function ConsultantStatusesSettingsTabView({
                   <ArrowDown size={16} />
                   下へ
                 </Button>
+                <Button
+                  type="button"
+                  variant="plain"
+                  size="sm"
+                  colorPalette="red"
+                  disabled={fields.length <= 1 || isDisabled}
+                  onClick={() => onRemove(index)}
+                >
+                  <Trash2 size={16} />
+                  削除
+                </Button>
               </styled.div>
-              <Button
-                type="button"
-                variant="plain"
-                size="sm"
-                colorPalette="red"
-                disabled={fields.length <= 1 || isDisabled}
-                onClick={() => onRemove(index)}
-              >
-                <Trash2 size={16} />
-                削除
-              </Button>
             </styled.div>
           );
         })}
