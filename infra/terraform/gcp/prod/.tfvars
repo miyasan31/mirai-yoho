@@ -11,8 +11,8 @@ firebase_storage_bucket_name = "mirai-yoho-prod.firebasestorage.app"
 firebase_storage_location    = "US-EAST1"
 firebase_storage_cors_origins = [
   "https://user.miraiyohou.com",
-  "https://admin.console.miraiyohou.com",
-  "https://consultant.console.miraiyohou.com",
+  "https://console.miraiyohou.com",
+  "https://consultant.miraiyohou.com",
 ]
 
 # Cloud Run API のカスタムドメイン。null（既定）だと run.app URL のみで稼働する
@@ -22,12 +22,12 @@ api_custom_domain = "api.miraiyohou.com"
 # SPA サイトのカスタムドメイン。
 spa_hosting_custom_domains = {
   user       = "user.miraiyohou.com"
-  admin      = "admin.console.miraiyohou.com"
-  consultant = "consultant.console.miraiyohou.com"
+  console    = "console.miraiyohou.com"
+  consultant = "consultant.miraiyohou.com"
 }
 
 authorized_domains = [
   "user.miraiyohou.com",
-  "admin.console.miraiyohou.com",
-  "consultant.console.miraiyohou.com",
+  "console.miraiyohou.com",
+  "consultant.miraiyohou.com",
 ]

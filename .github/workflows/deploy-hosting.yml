@@ -51,6 +51,6 @@ jobs:
       - name: Deploy to Firebase Hosting
         run: |
           pnpm dlx firebase-tools deploy \
-            --only hosting:user,hosting:admin,hosting:consultant \
+            --only hosting:user,hosting:console,hosting:consultant \
             --project "$PROJECT_ID" \
             --non-interactive

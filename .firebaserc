@@ -7,14 +7,14 @@
     "mirai-yoho-dev": {
       "hosting": {
         "user": ["mirai-yoho-dev-user"],
-        "admin": ["mirai-yoho-dev-admin"],
+        "console": ["mirai-yoho-dev-console"],
         "consultant": ["mirai-yoho-dev-consultant"]
       }
     },
     "mirai-yoho-prod": {
       "hosting": {
         "user": ["mirai-yoho-prod-user"],
-        "admin": ["mirai-yoho-prod-admin"],
+        "console": ["mirai-yoho-prod-console"],
         "consultant": ["mirai-yoho-prod-consultant"]
       }
     }

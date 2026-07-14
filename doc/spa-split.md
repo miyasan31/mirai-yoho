@@ -8,8 +8,8 @@
 ```
                     ┌──────────────────────────────┐
  user.miraiyohou.com               →  apps/user       （Firebase Hosting / 静的 SPA、組織は URL パス /<organizationId>/... で判別）
- admin.console.miraiyohou.com      →  apps/admin      （Firebase Hosting / 静的 SPA）
- consultant.console.miraiyohou.com →  apps/consultant （Firebase Hosting / 静的 SPA）
+ console.miraiyohou.com            →  apps/admin      （Firebase Hosting / 静的 SPA）
+ consultant.miraiyohou.com         →  apps/consultant （Firebase Hosting / 静的 SPA）
                     │            │ fetch (CORS + Bearer token)
                     ▼            ▼
  api.miraiyohou.com                →  apps/api        （Cloud Run / Hono）
@@ -45,8 +45,8 @@
 
 - Cloud Run service `api`（`common/api`。イメージは Terraform 管理外で `deploy-api.yml` が差し替える。`asia-northeast1`）
 - Secret Manager の新シークレット `API_URL` / `ADMIN_APP_URL` / `USER_APP_URL` / `CORS_ALLOWED_ORIGINS`（作成と IAM。**値の投入は手動**: `make setup-secrets`。全キーは `infra/terraform/gcp/common/api/main.tf` の `api_secret_ids` 参照）
-- SPA 用 Firebase Hosting サイト `{project}-user` / `{project}-admin` / `{project}-consultant`（`.firebaserc` の targets と一致）
-- SPA サイトのカスタムドメイン（`spa_hosting_custom_domains`。現状 admin / consultant。DNS は外部管理のため `wait_dns_verification = false` で apply し、追加すべきレコードは output で提示）
+- SPA 用 Firebase Hosting サイト `{project}-user` / `{project}-console` / `{project}-consultant`（`.firebaserc` の targets と一致。`console` は admin アプリ（`apps/admin`）のデプロイ先）
+- SPA サイトのカスタムドメイン（`spa_hosting_custom_domains`。現状 console / consultant。DNS は外部管理のため `wait_dns_verification = false` で apply し、追加すべきレコードは output で提示）
 - Firestore / Storage のセキュリティルール（`firestore.rules` / `storage.rules` を `google_firebaserules_ruleset/release` が読み込む。CLI では配信しない）
 - batch worker の `ADMIN_APP_URL` シークレット参照
 - github-deployer の Hosting / Cloud Run デプロイ権限（既存の `roles/firebase.admin` + `roles/run.admin` でカバー）
@@ -55,15 +55,33 @@
 
 1. **Secret Manager へ値を投入**: Terraform apply 後、`make setup-secrets`（または `make setup-secrets-from-env-fish:{dev,prod}`）で `API_URL` / `ADMIN_APP_URL` / `USER_APP_URL` / `CORS_ALLOWED_ORIGINS` を含む全キー（`Makefile` の `SECRET_KEYS`）に値を設定してから Cloud Run（`deploy-api.yml`）を再デプロイする。
 2. **GitHub Environments（dev / prod）の vars 追加**: `API_URL`, `STRIPE_PUBLISHABLE_KEY`, `FIREBASE_API_KEY`, `FIREBASE_AUTH_DOMAIN`, `FIREBASE_PROJECT_ID`（`GCP_PROJECT_NUMBER` は既存）。`deploy-hosting.yml` の SPA ビルドが参照する（`ADMIN_APP_URL` は SPA ビルド時の vars ではなく、API 側 Secret Manager の値としてのみ使用）。旧 `CONSOLE_APP_URL` var は廃止。
-3. **カスタムドメイン**: user / admin / consultant の Hosting サイト（prod: `user.miraiyohou.com` / `admin.console.miraiyohou.com` / `consultant.console.miraiyohou.com`、dev: `dev.user…` / `dev.admin.console…` / `dev.consultant.console…`）と Cloud Run service `api`（`api.miraiyohou.com`）のドメイン割り当ては Terraform 管理（`.tfvars` の `spa_hosting_custom_domains` / `api_custom_domain`）。terraform apply 後、`spa_hosting_custom_domain_dns_records_to_add` / `api_custom_domain_dns_records` output に出る DNS レコードを Xserver 側に登録する（`wait_dns_verification = false` のため apply は検証を待たない）。
-4. **Firebase Auth の Authorized domains** に `admin.console.miraiyohou.com` / `consultant.console.miraiyohou.com`（dev はそれぞれ `dev.admin.console…` / `dev.consultant.console…`）を追加（`.tfvars` の `authorized_domains` で管理）。
+3. **カスタムドメイン**: user / console / consultant の Hosting サイト（prod: `user.miraiyohou.com` / `console.miraiyohou.com` / `consultant.miraiyohou.com`、dev: `dev.user…` / `dev.console…` / `dev.consultant…`）と Cloud Run service `api`（`api.miraiyohou.com`）のドメイン割り当ては Terraform 管理（`.tfvars` の `spa_hosting_custom_domains` / `api_custom_domain`）。terraform apply 後、`spa_hosting_custom_domain_dns_records_to_add` / `api_custom_domain_dns_records` output に出る DNS レコードを Xserver 側に登録する（`wait_dns_verification = false` のため apply は検証を待たない）。
+4. **Firebase Auth の Authorized domains** に `console.miraiyohou.com` / `consultant.miraiyohou.com`（dev はそれぞれ `dev.console…` / `dev.consultant…`）を追加（`.tfvars` の `authorized_domains` で管理）。
 5. **Stripe / Zoom などの Webhook URL** は API ドメイン（api.miraiyohou.com）に変わるため、ドメイン切替時に Stripe ダッシュボードの webhook endpoint を更新。
 6. **移行完了後のクリーンアップ**: 旧 `NEXT_PUBLIC_*` シークレットを `terraform state rm` + 手動削除（deletion_protection のため Terraform では消せない）。
+
+## ドメイン移行手順（2026-07: `admin.console` / `consultant.console` → `console` / `consultant`）
+
+`apps/admin` を `admin.console.miraiyohou.com` → `console.miraiyohou.com`、`apps/consultant` を `consultant.console.miraiyohou.com` → `consultant.miraiyohou.com` へ移行する際の手順。同時に Firebase Hosting site `${project}-admin` を廃止し `${project}-console` を新規作成する。
+
+1. **Terraform apply**（dev → prod の順）で以下がまとめて実行される:
+   - 旧 hosting site `${project}-admin` を destroy（`google_firebase_hosting_site.admin_spa` を config から削除済み）
+   - 新 hosting site `${project}-console` を create（`google_firebase_hosting_site.console_spa`）
+   - `spa["admin"]` custom domain（`*.admin.console.miraiyohou.com`）を destroy
+   - `spa["console"]` custom domain（`console.miraiyohou.com` / `dev.console.miraiyohou.com`）を create
+   - `spa["consultant"]` custom domain の `custom_domain` 変更 → 実質 destroy + create（`*.consultant.miraiyohou.com`）
+   - `google_identity_platform_config.default.authorized_domains` と `google_storage_bucket.firebase_default.cors` の更新
+2. **DNS 切替（Xserver）**: apply 後の output `spa_hosting_custom_domain_dns_records_to_add` に新ドメインの A/TXT レコードが出るので Xserver に登録。同 output `spa_hosting_custom_domain_dns_records_to_remove` に出た旧レコード（`*.admin.console…` / `*.consultant.console…`）は Xserver 側で削除。
+3. **旧 hosting site の削除**: Terraform destroy 直後は Firebase Hosting 側に `${project}-admin` サイトが残っている可能性があるため、Firebase Console もしくは `firebase hosting:sites:delete ${project}-admin --project ${project}` で削除。
+4. **`ADMIN_APP_URL` / `CONSULTANT_APP_URL` シークレット更新**: `make setup-secrets-from-env-fish:{dev,prod}` を再実行して Secret Manager の値を新ドメインへ差し替え、その後 `deploy-api.yml` を再実行して Cloud Run を再デプロイ（バッチ Worker も同時に更新される）。
+5. **`release/dev` / `release/prod` push**: `deploy-hosting.yml` が `--only hosting:console` で新サイトへデプロイ（旧 `hosting:admin` target 名は既に置換済み）。
+6. **旧 domain の Firebase Auth authorized domain 削除**: Terraform apply で `authorized_domains` から自動で消えるため手動作業不要（Identity Platform 上でも消える）。
+7. **確認**: `curl -I https://console.miraiyohou.com` / `https://consultant.miraiyohou.com` で 200、Firebase Auth でログインが通ることを確認。
 
 ## デプロイフロー
 
 - `release/dev` / `release/prod` への push で:
-  - `.github/workflows/deploy-hosting.yml` … SPA 3 つ（user / admin / consultant）をビルドして Firebase Hosting にデプロイ
+  - `.github/workflows/deploy-hosting.yml` … SPA 3 つ（user / admin=console / consultant）をビルドして Firebase Hosting にデプロイ
   - `.github/workflows/deploy-batch-worker.yml` … worker イメージビルド + Terraform apply
   - `.github/workflows/deploy-api.yml` … API イメージ（`apps/api/Dockerfile`）をビルドして Cloud Run service `api` を更新
 
