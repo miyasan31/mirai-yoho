@@ -29,7 +29,7 @@ vi.mock("@/infrastructure/auth/load-auth-context", () => ({
 describe("PATCH /api/auth/organization", () => {
   it("returns no-store for success response", async () => {
     vi.mocked(verifyAuth).mockResolvedValueOnce({
-      uid: "uid-1",
+      authUid: "authUid-1",
       accounts: [],
       currentOrganizationId: "org-1",
       currentDisplayName: "User",
@@ -52,7 +52,7 @@ describe("PATCH /api/auth/organization", () => {
     );
 
     expect(response.status).toBe(200);
-    expect(setLastOrganizationId).toHaveBeenCalledWith("uid-1", "org-1");
+    expect(setLastOrganizationId).toHaveBeenCalledWith("authUid-1", "org-1");
     expect(response.headers.get("Cache-Control")).toBe(
       "no-store, no-cache, must-revalidate, private",
     );

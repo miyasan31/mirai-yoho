@@ -111,7 +111,7 @@ export default function AdminAccountsPage() {
   const inviteAccount = useInviteAccount();
 
   const [editRoleOpen, setEditRoleOpen] = useState(false);
-  const [editRoleUid, setEditRoleUid] = useState("");
+  const [editRoleAuthUid, setEditRoleAuthUid] = useState("");
   const {
     handleSubmit: handleEditRoleSubmit,
     setValue: setEditRoleValue,
@@ -126,7 +126,7 @@ export default function AdminAccountsPage() {
   const editRoleValue = watchEditRole("role");
   const updateAccountRole = useUpdateAccountRole();
   const [editDisplayNameOpen, setEditDisplayNameOpen] = useState(false);
-  const [editDisplayNameUid, setEditDisplayNameUid] = useState("");
+  const [editDisplayNameAuthUid, setEditDisplayNameAuthUid] = useState("");
   const {
     register: registerEditDisplayName,
     handleSubmit: handleEditDisplayNameSubmit,
@@ -141,7 +141,7 @@ export default function AdminAccountsPage() {
   const updateAccountDisplayName = useUpdateAccountDisplayName();
 
   const [deleteOpen, setDeleteOpen] = useState(false);
-  const [deleteUid, setDeleteUid] = useState("");
+  const [deleteAuthUid, setDeleteAuthUid] = useState("");
   const [deleteEmail, setDeleteEmail] = useState("");
   const deleteAdminAccount = useDeleteAdminAccount();
 
@@ -157,7 +157,7 @@ export default function AdminAccountsPage() {
     total: accounts.length,
     totalPages: 1,
   };
-  const currentUid = user?.uid;
+  const currentAuthUid = user?.uid;
 
   if (!organizationId || !hasPermission("admin.accounts.read")) {
     return <Text>権限がありません</Text>;
@@ -196,7 +196,7 @@ export default function AdminAccountsPage() {
     try {
       await updateAccountRole.mutateAsync({
         organizationId: resolvedOrganizationId,
-        uid: editRoleUid,
+        authUid: editRoleAuthUid,
         data: { role: values.role },
       });
       toaster.success({
@@ -217,7 +217,7 @@ export default function AdminAccountsPage() {
     try {
       await updateAccountDisplayName.mutateAsync({
         organizationId: resolvedOrganizationId,
-        uid: editDisplayNameUid,
+        authUid: editDisplayNameAuthUid,
         data: { name: values.name },
       });
       toaster.success({
@@ -231,11 +231,11 @@ export default function AdminAccountsPage() {
     }
   };
 
-  const handleResendInvite = async (uid: string, email: string) => {
+  const handleResendInvite = async (authUid: string, email: string) => {
     try {
       await resendAccountInvite.mutateAsync({
         organizationId: resolvedOrganizationId,
-        uid,
+        authUid,
       });
       toaster.success({
         title: "成功",
@@ -246,11 +246,11 @@ export default function AdminAccountsPage() {
     }
   };
 
-  const handleResetPassword = async (uid: string, email: string) => {
+  const handleResetPassword = async (authUid: string, email: string) => {
     try {
       await resetAccountPassword.mutateAsync({
         organizationId: resolvedOrganizationId,
-        uid,
+        authUid,
       });
       toaster.success({
         title: "成功",
@@ -265,7 +265,7 @@ export default function AdminAccountsPage() {
     try {
       await deleteAdminAccount.mutateAsync({
         organizationId: resolvedOrganizationId,
-        uid: deleteUid,
+        authUid: deleteAuthUid,
       });
       toaster.success({
         title: "成功",
@@ -412,8 +412,10 @@ export default function AdminAccountsPage() {
             <Table.Body>
               {accounts.map((adminUser) => (
                 <Table.Row
-                  key={adminUser.uid}
-                  bg={currentUid === adminUser.uid ? "blue.2" : undefined}
+                  key={adminUser.authUid}
+                  bg={
+                    currentAuthUid === adminUser.authUid ? "blue.2" : undefined
+                  }
                 >
                   <Table.Cell>{adminUser.email}</Table.Cell>
                   <Table.Cell>
@@ -425,7 +427,7 @@ export default function AdminAccountsPage() {
                       <Text as="span">
                         {adminUser.name || adminUser.email || "-"}
                       </Text>
-                      {currentUid === adminUser.uid && (
+                      {currentAuthUid === adminUser.authUid && (
                         <styled.div
                           display="inline-flex"
                           alignItems="center"
@@ -454,13 +456,17 @@ export default function AdminAccountsPage() {
                   <Table.Cell>
                     <styled.div display="flex" gap="1">
                       {hasPermission("admin.accounts.display-name.manage") &&
-                        canEditDisplayName(role, user?.uid, adminUser.uid) && (
+                        canEditDisplayName(
+                          role,
+                          user?.uid,
+                          adminUser.authUid,
+                        ) && (
                           <Tooltip content="表示名変更">
                             <IconButton
                               variant="subtle"
                               size="sm"
                               onClick={() => {
-                                setEditDisplayNameUid(adminUser.uid);
+                                setEditDisplayNameAuthUid(adminUser.authUid);
                                 resetEditDisplayNameForm({
                                   name: adminUser.name || adminUser.email || "",
                                 });
@@ -477,7 +483,7 @@ export default function AdminAccountsPage() {
                             variant="subtle"
                             size="sm"
                             onClick={() => {
-                              setEditRoleUid(adminUser.uid);
+                              setEditRoleAuthUid(adminUser.authUid);
                               setEditRoleValue(
                                 "role",
                                 adminUser.role as AccountEditRoleFormValues["role"],
@@ -497,14 +503,14 @@ export default function AdminAccountsPage() {
                               size="sm"
                               onClick={() =>
                                 handleResendInvite(
-                                  adminUser.uid,
+                                  adminUser.authUid,
                                   adminUser.email,
                                 )
                               }
                               loading={
                                 resendAccountInvite.isPending &&
-                                resendAccountInvite.variables?.uid ===
-                                  adminUser.uid
+                                resendAccountInvite.variables?.authUid ===
+                                  adminUser.authUid
                               }
                             >
                               <Mail size={16} />
@@ -519,14 +525,14 @@ export default function AdminAccountsPage() {
                               size="sm"
                               onClick={() =>
                                 handleResetPassword(
-                                  adminUser.uid,
+                                  adminUser.authUid,
                                   adminUser.email,
                                 )
                               }
                               loading={
                                 resetAccountPassword.isPending &&
-                                resetAccountPassword.variables?.uid ===
-                                  adminUser.uid
+                                resetAccountPassword.variables?.authUid ===
+                                  adminUser.authUid
                               }
                             >
                               <RotateCcwKey size={16} />
@@ -541,7 +547,7 @@ export default function AdminAccountsPage() {
                               size="sm"
                               colorPalette="red"
                               onClick={() => {
-                                setDeleteUid(adminUser.uid);
+                                setDeleteAuthUid(adminUser.authUid);
                                 setDeleteEmail(adminUser.email);
                                 setDeleteOpen(true);
                               }}

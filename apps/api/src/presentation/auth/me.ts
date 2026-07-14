@@ -7,7 +7,7 @@ export async function GET(request: Request) {
 
     return withNoStore(
       Response.json({
-        uid: authUser.uid,
+        authUid: authUser.authUid,
         accounts: authUser.accounts,
         currentOrganizationId: authUser.currentOrganizationId,
         currentDisplayName: authUser.currentDisplayName,

@@ -200,7 +200,7 @@ class InMemoryUserContactService implements IUserContactService {
     return new Map([
       [
         "consultant-1",
-        { uid: "consultant-1", email: "consultant@example.com" },
+        { authUid: "consultant-1", email: "consultant@example.com" },
       ],
     ]);
   }

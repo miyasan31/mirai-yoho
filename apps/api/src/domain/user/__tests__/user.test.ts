@@ -23,7 +23,7 @@ function createGoogleUser(): User {
   return User.createWithGoogle({
     userId: "user-2",
     authUid: "auth-2",
-    providerUid: "google-uid-2",
+    providerUid: "google-authUid-2",
     primaryEmail: "user2@example.com",
     displayName: "テスト次郎",
     birthDate: birthDate(),
@@ -70,7 +70,7 @@ describe("User", () => {
       user.linkProvider(
         AuthProvider.create({
           providerId: "google.com",
-          providerUid: "google-uid",
+          providerUid: "google-authUid",
           linkedAt: new Date(),
         }),
       );
@@ -83,7 +83,7 @@ describe("User", () => {
         user.linkProvider(
           AuthProvider.create({
             providerId: "google.com",
-            providerUid: "google-uid-2",
+            providerUid: "google-authUid-2",
             linkedAt: new Date(),
           }),
         ),
@@ -97,7 +97,7 @@ describe("User", () => {
         user.linkProvider(
           AuthProvider.create({
             providerId: "line",
-            providerUid: "line-uid",
+            providerUid: "line-authUid",
             linkedAt: new Date(),
           }),
         ),

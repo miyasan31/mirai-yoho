@@ -24,7 +24,7 @@ export class SignupAnonymouslyUseCase {
       throw new AppError(
         409,
         "USER_ALREADY_EXISTS",
-        "User already exists for this auth uid",
+        "User already exists for this auth authUid",
       );
     }
 

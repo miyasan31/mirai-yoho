@@ -66,7 +66,7 @@ consultantProfileRoutes.get(
     requireRole(authUser, organizationId, "consultant");
     const consultant = await createConsultantRepository().findById(
       organizationId,
-      authUser.uid,
+      authUser.authUid,
     );
 
     if (!consultant) {
@@ -79,7 +79,7 @@ consultantProfileRoutes.get(
         settings.getDefaultConsultantStatusId(),
       );
       return noStoreJson({
-        consultantId: authUser.uid,
+        consultantId: authUser.authUid,
         name: "",
         bio: "",
         phone: "",
@@ -124,7 +124,7 @@ consultantProfileRoutes.patch(
     await new UpdateProfileUseCase(new FirestoreConsultantRepository()).execute(
       {
         organizationId,
-        consultantId: authUser.uid,
+        consultantId: authUser.authUid,
         name: body.name,
         bio: body.bio ?? "",
         specialties: body.specialties,
@@ -165,7 +165,7 @@ consultantProfileRoutes.post(
 
     const objectPath = getAvatarObjectPath({
       organizationId,
-      consultantId: authUser.uid,
+      consultantId: authUser.authUid,
       contentType,
     });
     const bucketName = envServer.firebaseStorageBucket;
@@ -203,7 +203,7 @@ consultantProfileRoutes.post(
       !isAllowedAvatarObjectPath({
         objectPath,
         organizationId,
-        consultantId: authUser.uid,
+        consultantId: authUser.authUid,
       })
     ) {
       return jsonError(400, "VALIDATION_ERROR", "invalid objectPath");

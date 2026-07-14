@@ -25,7 +25,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    await setLastOrganizationId(authUser.uid, body.organizationId);
+    await setLastOrganizationId(authUser.authUid, body.organizationId);
 
     return withNoStore(Response.json({ success: true }));
   } catch (error) {
