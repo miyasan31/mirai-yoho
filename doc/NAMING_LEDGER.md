@@ -26,7 +26,9 @@
 
 **対象外（据え置き）**:
 - `organizations` コレクション本体（エンティティ名そのもの）／ OpenAPI の `OrganizationIdParam`（組織 ID パラメータ）
-- `user-*` プレフィックス（`user-zoom-credentials` / `user-coupons`。今回のスコープ外）
+- `user-*` プレフィックス（`user-zoom-credentials` / `user-coupons`）… **意図的に維持**（2026-07-14 判断）。`organization-` と違い冗長ではない:
+  - `UserCoupon` は「ユーザーが受け取ったクーポン**インスタンス**」で、`userCouponId`（インスタンス ID）と `couponId`（**マスタークーポン参照**）を併せ持つ集約。`user-coupons → coupons` / `UserCoupon → Coupon` / `userCouponId → couponId` は **既存の `couponId` と衝突し意味も誤る**ため不可。`user-` はインスタンス vs マスターを分ける意味を持つ。
+  - `user-zoom-credentials` は user-scoped（doc ID = `userId`）で、org-scoped の `zoom-sessions` と対になる。スコープ区別のため `user-` を残す。
 
 **データ移行**: `apps/api/scripts/migrate-drop-organization-prefix.ts`（doc ID を保持してコピー → 新コードをデプロイ → `--delete-source` で旧コレクション削除）。`firestore.rules` の変更は terraform apply が必要（§4.4）。
 
