@@ -1,38 +1,38 @@
 export function canUpdateDisplayNameTarget(
   actorRole: string,
-  actorUid: string,
-  targetUid: string,
+  actorAuthUid: string,
+  targetAuthUid: string,
 ): boolean {
   if (actorRole === "admin") {
     return true;
   }
 
   if (actorRole === "operator") {
-    return actorUid === targetUid;
+    return actorAuthUid === targetAuthUid;
   }
 
   return true;
 }
 
 export function isLastAdminSelfDemotion(params: {
-  actorUid: string;
-  targetUid: string;
+  actorAuthUid: string;
+  targetAuthUid: string;
   nextRole: string;
   activeAdminCount: number;
 }): boolean {
   return (
-    params.actorUid === params.targetUid &&
+    params.actorAuthUid === params.targetAuthUid &&
     params.nextRole !== "admin" &&
     params.activeAdminCount <= 1
   );
 }
 
 export function validateAdminUserDeletionTarget(
-  actorUid: string,
-  targetUid: string,
+  actorAuthUid: string,
+  targetAuthUid: string,
   targetRole: string,
 ): { isAllowed: boolean; message?: string } {
-  if (actorUid === targetUid) {
+  if (actorAuthUid === targetAuthUid) {
     return {
       isAllowed: false,
       message: "自分自身は削除できません",

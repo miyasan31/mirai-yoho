@@ -12,15 +12,15 @@ export function canInviteAdminAccounts(actorRole: AdminActorRole): boolean {
 
 export function canEditDisplayName(
   actorRole: AdminActorRole,
-  actorUid: string | undefined,
-  targetUid: string,
+  actorAuthUid: string | undefined,
+  targetAuthUid: string,
 ): boolean {
   if (actorRole === "admin") {
     return true;
   }
 
   if (actorRole === "operator") {
-    return !!actorUid && actorUid === targetUid;
+    return !!actorAuthUid && actorAuthUid === targetAuthUid;
   }
 
   return true;

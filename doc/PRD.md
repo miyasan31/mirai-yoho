@@ -494,11 +494,11 @@ pending ──── 仮決済失敗 or タイムアウト ───────
 | `/api/organizations/[organizationId]/admin/customers` | `GET` | 顧客一覧取得（ページング対応） |
 | `/api/organizations/[organizationId]/admin/accounts` | `GET` | 組織アカウント一覧取得 |
 | `/api/organizations/[organizationId]/admin/accounts/invite` | `POST` | 組織アカウント招待 |
-| `/api/organizations/[organizationId]/admin/accounts/[uid]` | `DELETE` | 組織アカウント削除 |
-| `/api/organizations/[organizationId]/admin/accounts/[uid]/role` | `PATCH` | 組織アカウントロール更新 |
-| `/api/organizations/[organizationId]/admin/accounts/[uid]/display-name` | `PATCH` | 表示名更新 |
-| `/api/organizations/[organizationId]/admin/accounts/[uid]/resend-invite` | `POST` | 招待メール再送 |
-| `/api/organizations/[organizationId]/admin/accounts/[uid]/reset-password` | `POST` | パスワードリセットメール送信 |
+| `/api/organizations/[organizationId]/admin/accounts/[authUid]` | `DELETE` | 組織アカウント削除 |
+| `/api/organizations/[organizationId]/admin/accounts/[authUid]/role` | `PATCH` | 組織アカウントロール更新 |
+| `/api/organizations/[organizationId]/admin/accounts/[authUid]/display-name` | `PATCH` | 表示名更新 |
+| `/api/organizations/[organizationId]/admin/accounts/[authUid]/resend-invite` | `POST` | 招待メール再送 |
+| `/api/organizations/[organizationId]/admin/accounts/[authUid]/reset-password` | `POST` | パスワードリセットメール送信 |
 
 ---
 

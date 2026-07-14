@@ -175,7 +175,7 @@ describe("batch charge / consultation reminder routes", () => {
 
   it("executes batch charge for an admin manually", async () => {
     mocks.verifyAuth.mockResolvedValue({
-      uid: "admin-1",
+      authUid: "admin-1",
       accounts: [],
       currentOrganizationId: "org-charge-admin",
       currentDisplayName: "Admin",
@@ -187,7 +187,7 @@ describe("batch charge / consultation reminder routes", () => {
 
     expect(response.status).toBe(200);
     expect(mocks.requirePermission).toHaveBeenCalledWith(
-      expect.objectContaining({ uid: "admin-1" }),
+      expect.objectContaining({ authUid: "admin-1" }),
       "org-charge-admin",
       "admin.payments.charge",
     );

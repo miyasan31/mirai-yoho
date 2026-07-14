@@ -39,7 +39,7 @@ consultantBookingRoutes.get(
     const paymentRepository = createPaymentRepository();
     const customerRepository = createCustomerRepository();
     const [bookings, payments] = await Promise.all([
-      bookingRepository.findByConsultantId(organizationId, authUser.uid),
+      bookingRepository.findByConsultantId(organizationId, authUser.authUid),
       paymentRepository.findAll(organizationId),
     ]);
     const paymentByBookingId = new Map(
@@ -119,7 +119,7 @@ consultantBookingRoutes.post(
     ).execute({
       organizationId,
       bookingId: param("bookingId"),
-      consultantId: authUser.uid,
+      consultantId: authUser.authUid,
       joinedAt: new Date(),
     });
 
@@ -149,7 +149,7 @@ consultantBookingRoutes.patch(
     await new UpdateMemoUseCase(new FirestoreBookingRepository()).execute({
       organizationId,
       bookingId: param("bookingId"),
-      consultantId: authUser.uid,
+      consultantId: authUser.authUid,
       customerName: body.customerName,
       birthDate: body.birthDate,
       appraisalDate: body.appraisalDate,

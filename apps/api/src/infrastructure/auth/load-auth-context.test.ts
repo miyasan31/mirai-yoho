@@ -60,7 +60,7 @@ describe("activateInvitedAccounts", () => {
     await activateInvitedAccounts("u1");
 
     expect(mockCollection).toHaveBeenCalledWith("accounts");
-    expect(mockWhereUid).toHaveBeenCalledWith("uid", "==", "u1");
+    expect(mockWhereUid).toHaveBeenCalledWith("authUid", "==", "u1");
     expect(mockWhereStatus).toHaveBeenCalledWith("status", "==", "invited");
     expect(mockBatch).toHaveBeenCalledTimes(1);
     expect(mockBatchUpdate).toHaveBeenCalledTimes(3);

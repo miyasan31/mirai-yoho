@@ -44,7 +44,7 @@ slotRoutes.post(
       );
     }
 
-    if (account.role === "consultant" && authUser.uid !== consultantId) {
+    if (account.role === "consultant" && authUser.authUid !== consultantId) {
       return jsonError(
         403,
         "FORBIDDEN",
@@ -129,7 +129,7 @@ slotRoutes.delete(
     }
     if (
       account.role === "consultant" &&
-      slot.getConsultantId() !== authUser.uid
+      slot.getConsultantId() !== authUser.authUid
     ) {
       return jsonError(
         403,

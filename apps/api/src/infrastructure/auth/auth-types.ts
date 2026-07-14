@@ -13,7 +13,7 @@ export interface Account {
 }
 
 export interface AuthUser {
-  uid: string;
+  authUid: string;
   accounts: Account[];
   currentOrganizationId: string | null;
   currentDisplayName: string | null;

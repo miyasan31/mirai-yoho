@@ -24,7 +24,7 @@ describe("verifyAuth", () => {
   it("activates invited accounts before loading auth user", async () => {
     mockVerifyIdToken.mockResolvedValueOnce({ uid: "user-1" });
     mockLoadAuthUser.mockResolvedValueOnce({
-      uid: "user-1",
+      authUid: "user-1",
       accounts: [
         {
           organizationId: "org-1",
@@ -60,7 +60,7 @@ describe("verifyAuth", () => {
     for (const role of roles) {
       mockVerifyIdToken.mockResolvedValueOnce({ uid: `user-${role}` });
       mockLoadAuthUser.mockResolvedValueOnce({
-        uid: `user-${role}`,
+        authUid: `user-${role}`,
         accounts: [
           {
             organizationId: "org-1",
@@ -81,7 +81,7 @@ describe("verifyAuth", () => {
       });
 
       await expect(verifyAuth(request)).resolves.toMatchObject({
-        uid: `user-${role}`,
+        authUid: `user-${role}`,
       });
       expect(mockActivateInvitedAccounts).toHaveBeenCalledWith(`user-${role}`);
     }
@@ -90,7 +90,7 @@ describe("verifyAuth", () => {
   it("throws NO_ROLE when accounts are still empty", async () => {
     mockVerifyIdToken.mockResolvedValueOnce({ uid: "user-2" });
     mockLoadAuthUser.mockResolvedValueOnce({
-      uid: "user-2",
+      authUid: "user-2",
       accounts: [],
       currentOrganizationId: null,
       currentDisplayName: null,
