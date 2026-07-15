@@ -647,8 +647,8 @@ paths:
         "200":
           description: OK
     delete:
-      operationId: deletePricePlan
-      summary: 相談員料金プラン削除
+      operationId: archivePricePlan
+      summary: 相談員料金プランアーカイブ
       tags: [consultant]
       security:
         - bearerAuth: []
@@ -2160,7 +2160,7 @@ components:
           isWithinCurrentRange,
           createdAt,
           updatedAt,
-          deletedAt,
+          archivedAt,
         ]
       properties:
         pricePlanId:
@@ -2180,7 +2180,7 @@ components:
         updatedAt:
           type: string
           format: date-time
-        deletedAt:
+        archivedAt:
           type:
             - string
             - "null"
@@ -2201,7 +2201,7 @@ components:
       properties:
         name:
           type: string
-        restore:
+        unarchive:
           type: boolean
 
     CreateBookingResponse:

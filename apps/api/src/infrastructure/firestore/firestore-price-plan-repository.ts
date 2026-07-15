@@ -15,7 +15,7 @@ interface PricePlanDoc {
   totalJPY: number;
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;
-  deletedAt?: Timestamp | Date | null;
+  archivedAt?: Timestamp | Date | null;
 }
 
 function toDate(value?: Timestamp | Date | null): Date | undefined {
@@ -33,7 +33,7 @@ function toDomain(doc: PricePlanDoc): PricePlan {
     totalJPY: doc.totalJPY,
     createdAt: toDate(doc.createdAt),
     updatedAt: toDate(doc.updatedAt),
-    deletedAt: toDate(doc.deletedAt),
+    archivedAt: toDate(doc.archivedAt),
   });
 }
 
@@ -47,7 +47,7 @@ function toFirestore(pricePlan: PricePlan): PricePlanDoc {
     totalJPY: pricePlan.getTotalJPY(),
     createdAt: pricePlan.getCreatedAt(),
     updatedAt: pricePlan.getUpdatedAt(),
-    deletedAt: pricePlan.getDeletedAt() ?? null,
+    archivedAt: pricePlan.getArchivedAt() ?? null,
   };
 }
 
@@ -82,7 +82,7 @@ export class FirestorePricePlanRepository implements IPricePlanRepository {
       .collection(COLLECTION)
       .where("organizationId", "==", organizationId)
       .where("consultantId", "==", consultantId)
-      .where("deletedAt", "==", null)
+      .where("archivedAt", "==", null)
       .get();
     return snapshot.docs.map((doc) => toDomain(doc.data() as PricePlanDoc));
   }

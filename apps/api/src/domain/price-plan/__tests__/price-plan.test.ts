@@ -20,15 +20,15 @@ describe("PricePlan", () => {
     expect("changeAmount" in pricePlan).toBe(false);
   });
 
-  it("supports logical delete and restore", () => {
+  it("supports archive and unarchive", () => {
     const pricePlan = createPricePlan();
 
-    pricePlan.delete();
+    pricePlan.archive();
     expect(pricePlan.isActive()).toBe(false);
-    expect(pricePlan.getDeletedAt()).toBeInstanceOf(Date);
+    expect(pricePlan.getArchivedAt()).toBeInstanceOf(Date);
 
-    pricePlan.restore();
+    pricePlan.unarchive();
     expect(pricePlan.isActive()).toBe(true);
-    expect(pricePlan.getDeletedAt()).toBeUndefined();
+    expect(pricePlan.getArchivedAt()).toBeUndefined();
   });
 });

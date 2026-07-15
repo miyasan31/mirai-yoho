@@ -112,10 +112,10 @@ describe("CreatePricePlanUseCase", () => {
     });
   });
 
-  it("returns a restoreable duplicate error when the same deleted plan exists", async () => {
-    const deletedPlan = createExistingPlan();
-    deletedPlan.delete();
-    const { useCase } = createUseCase([deletedPlan]);
+  it("returns an unarchivable duplicate error when the same archived plan exists", async () => {
+    const archivedPlan = createExistingPlan();
+    archivedPlan.archive();
+    const { useCase } = createUseCase([archivedPlan]);
 
     await expect(
       useCase.execute({
@@ -125,7 +125,7 @@ describe("CreatePricePlanUseCase", () => {
         totalJPY: 5000,
       }),
     ).rejects.toMatchObject({
-      code: "PRICE_PLAN_ALREADY_DELETED",
+      code: "PRICE_PLAN_ALREADY_ARCHIVED",
       statusCode: 409,
     });
   });

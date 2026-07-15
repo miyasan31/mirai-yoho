@@ -9,7 +9,7 @@ export interface PricePlanProps {
   totalJPY: number;
   createdAt?: Date;
   updatedAt?: Date;
-  deletedAt?: Date;
+  archivedAt?: Date;
 }
 
 interface PricePlanCreateProps {
@@ -87,7 +87,7 @@ export class PricePlan extends AggregateRoot {
     private readonly totalJPY: number,
     private readonly createdAt: Date,
     private updatedAt: Date,
-    private deletedAt: Date | undefined,
+    private archivedAt: Date | undefined,
   ) {
     super();
   }
@@ -117,7 +117,7 @@ export class PricePlan extends AggregateRoot {
       props.totalJPY,
       createdAt,
       props.updatedAt ?? createdAt,
-      props.deletedAt,
+      props.archivedAt,
     );
   }
 
@@ -126,21 +126,21 @@ export class PricePlan extends AggregateRoot {
     this.updatedAt = new Date();
   }
 
-  delete(): void {
-    if (this.deletedAt) return;
+  archive(): void {
+    if (this.archivedAt) return;
     const now = new Date();
-    this.deletedAt = now;
+    this.archivedAt = now;
     this.updatedAt = now;
   }
 
-  restore(): void {
-    if (!this.deletedAt) return;
-    this.deletedAt = undefined;
+  unarchive(): void {
+    if (!this.archivedAt) return;
+    this.archivedAt = undefined;
     this.updatedAt = new Date();
   }
 
   isActive(): boolean {
-    return this.deletedAt === undefined;
+    return this.archivedAt === undefined;
   }
 
   getOrganizationId(): string {
@@ -189,7 +189,7 @@ export class PricePlan extends AggregateRoot {
     return this.updatedAt;
   }
 
-  getDeletedAt(): Date | undefined {
-    return this.deletedAt;
+  getArchivedAt(): Date | undefined {
+    return this.archivedAt;
   }
 }

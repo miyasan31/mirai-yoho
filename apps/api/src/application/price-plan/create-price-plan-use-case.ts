@@ -22,7 +22,7 @@ export interface PricePlanOutput {
   isWithinCurrentRange: boolean;
   createdAt: string;
   updatedAt: string;
-  deletedAt: string | null;
+  archivedAt: string | null;
 }
 
 export function toPricePlanOutput(params: {
@@ -37,7 +37,7 @@ export function toPricePlanOutput(params: {
     isWithinCurrentRange: params.isWithinCurrentRange,
     createdAt: params.pricePlan.getCreatedAt().toISOString(),
     updatedAt: params.pricePlan.getUpdatedAt().toISOString(),
-    deletedAt: params.pricePlan.getDeletedAt()?.toISOString() ?? null,
+    archivedAt: params.pricePlan.getArchivedAt()?.toISOString() ?? null,
   };
 }
 
@@ -82,13 +82,13 @@ export class CreatePricePlanUseCase {
     });
     if (duplicated) {
       throw new AppError(
-        duplicated.isActive() ? 409 : 409,
+        409,
         duplicated.isActive()
           ? "PRICE_PLAN_ALREADY_EXISTS"
-          : "PRICE_PLAN_ALREADY_DELETED",
+          : "PRICE_PLAN_ALREADY_ARCHIVED",
         duplicated.isActive()
           ? "Same plan already exists"
-          : "Same deleted plan exists and can be restored",
+          : "Same archived plan exists and can be unarchived",
       );
     }
 

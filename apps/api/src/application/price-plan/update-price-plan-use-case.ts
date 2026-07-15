@@ -7,7 +7,7 @@ interface UpdatePricePlanInput {
   consultantId: string;
   pricePlanId: string;
   name?: string;
-  restore?: boolean;
+  unarchive?: boolean;
 }
 
 export class UpdatePricePlanUseCase {
@@ -46,17 +46,17 @@ export class UpdatePricePlanUseCase {
           409,
           duplicated.isActive()
             ? "PRICE_PLAN_ALREADY_EXISTS"
-            : "PRICE_PLAN_ALREADY_DELETED",
+            : "PRICE_PLAN_ALREADY_ARCHIVED",
           duplicated.isActive()
             ? "Same plan already exists"
-            : "Same deleted plan exists and can be restored",
+            : "Same archived plan exists and can be unarchived",
         );
       }
       pricePlan.rename(input.name);
     }
 
-    if (input.restore) {
-      pricePlan.restore();
+    if (input.unarchive) {
+      pricePlan.unarchive();
     }
 
     await this.pricePlanRepository.save(pricePlan);
