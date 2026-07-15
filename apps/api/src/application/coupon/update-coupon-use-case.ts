@@ -10,7 +10,8 @@ export interface UpdateCouponInput {
   couponId: string;
   name?: string;
   amountJPY?: number;
-  distributionCount?: number;
+  batchSize?: number;
+  totalLimit?: number;
 }
 
 export class UpdateCouponUseCase {
@@ -31,8 +32,11 @@ export class UpdateCouponUseCase {
     if (input.amountJPY !== undefined) {
       coupon.updateAmount(input.amountJPY);
     }
-    if (input.distributionCount !== undefined) {
-      coupon.updateDistributionCount(input.distributionCount);
+    if (input.batchSize !== undefined) {
+      coupon.updateBatchSize(input.batchSize);
+    }
+    if (input.totalLimit !== undefined) {
+      coupon.updateTotalLimit(input.totalLimit);
     }
 
     await this.couponRepository.save(coupon);

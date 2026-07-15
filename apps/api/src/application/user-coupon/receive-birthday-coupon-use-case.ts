@@ -38,6 +38,14 @@ export class ReceiveBirthdayCouponUseCase {
         "This organization does not offer a birthday coupon",
       );
     }
+    const totalLimit = birthday.getTotalLimit();
+    if (!totalLimit) {
+      throw new AppError(
+        500,
+        "BIRTHDAY_COUPON_MISCONFIGURED",
+        "Birthday coupon is missing totalLimit",
+      );
+    }
 
     const user = await this.userRepository.findById(input.userId);
     if (!user) {
@@ -74,7 +82,7 @@ export class ReceiveBirthdayCouponUseCase {
     const totalDistributed = await this.userCouponRepository.countByCouponId(
       birthday.getCouponId(),
     );
-    if (totalDistributed >= birthday.getDistributionCount()) {
+    if (totalDistributed >= totalLimit) {
       throw new AppError(
         409,
         "BIRTHDAY_COUPON_LIMIT_REACHED",

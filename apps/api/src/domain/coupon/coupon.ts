@@ -14,7 +14,10 @@ export interface CouponCreateProps {
   type: CouponType;
   name: string;
   amountJPY: number;
-  distributionCount: number;
+  /** welcome のみ: 1 ユーザーが 1 度の取得でもらう枚数 */
+  batchSize?: number;
+  /** birthday のみ: 全ユーザー合計の発行上限 */
+  totalLimit?: number;
   expiresInDays: number;
 }
 
@@ -47,11 +50,11 @@ function validateAmountJPY(amountJPY: number): void {
   }
 }
 
-function validateDistributionCount(count: number): void {
-  if (!Number.isInteger(count) || count <= 0) {
+function validatePositiveInteger(value: number, field: string): void {
+  if (!Number.isInteger(value) || value <= 0) {
     throw new DomainError(
-      "INVALID_COUPON_DISTRIBUTION_COUNT",
-      "Distribution count must be a positive integer",
+      "INVALID_COUPON_QUANTITY",
+      `${field} must be a positive integer`,
     );
   }
 }
@@ -72,6 +75,43 @@ function validateType(type: string): CouponType {
   return type as CouponType;
 }
 
+function validateQuantityFields(props: {
+  type: CouponType;
+  batchSize?: number;
+  totalLimit?: number;
+}): void {
+  if (props.type === "welcome") {
+    if (props.batchSize === undefined) {
+      throw new DomainError(
+        "INVALID_COUPON_QUANTITY",
+        "welcome coupon requires batchSize",
+      );
+    }
+    validatePositiveInteger(props.batchSize, "batchSize");
+    if (props.totalLimit !== undefined) {
+      throw new DomainError(
+        "INVALID_COUPON_QUANTITY",
+        "welcome coupon must not set totalLimit",
+      );
+    }
+    return;
+  }
+  // birthday
+  if (props.totalLimit === undefined) {
+    throw new DomainError(
+      "INVALID_COUPON_QUANTITY",
+      "birthday coupon requires totalLimit",
+    );
+  }
+  validatePositiveInteger(props.totalLimit, "totalLimit");
+  if (props.batchSize !== undefined) {
+    throw new DomainError(
+      "INVALID_COUPON_QUANTITY",
+      "birthday coupon must not set batchSize",
+    );
+  }
+}
+
 export class Coupon extends AggregateRoot {
   private constructor(
     private readonly organizationId: string,
@@ -79,7 +119,8 @@ export class Coupon extends AggregateRoot {
     private readonly type: CouponType,
     private name: string,
     private amountJPY: number,
-    private distributionCount: number,
+    private batchSize: number | undefined,
+    private totalLimit: number | undefined,
     private readonly expiresInDays: number,
     private readonly createdAt: Date,
     private updatedAt: Date,
@@ -93,15 +134,20 @@ export class Coupon extends AggregateRoot {
     const type = validateType(props.type);
     const name = validateName(props.name);
     validateAmountJPY(props.amountJPY);
-    validateDistributionCount(props.distributionCount);
     validateExpiresInDays(props.expiresInDays);
+    validateQuantityFields({
+      type,
+      batchSize: props.batchSize,
+      totalLimit: props.totalLimit,
+    });
     return new Coupon(
       props.organizationId,
       props.couponId,
       type,
       name,
       props.amountJPY,
-      props.distributionCount,
+      props.batchSize,
+      props.totalLimit,
       props.expiresInDays,
       now,
       now,
@@ -116,7 +162,8 @@ export class Coupon extends AggregateRoot {
       validateType(props.type),
       props.name,
       props.amountJPY,
-      props.distributionCount,
+      props.batchSize,
+      props.totalLimit,
       props.expiresInDays,
       props.createdAt,
       props.updatedAt,
@@ -135,9 +182,27 @@ export class Coupon extends AggregateRoot {
     this.updatedAt = new Date();
   }
 
-  updateDistributionCount(count: number): void {
-    validateDistributionCount(count);
-    this.distributionCount = count;
+  updateBatchSize(size: number): void {
+    if (this.type !== "welcome") {
+      throw new DomainError(
+        "INVALID_COUPON_QUANTITY",
+        "batchSize can only be set on welcome coupons",
+      );
+    }
+    validatePositiveInteger(size, "batchSize");
+    this.batchSize = size;
+    this.updatedAt = new Date();
+  }
+
+  updateTotalLimit(limit: number): void {
+    if (this.type !== "birthday") {
+      throw new DomainError(
+        "INVALID_COUPON_QUANTITY",
+        "totalLimit can only be set on birthday coupons",
+      );
+    }
+    validatePositiveInteger(limit, "totalLimit");
+    this.totalLimit = limit;
     this.updatedAt = new Date();
   }
 
@@ -182,8 +247,14 @@ export class Coupon extends AggregateRoot {
     return this.amountJPY;
   }
 
-  getDistributionCount(): number {
-    return this.distributionCount;
+  /** welcome のみ、それ以外の場合は undefined */
+  getBatchSize(): number | undefined {
+    return this.batchSize;
+  }
+
+  /** birthday のみ、それ以外の場合は undefined */
+  getTotalLimit(): number | undefined {
+    return this.totalLimit;
   }
 
   getExpiresInDays(): number {

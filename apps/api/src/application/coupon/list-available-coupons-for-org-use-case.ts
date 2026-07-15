@@ -13,7 +13,8 @@ export interface AvailableCouponOutput {
   type: CouponType;
   name: string;
   amountJPY: number;
-  distributionCount: number;
+  batchSize: number | null;
+  totalLimit: number | null;
   expiresInDays: number;
   isReceivable: boolean;
   ineligibilityReason: AvailableCouponIneligibilityReason | null;
@@ -49,7 +50,8 @@ export class ListAvailableCouponsForOrgUseCase {
         type: coupon.getType(),
         name: coupon.getName(),
         amountJPY: coupon.getAmountJPY(),
-        distributionCount: coupon.getDistributionCount(),
+        batchSize: coupon.getBatchSize() ?? null,
+        totalLimit: coupon.getTotalLimit() ?? null,
         expiresInDays: coupon.getExpiresInDays(),
         isReceivable: reason === null,
         ineligibilityReason: reason,
@@ -91,11 +93,12 @@ export class ListAvailableCouponsForOrgUseCase {
     });
     if (receivedThisMonth) return "already-received";
 
-    const totalDistributed = await this.userCouponRepository.countByCouponId(
-      coupon.getCouponId(),
-    );
-    if (totalDistributed >= coupon.getDistributionCount()) {
-      return "limit-reached";
+    const totalLimit = coupon.getTotalLimit();
+    if (totalLimit !== undefined) {
+      const totalDistributed = await this.userCouponRepository.countByCouponId(
+        coupon.getCouponId(),
+      );
+      if (totalDistributed >= totalLimit) return "limit-reached";
     }
     return null;
   }

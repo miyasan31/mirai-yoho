@@ -150,8 +150,9 @@ function OrganizationCouponsPage() {
                 </styled.div>
                 <Text textStyle="sm" color="fg.muted">
                   受け取り後 {coupon.expiresInDays} 日間有効
-                  {coupon.type === "welcome" &&
-                    ` / ${coupon.distributionCount} 枚まとめて配布`}
+                  {coupon.type === "welcome" && coupon.batchSize
+                    ? ` / ${coupon.batchSize} 枚まとめて配布`
+                    : ""}
                 </Text>
               </styled.div>
               {coupon.isReceivable ? (

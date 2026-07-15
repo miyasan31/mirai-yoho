@@ -2447,7 +2447,8 @@ components:
           type,
           name,
           amountJPY,
-          distributionCount,
+          batchSize,
+          totalLimit,
           expiresInDays,
           isActive,
           isArchived,
@@ -2464,9 +2465,16 @@ components:
         amountJPY:
           type: integer
           minimum: 1
-        distributionCount:
+        batchSize:
           type: integer
           minimum: 1
+          nullable: true
+          description: welcome のみ。1 ユーザーが 1 度の取得でもらう枚数。
+        totalLimit:
+          type: integer
+          minimum: 1
+          nullable: true
+          description: birthday のみ。全ユーザー合計の発行上限。
         expiresInDays:
           type: integer
           minimum: 1
@@ -2487,7 +2495,7 @@ components:
 
     CouponInput:
       type: object
-      required: [type, name, amountJPY, distributionCount, expiresInDays]
+      required: [type, name, amountJPY, expiresInDays]
       properties:
         type:
           $ref: "#/components/schemas/CouponType"
@@ -2498,9 +2506,14 @@ components:
         amountJPY:
           type: integer
           minimum: 1
-        distributionCount:
+        batchSize:
           type: integer
           minimum: 1
+          description: welcome のときのみ指定
+        totalLimit:
+          type: integer
+          minimum: 1
+          description: birthday のときのみ指定
         expiresInDays:
           type: integer
           minimum: 1
@@ -2515,7 +2528,10 @@ components:
         amountJPY:
           type: integer
           minimum: 1
-        distributionCount:
+        batchSize:
+          type: integer
+          minimum: 1
+        totalLimit:
           type: integer
           minimum: 1
 
@@ -2531,7 +2547,8 @@ components:
           type,
           name,
           amountJPY,
-          distributionCount,
+          batchSize,
+          totalLimit,
           expiresInDays,
           isReceivable,
           ineligibilityReason,
@@ -2546,9 +2563,14 @@ components:
         amountJPY:
           type: integer
           minimum: 1
-        distributionCount:
+        batchSize:
           type: integer
           minimum: 1
+          nullable: true
+        totalLimit:
+          type: integer
+          minimum: 1
+          nullable: true
         expiresInDays:
           type: integer
           minimum: 1

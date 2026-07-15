@@ -36,6 +36,14 @@ export class ReceiveWelcomeCouponsUseCase {
         "This organization does not offer a welcome coupon",
       );
     }
+    const batchSize = welcome.getBatchSize();
+    if (!batchSize) {
+      throw new AppError(
+        500,
+        "WELCOME_COUPON_MISCONFIGURED",
+        "Welcome coupon is missing batchSize",
+      );
+    }
 
     // 冪等性: 同ユーザーが同一 welcome couponId を既に受け取っていたら no-op
     const existing = await this.userCouponRepository.findByUserIdAndCouponId(
@@ -48,7 +56,7 @@ export class ReceiveWelcomeCouponsUseCase {
 
     const expiresAt = welcome.calcExpiresAtFor(now);
     const coupons: UserCoupon[] = [];
-    for (let i = 0; i < welcome.getDistributionCount(); i++) {
+    for (let i = 0; i < batchSize; i++) {
       coupons.push(
         UserCoupon.receive({
           userCouponId: crypto.randomUUID(),

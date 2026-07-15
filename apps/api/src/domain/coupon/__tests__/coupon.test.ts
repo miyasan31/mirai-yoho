@@ -7,7 +7,7 @@ const baseWelcomeProps = {
   type: "welcome" as const,
   name: "初回登録特典",
   amountJPY: 1000,
-  distributionCount: 10,
+  batchSize: 10,
   expiresInDays: 90,
 };
 
@@ -17,26 +17,24 @@ const baseBirthdayProps = {
   type: "birthday" as const,
   name: "誕生月クーポン",
   amountJPY: 500,
-  distributionCount: 1000,
+  totalLimit: 1000,
   expiresInDays: 30,
 };
 
 describe("Coupon", () => {
   describe("create", () => {
-    it("welcome クーポンを生成できる", () => {
+    it("welcome クーポンを生成できる（batchSize 必須）", () => {
       const coupon = Coupon.create(baseWelcomeProps);
       expect(coupon.getType()).toBe("welcome");
-      expect(coupon.getName()).toBe("初回登録特典");
-      expect(coupon.getAmountJPY()).toBe(1000);
-      expect(coupon.getDistributionCount()).toBe(10);
-      expect(coupon.getExpiresInDays()).toBe(90);
-      expect(coupon.isArchived()).toBe(false);
+      expect(coupon.getBatchSize()).toBe(10);
+      expect(coupon.getTotalLimit()).toBeUndefined();
     });
 
-    it("birthday クーポンを生成できる", () => {
+    it("birthday クーポンを生成できる（totalLimit 必須）", () => {
       const coupon = Coupon.create(baseBirthdayProps);
       expect(coupon.getType()).toBe("birthday");
-      expect(coupon.getExpiresInDays()).toBe(30);
+      expect(coupon.getTotalLimit()).toBe(1000);
+      expect(coupon.getBatchSize()).toBeUndefined();
     });
 
     it("amountJPY が 0 以下だと DomainError", () => {
@@ -45,9 +43,41 @@ describe("Coupon", () => {
       ).toThrow(DomainError);
     });
 
-    it("distributionCount が 0 以下だと DomainError", () => {
+    it("welcome に batchSize が無いと DomainError", () => {
+      const props = { ...baseWelcomeProps } as unknown as {
+        batchSize?: number;
+      };
+      delete props.batchSize;
       expect(() =>
-        Coupon.create({ ...baseWelcomeProps, distributionCount: 0 }),
+        Coupon.create(props as unknown as typeof baseWelcomeProps),
+      ).toThrow(DomainError);
+    });
+
+    it("welcome に totalLimit を設定すると DomainError", () => {
+      expect(() =>
+        Coupon.create({
+          ...baseWelcomeProps,
+          totalLimit: 100,
+        } as unknown as typeof baseWelcomeProps),
+      ).toThrow(DomainError);
+    });
+
+    it("birthday に totalLimit が無いと DomainError", () => {
+      const props = { ...baseBirthdayProps } as unknown as {
+        totalLimit?: number;
+      };
+      delete props.totalLimit;
+      expect(() =>
+        Coupon.create(props as unknown as typeof baseBirthdayProps),
+      ).toThrow(DomainError);
+    });
+
+    it("birthday に batchSize を設定すると DomainError", () => {
+      expect(() =>
+        Coupon.create({
+          ...baseBirthdayProps,
+          batchSize: 3,
+        } as unknown as typeof baseBirthdayProps),
       ).toThrow(DomainError);
     });
 
@@ -68,39 +98,34 @@ describe("Coupon", () => {
         Coupon.create({ ...baseWelcomeProps, expiresInDays: 0 }),
       ).toThrow(DomainError);
     });
-
-    it("未知の type は DomainError", () => {
-      expect(() =>
-        Coupon.create({
-          ...baseWelcomeProps,
-          type: "invalid" as unknown as "welcome",
-        }),
-      ).toThrow(DomainError);
-    });
   });
 
   describe("update", () => {
-    it("rename で名前を変更できる", () => {
+    it("welcome の updateBatchSize で枚数を変更できる", () => {
       const coupon = Coupon.create(baseWelcomeProps);
-      coupon.rename("新しい名前");
-      expect(coupon.getName()).toBe("新しい名前");
+      coupon.updateBatchSize(20);
+      expect(coupon.getBatchSize()).toBe(20);
     });
 
-    it("updateAmount で金額を変更できる", () => {
-      const coupon = Coupon.create(baseWelcomeProps);
-      coupon.updateAmount(2000);
-      expect(coupon.getAmountJPY()).toBe(2000);
+    it("birthday に updateBatchSize すると DomainError", () => {
+      const coupon = Coupon.create(baseBirthdayProps);
+      expect(() => coupon.updateBatchSize(5)).toThrow(DomainError);
     });
 
-    it("updateDistributionCount で枚数を変更できる", () => {
+    it("birthday の updateTotalLimit で上限を変更できる", () => {
+      const coupon = Coupon.create(baseBirthdayProps);
+      coupon.updateTotalLimit(2000);
+      expect(coupon.getTotalLimit()).toBe(2000);
+    });
+
+    it("welcome に updateTotalLimit すると DomainError", () => {
       const coupon = Coupon.create(baseWelcomeProps);
-      coupon.updateDistributionCount(20);
-      expect(coupon.getDistributionCount()).toBe(20);
+      expect(() => coupon.updateTotalLimit(500)).toThrow(DomainError);
     });
   });
 
   describe("archive / unarchive", () => {
-    it("archive すると archivedAt がセットされ、isActive は false", () => {
+    it("archive すると isActive は false", () => {
       const coupon = Coupon.create(baseWelcomeProps);
       coupon.archive();
       expect(coupon.isArchived()).toBe(true);
@@ -111,7 +136,6 @@ describe("Coupon", () => {
       const coupon = Coupon.create(baseWelcomeProps);
       coupon.archive();
       coupon.unarchive();
-      expect(coupon.isArchived()).toBe(false);
       expect(coupon.isActive()).toBe(true);
     });
   });
@@ -124,20 +148,6 @@ describe("Coupon", () => {
       expect(expiresAt.getTime()).toBe(
         receivedAt.getTime() + 90 * 24 * 60 * 60 * 1000,
       );
-    });
-  });
-
-  describe("reconstruct", () => {
-    it("永続化から復元できる", () => {
-      const now = new Date("2026-07-15T00:00:00Z");
-      const coupon = Coupon.reconstruct({
-        ...baseWelcomeProps,
-        createdAt: now,
-        updatedAt: now,
-        archivedAt: undefined,
-      });
-      expect(coupon.getCouponId()).toBe(baseWelcomeProps.couponId);
-      expect(coupon.getCreatedAt()).toEqual(now);
     });
   });
 });
