@@ -12,29 +12,25 @@ export interface CreateCouponInput {
   name: string;
   amountJPY: number;
   distributionCount: number;
-  startsAt?: Date;
-  expiresInDays?: number;
-  expiresAt?: Date;
+  expiresInDays: number;
 }
 
 export class CreateCouponUseCase {
   constructor(private readonly couponRepository: ICouponRepository) {}
 
   async execute(input: CreateCouponInput): Promise<CouponOutput> {
-    if (input.type === "welcome" || input.type === "birthday") {
-      const existing = await this.couponRepository.findByOrganizationId(
-        input.organizationId,
+    const existing = await this.couponRepository.findByOrganizationId(
+      input.organizationId,
+    );
+    const already = existing.find(
+      (c) => c.getType() === input.type && !c.isArchived(),
+    );
+    if (already) {
+      throw new AppError(
+        409,
+        "COUPON_TYPE_ALREADY_EXISTS",
+        `Active ${input.type} coupon already exists for this organization`,
       );
-      const already = existing.find(
-        (c) => c.getType() === input.type && !c.isArchived(),
-      );
-      if (already) {
-        throw new AppError(
-          409,
-          "COUPON_TYPE_ALREADY_EXISTS",
-          `Active ${input.type} coupon already exists for this organization`,
-        );
-      }
     }
 
     const coupon = Coupon.create({
@@ -44,12 +40,10 @@ export class CreateCouponUseCase {
       name: input.name,
       amountJPY: input.amountJPY,
       distributionCount: input.distributionCount,
-      startsAt: input.startsAt,
       expiresInDays: input.expiresInDays,
-      expiresAt: input.expiresAt,
     });
 
     await this.couponRepository.save(coupon);
-    return toCouponOutput(coupon, new Date());
+    return toCouponOutput(coupon);
   }
 }

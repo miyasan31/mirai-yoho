@@ -1,6 +1,5 @@
 import { AppError } from "@/application/shared/app-error";
 import type { ICouponRepository } from "@/domain/coupon/coupon-repository";
-import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 import type { IUserRepository } from "@/domain/user/user-repository";
 import { UserCoupon } from "@/domain/user-coupon/user-coupon";
 import type { IUserCouponRepository } from "@/domain/user-coupon/user-coupon-repository";
@@ -19,7 +18,6 @@ export class ReceiveBirthdayCouponUseCase {
     private readonly couponRepository: ICouponRepository,
     private readonly userCouponRepository: IUserCouponRepository,
     private readonly userRepository: IUserRepository,
-    private readonly customerRepository: ICustomerRepository,
   ) {}
 
   async execute(
@@ -40,13 +38,6 @@ export class ReceiveBirthdayCouponUseCase {
         "This organization does not offer a birthday coupon",
       );
     }
-    if (!birthday.isActive(now)) {
-      throw new AppError(
-        409,
-        "BIRTHDAY_COUPON_DISABLED",
-        "Birthday coupon is not currently active",
-      );
-    }
 
     const user = await this.userRepository.findById(input.userId);
     if (!user) {
@@ -58,19 +49,6 @@ export class ReceiveBirthdayCouponUseCase {
         400,
         "BIRTHDAY_COUPON_NOT_IN_MONTH",
         "Birthday coupon can only be received in your birth month",
-      );
-    }
-
-    const customer =
-      await this.customerRepository.findByUserIdAndOrganizationId(
-        input.userId,
-        input.organizationId,
-      );
-    if (!customer) {
-      throw new AppError(
-        403,
-        "CUSTOMER_NOT_FOUND_IN_ORGANIZATION",
-        "You have not used this organization yet",
       );
     }
 

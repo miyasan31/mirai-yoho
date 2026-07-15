@@ -21,6 +21,6 @@ export class GetCouponUseCase {
     if (!coupon) {
       throw new AppError(404, "COUPON_NOT_FOUND", "Coupon not found");
     }
-    return toCouponOutput(coupon, new Date());
+    return toCouponOutput(coupon);
   }
 }

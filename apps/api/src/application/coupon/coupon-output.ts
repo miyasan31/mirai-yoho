@@ -6,9 +6,7 @@ export interface CouponOutput {
   name: string;
   amountJPY: number;
   distributionCount: number;
-  startsAt: string | null;
-  expiresInDays: number | null;
-  expiresAt: string | null;
+  expiresInDays: number;
   isActive: boolean;
   isArchived: boolean;
   createdAt: string;
@@ -16,17 +14,15 @@ export interface CouponOutput {
   archivedAt: string | null;
 }
 
-export function toCouponOutput(coupon: Coupon, now: Date): CouponOutput {
+export function toCouponOutput(coupon: Coupon): CouponOutput {
   return {
     couponId: coupon.getCouponId(),
     type: coupon.getType(),
     name: coupon.getName(),
     amountJPY: coupon.getAmountJPY(),
     distributionCount: coupon.getDistributionCount(),
-    startsAt: coupon.getStartsAt()?.toISOString() ?? null,
-    expiresInDays: coupon.getExpiresInDays() ?? null,
-    expiresAt: coupon.getExpiresAt()?.toISOString() ?? null,
-    isActive: coupon.isActive(now),
+    expiresInDays: coupon.getExpiresInDays(),
+    isActive: coupon.isActive(),
     isArchived: coupon.isArchived(),
     createdAt: coupon.getCreatedAt().toISOString(),
     updatedAt: coupon.getUpdatedAt().toISOString(),

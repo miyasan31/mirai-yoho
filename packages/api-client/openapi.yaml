@@ -1458,27 +1458,28 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/console/coupons/{couponId}/distribute:
-    post:
-      operationId: distributeConsoleCoupon
-      summary: general クーポンを全顧客に一斉配布
-      tags: [console]
+  /organizations/{organizationId}/customer/coupons/available:
+    get:
+      operationId: getAvailableCoupons
+      summary: 組織で取得可能なクーポン一覧を取得（取得可否と理由付き）
+      tags: [customer]
       security:
         - bearerAuth: []
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
-        - name: couponId
-          in: path
-          required: true
-          schema:
-            type: string
       responses:
         "200":
           description: OK
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/DistributeCouponResult"
+                type: object
+                required: [coupons]
+                properties:
+                  coupons:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AvailableCoupon"
 
   /organizations/{organizationId}/customer/coupons/receive-welcome:
     post:
@@ -2436,7 +2437,7 @@ components:
 
     CouponType:
       type: string
-      enum: [welcome, birthday, general]
+      enum: [welcome, birthday]
 
     Coupon:
       type: object
@@ -2447,6 +2448,7 @@ components:
           name,
           amountJPY,
           distributionCount,
+          expiresInDays,
           isActive,
           isArchived,
           createdAt,
@@ -2465,18 +2467,9 @@ components:
         distributionCount:
           type: integer
           minimum: 1
-        startsAt:
-          type: string
-          format: date-time
-          nullable: true
         expiresInDays:
           type: integer
           minimum: 1
-          nullable: true
-        expiresAt:
-          type: string
-          format: date-time
-          nullable: true
         isActive:
           type: boolean
         isArchived:
@@ -2494,7 +2487,7 @@ components:
 
     CouponInput:
       type: object
-      required: [type, name, amountJPY, distributionCount]
+      required: [type, name, amountJPY, distributionCount, expiresInDays]
       properties:
         type:
           $ref: "#/components/schemas/CouponType"
@@ -2508,15 +2501,9 @@ components:
         distributionCount:
           type: integer
           minimum: 1
-        startsAt:
-          type: string
-          format: date-time
         expiresInDays:
           type: integer
           minimum: 1
-        expiresAt:
-          type: string
-          format: date-time
 
     CouponUpdateInput:
       type: object
@@ -2532,18 +2519,45 @@ components:
           type: integer
           minimum: 1
 
-    DistributeCouponResult:
+    AvailableCouponIneligibilityReason:
+      type: string
+      enum: [already-received, not-in-birth-month, limit-reached]
+
+    AvailableCoupon:
       type: object
-      required: [issuedCount, skippedCount, reachedLimit]
+      required:
+        [
+          couponId,
+          type,
+          name,
+          amountJPY,
+          distributionCount,
+          expiresInDays,
+          isReceivable,
+          ineligibilityReason,
+        ]
       properties:
-        issuedCount:
+        couponId:
+          type: string
+        type:
+          $ref: "#/components/schemas/CouponType"
+        name:
+          type: string
+        amountJPY:
           type: integer
-          minimum: 0
-        skippedCount:
+          minimum: 1
+        distributionCount:
           type: integer
-          minimum: 0
-        reachedLimit:
+          minimum: 1
+        expiresInDays:
+          type: integer
+          minimum: 1
+        isReceivable:
           type: boolean
+        ineligibilityReason:
+          allOf:
+            - $ref: "#/components/schemas/AvailableCouponIneligibilityReason"
+          nullable: true
 
     ReceiveWelcomeCouponResult:
       type: object

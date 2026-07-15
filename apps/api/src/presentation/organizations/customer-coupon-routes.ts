@@ -2,13 +2,34 @@ import { Hono } from "hono";
 import { AuthError } from "@/infrastructure/auth/verify-auth";
 import { verifyCustomerAuth } from "@/infrastructure/auth/verify-customer-auth";
 import {
+  createListAvailableCouponsForOrgUseCase,
   createReceiveBirthdayCouponUseCase,
   createReceiveWelcomeCouponsUseCase,
   createUserRepository,
 } from "@/infrastructure/container";
-import { jsonError, postRoute } from "./route-handler";
+import { getRoute, jsonError, noStoreJson, postRoute } from "./route-handler";
 
 export const customerCouponRoutes = new Hono();
+
+customerCouponRoutes.get(
+  "/customer/coupons/available",
+  getRoute(async ({ organizationId, request }) => {
+    const { authUid } = await verifyCustomerAuth(request);
+    const user = await createUserRepository().findByAuthUid(authUid);
+    if (!user) {
+      throw new AuthError(
+        403,
+        "CUSTOMER_NOT_SIGNED_UP",
+        "Customer has not signed up yet",
+      );
+    }
+    const coupons = await createListAvailableCouponsForOrgUseCase().execute({
+      userId: user.getUserId(),
+      organizationId,
+    });
+    return noStoreJson({ coupons });
+  }),
+);
 
 customerCouponRoutes.post(
   "/customer/coupons/receive-welcome",

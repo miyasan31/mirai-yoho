@@ -5,7 +5,6 @@ import { verifyAccountAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createArchiveCouponUseCase,
   createCreateCouponUseCase,
-  createDistributeGeneralCouponUseCase,
   createGetCouponUseCase,
   createListCouponsUseCase,
   createUpdateCouponUseCase,
@@ -19,19 +18,15 @@ import {
   postRoute,
 } from "./route-handler";
 
-const couponTypeSchema = v.picklist(["welcome", "birthday", "general"]);
+const couponTypeSchema = v.picklist(["welcome", "birthday"]);
 
-const createCouponBodySchema = v.pipe(
-  v.object({
-    type: couponTypeSchema,
-    name: v.pipe(v.string(), v.minLength(1), v.maxLength(80)),
-    amountJPY: v.pipe(v.number(), v.integer(), v.minValue(1)),
-    distributionCount: v.pipe(v.number(), v.integer(), v.minValue(1)),
-    startsAt: v.optional(v.pipe(v.string(), v.isoTimestamp())),
-    expiresInDays: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
-    expiresAt: v.optional(v.pipe(v.string(), v.isoTimestamp())),
-  }),
-);
+const createCouponBodySchema = v.object({
+  type: couponTypeSchema,
+  name: v.pipe(v.string(), v.minLength(1), v.maxLength(80)),
+  amountJPY: v.pipe(v.number(), v.integer(), v.minValue(1)),
+  distributionCount: v.pipe(v.number(), v.integer(), v.minValue(1)),
+  expiresInDays: v.pipe(v.number(), v.integer(), v.minValue(1)),
+});
 
 const updateCouponBodySchema = v.object({
   name: v.optional(v.pipe(v.string(), v.minLength(1), v.maxLength(80))),
@@ -82,13 +77,7 @@ consoleCouponRoutes.post(
       name: parsed.output.name,
       amountJPY: parsed.output.amountJPY,
       distributionCount: parsed.output.distributionCount,
-      startsAt: parsed.output.startsAt
-        ? new Date(parsed.output.startsAt)
-        : undefined,
       expiresInDays: parsed.output.expiresInDays,
-      expiresAt: parsed.output.expiresAt
-        ? new Date(parsed.output.expiresAt)
-        : undefined,
     });
     return Response.json(coupon, { status: 201 });
   }),
@@ -125,18 +114,5 @@ consoleCouponRoutes.delete(
       couponId: param("couponId"),
     });
     return Response.json({ success: true });
-  }),
-);
-
-consoleCouponRoutes.post(
-  "/console/coupons/:couponId/distribute",
-  postRoute(async ({ organizationId, request, param }) => {
-    const authUser = await verifyAccountAuth(request);
-    requirePermission(authUser, organizationId, "console.coupons.manage");
-    const result = await createDistributeGeneralCouponUseCase().execute({
-      organizationId,
-      couponId: param("couponId"),
-    });
-    return Response.json(result);
   }),
 );

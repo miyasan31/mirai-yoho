@@ -1,13 +1,9 @@
 import { DomainError } from "@mirai-yoho/shared/domain-error";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 
-export type CouponType = "welcome" | "birthday" | "general";
+export type CouponType = "welcome" | "birthday";
 
-const COUPON_TYPES: readonly CouponType[] = [
-  "welcome",
-  "birthday",
-  "general",
-] as const;
+const COUPON_TYPES: readonly CouponType[] = ["welcome", "birthday"] as const;
 
 const NAME_MAX_LENGTH = 80;
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
@@ -19,9 +15,7 @@ export interface CouponCreateProps {
   name: string;
   amountJPY: number;
   distributionCount: number;
-  startsAt?: Date;
-  expiresInDays?: number;
-  expiresAt?: Date;
+  expiresInDays: number;
 }
 
 export interface CouponReconstructProps extends CouponCreateProps {
@@ -62,62 +56,20 @@ function validateDistributionCount(count: number): void {
   }
 }
 
+function validateExpiresInDays(days: number): void {
+  if (!Number.isInteger(days) || days <= 0) {
+    throw new DomainError(
+      "INVALID_COUPON_EXPIRY",
+      "expiresInDays must be a positive integer",
+    );
+  }
+}
+
 function validateType(type: string): CouponType {
   if (!COUPON_TYPES.includes(type as CouponType)) {
     throw new DomainError("INVALID_COUPON_TYPE", "Unknown coupon type");
   }
   return type as CouponType;
-}
-
-function validateExpirySettings(props: {
-  type: CouponType;
-  startsAt?: Date;
-  expiresInDays?: number;
-  expiresAt?: Date;
-}): void {
-  if (props.type === "welcome" || props.type === "birthday") {
-    if (props.expiresInDays === undefined) {
-      throw new DomainError(
-        "INVALID_COUPON_EXPIRY",
-        `${props.type} coupon requires expiresInDays`,
-      );
-    }
-    if (!Number.isInteger(props.expiresInDays) || props.expiresInDays <= 0) {
-      throw new DomainError(
-        "INVALID_COUPON_EXPIRY",
-        "expiresInDays must be a positive integer",
-      );
-    }
-    if (props.expiresAt !== undefined) {
-      throw new DomainError(
-        "INVALID_COUPON_EXPIRY",
-        `${props.type} coupon must not set expiresAt (use expiresInDays)`,
-      );
-    }
-    if (props.startsAt !== undefined) {
-      throw new DomainError(
-        "INVALID_COUPON_EXPIRY",
-        `${props.type} coupon must not set startsAt`,
-      );
-    }
-    return;
-  }
-  if (props.expiresInDays !== undefined) {
-    throw new DomainError(
-      "INVALID_COUPON_EXPIRY",
-      "general coupon must not set expiresInDays (use expiresAt)",
-    );
-  }
-  if (
-    props.startsAt &&
-    props.expiresAt &&
-    props.expiresAt.getTime() <= props.startsAt.getTime()
-  ) {
-    throw new DomainError(
-      "INVALID_COUPON_EXPIRY",
-      "expiresAt must be after startsAt",
-    );
-  }
 }
 
 export class Coupon extends AggregateRoot {
@@ -128,9 +80,7 @@ export class Coupon extends AggregateRoot {
     private name: string,
     private amountJPY: number,
     private distributionCount: number,
-    private readonly startsAt: Date | undefined,
-    private readonly expiresInDays: number | undefined,
-    private readonly expiresAt: Date | undefined,
+    private readonly expiresInDays: number,
     private readonly createdAt: Date,
     private updatedAt: Date,
     private archivedAt: Date | undefined,
@@ -144,12 +94,7 @@ export class Coupon extends AggregateRoot {
     const name = validateName(props.name);
     validateAmountJPY(props.amountJPY);
     validateDistributionCount(props.distributionCount);
-    validateExpirySettings({
-      type,
-      startsAt: props.startsAt,
-      expiresInDays: props.expiresInDays,
-      expiresAt: props.expiresAt,
-    });
+    validateExpiresInDays(props.expiresInDays);
     return new Coupon(
       props.organizationId,
       props.couponId,
@@ -157,9 +102,7 @@ export class Coupon extends AggregateRoot {
       name,
       props.amountJPY,
       props.distributionCount,
-      props.startsAt,
       props.expiresInDays,
-      props.expiresAt,
       now,
       now,
       undefined,
@@ -174,9 +117,7 @@ export class Coupon extends AggregateRoot {
       props.name,
       props.amountJPY,
       props.distributionCount,
-      props.startsAt,
       props.expiresInDays,
-      props.expiresAt,
       props.createdAt,
       props.updatedAt,
       props.archivedAt,
@@ -213,20 +154,12 @@ export class Coupon extends AggregateRoot {
     this.updatedAt = new Date();
   }
 
-  isActive(now: Date): boolean {
-    if (this.archivedAt) return false;
-    if (this.startsAt && this.startsAt.getTime() > now.getTime()) return false;
-    if (this.expiresAt && this.expiresAt.getTime() <= now.getTime())
-      return false;
-    return true;
+  isActive(): boolean {
+    return this.archivedAt === undefined;
   }
 
-  calcExpiresAtFor(receivedAt: Date): Date | undefined {
-    if (this.type === "welcome" || this.type === "birthday") {
-      if (this.expiresInDays === undefined) return undefined;
-      return new Date(receivedAt.getTime() + this.expiresInDays * DAY_IN_MS);
-    }
-    return this.expiresAt;
+  calcExpiresAtFor(receivedAt: Date): Date {
+    return new Date(receivedAt.getTime() + this.expiresInDays * DAY_IN_MS);
   }
 
   getOrganizationId(): string {
@@ -253,16 +186,8 @@ export class Coupon extends AggregateRoot {
     return this.distributionCount;
   }
 
-  getStartsAt(): Date | undefined {
-    return this.startsAt;
-  }
-
-  getExpiresInDays(): number | undefined {
+  getExpiresInDays(): number {
     return this.expiresInDays;
-  }
-
-  getExpiresAt(): Date | undefined {
-    return this.expiresAt;
   }
 
   getCreatedAt(): Date {

@@ -15,7 +15,7 @@ import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
 import { useQueryClient } from "@tanstack/react-query";
-import { Archive, Pencil, Plus, Send, TicketPercent } from "lucide-react";
+import { Archive, Pencil, Plus, TicketPercent } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
@@ -24,7 +24,6 @@ import {
   useArchiveConsoleCoupon,
   useConsoleCoupons,
   useCreateConsoleCoupon,
-  useDistributeConsoleCoupon,
   useUpdateConsoleCoupon,
 } from "@/hooks/use-console-coupons";
 import {
@@ -37,19 +36,12 @@ import {
 const COUPON_TYPE_LABEL: Record<CouponType, string> = {
   welcome: "初回登録特典",
   birthday: "誕生月",
-  general: "汎用",
 };
 
-const COUPON_TYPE_COLOR: Record<CouponType, "green" | "purple" | "blue"> = {
+const COUPON_TYPE_COLOR: Record<CouponType, "green" | "purple"> = {
   welcome: "green",
   birthday: "purple",
-  general: "blue",
 };
-
-function formatDate(iso: string | null): string {
-  if (!iso) return "-";
-  return new Date(iso).toLocaleString("ja-JP");
-}
 
 export default function ConsoleCouponsPage() {
   const { organizationId } = useOrganizationRouting();
@@ -60,12 +52,10 @@ export default function ConsoleCouponsPage() {
   const createMutation = useCreateConsoleCoupon();
   const updateMutation = useUpdateConsoleCoupon();
   const archiveMutation = useArchiveConsoleCoupon();
-  const distributeMutation = useDistributeConsoleCoupon();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Coupon | null>(null);
   const [archiveTarget, setArchiveTarget] = useState<Coupon | null>(null);
-  const [distributeTarget, setDistributeTarget] = useState<Coupon | null>(null);
 
   const canManage = hasPermission("console.coupons.manage");
 
@@ -79,10 +69,11 @@ export default function ConsoleCouponsPage() {
   const createForm = useForm<CouponCreateFormValues>({
     resolver: valibotResolver(couponCreateFormSchema),
     defaultValues: {
-      type: "general",
+      type: "welcome",
       name: "",
       amountJPY: 1000,
       distributionCount: 1,
+      expiresInDays: 90,
     },
   });
 
@@ -117,18 +108,7 @@ export default function ConsoleCouponsPage() {
           name: values.name,
           amountJPY: values.amountJPY,
           distributionCount: values.distributionCount,
-          startsAt:
-            values.type === "general" && values.startsAt
-              ? new Date(values.startsAt).toISOString()
-              : undefined,
-          expiresInDays:
-            values.type === "welcome" || values.type === "birthday"
-              ? values.expiresInDays
-              : undefined,
-          expiresAt:
-            values.type === "general" && values.expiresAt
-              ? new Date(values.expiresAt).toISOString()
-              : undefined,
+          expiresInDays: values.expiresInDays,
         },
       });
       toaster.success({ title: "クーポンを作成しました" });
@@ -171,27 +151,6 @@ export default function ConsoleCouponsPage() {
     }
   };
 
-  const onDistribute = async () => {
-    if (!organizationId || !distributeTarget) return;
-    try {
-      const result = await distributeMutation.mutateAsync({
-        organizationId,
-        couponId: distributeTarget.couponId,
-      });
-      toaster.success({
-        title: `${result.data.issuedCount} 名に配布しました`,
-        description:
-          result.data.skippedCount > 0
-            ? `${result.data.skippedCount} 名は受け取り済みのためスキップ`
-            : undefined,
-      });
-      setDistributeTarget(null);
-      await invalidate();
-    } catch {
-      // handled globally
-    }
-  };
-
   const coupons = data?.data?.coupons ?? [];
 
   return (
@@ -207,17 +166,18 @@ export default function ConsoleCouponsPage() {
             クーポン管理
           </Text>
           <Text textStyle="sm" color="fg.muted">
-            初回登録特典・誕生月・汎用クーポンのマスターを管理します。
+            初回登録特典・誕生月クーポンのマスターを管理します。顧客はマイページから自分で取得します。
           </Text>
         </styled.div>
         {canManage && (
           <Button
             onClick={() => {
               createForm.reset({
-                type: "general",
+                type: "welcome",
                 name: "",
                 amountJPY: 1000,
                 distributionCount: 1,
+                expiresInDays: 90,
               });
               setCreateOpen(true);
             }}
@@ -247,7 +207,7 @@ export default function ConsoleCouponsPage() {
               <Table.Header>名称</Table.Header>
               <Table.Header>割引額</Table.Header>
               <Table.Header>枚数</Table.Header>
-              <Table.Header>期限</Table.Header>
+              <Table.Header>有効日数</Table.Header>
               <Table.Header>状態</Table.Header>
               <Table.Header>操作</Table.Header>
             </Table.Row>
@@ -263,34 +223,17 @@ export default function ConsoleCouponsPage() {
                 <Table.Cell>{coupon.name}</Table.Cell>
                 <Table.Cell>¥{coupon.amountJPY.toLocaleString()}</Table.Cell>
                 <Table.Cell>{coupon.distributionCount}</Table.Cell>
-                <Table.Cell>
-                  {coupon.type === "general"
-                    ? `${formatDate(coupon.startsAt ?? null)} 〜 ${formatDate(coupon.expiresAt ?? null)}`
-                    : `${coupon.expiresInDays ?? "-"}日`}
-                </Table.Cell>
+                <Table.Cell>{coupon.expiresInDays}日</Table.Cell>
                 <Table.Cell>
                   {coupon.isArchived ? (
                     <Badge variant="subtle">無効</Badge>
-                  ) : coupon.isActive ? (
-                    <Badge colorPalette="green">有効</Badge>
                   ) : (
-                    <Badge colorPalette="gray">期間外</Badge>
+                    <Badge colorPalette="green">有効</Badge>
                   )}
                 </Table.Cell>
                 <Table.Cell>
                   {canManage && !coupon.isArchived && (
                     <styled.div display="flex" gap="1">
-                      {coupon.type === "general" && coupon.isActive && (
-                        <Tooltip content="全顧客に配布">
-                          <IconButton
-                            variant="subtle"
-                            size="sm"
-                            onClick={() => setDistributeTarget(coupon)}
-                          >
-                            <Send size={16} />
-                          </IconButton>
-                        </Tooltip>
-                      )}
                       <Tooltip content="編集">
                         <IconButton
                           variant="subtle"
@@ -342,7 +285,6 @@ export default function ConsoleCouponsPage() {
                     borderWidth="1"
                     borderColor="border"
                   >
-                    <option value="general">汎用</option>
                     <option value="welcome">初回登録特典</option>
                     <option value="birthday">誕生月</option>
                   </styled.select>
@@ -397,51 +339,23 @@ export default function ConsoleCouponsPage() {
                     </Field.ErrorText>
                   )}
                 </Field.Root>
-                {(selectedType === "welcome" ||
-                  selectedType === "birthday") && (
-                  <Field.Root
-                    invalid={!!createForm.formState.errors.expiresInDays}
-                  >
-                    <Field.Label>有効日数（受け取り日から）</Field.Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      {...createForm.register("expiresInDays", {
-                        valueAsNumber: true,
-                      })}
-                    />
-                    {createForm.formState.errors.expiresInDays && (
-                      <Field.ErrorText>
-                        {createForm.formState.errors.expiresInDays.message}
-                      </Field.ErrorText>
-                    )}
-                  </Field.Root>
-                )}
-                {selectedType === "general" && (
-                  <>
-                    <Field.Root>
-                      <Field.Label>開始日時（省略可）</Field.Label>
-                      <Input
-                        type="datetime-local"
-                        {...createForm.register("startsAt")}
-                      />
-                    </Field.Root>
-                    <Field.Root
-                      invalid={!!createForm.formState.errors.expiresAt}
-                    >
-                      <Field.Label>有効期限日時</Field.Label>
-                      <Input
-                        type="datetime-local"
-                        {...createForm.register("expiresAt")}
-                      />
-                      {createForm.formState.errors.expiresAt && (
-                        <Field.ErrorText>
-                          {createForm.formState.errors.expiresAt.message}
-                        </Field.ErrorText>
-                      )}
-                    </Field.Root>
-                  </>
-                )}
+                <Field.Root
+                  invalid={!!createForm.formState.errors.expiresInDays}
+                >
+                  <Field.Label>有効日数（受け取り日から）</Field.Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    {...createForm.register("expiresInDays", {
+                      valueAsNumber: true,
+                    })}
+                  />
+                  {createForm.formState.errors.expiresInDays && (
+                    <Field.ErrorText>
+                      {createForm.formState.errors.expiresInDays.message}
+                    </Field.ErrorText>
+                  )}
+                </Field.Root>
               </Dialog.Body>
               <Dialog.Footer>
                 <Dialog.CloseTrigger asChild>
@@ -565,39 +479,6 @@ export default function ConsoleCouponsPage() {
                 onClick={onArchive}
               >
                 無効化する
-              </Button>
-            </Dialog.Footer>
-          </Dialog.Content>
-        </Dialog.Positioner>
-      </Dialog.Root>
-
-      <Dialog.Root
-        open={!!distributeTarget}
-        onOpenChange={(details) => {
-          if (!details.open) setDistributeTarget(null);
-        }}
-      >
-        <Dialog.Backdrop />
-        <Dialog.Positioner>
-          <Dialog.Content>
-            <Dialog.Header>
-              <Dialog.Title>クーポンを一斉配布</Dialog.Title>
-              <Dialog.Description>
-                「{distributeTarget?.name}
-                」（¥{distributeTarget?.amountJPY.toLocaleString()}）を
-                この事業所のすべての顧客に配布します。既に受け取り済みの顧客はスキップされます。
-              </Dialog.Description>
-            </Dialog.Header>
-            <Dialog.Footer>
-              <Dialog.CloseTrigger asChild>
-                <Button variant="outline">キャンセル</Button>
-              </Dialog.CloseTrigger>
-              <Button
-                loading={distributeMutation.isPending}
-                loadingText="配布中..."
-                onClick={onDistribute}
-              >
-                配布実行
               </Button>
             </Dialog.Footer>
           </Dialog.Content>

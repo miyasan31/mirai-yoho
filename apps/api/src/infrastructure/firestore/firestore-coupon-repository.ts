@@ -13,9 +13,7 @@ interface CouponDoc {
   name: string;
   amountJPY: number;
   distributionCount: number;
-  startsAt?: Timestamp | Date | null;
-  expiresInDays?: number | null;
-  expiresAt?: Timestamp | Date | null;
+  expiresInDays: number;
   createdAt: Timestamp | Date;
   updatedAt: Timestamp | Date;
   archivedAt?: Timestamp | Date | null;
@@ -39,9 +37,7 @@ function toDomain(doc: CouponDoc): Coupon {
     name: doc.name,
     amountJPY: doc.amountJPY,
     distributionCount: doc.distributionCount,
-    startsAt: toDate(doc.startsAt),
-    expiresInDays: doc.expiresInDays ?? undefined,
-    expiresAt: toDate(doc.expiresAt),
+    expiresInDays: doc.expiresInDays,
     createdAt: toRequiredDate(doc.createdAt),
     updatedAt: toRequiredDate(doc.updatedAt),
     archivedAt: toDate(doc.archivedAt),
@@ -56,9 +52,7 @@ function toFirestore(coupon: Coupon): CouponDoc {
     name: coupon.getName(),
     amountJPY: coupon.getAmountJPY(),
     distributionCount: coupon.getDistributionCount(),
-    startsAt: coupon.getStartsAt() ?? null,
-    expiresInDays: coupon.getExpiresInDays() ?? null,
-    expiresAt: coupon.getExpiresAt() ?? null,
+    expiresInDays: coupon.getExpiresInDays(),
     createdAt: coupon.getCreatedAt(),
     updatedAt: coupon.getUpdatedAt(),
     archivedAt: coupon.getArchivedAt() ?? null,

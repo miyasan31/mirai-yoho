@@ -11,14 +11,14 @@ const baseWelcomeProps = {
   expiresInDays: 90,
 };
 
-const baseGeneralProps = {
+const baseBirthdayProps = {
   organizationId: "org-1",
-  couponId: "coupon-general",
-  type: "general" as const,
-  name: "春のキャンペーン",
+  couponId: "coupon-birthday",
+  type: "birthday" as const,
+  name: "誕生月クーポン",
   amountJPY: 500,
-  distributionCount: 100,
-  expiresAt: new Date("2026-12-31T14:59:59Z"),
+  distributionCount: 1000,
+  expiresInDays: 30,
 };
 
 describe("Coupon", () => {
@@ -30,14 +30,13 @@ describe("Coupon", () => {
       expect(coupon.getAmountJPY()).toBe(1000);
       expect(coupon.getDistributionCount()).toBe(10);
       expect(coupon.getExpiresInDays()).toBe(90);
-      expect(coupon.getExpiresAt()).toBeUndefined();
       expect(coupon.isArchived()).toBe(false);
     });
 
-    it("general クーポンを生成できる", () => {
-      const coupon = Coupon.create(baseGeneralProps);
-      expect(coupon.getType()).toBe("general");
-      expect(coupon.getExpiresAt()).toEqual(baseGeneralProps.expiresAt);
+    it("birthday クーポンを生成できる", () => {
+      const coupon = Coupon.create(baseBirthdayProps);
+      expect(coupon.getType()).toBe("birthday");
+      expect(coupon.getExpiresInDays()).toBe(30);
     });
 
     it("amountJPY が 0 以下だと DomainError", () => {
@@ -64,39 +63,17 @@ describe("Coupon", () => {
       ).toThrow(DomainError);
     });
 
-    it("welcome に expiresInDays が無いと DomainError", () => {
-      const props = { ...baseWelcomeProps } as unknown as {
-        expiresInDays?: number;
-      };
-      delete props.expiresInDays;
+    it("expiresInDays が 0 以下だと DomainError", () => {
       expect(() =>
-        Coupon.create(props as unknown as typeof baseWelcomeProps),
+        Coupon.create({ ...baseWelcomeProps, expiresInDays: 0 }),
       ).toThrow(DomainError);
     });
 
-    it("welcome に expiresAt を設定すると DomainError", () => {
+    it("未知の type は DomainError", () => {
       expect(() =>
         Coupon.create({
           ...baseWelcomeProps,
-          expiresAt: new Date("2026-12-31T14:59:59Z"),
-        }),
-      ).toThrow(DomainError);
-    });
-
-    it("general に expiresInDays を設定すると DomainError", () => {
-      expect(() =>
-        Coupon.create({
-          ...baseGeneralProps,
-          expiresInDays: 30,
-        }),
-      ).toThrow(DomainError);
-    });
-
-    it("general の startsAt が expiresAt 以降だと DomainError", () => {
-      expect(() =>
-        Coupon.create({
-          ...baseGeneralProps,
-          startsAt: new Date("2027-01-01T00:00:00Z"),
+          type: "invalid" as unknown as "welcome",
         }),
       ).toThrow(DomainError);
     });
@@ -127,7 +104,7 @@ describe("Coupon", () => {
       const coupon = Coupon.create(baseWelcomeProps);
       coupon.archive();
       expect(coupon.isArchived()).toBe(true);
-      expect(coupon.isActive(new Date())).toBe(false);
+      expect(coupon.isActive()).toBe(false);
     });
 
     it("unarchive で復活する", () => {
@@ -135,43 +112,17 @@ describe("Coupon", () => {
       coupon.archive();
       coupon.unarchive();
       expect(coupon.isArchived()).toBe(false);
-      expect(coupon.isActive(new Date())).toBe(true);
-    });
-  });
-
-  describe("isActive", () => {
-    it("startsAt 前は false", () => {
-      const coupon = Coupon.create({
-        ...baseGeneralProps,
-        startsAt: new Date("2026-08-01T00:00:00Z"),
-      });
-      expect(coupon.isActive(new Date("2026-07-31T23:59:59Z"))).toBe(false);
-      expect(coupon.isActive(new Date("2026-08-01T00:00:01Z"))).toBe(true);
-    });
-
-    it("expiresAt 以降は false", () => {
-      const coupon = Coupon.create(baseGeneralProps);
-      expect(coupon.isActive(baseGeneralProps.expiresAt)).toBe(false);
-      expect(
-        coupon.isActive(new Date(baseGeneralProps.expiresAt.getTime() - 1000)),
-      ).toBe(true);
+      expect(coupon.isActive()).toBe(true);
     });
   });
 
   describe("calcExpiresAtFor", () => {
-    it("welcome は receivedAt + expiresInDays 日", () => {
+    it("受け取り日から expiresInDays 日後の Date を返す", () => {
       const coupon = Coupon.create(baseWelcomeProps);
       const receivedAt = new Date("2026-07-01T00:00:00Z");
       const expiresAt = coupon.calcExpiresAtFor(receivedAt);
-      expect(expiresAt?.getTime()).toBe(
+      expect(expiresAt.getTime()).toBe(
         receivedAt.getTime() + 90 * 24 * 60 * 60 * 1000,
-      );
-    });
-
-    it("general は固定 expiresAt を返す", () => {
-      const coupon = Coupon.create(baseGeneralProps);
-      expect(coupon.calcExpiresAtFor(new Date("2026-07-01T00:00:00Z"))).toEqual(
-        baseGeneralProps.expiresAt,
       );
     });
   });

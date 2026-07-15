@@ -1,7 +1,6 @@
 import {
   useArchiveConsoleCoupon,
   useCreateConsoleCoupon,
-  useDistributeConsoleCoupon,
   useGetConsoleCoupons,
   useUpdateConsoleCoupon,
 } from "@mirai-yoho/api-client/api/console/console";
@@ -29,5 +28,4 @@ export {
   useCreateConsoleCoupon,
   useUpdateConsoleCoupon,
   useArchiveConsoleCoupon,
-  useDistributeConsoleCoupon,
 };

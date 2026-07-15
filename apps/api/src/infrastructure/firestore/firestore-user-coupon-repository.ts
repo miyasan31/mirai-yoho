@@ -41,7 +41,7 @@ function toDomain(doc: UserCouponDoc): UserCoupon {
     organizationId: doc.organizationId ?? "",
     amountJPY: doc.amountJPY ?? 0,
     couponName: doc.couponName ?? "",
-    type: doc.type ?? "general",
+    type: doc.type ?? "welcome",
     receivedAt: toRequiredDate(doc.receivedAt),
     expiresAt: toDate(doc.expiresAt),
     redeemedAt: toDate(doc.redeemedAt),

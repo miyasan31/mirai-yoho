@@ -36,6 +36,6 @@ export class UpdateCouponUseCase {
     }
 
     await this.couponRepository.save(coupon);
-    return toCouponOutput(coupon, new Date());
+    return toCouponOutput(coupon);
   }
 }

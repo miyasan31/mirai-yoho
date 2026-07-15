@@ -36,13 +36,6 @@ export class ReceiveWelcomeCouponsUseCase {
         "This organization does not offer a welcome coupon",
       );
     }
-    if (!welcome.isActive(now)) {
-      throw new AppError(
-        409,
-        "WELCOME_COUPON_DISABLED",
-        "Welcome coupon is not currently active",
-      );
-    }
 
     // 冪等性: 同ユーザーが同一 welcome couponId を既に受け取っていたら no-op
     const existing = await this.userCouponRepository.findByUserIdAndCouponId(

@@ -15,7 +15,6 @@ export class ListCouponsUseCase {
     const coupons = await this.couponRepository.findByOrganizationId(
       input.organizationId,
     );
-    const now = new Date();
-    return coupons.map((coupon) => toCouponOutput(coupon, now));
+    return coupons.map((coupon) => toCouponOutput(coupon));
   }
 }
