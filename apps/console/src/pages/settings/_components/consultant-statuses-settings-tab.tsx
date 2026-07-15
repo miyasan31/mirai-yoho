@@ -1,6 +1,6 @@
 import {
-  useAdminConsultantStatuses,
-  useUpdateAdminConsultantStatuses,
+  useConsoleConsultantStatuses,
+  useUpdateConsoleConsultantStatuses,
 } from "@mirai-yoho/console-core/hooks/use-booking-settings";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
@@ -173,8 +173,8 @@ export function ConsultantStatusesSettingsTab({
   organizationId,
   isReadOnly,
 }: ConsultantStatusesSettingsTabContainerProps) {
-  const { data, isLoading } = useAdminConsultantStatuses();
-  const updateConsultantStatuses = useUpdateAdminConsultantStatuses();
+  const { data, isLoading } = useConsoleConsultantStatuses();
+  const updateConsultantStatuses = useUpdateConsoleConsultantStatuses();
   const form = useForm<ConsultantStatusFormValues>({
     defaultValues: {
       consultantStatuses: [{ statusId: "standard", name: "標準" }],

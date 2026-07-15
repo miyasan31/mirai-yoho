@@ -22,7 +22,7 @@ export class NotifyLateConsultantArrivalUseCase {
     private readonly customerRepository: ICustomerRepository,
     private readonly userContactService: IUserContactService,
     private readonly lateArrivalAlertService: ILateArrivalAlertService,
-    private readonly adminAppUrl: string,
+    private readonly consoleAppUrl: string,
   ) {}
 
   async execute(
@@ -84,7 +84,9 @@ export class NotifyLateConsultantArrivalUseCase {
               (input.now.getTime() - booking.getStartsAt().getTime()) / 60_000,
             ),
           ),
-          adminBookingsUrl: this.buildAdminBookingsUrl(input.organizationId),
+          consoleBookingsUrl: this.buildConsoleBookingsUrl(
+            input.organizationId,
+          ),
         });
 
         booking.markLateArrivalAlertSent(input.now);
@@ -101,8 +103,8 @@ export class NotifyLateConsultantArrivalUseCase {
     return { targetCount: targetBookings.length, notifiedCount, errors };
   }
 
-  private buildAdminBookingsUrl(organizationId: string): string {
-    const baseUrl = this.adminAppUrl.replace(/\/$/, "");
-    return `${baseUrl}/${organizationId}/admin/bookings`;
+  private buildConsoleBookingsUrl(organizationId: string): string {
+    const baseUrl = this.consoleAppUrl.replace(/\/$/, "");
+    return `${baseUrl}/${organizationId}/bookings`;
   }
 }

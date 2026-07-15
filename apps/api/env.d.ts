@@ -26,7 +26,7 @@ declare namespace NodeJS {
     FIREBASE_STORAGE_BUCKET?: string;
 
     API_URL?: string;
-    ADMIN_APP_URL?: string;
+    CONSOLE_APP_URL?: string;
     USER_APP_URL?: string;
     CONSULTANT_APP_URL?: string;
     CORS_ALLOWED_ORIGINS?: string;

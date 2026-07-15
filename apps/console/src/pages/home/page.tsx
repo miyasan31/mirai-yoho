@@ -12,10 +12,10 @@ import { Link } from "@tanstack/react-router";
 import { CalendarDays, CircleAlert, CreditCard, House } from "lucide-react";
 import { useMemo } from "react";
 import { styled } from "styled-system/jsx";
-import { useAdminBookings } from "@/hooks/use-admin-bookings";
-import { useAdminCustomers } from "@/hooks/use-admin-customers";
-import { useAdminPayments } from "@/hooks/use-admin-payments";
-import { buildAdminHomeViewModel } from "./home-view-model";
+import { useConsoleBookings } from "@/hooks/use-console-bookings";
+import { useConsoleCustomers } from "@/hooks/use-console-customers";
+import { useConsolePayments } from "@/hooks/use-console-payments";
+import { buildConsoleHomeViewModel } from "./home-view-model";
 
 function formatDatetime(value: string): string {
   return new Date(value).toLocaleString("ja-JP", {
@@ -27,23 +27,23 @@ function formatDatetime(value: string): string {
   });
 }
 
-export default function AdminHomePage() {
+export default function ConsoleHomePage() {
   const { buildPath } = useOrganizationRouting();
   const { hasPermission } = useAuth();
-  const canManageSettings = hasPermission("admin.settings.manage");
-  const bookingsQuery = useAdminBookings({
+  const canManageSettings = hasPermission("console.settings.manage");
+  const bookingsQuery = useConsoleBookings({
     page: 1,
     pageSize: 100,
     sortBy: "createdAt",
     sortOrder: "desc",
   });
-  const paymentsQuery = useAdminPayments({
+  const paymentsQuery = useConsolePayments({
     page: 1,
     pageSize: 100,
     sortBy: "createdAt",
     sortOrder: "desc",
   });
-  const customersQuery = useAdminCustomers(
+  const customersQuery = useConsoleCustomers(
     {
       page: 1,
       pageSize: 100,
@@ -62,7 +62,7 @@ export default function AdminHomePage() {
   const customers = customersQuery.data?.data?.customers ?? [];
   const viewModel = useMemo(
     () =>
-      buildAdminHomeViewModel({
+      buildConsoleHomeViewModel({
         bookings,
         payments,
         customers,

@@ -19,10 +19,10 @@ import {
 } from "./list-query";
 import { getRoute, jsonError, noStoreJson } from "./route-handler";
 
-export const adminListingRoutes = new Hono();
+export const consoleListingRoutes = new Hono();
 
-adminListingRoutes.get(
-  "/admin/slots",
+consoleListingRoutes.get(
+  "/console/slots",
   getRoute(async ({ organizationId, request, requestUrl }) => {
     const authUser = await verifyAuth(request);
     const account = authUser.accounts.find(
@@ -38,7 +38,7 @@ adminListingRoutes.get(
       );
     }
     if (!account.isConsultant) {
-      requirePermission(authUser, organizationId, "admin.slots.read");
+      requirePermission(authUser, organizationId, "console.slots.read");
     }
 
     const requestedConsultantId = requestUrl.searchParams.get("consultantId");
@@ -103,11 +103,11 @@ adminListingRoutes.get(
   }),
 );
 
-adminListingRoutes.get(
-  "/admin/dashboard",
+consoleListingRoutes.get(
+  "/console/dashboard",
   getRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requirePermission(authUser, organizationId, "admin.dashboard.read");
+    requirePermission(authUser, organizationId, "console.dashboard.read");
     const [bookings, payments, customers, consultants] = await Promise.all([
       createBookingRepository().findAll(organizationId),
       createPaymentRepository().findAll(organizationId),
@@ -143,11 +143,11 @@ adminListingRoutes.get(
   }),
 );
 
-adminListingRoutes.get(
-  "/admin/bookings",
+consoleListingRoutes.get(
+  "/console/bookings",
   getRoute(async ({ organizationId, request, requestUrl }) => {
     const authUser = await verifyAuth(request);
-    requirePermission(authUser, organizationId, "admin.bookings.read");
+    requirePermission(authUser, organizationId, "console.bookings.read");
     const listQueryParams = parseListQueryParams(requestUrl.searchParams);
     if (!listQueryParams) {
       return jsonError(400, "VALIDATION_ERROR", INVALID_LIST_QUERY_MESSAGE);
@@ -202,11 +202,11 @@ adminListingRoutes.get(
   }),
 );
 
-adminListingRoutes.get(
-  "/admin/customers",
+consoleListingRoutes.get(
+  "/console/customers",
   getRoute(async ({ organizationId, request, requestUrl }) => {
     const authUser = await verifyAuth(request);
-    requirePermission(authUser, organizationId, "admin.customers.read");
+    requirePermission(authUser, organizationId, "console.customers.read");
     const listQueryParams = parseListQueryParams(requestUrl.searchParams);
     if (!listQueryParams) {
       return jsonError(400, "VALIDATION_ERROR", INVALID_LIST_QUERY_MESSAGE);
@@ -235,11 +235,11 @@ adminListingRoutes.get(
   }),
 );
 
-adminListingRoutes.get(
-  "/admin/payments",
+consoleListingRoutes.get(
+  "/console/payments",
   getRoute(async ({ organizationId, request, requestUrl }) => {
     const authUser = await verifyAuth(request);
-    requirePermission(authUser, organizationId, "admin.payments.read");
+    requirePermission(authUser, organizationId, "console.payments.read");
     const listQueryParams = parseListQueryParams(requestUrl.searchParams);
     if (!listQueryParams) {
       return jsonError(400, "VALIDATION_ERROR", INVALID_LIST_QUERY_MESSAGE);

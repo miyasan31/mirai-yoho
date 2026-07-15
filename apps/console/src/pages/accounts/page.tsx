@@ -32,16 +32,19 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import {
-  useAdminAccounts,
-  useAdminAccountsQueryKey,
-  useDeleteAdminAccount,
+  useConsoleAccounts,
+  useConsoleAccountsQueryKey,
+  useDeleteConsoleAccount,
   useInviteAccount,
   useResendAccountInvite,
   useResetAccountPassword,
   useUpdateAccountDisplayName,
   useUpdateAccountRole,
-} from "@/hooks/use-admin-accounts";
-import { useAdminRoles, useAdminRolesQueryKey } from "@/hooks/use-admin-roles";
+} from "@/hooks/use-console-accounts";
+import {
+  useConsoleRoles,
+  useConsoleRolesQueryKey,
+} from "@/hooks/use-console-roles";
 import {
   type AccountEditDisplayNameFormValues,
   accountEditDisplayNameFormSchema,
@@ -55,27 +58,27 @@ import {
   accountInviteFormSchema,
 } from "./account-invite-form-schema";
 import {
-  canDeleteAdminAccount,
+  canDeleteConsoleAccount,
   canEditDisplayName,
   canResendInvite,
   canResetPassword,
 } from "./account-permissions";
 
-export default function AdminAccountsPage() {
+export default function ConsoleAccountsPage() {
   const { organizationId } = useOrganizationRouting();
   const resolvedOrganizationId = organizationId ?? "";
   const { roleId, user, hasPermission, refreshAuthContext } = useAuth();
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
     useListQueryParams();
-  const { data, isLoading } = useAdminAccounts({
+  const { data, isLoading } = useConsoleAccounts({
     page,
     pageSize,
     sortBy,
     sortOrder: "desc",
   });
-  const { data: roleData } = useAdminRoles();
-  const queryKey = useAdminAccountsQueryKey();
-  const rolesQueryKey = useAdminRolesQueryKey();
+  const { data: roleData } = useConsoleRoles();
+  const queryKey = useConsoleAccountsQueryKey();
+  const rolesQueryKey = useConsoleRolesQueryKey();
   const queryCustomer = useQueryClient();
   const roles = roleData?.data?.roles ?? [];
   const roleCollection = createListCollection({
@@ -139,7 +142,7 @@ export default function AdminAccountsPage() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteAccountId, setDeleteAccountId] = useState<string>("");
   const [deleteEmail, setDeleteEmail] = useState("");
-  const deleteAdminAccount = useDeleteAdminAccount();
+  const deleteConsoleAccount = useDeleteConsoleAccount();
 
   const resendAccountInvite = useResendAccountInvite();
   const resetAccountPassword = useResetAccountPassword();
@@ -156,7 +159,7 @@ export default function AdminAccountsPage() {
     roles.map((role) => [role.roleId, role.name] as const),
   );
 
-  if (!organizationId || !hasPermission("admin.accounts.read")) {
+  if (!organizationId || !hasPermission("console.accounts.read")) {
     return <Text>権限がありません</Text>;
   }
 
@@ -260,7 +263,7 @@ export default function AdminAccountsPage() {
 
   const handleDelete = async () => {
     try {
-      await deleteAdminAccount.mutateAsync({
+      await deleteConsoleAccount.mutateAsync({
         organizationId: resolvedOrganizationId,
         accountId: deleteAccountId,
       });
@@ -407,16 +410,16 @@ export default function AdminAccountsPage() {
               </Table.Row>
             </Table.Head>
             <Table.Body>
-              {accounts.map((adminUser) => (
+              {accounts.map((consoleUser) => (
                 <Table.Row
-                  key={adminUser.accountId}
+                  key={consoleUser.accountId}
                   bg={
-                    currentAccountId === adminUser.accountId
+                    currentAccountId === consoleUser.accountId
                       ? "blue.2"
                       : undefined
                   }
                 >
-                  <Table.Cell>{adminUser.email}</Table.Cell>
+                  <Table.Cell>{consoleUser.email}</Table.Cell>
                   <Table.Cell>
                     <styled.div
                       display="inline-flex"
@@ -424,9 +427,9 @@ export default function AdminAccountsPage() {
                       gap="2"
                     >
                       <Text as="span">
-                        {adminUser.name || adminUser.email || "-"}
+                        {consoleUser.name || consoleUser.email || "-"}
                       </Text>
-                      {currentAccountId === adminUser.accountId && (
+                      {currentAccountId === consoleUser.accountId && (
                         <styled.div
                           display="inline-flex"
                           alignItems="center"
@@ -445,18 +448,18 @@ export default function AdminAccountsPage() {
                     </styled.div>
                   </Table.Cell>
                   <Table.Cell>
-                    {adminUser.roleName ?? adminUser.roleId}
+                    {consoleUser.roleName ?? consoleUser.roleId}
                   </Table.Cell>
                   <Table.Cell>
-                    <AccountStatusBadge status={adminUser.status} />
+                    <AccountStatusBadge status={consoleUser.status} />
                   </Table.Cell>
                   <Table.Cell>
                     <styled.div display="flex" gap="1">
-                      {hasPermission("admin.accounts.display-name.manage") &&
+                      {hasPermission("console.accounts.display-name.manage") &&
                         canEditDisplayName(
                           roleId,
                           user?.uid,
-                          adminUser.accountId,
+                          consoleUser.accountId,
                         ) && (
                           <Tooltip content="表示名変更">
                             <IconButton
@@ -464,10 +467,11 @@ export default function AdminAccountsPage() {
                               size="sm"
                               onClick={() => {
                                 setEditDisplayNameAccountId(
-                                  adminUser.accountId,
+                                  consoleUser.accountId,
                                 );
                                 resetEditDisplayNameForm({
-                                  name: adminUser.name || adminUser.email || "",
+                                  name:
+                                    consoleUser.name || consoleUser.email || "",
                                 });
                                 setEditDisplayNameOpen(true);
                               }}
@@ -476,78 +480,79 @@ export default function AdminAccountsPage() {
                             </IconButton>
                           </Tooltip>
                         )}
-                      {roleId === "admin" && adminUser.status === "active" && (
-                        <Tooltip content="ロール変更">
-                          <IconButton
-                            variant="subtle"
-                            size="sm"
-                            onClick={() => {
-                              setEditRoleAccountId(adminUser.accountId);
-                              setEditRoleValue(
-                                "roleId",
-                                adminUser.roleId as AccountEditRoleFormValues["roleId"],
-                              );
-                              setEditRoleOpen(true);
-                            }}
-                          >
-                            <ShieldAlert size={16} />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {hasPermission("admin.accounts.invite.resend") &&
-                        canResendInvite(roleId, adminUser.status) && (
+                      {roleId === "admin" &&
+                        consoleUser.status === "active" && (
+                          <Tooltip content="ロール変更">
+                            <IconButton
+                              variant="subtle"
+                              size="sm"
+                              onClick={() => {
+                                setEditRoleAccountId(consoleUser.accountId);
+                                setEditRoleValue(
+                                  "roleId",
+                                  consoleUser.roleId as AccountEditRoleFormValues["roleId"],
+                                );
+                                setEditRoleOpen(true);
+                              }}
+                            >
+                              <ShieldAlert size={16} />
+                            </IconButton>
+                          </Tooltip>
+                        )}
+                      {hasPermission("console.accounts.invite.resend") &&
+                        canResendInvite(roleId, consoleUser.status) && (
                           <Tooltip content="招待メール再送">
                             <IconButton
                               variant="subtle"
                               size="sm"
                               onClick={() =>
                                 handleResendInvite(
-                                  adminUser.accountId,
-                                  adminUser.email,
+                                  consoleUser.accountId,
+                                  consoleUser.email,
                                 )
                               }
                               loading={
                                 resendAccountInvite.isPending &&
                                 resendAccountInvite.variables?.accountId ===
-                                  adminUser.accountId
+                                  consoleUser.accountId
                               }
                             >
                               <Mail size={16} />
                             </IconButton>
                           </Tooltip>
                         )}
-                      {hasPermission("admin.accounts.password-reset") &&
-                        canResetPassword(roleId, adminUser.status) && (
+                      {hasPermission("console.accounts.password-reset") &&
+                        canResetPassword(roleId, consoleUser.status) && (
                           <Tooltip content="パスワードリセット">
                             <IconButton
                               variant="subtle"
                               size="sm"
                               onClick={() =>
                                 handleResetPassword(
-                                  adminUser.accountId,
-                                  adminUser.email,
+                                  consoleUser.accountId,
+                                  consoleUser.email,
                                 )
                               }
                               loading={
                                 resetAccountPassword.isPending &&
                                 resetAccountPassword.variables?.accountId ===
-                                  adminUser.accountId
+                                  consoleUser.accountId
                               }
                             >
                               <RotateCcwKey size={16} />
                             </IconButton>
                           </Tooltip>
                         )}
-                      {hasPermission("admin.accounts.delete") &&
-                        canDeleteAdminAccount(roleId) && (
+                      {hasPermission("console.accounts.delete") &&
+                        canDeleteConsoleAccount(roleId) && (
                           <Tooltip content="削除">
                             <IconButton
                               variant="subtle"
                               size="sm"
                               colorPalette="red"
                               onClick={() => {
-                                setDeleteAccountId(adminUser.accountId);
-                                setDeleteEmail(adminUser.email);
+                                setDeleteAccountId(consoleUser.accountId);
+                                setDeleteEmail(consoleUser.email);
                                 setDeleteOpen(true);
                               }}
                             >
@@ -711,7 +716,7 @@ export default function AdminAccountsPage() {
               <Button
                 colorPalette="red"
                 onClick={handleDelete}
-                loading={deleteAdminAccount.isPending}
+                loading={deleteConsoleAccount.isPending}
                 loadingText="削除中..."
               >
                 削除する

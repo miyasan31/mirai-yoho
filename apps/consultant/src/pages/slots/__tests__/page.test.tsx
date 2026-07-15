@@ -194,8 +194,8 @@ vi.mock("@mirai-yoho/console-core/hooks/use-booking-settings", () => ({
   usePublicBookingSettings: () => mockUsePublicBookingSettings(),
 }));
 
-vi.mock("@/hooks/use-admin-slots", () => ({
-  useGetAdminSlots: () => ({
+vi.mock("@/hooks/use-console-slots", () => ({
+  useGetConsoleSlots: () => ({
     data: { data: { slots: [] } },
     isLoading: false,
     refetch: mockRefetch,

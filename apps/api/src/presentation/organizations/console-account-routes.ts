@@ -24,12 +24,12 @@ import {
   getUsersByUids,
 } from "@/infrastructure/firebase/firebase-auth-admin";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
-import { deleteAdminUserWithAuthCleanup } from "./admin-user-deletion";
+import { deleteConsoleUserWithAuthCleanup } from "./console-user-deletion";
 import {
   canUpdateDisplayNameTarget,
   isLastAdminSelfDemotion,
-  validateAdminUserDeletionTarget,
-} from "./admin-user-policy";
+  validateConsoleUserDeletionTarget,
+} from "./console-user-policy";
 import {
   INVALID_LIST_QUERY_MESSAGE,
   paginateArray,
@@ -45,13 +45,13 @@ import {
   postRoute,
 } from "./route-handler";
 
-export const adminAccountRoutes = new Hono();
+export const consoleAccountRoutes = new Hono();
 
-adminAccountRoutes.get(
-  "/admin/accounts",
+consoleAccountRoutes.get(
+  "/console/accounts",
   getRoute(async ({ organizationId, request, requestUrl }) => {
     const authUser = await verifyAuth(request);
-    requirePermission(authUser, organizationId, "admin.accounts.read");
+    requirePermission(authUser, organizationId, "console.accounts.read");
     const listQueryParams = parseListQueryParams(requestUrl.searchParams);
     if (!listQueryParams) {
       return jsonError(400, "VALIDATION_ERROR", INVALID_LIST_QUERY_MESSAGE);
@@ -96,8 +96,8 @@ adminAccountRoutes.get(
   }),
 );
 
-adminAccountRoutes.post(
-  "/admin/accounts/invite",
+consoleAccountRoutes.post(
+  "/console/accounts/invite",
   postRoute(async ({ organizationId, request, requestUrl }) => {
     const authUser = await verifyAuth(request);
     const actorAccount = requireSystemAdminRole(authUser, organizationId);
@@ -210,11 +210,15 @@ adminAccountRoutes.post(
   }),
 );
 
-adminAccountRoutes.post(
-  "/admin/accounts/:accountId/resend-invite",
+consoleAccountRoutes.post(
+  "/console/accounts/:accountId/resend-invite",
   postRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requirePermission(authUser, organizationId, "admin.accounts.invite.resend");
+    requirePermission(
+      authUser,
+      organizationId,
+      "console.accounts.invite.resend",
+    );
     const accountId = param("accountId");
     const userRecord = await getUser(accountId);
     const account = await createAccountRepository().findById(
@@ -254,14 +258,14 @@ adminAccountRoutes.post(
   }),
 );
 
-adminAccountRoutes.post(
-  "/admin/accounts/:accountId/reset-password",
+consoleAccountRoutes.post(
+  "/console/accounts/:accountId/reset-password",
   postRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
     requirePermission(
       authUser,
       organizationId,
-      "admin.accounts.password-reset",
+      "console.accounts.password-reset",
     );
     const accountId = param("accountId");
     const account = await createAccountRepository().findById(
@@ -289,14 +293,14 @@ adminAccountRoutes.post(
   }),
 );
 
-adminAccountRoutes.patch(
-  "/admin/accounts/:accountId/display-name",
+consoleAccountRoutes.patch(
+  "/console/accounts/:accountId/display-name",
   patchRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
     const actorAccount = requirePermission(
       authUser,
       organizationId,
-      "admin.accounts.display-name.manage",
+      "console.accounts.display-name.manage",
     );
     const accountId = param("accountId");
     const body = await request.json();
@@ -334,8 +338,8 @@ adminAccountRoutes.patch(
   }),
 );
 
-adminAccountRoutes.patch(
-  "/admin/accounts/:accountId/role",
+consoleAccountRoutes.patch(
+  "/console/accounts/:accountId/role",
   patchRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
     requireSystemAdminRole(authUser, organizationId);
@@ -386,18 +390,18 @@ adminAccountRoutes.patch(
   }),
 );
 
-adminAccountRoutes.delete(
-  "/admin/accounts/:accountId",
+consoleAccountRoutes.delete(
+  "/console/accounts/:accountId",
   deleteRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requirePermission(authUser, organizationId, "admin.accounts.delete");
+    requirePermission(authUser, organizationId, "console.accounts.delete");
     const accountId = param("accountId");
     const accountRepository = createAccountRepository();
     const account = await accountRepository.findById(organizationId, accountId);
     if (!account) {
       return jsonError(404, "NOT_FOUND", "Account not found");
     }
-    const deletionTargetValidation = validateAdminUserDeletionTarget(
+    const deletionTargetValidation = validateConsoleUserDeletionTarget(
       authUser.authUid,
       accountId,
     );
@@ -409,7 +413,7 @@ adminAccountRoutes.delete(
       );
     }
 
-    await deleteAdminUserWithAuthCleanup({
+    await deleteConsoleUserWithAuthCleanup({
       accountId,
       account,
       countAccountsByAccountId: (targetAccountId) =>

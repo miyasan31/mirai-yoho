@@ -44,8 +44,8 @@
 - Firestore: `accounts.authUid` → **`accountId`**（値は同じ、Doc ID の形式・値も不変）
 - Domain: 新規 `Account` エンティティ + `IAccountRepository`（§3.5 の Repository 化 TODO を同時に解消）
 - 認証コンテキスト: `AuthUser.authUid` は **維持**（これは「認証セッションの Firebase Auth uid」で、accounts 集約のフィールドではないため）。ただし内部変数・関数引数のうち accounts 集約に紐づく `targetAuthUid` などは `targetAccountId` にリネーム
-- API: `AdminAccount.authUid` → **`accountId`**、`AuthUidParam` → **`AccountIdParam`**、path `/admin/accounts/{authUid}/*` → **`/admin/accounts/{accountId}/*`**、招待レスポンス `{ authUid }` → **`{ accountId }`**（`pnpm generate` でクライアント再生成）
-- 併せて `AdminAccount.status` の enum を `pending`/`registered` から Firestore と揃えた **`active`/`invited`/`disabled`** に変更（§3.5 の合意を実装に反映）
+- API: `ConsoleAccount.authUid` → **`accountId`**、`AuthUidParam` → **`AccountIdParam`**、path `/admin/accounts/{authUid}/*` → **`/admin/accounts/{accountId}/*`**、招待レスポンス `{ authUid }` → **`{ accountId }`**（`pnpm generate` でクライアント再生成）
+- 併せて `ConsoleAccount.status` の enum を `pending`/`registered` から Firestore と揃えた **`active`/`invited`/`disabled`** に変更（§3.5 の合意を実装に反映）
 
 **触らないもの**:
 - `users.authUid`（別集約の外部参照フィールド）
@@ -70,7 +70,7 @@
 **適用範囲**:
 - Firestore: `accounts.uid` → **`authUid`**（doc ID `{organizationId}_{authUid}` の形式・値は不変）
 - 認証コンテキスト: `AuthUser.uid` → **`authUid`**（`load-auth-context.ts` のクエリ・`getAccountDocId` 引数含む）
-- API: `/auth/me` レスポンス・招待レスポンス・`AdminAccount` スキーマの `uid` → **`authUid`**、パスパラメータ `/admin/accounts/{uid}` → **`{authUid}`**（`UserIdParam` → `AuthUidParam`。`pnpm generate` でクライアント再生成）
+- API: `/auth/me` レスポンス・招待レスポンス・`ConsoleAccount` スキーマの `uid` → **`authUid`**、パスパラメータ `/admin/accounts/{uid}` → **`{authUid}`**（`UserIdParam` → `AuthUidParam`。`pnpm generate` でクライアント再生成）
 - admin UI（accounts ページ）・監査ログ等の修飾付き複合名: `actorUid` / `targetUid` / `countAccountsByUid` → **`actorAuthUid` / `targetAuthUid` / `countAccountsByAuthUid`**
 
 **対象外（据え置き）**:
@@ -368,7 +368,7 @@
 - API: `Account.role` → `Account.roleId` + `isConsultant: boolean` を追加（`consultants` から導出）。`requireRole(authUser, orgId, "consultant") → requireConsultant`、`requireRoleId` 新設、`requireSystemAdminRole` は `roleId` 参照
 - ルート: 招待ペイロード `{ role }` → `{ roleId, isConsultant? }`、ロール変更ペイロード `{ role }` → `{ roleId }`、`admin-role-routes` の `roleId === "consultant"` 予約語チェック削除、`admin-account-routes` の `isAdminPanelUserRole` チェック削除
 - Email: `sendInvitation({ role })` → `sendInvitation({ roleName, isConsultant })`
-- OpenAPI: `AdminAccount.role → roleId`、`inviteAccount` / `updateAccountRole` のリクエスト schema
+- OpenAPI: `ConsoleAccount.role → roleId`、`inviteAccount` / `updateAccountRole` のリクエスト schema
 - SPA (console-core / admin / consultant): `useAuth().role → useAuth().roleId`、`currentRole → currentRoleId`、`isConsultant` フラグ追加。相談員 SPA ログインゲートは `currentIsConsultant` で判定
 - `firestore.rules`: `hasRole → hasRoleId`（`accountData.role → .roleId`）、`isOrganizationConsultant` は `consultants` doc の `exists()` で判定（**terraform apply 必須**）
 
@@ -379,12 +379,12 @@
 - 実行: `pnpm dlx tsx --env-file=.env.local apps/api/scripts/migrate-account-role-to-role-id.ts`
 
 **連鎖影響**
-- `openapi.yaml` AdminAccount.status enum 変更（`pending` / `registered`）
+- `openapi.yaml` ConsoleAccount.status enum 変更（`pending` / `registered`）
 - `load-auth-context.ts` の name 取得元変更、および consultants コレクションを uid で 1 クエリ引いて `isConsultant` を展開
-- AdminAccount API の `displayName` → **`name`** にリネーム
+- ConsoleAccount API の `displayName` → **`name`** にリネーム
 - ~~`user-preferences`~~ 廃止（§3.10）
 
-**根拠**: `load-auth-context.ts`, `admin-account-routes.ts`, `openapi.yaml` (AdminAccount), `auth-types.ts`, `firestore.rules`
+**根拠**: `load-auth-context.ts`, `admin-account-routes.ts`, `openapi.yaml` (ConsoleAccount), `auth-types.ts`, `firestore.rules`
 
 ---
 
@@ -551,7 +551,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 | API `pricePlanSelectionId` → `selectionId` | `openapi.yaml`, route, 公開予約 UI, Orval |
 | CreateBooking から `clientBirthdate` 削除 | `openapi.yaml`, route, 予約フォーム |
 | `customers.memo` → `note` | customer repository, openapi, 管理 UI |
-| AdminAccount `displayName` → `name`、status enum 統一 | openapi, route, admin UI |
+| ConsoleAccount `displayName` → `name`、status enum 統一 | openapi, route, admin UI |
 | `organizations.organizationName` → `name` | auth-types, layouts, load-auth-context |
 
 ### 4.2 優先度: 中（アーキテクチャ整備）

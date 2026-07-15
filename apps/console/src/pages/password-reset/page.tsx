@@ -13,7 +13,7 @@ import {
   passwordResetFormSchema,
 } from "./password-reset-form-schema";
 
-export default function AdminPasswordResetPage() {
+export default function ConsolePasswordResetPage() {
   const { sendPasswordResetEmail } = useAuth();
   const {
     register,

@@ -1,5 +1,5 @@
 import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
-import { useAdminBookingSettings } from "@mirai-yoho/console-core/hooks/use-booking-settings";
+import { useConsoleBookingSettings } from "@mirai-yoho/console-core/hooks/use-booking-settings";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { BusinessHours } from "@mirai-yoho/shared/business-hours";
 import { Tabs } from "@mirai-yoho/ui/components/ui";
@@ -28,16 +28,16 @@ function isSettingsTab(value: string | null): value is SettingsTab {
   );
 }
 
-export default function AdminSettingsPage() {
+export default function ConsoleSettingsPage() {
   const { organizationId } = useOrganizationRouting();
   const navigate = useNavigate();
   const search = useSearch({ strict: false }) as Record<string, unknown>;
   const tabQueryValue = typeof search.tab === "string" ? search.tab : null;
   const { hasPermission } = useAuth();
-  const { data, isLoading } = useAdminBookingSettings();
-  const isReadOnly = !hasPermission("admin.settings.manage");
+  const { data, isLoading } = useConsoleBookingSettings();
+  const isReadOnly = !hasPermission("console.settings.manage");
   const canManageConsultantStatuses = hasPermission(
-    "admin.consultants.status.manage",
+    "console.consultants.status.manage",
   );
   const [currentTab, setCurrentTab] = useState<SettingsTab>("booking");
   const [initialized, setInitialized] = useState(false);

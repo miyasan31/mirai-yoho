@@ -4,7 +4,7 @@ import type * as React from "react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-const mockUseAdminCustomers = vi.fn();
+const mockUseConsoleCustomers = vi.fn();
 const mockNavigate = vi.fn();
 
 type QueryState = {
@@ -19,9 +19,9 @@ let mockSearch: QueryState = {
   "sort-by": 2,
 };
 
-vi.mock("@/hooks/use-admin-customers", () => ({
-  useAdminCustomers: (params?: Record<string, unknown>) =>
-    mockUseAdminCustomers(params),
+vi.mock("@/hooks/use-console-customers", () => ({
+  useConsoleCustomers: (params?: Record<string, unknown>) =>
+    mockUseConsoleCustomers(params),
 }));
 
 vi.mock("@mirai-yoho/ui/components/list-controls", () => ({
@@ -94,18 +94,18 @@ vi.mock("@tanstack/react-router", () => ({
   useNavigate: () => mockNavigate,
 }));
 
-import AdminCustomersPage from "../page";
+import ConsoleCustomersPage from "../page";
 
-describe("AdminCustomersPage query params", () => {
+describe("ConsoleCustomersPage query params", () => {
   beforeEach(() => {
-    mockUseAdminCustomers.mockReset();
+    mockUseConsoleCustomers.mockReset();
     mockNavigate.mockClear();
     mockSearch = {
       page: 3,
       "page-size": 50,
       "sort-by": 2,
     };
-    mockUseAdminCustomers.mockReturnValue({
+    mockUseConsoleCustomers.mockReturnValue({
       data: {
         data: {
           customers: [],
@@ -122,9 +122,9 @@ describe("AdminCustomersPage query params", () => {
   });
 
   it("passes URL query values to API query params", () => {
-    render(<AdminCustomersPage />);
+    render(<ConsoleCustomersPage />);
 
-    expect(mockUseAdminCustomers).toHaveBeenCalledWith({
+    expect(mockUseConsoleCustomers).toHaveBeenCalledWith({
       page: 3,
       pageSize: 50,
       sortBy: "updatedAt",

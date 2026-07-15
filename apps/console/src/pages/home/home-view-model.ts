@@ -7,7 +7,7 @@ import type {
 const UPCOMING_LIMIT_DEFAULT = 5;
 const CHARGEABLE_LIMIT_DEFAULT = 5;
 
-export interface AdminHomeBookingItem {
+export interface ConsoleHomeBookingItem {
   bookingId: string;
   customerId: string;
   customerName: string;
@@ -18,7 +18,7 @@ export interface AdminHomeBookingItem {
   chargeable: boolean;
 }
 
-export interface AdminHomeChargeableItem {
+export interface ConsoleHomeChargeableItem {
   bookingId: string;
   customerId: string;
   customerName: string;
@@ -27,19 +27,19 @@ export interface AdminHomeChargeableItem {
   paymentStatus: string | null;
 }
 
-export interface AdminHomeTodoSummary {
+export interface ConsoleHomeTodoSummary {
   upcomingUnprocessedCount: number;
   chargePendingCount: number;
   memoMissingCount: number;
 }
 
-export interface AdminHomeViewModel {
-  todo: AdminHomeTodoSummary;
-  upcomingBookings: AdminHomeBookingItem[];
-  chargeableBookings: AdminHomeChargeableItem[];
+export interface ConsoleHomeViewModel {
+  todo: ConsoleHomeTodoSummary;
+  upcomingBookings: ConsoleHomeBookingItem[];
+  chargeableBookings: ConsoleHomeChargeableItem[];
 }
 
-interface BuildAdminHomeViewModelParams {
+interface BuildConsoleHomeViewModelParams {
   bookings: BookingDetail[];
   payments: PaymentDetail[];
   customers: CustomerDetail[];
@@ -64,14 +64,14 @@ function isBlank(value: string | undefined): boolean {
   return (value ?? "").trim().length === 0;
 }
 
-export function buildAdminHomeViewModel({
+export function buildConsoleHomeViewModel({
   bookings,
   payments,
   customers,
   now = new Date(),
   upcomingLimit = UPCOMING_LIMIT_DEFAULT,
   chargeableLimit = CHARGEABLE_LIMIT_DEFAULT,
-}: BuildAdminHomeViewModelParams): AdminHomeViewModel {
+}: BuildConsoleHomeViewModelParams): ConsoleHomeViewModel {
   const customerNameById = new Map(
     customers.map((customer) => [customer.customerId, customer.name]),
   );
@@ -79,7 +79,7 @@ export function buildAdminHomeViewModel({
     payments.map((payment) => [payment.bookingId, payment]),
   );
 
-  const mappedBookings: AdminHomeBookingItem[] = bookings
+  const mappedBookings: ConsoleHomeBookingItem[] = bookings
     .map((booking) => ({
       bookingId: booking.bookingId,
       customerId: booking.customerId,

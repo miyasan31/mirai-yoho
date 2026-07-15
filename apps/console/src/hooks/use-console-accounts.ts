@@ -1,22 +1,22 @@
 import {
-  getGetAdminAccountsQueryKey as getGeneratedAdminAccountsQueryKey,
-  useDeleteAdminAccount,
-  useGetAdminAccounts,
+  getGetConsoleAccountsQueryKey as getGeneratedAdminAccountsQueryKey,
+  useDeleteConsoleAccount,
+  useGetConsoleAccounts,
   useInviteAccount,
   useResendAccountInvite,
   useResetAccountPassword,
   useUpdateAccountDisplayName,
   useUpdateAccountRole,
-} from "@mirai-yoho/api-client/api/admin/admin";
-import type { GetAdminAccountsParams } from "@mirai-yoho/api-client/schemas";
+} from "@mirai-yoho/api-client/api/console/console";
+import type { GetConsoleAccountsParams } from "@mirai-yoho/api-client/schemas";
 import { QUERY_STALE_TIME } from "@mirai-yoho/console-core/hooks/query-cache-policy";
 import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 
-export function useAdminAccounts(params?: GetAdminAccountsParams) {
+export function useConsoleAccounts(params?: GetConsoleAccountsParams) {
   const { token } = useAuth();
   const { organizationId } = useOrganizationRouting();
-  return useGetAdminAccounts(organizationId ?? "", params, {
+  return useGetConsoleAccounts(organizationId ?? "", params, {
     query: {
       enabled: !!token && !!organizationId,
       staleTime: QUERY_STALE_TIME.normal,
@@ -24,13 +24,13 @@ export function useAdminAccounts(params?: GetAdminAccountsParams) {
   });
 }
 
-export function useAdminAccountsQueryKey() {
+export function useConsoleAccountsQueryKey() {
   const { organizationId } = useOrganizationRouting();
   return getGeneratedAdminAccountsQueryKey(organizationId ?? "");
 }
 
 export {
-  useDeleteAdminAccount,
+  useDeleteConsoleAccount,
   useInviteAccount,
   useResendAccountInvite,
   useResetAccountPassword,

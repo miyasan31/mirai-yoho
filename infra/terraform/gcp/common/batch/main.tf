@@ -20,7 +20,10 @@ locals {
       "FIREBASE_PRIVATE_KEY",
       "FIREBASE_PROJECT_ID",
       "LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL",
+      # ADMIN_APP_URL は Cloud Run env としては未使用だが、Secret 存続と IAM 維持のため
+      # ここに残す（完全移行後に削除。詳細は firebase/main.tf のコメント参照）。
       "ADMIN_APP_URL",
+      "CONSOLE_APP_URL",
     ])
   }
 

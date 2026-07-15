@@ -110,7 +110,7 @@ const defaultBusinessHours = {
   exceptions: [],
 };
 vi.mock("@mirai-yoho/console-core/hooks/use-booking-settings", () => ({
-  useAdminBookingSettings: () => ({
+  useConsoleBookingSettings: () => ({
     data: {
       data: {
         consultantSelectionEnabled: true,
@@ -119,7 +119,7 @@ vi.mock("@mirai-yoho/console-core/hooks/use-booking-settings", () => ({
     },
     isLoading: false,
   }),
-  useAdminConsultantStatuses: () => ({
+  useConsoleConsultantStatuses: () => ({
     data: {
       data: {
         consultantStatuses: [
@@ -131,11 +131,11 @@ vi.mock("@mirai-yoho/console-core/hooks/use-booking-settings", () => ({
     },
     isLoading: false,
   }),
-  useUpdateAdminBookingSettings: () => ({
+  useUpdateConsoleBookingSettings: () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
   }),
-  useUpdateAdminConsultantStatuses: () => ({
+  useUpdateConsoleConsultantStatuses: () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
   }),
@@ -144,9 +144,9 @@ vi.mock("@mirai-yoho/console-core/hooks/use-auth", () => ({
   useAuth: () => mockUseAuth(),
 }));
 
-import AdminSettingsPage from "../page";
+import ConsoleSettingsPage from "../page";
 
-describe("AdminSettingsPage", () => {
+describe("ConsoleSettingsPage", () => {
   beforeEach(() => {
     mockUseAuth.mockReturnValue({
       roleId: "admin",
@@ -161,7 +161,7 @@ describe("AdminSettingsPage", () => {
   });
 
   it("shows booking tab by default", () => {
-    render(<AdminSettingsPage />);
+    render(<ConsoleSettingsPage />);
     const tabPanels = screen.getAllByRole("tabpanel", { hidden: true });
     const businessHoursPanel = tabPanels.find((panel) =>
       panel.id.includes("content-business-hours"),
@@ -180,7 +180,7 @@ describe("AdminSettingsPage", () => {
 
   it("opens business-hours tab from query", () => {
     currentTabParam = "business-hours";
-    render(<AdminSettingsPage />);
+    render(<ConsoleSettingsPage />);
     const tabPanels = screen.getAllByRole("tabpanel", { hidden: true });
     const bookingPanel = tabPanels.find((panel) =>
       panel.id.includes("content-booking"),
@@ -199,7 +199,7 @@ describe("AdminSettingsPage", () => {
 
   it("updates tab query when switching tabs", async () => {
     const user = userEvent.setup();
-    render(<AdminSettingsPage />);
+    render(<ConsoleSettingsPage />);
 
     await user.click(screen.getByRole("tab", { name: "営業時間" }));
 
@@ -209,7 +209,7 @@ describe("AdminSettingsPage", () => {
 
   it("shows consultant status settings", async () => {
     const user = userEvent.setup();
-    render(<AdminSettingsPage />);
+    render(<ConsoleSettingsPage />);
 
     await user.click(screen.getByRole("tab", { name: "相談員ステータス" }));
     const panel = screen.getByRole("tabpanel", { name: "相談員ステータス" });
@@ -224,7 +224,7 @@ describe("AdminSettingsPage", () => {
 
   it("keeps unsaved booking form state across tab switches", async () => {
     const user = userEvent.setup();
-    render(<AdminSettingsPage />);
+    render(<ConsoleSettingsPage />);
 
     const bookingCheckbox = screen.getAllByRole("checkbox")[0];
     expect(bookingCheckbox).toBeChecked();
@@ -251,7 +251,7 @@ describe("AdminSettingsPage", () => {
     });
 
     const user = userEvent.setup();
-    render(<AdminSettingsPage />);
+    render(<ConsoleSettingsPage />);
 
     const bookingCheckbox = screen.getAllByRole("checkbox")[0];
     await user.click(bookingCheckbox);
@@ -280,7 +280,7 @@ describe("AdminSettingsPage", () => {
     });
 
     const user = userEvent.setup();
-    render(<AdminSettingsPage />);
+    render(<ConsoleSettingsPage />);
 
     await user.click(screen.getByRole("tab", { name: "営業時間" }));
     await user.click(screen.getByRole("button", { name: "例外日を追加" }));
@@ -327,7 +327,7 @@ describe("AdminSettingsPage", () => {
   it("shows validation error on invalid business-hours range", async () => {
     mockUseAuth.mockReturnValue({ roleId: "admin", hasPermission: () => true });
     const user = userEvent.setup();
-    render(<AdminSettingsPage />);
+    render(<ConsoleSettingsPage />);
 
     await user.click(screen.getByRole("tab", { name: "営業時間" }));
     await user.click(screen.getByRole("button", { name: "例外日を追加" }));
@@ -361,7 +361,7 @@ describe("AdminSettingsPage", () => {
       hasPermission: () => false,
     });
     const user = userEvent.setup();
-    render(<AdminSettingsPage />);
+    render(<ConsoleSettingsPage />);
 
     const checkboxes = screen.getAllByRole("checkbox");
     const saveButton = screen.getByRole("button", { name: "保存" });

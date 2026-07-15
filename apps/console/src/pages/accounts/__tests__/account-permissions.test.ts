@@ -1,21 +1,21 @@
 import {
-  canDeleteAdminAccount,
+  canDeleteConsoleAccount,
   canEditDisplayName,
   canEditRole,
-  canInviteAdminAccounts,
-  canManageAdminAccounts,
+  canInviteConsoleAccounts,
+  canManageConsoleAccounts,
   canResendInvite,
   canResetPassword,
 } from "../account-permissions";
 
 describe("account permissions", () => {
   it("allows any assigned roleId to access account management and invite", () => {
-    expect(canManageAdminAccounts("admin")).toBe(true);
-    expect(canManageAdminAccounts("operator")).toBe(true);
-    expect(canManageAdminAccounts("custom-role")).toBe(true);
-    expect(canManageAdminAccounts(null)).toBe(false);
-    expect(canInviteAdminAccounts("admin")).toBe(true);
-    expect(canInviteAdminAccounts("operator")).toBe(true);
+    expect(canManageConsoleAccounts("admin")).toBe(true);
+    expect(canManageConsoleAccounts("operator")).toBe(true);
+    expect(canManageConsoleAccounts("custom-role")).toBe(true);
+    expect(canManageConsoleAccounts(null)).toBe(false);
+    expect(canInviteConsoleAccounts("admin")).toBe(true);
+    expect(canInviteConsoleAccounts("operator")).toBe(true);
   });
 
   it("allows non-admin roles to edit display name only for self", () => {
@@ -33,8 +33,8 @@ describe("account permissions", () => {
     expect(canEditRole("admin", "invited")).toBe(false);
     expect(canEditRole("admin", "disabled")).toBe(false);
     expect(canEditRole("operator", "active")).toBe(false);
-    expect(canDeleteAdminAccount("admin")).toBe(true);
-    expect(canDeleteAdminAccount("operator")).toBe(true);
+    expect(canDeleteConsoleAccount("admin")).toBe(true);
+    expect(canDeleteConsoleAccount("operator")).toBe(true);
   });
 
   it("allows resend invite only for invited accounts and reset password only for active accounts", () => {

@@ -1,9 +1,9 @@
 import {
-  useGetAdminBookingSettings,
-  useGetAdminConsultantStatuses,
-  useUpdateAdminBookingSettings,
-  useUpdateAdminConsultantStatuses,
-} from "@mirai-yoho/api-client/api/admin/admin";
+  useGetConsoleBookingSettings,
+  useGetConsoleConsultantStatuses,
+  useUpdateConsoleBookingSettings,
+  useUpdateConsoleConsultantStatuses,
+} from "@mirai-yoho/api-client/api/console/console";
 import { useGetPublicSettings } from "@mirai-yoho/api-client/api/settings/settings";
 import { QUERY_STALE_TIME } from "./query-cache-policy";
 import { useAuth } from "./use-auth";
@@ -19,28 +19,28 @@ export function usePublicBookingSettings() {
   });
 }
 
-export function useAdminBookingSettings() {
+export function useConsoleBookingSettings() {
   const { token, hasPermission } = useAuth();
   const { organizationId } = useOrganizationRouting();
-  return useGetAdminBookingSettings(organizationId ?? "", {
+  return useGetConsoleBookingSettings(organizationId ?? "", {
     query: {
       enabled:
-        !!token && !!organizationId && hasPermission("admin.settings.read"),
+        !!token && !!organizationId && hasPermission("console.settings.read"),
       staleTime: QUERY_STALE_TIME.normal,
     },
   });
 }
 
-export function useAdminConsultantStatuses() {
+export function useConsoleConsultantStatuses() {
   const { token, hasPermission } = useAuth();
   const { organizationId } = useOrganizationRouting();
-  return useGetAdminConsultantStatuses(organizationId ?? "", {
+  return useGetConsoleConsultantStatuses(organizationId ?? "", {
     query: {
       enabled:
-        !!token && !!organizationId && hasPermission("admin.settings.read"),
+        !!token && !!organizationId && hasPermission("console.settings.read"),
       staleTime: QUERY_STALE_TIME.normal,
     },
   });
 }
 
-export { useUpdateAdminBookingSettings, useUpdateAdminConsultantStatuses };
+export { useUpdateConsoleBookingSettings, useUpdateConsoleConsultantStatuses };

@@ -193,7 +193,7 @@ make apply ENV=dev
 - Firestore Native database、複合インデックス、Firestore / Storage Security Rules
 - Firebase Storage bucket、Firebase Authentication 設定、Firebase Web App
 - Cloud Run service `api`（イメージは `deploy-api.yml` が差し替え）、実行用サービスアカウント、Secret 参照権限
-- SPA 用 Firebase Hosting サイト（user / admin / consultant）
+- SPA 用 Firebase Hosting サイト（user / console / consultant）
 - Secret Manager の Secret コンテナ（値そのものは含まない）
 - Artifact Registry、Cloud Run Job、Cloud Scheduler、各サービスアカウントと IAM
 - GitHub Actions 用 Workload Identity Federation
@@ -230,7 +230,7 @@ Secret の詳しい運用・確認方法は [Secret Manager 運用手順](secret
 `release/dev` または `release/prod` への push で、GitHub Actions が以下を実行します。GitHub Environment ごとに `GCP_PROJECT_NUMBER` や SPA ビルド用の variables を設定し、`github-deployer` サービスアカウントへ Terraform state bucket の読み書き権限を付与してください。
 
 - `deploy-api.yml` … API イメージをビルドして Cloud Run service `api` を更新
-- `deploy-hosting.yml` … SPA（user / admin / consultant）をビルドして Firebase Hosting にデプロイ
+- `deploy-hosting.yml` … SPA（user / console / consultant）をビルドして Firebase Hosting にデプロイ
 - `deploy-batch-worker.yml` … Worker イメージをビルド・push し、該当環境へ Terraform apply
 
 ## 4. 組織作成フロー

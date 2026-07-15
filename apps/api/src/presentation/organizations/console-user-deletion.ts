@@ -1,6 +1,6 @@
 import type { Account } from "@/domain/account/account";
 
-interface DeleteAdminUserWithAuthCleanupParams {
+interface DeleteConsoleUserWithAuthCleanupParams {
   accountId: string;
   account: Account;
   countAccountsByAccountId: (accountId: string) => Promise<number>;
@@ -9,8 +9,8 @@ interface DeleteAdminUserWithAuthCleanupParams {
   deleteAuthUser: (accountId: string) => Promise<void>;
 }
 
-export async function deleteAdminUserWithAuthCleanup(
-  params: DeleteAdminUserWithAuthCleanupParams,
+export async function deleteConsoleUserWithAuthCleanup(
+  params: DeleteConsoleUserWithAuthCleanupParams,
 ): Promise<void> {
   const accountCount = await params.countAccountsByAccountId(params.accountId);
   const isLastAccount = accountCount <= 1;

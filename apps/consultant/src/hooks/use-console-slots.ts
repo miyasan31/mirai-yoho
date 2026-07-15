@@ -1,22 +1,22 @@
 import {
-  type GetAdminSlotsQueryError,
-  type GetAdminSlotsQueryResult,
-  useGetAdminSlots as useGeneratedGetAdminSlots,
-} from "@mirai-yoho/api-client/api/admin/admin";
-import type { GetAdminSlotsParams } from "@mirai-yoho/api-client/schemas";
+  type GetConsoleSlotsQueryError,
+  type GetConsoleSlotsQueryResult,
+  useGetConsoleSlots as useGeneratedGetConsoleSlots,
+} from "@mirai-yoho/api-client/api/console/console";
+import type { GetConsoleSlotsParams } from "@mirai-yoho/api-client/schemas";
 import { QUERY_STALE_TIME } from "@mirai-yoho/console-core/hooks/query-cache-policy";
 import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 
-export function useGetAdminSlots(
-  params?: GetAdminSlotsParams,
+export function useGetConsoleSlots(
+  params?: GetConsoleSlotsParams,
   options?: Record<string, unknown>,
 ) {
   const { hasPermission, isConsultant } = useAuth();
   const { organizationId } = useOrganizationRouting();
-  return useGeneratedGetAdminSlots<
-    GetAdminSlotsQueryResult,
-    GetAdminSlotsQueryError
+  return useGeneratedGetConsoleSlots<
+    GetConsoleSlotsQueryResult,
+    GetConsoleSlotsQueryError
   >(organizationId ?? "", params, {
     ...options,
     query: {
@@ -28,7 +28,7 @@ export function useGetAdminSlots(
         ((options?.query as { enabled?: boolean } | undefined)?.enabled ??
           true) &&
         Boolean(organizationId) &&
-        (isConsultant || hasPermission("admin.slots.read")),
+        (isConsultant || hasPermission("console.slots.read")),
     },
   });
 }

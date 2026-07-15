@@ -8,7 +8,7 @@ import * as Table from "@mirai-yoho/ui/components/ui/table";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { CreditCard } from "lucide-react";
 import { styled } from "styled-system/jsx";
-import { useAdminPayments } from "@/hooks/use-admin-payments";
+import { useConsolePayments } from "@/hooks/use-console-payments";
 
 const PAYMENT_STRATEGY_LABEL_MAP: Record<string, string> = {
   deferred: "後払い",
@@ -20,10 +20,10 @@ const CHARGE_METHOD_LABEL_MAP: Record<string, string> = {
   batch: "自動",
 };
 
-export default function AdminPaymentsPage() {
+export default function ConsolePaymentsPage() {
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
     useListQueryParams();
-  const { data, isLoading } = useAdminPayments({
+  const { data, isLoading } = useConsolePayments({
     page,
     pageSize,
     sortBy,

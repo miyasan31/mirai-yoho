@@ -2,24 +2,24 @@
 import { cleanup, render, screen, within } from "@testing-library/react";
 import type { ReactNode } from "react";
 
-const mockUseAdminBookings = vi.fn();
-const mockUseAdminPayments = vi.fn();
-const mockUseAdminCustomers = vi.fn();
+const mockUseConsoleBookings = vi.fn();
+const mockUseConsolePayments = vi.fn();
+const mockUseConsoleCustomers = vi.fn();
 const mockUseAuth = vi.fn();
 
-vi.mock("@/hooks/use-admin-bookings", () => ({
-  useAdminBookings: () => mockUseAdminBookings(),
+vi.mock("@/hooks/use-console-bookings", () => ({
+  useConsoleBookings: () => mockUseConsoleBookings(),
 }));
 
-vi.mock("@/hooks/use-admin-payments", () => ({
-  useAdminPayments: () => mockUseAdminPayments(),
+vi.mock("@/hooks/use-console-payments", () => ({
+  useConsolePayments: () => mockUseConsolePayments(),
 }));
 
-vi.mock("@/hooks/use-admin-customers", () => ({
-  useAdminCustomers: (
+vi.mock("@/hooks/use-console-customers", () => ({
+  useConsoleCustomers: (
     params?: Record<string, unknown>,
     options?: { enabled?: boolean },
-  ) => mockUseAdminCustomers(params, options),
+  ) => mockUseConsoleCustomers(params, options),
 }));
 
 vi.mock("@mirai-yoho/console-core/hooks/use-auth", () => ({
@@ -103,9 +103,9 @@ vi.mock("@mirai-yoho/ui/components/empty-state", () => ({
   EmptyState: ({ message }: { message: string }) => <div>{message}</div>,
 }));
 
-import AdminHomePage from "../page";
+import ConsoleHomePage from "../page";
 
-describe("AdminHomePage", () => {
+describe("ConsoleHomePage", () => {
   beforeEach(() => {
     vi.setSystemTime(new Date("2026-06-03T09:00:00.000+09:00"));
   });
@@ -124,9 +124,9 @@ describe("AdminHomePage", () => {
     mockUseAuth.mockReturnValue({
       roleId: "admin",
       hasPermission: (permission: string) =>
-        permission === "admin.settings.manage",
+        permission === "console.settings.manage",
     });
-    mockUseAdminBookings.mockReturnValue({
+    mockUseConsoleBookings.mockReturnValue({
       data: {
         data: {
           bookings: [
@@ -162,7 +162,7 @@ describe("AdminHomePage", () => {
       isLoading: false,
       error: null,
     });
-    mockUseAdminPayments.mockReturnValue({
+    mockUseConsolePayments.mockReturnValue({
       data: {
         data: {
           payments: [
@@ -186,7 +186,7 @@ describe("AdminHomePage", () => {
       isLoading: false,
       error: null,
     });
-    mockUseAdminCustomers.mockReturnValue({
+    mockUseConsoleCustomers.mockReturnValue({
       data: {
         data: {
           customers: [
@@ -211,7 +211,7 @@ describe("AdminHomePage", () => {
       error: null,
     });
 
-    render(<AdminHomePage />);
+    render(<ConsoleHomePage />);
 
     expect(screen.getByText("未対応予約")).toBeInTheDocument();
     expect(screen.getByText("本決済待ち")).toBeInTheDocument();
@@ -238,7 +238,7 @@ describe("AdminHomePage", () => {
       screen.getByRole("link", { name: "設定を編集する" }),
     ).toHaveAttribute("href", "/org-test/settings");
 
-    expect(mockUseAdminCustomers).toHaveBeenCalledWith(
+    expect(mockUseConsoleCustomers).toHaveBeenCalledWith(
       { page: 1, pageSize: 100, sortBy: "createdAt", sortOrder: "desc" },
       { enabled: true },
     );
@@ -249,23 +249,23 @@ describe("AdminHomePage", () => {
       roleId: "operator",
       hasPermission: () => false,
     });
-    mockUseAdminBookings.mockReturnValue({
+    mockUseConsoleBookings.mockReturnValue({
       data: { data: { bookings: [] } },
       isLoading: false,
       error: null,
     });
-    mockUseAdminPayments.mockReturnValue({
+    mockUseConsolePayments.mockReturnValue({
       data: { data: { payments: [] } },
       isLoading: false,
       error: null,
     });
-    mockUseAdminCustomers.mockReturnValue({
+    mockUseConsoleCustomers.mockReturnValue({
       data: { data: { customers: [] } },
       isLoading: false,
       error: null,
     });
 
-    render(<AdminHomePage />);
+    render(<ConsoleHomePage />);
 
     const button = screen.getByRole("button", { name: "設定を編集する" });
     expect(button).toBeDisabled();
@@ -278,13 +278,13 @@ describe("AdminHomePage", () => {
     mockUseAuth.mockReturnValue({
       roleId: "admin",
       hasPermission: (permission: string) =>
-        permission === "admin.settings.manage",
+        permission === "console.settings.manage",
     });
-    mockUseAdminBookings.mockReturnValue({ isLoading: true });
-    mockUseAdminPayments.mockReturnValue({ isLoading: false });
-    mockUseAdminCustomers.mockReturnValue({ isLoading: false });
+    mockUseConsoleBookings.mockReturnValue({ isLoading: true });
+    mockUseConsolePayments.mockReturnValue({ isLoading: false });
+    mockUseConsoleCustomers.mockReturnValue({ isLoading: false });
 
-    render(<AdminHomePage />);
+    render(<ConsoleHomePage />);
 
     expect(screen.getAllByTestId("skeleton").length).toBeGreaterThan(0);
   });

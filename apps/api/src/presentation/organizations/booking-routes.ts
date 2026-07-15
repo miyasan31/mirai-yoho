@@ -188,7 +188,7 @@ bookingRoutes.post(
       }
     } else {
       const authUser = await verifyAuth(request);
-      requirePermission(authUser, organizationId, "admin.bookings.cancel");
+      requirePermission(authUser, organizationId, "console.bookings.cancel");
     }
 
     await createCancelBookingUseCase().execute({
@@ -205,7 +205,7 @@ bookingRoutes.post(
   "/bookings/:bookingId/charge",
   postRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requirePermission(authUser, organizationId, "admin.payments.charge");
+    requirePermission(authUser, organizationId, "console.payments.charge");
 
     const body = await request.json();
     if (body.method !== "manual") {

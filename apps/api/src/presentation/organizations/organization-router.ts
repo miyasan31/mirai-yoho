@@ -1,11 +1,11 @@
 import { Hono } from "hono";
-import { adminAccountRoutes } from "./admin-account-routes";
-import { adminConsultantRoutes } from "./admin-consultant-routes";
-import { adminListingRoutes } from "./admin-listing-routes";
-import { adminRoleRoutes } from "./admin-role-routes";
-import { adminSettingsRoutes } from "./admin-settings-routes";
 import { batchRoutes } from "./batch-routes";
 import { bookingRoutes } from "./booking-routes";
+import { consoleAccountRoutes } from "./console-account-routes";
+import { consoleConsultantRoutes } from "./console-consultant-routes";
+import { consoleListingRoutes } from "./console-listing-routes";
+import { consoleRoleRoutes } from "./console-role-routes";
+import { consoleSettingsRoutes } from "./console-settings-routes";
 import { consultantBookingRoutes } from "./consultant-booking-routes";
 import { consultantProfileRoutes } from "./consultant-profile-routes";
 import { customerBookingRoutes } from "./customer-bookings";
@@ -26,11 +26,11 @@ export function createOrganizationRoutes(): Hono {
   routes.route("/:organizationId", consultantBookingRoutes);
   routes.route("/:organizationId", pricePlanRoutes);
   routes.route("/:organizationId", consultantProfileRoutes);
-  routes.route("/:organizationId", adminListingRoutes);
-  routes.route("/:organizationId", adminConsultantRoutes);
-  routes.route("/:organizationId", adminSettingsRoutes);
-  routes.route("/:organizationId", adminAccountRoutes);
-  routes.route("/:organizationId", adminRoleRoutes);
+  routes.route("/:organizationId", consoleListingRoutes);
+  routes.route("/:organizationId", consoleConsultantRoutes);
+  routes.route("/:organizationId", consoleSettingsRoutes);
+  routes.route("/:organizationId", consoleAccountRoutes);
+  routes.route("/:organizationId", consoleRoleRoutes);
 
   return routes;
 }

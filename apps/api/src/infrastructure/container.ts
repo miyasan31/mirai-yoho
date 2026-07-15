@@ -166,7 +166,7 @@ export function createNotifyLateConsultantArrivalUseCase() {
     new FirestoreCustomerRepository(),
     new FirebaseUserContactService(),
     new LineWorksLateArrivalAlertService(),
-    envServer.adminAppUrl,
+    envServer.consoleAppUrl,
   );
 }
 

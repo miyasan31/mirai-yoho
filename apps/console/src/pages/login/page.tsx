@@ -9,10 +9,10 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
-import { ADMIN_NAV_PERMISSIONS } from "../nav-items";
+import { CONSOLE_NAV_PERMISSIONS } from "../nav-items";
 import { type LoginFormValues, loginFormSchema } from "./login-form-schema";
 
-export default function AdminLoginPage() {
+export default function ConsoleLoginPage() {
   const { signIn } = useAuth();
   const navigate = useNavigate();
   const {
@@ -34,7 +34,7 @@ export default function AdminLoginPage() {
         throw new Error("No organization available");
       }
       const hasAdminAccess = result.currentPermissions.some((permission) =>
-        ADMIN_NAV_PERMISSIONS.includes(permission),
+        CONSOLE_NAV_PERMISSIONS.includes(permission),
       );
       if (!hasAdminAccess) {
         throw new Error("No admin access");
