@@ -10,7 +10,15 @@ import {
   useNavigate,
   useRouterState,
 } from "@tanstack/react-router";
-import { CalendarDays, LogIn, LogOut, Ticket, User, Video } from "lucide-react";
+import {
+  CalendarCheck,
+  CalendarDays,
+  LogIn,
+  LogOut,
+  Ticket,
+  User,
+  Video,
+} from "lucide-react";
 import { useTransition } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
@@ -22,6 +30,12 @@ export const Route = createFileRoute("/mypage")({
 const NAV_ITEMS = [
   { to: "/mypage", label: "ホーム", icon: CalendarDays, exact: true },
   { to: "/mypage/profile", label: "プロフィール", icon: User, exact: false },
+  {
+    to: "/mypage/bookings",
+    label: "予約一覧",
+    icon: CalendarCheck,
+    exact: false,
+  },
   { to: "/mypage/zoom", label: "Zoom 連携", icon: Video, exact: false },
   { to: "/mypage/coupons", label: "クーポン", icon: Ticket, exact: false },
 ] as const;

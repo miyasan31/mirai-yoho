@@ -40,6 +40,10 @@ class InMemoryBookingRepository implements IBookingRepository {
     return this.booking ? [this.booking] : [];
   }
 
+  async findAllByCustomerId(): Promise<Booking[]> {
+    return this.booking ? [this.booking] : [];
+  }
+
   async findByStatus(): Promise<Booking[]> {
     return this.booking ? [this.booking] : [];
   }
