@@ -1,4 +1,3 @@
-import { DomainError } from "@mirai-yoho/shared/domain-error";
 import type { Context, Handler } from "hono";
 import { AuthError } from "@/infrastructure/auth/verify-auth";
 import { withNoStore } from "../cache-control";
@@ -197,10 +196,12 @@ function mutationRoute(
         }
         return jsonError(error.statusCode, error.code, error.message);
       }
-      if (error instanceof DomainError) {
-        return jsonError(400, error.code, error.message);
-      }
-      return jsonError(500, "INTERNAL_ERROR", "Internal server error");
+      const mappedError = mapApiError(error);
+      return jsonError(
+        mappedError.status,
+        mappedError.code,
+        mappedError.message,
+      );
     }
   };
 }

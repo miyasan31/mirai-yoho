@@ -127,10 +127,7 @@ export function createSettingsRepository() {
 }
 
 export function createUpdateBookingSettingsUseCase() {
-  return new UpdateBookingSettingsUseCase(
-    new FirestoreSettingsRepository(),
-    new FirestoreSlotRepository(),
-  );
+  return new UpdateBookingSettingsUseCase(new FirestoreSettingsRepository());
 }
 
 export function createUpdateConsultantStatusesUseCase() {
