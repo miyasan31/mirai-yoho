@@ -76,6 +76,46 @@ function BookingPageInner() {
     (c) =>
       c.organizationId === organizationId && c.isRedeemable && !c.redeemedAt,
   );
+  // couponId ごとにまとめて 1 行として提示する。radio の value は代表 userCouponId
+  // （最も早く期限切れになるもの）を選び、選択時にその ID を送信する。
+  const couponGroups = Object.values(
+    availableCoupons.reduce<
+      Record<
+        string,
+        {
+          representativeUserCouponId: string;
+          couponId: string;
+          couponName: string;
+          amountJPY: number;
+          expiresAt: string | null;
+          remainingCount: number;
+        }
+      >
+    >((acc, c) => {
+      const existing = acc[c.couponId];
+      if (existing) {
+        existing.remainingCount += 1;
+        // より早く期限切れになるものを代表に選ぶ
+        if (
+          c.expiresAt &&
+          (!existing.expiresAt || c.expiresAt < existing.expiresAt)
+        ) {
+          existing.expiresAt = c.expiresAt;
+          existing.representativeUserCouponId = c.userCouponId;
+        }
+      } else {
+        acc[c.couponId] = {
+          representativeUserCouponId: c.userCouponId,
+          couponId: c.couponId,
+          couponName: c.couponName,
+          amountJPY: c.amountJPY,
+          expiresAt: c.expiresAt,
+          remainingCount: 1,
+        };
+      }
+      return acc;
+    }, {}),
+  );
   const selectedCoupon =
     availableCoupons.find((c) => c.userCouponId === selectedUserCouponId) ??
     null;
@@ -367,7 +407,7 @@ function BookingPageInner() {
                 </styled.span>
               </Link>
             </styled.div>
-            {availableCoupons.length === 0 ? (
+            {couponGroups.length === 0 ? (
               <Text textStyle="sm" color="fg.muted">
                 利用可能なクーポンはありません。取得画面から受け取れます。
               </Text>
@@ -388,10 +428,10 @@ function BookingPageInner() {
                   </RadioGroup.ItemControl>
                   <RadioGroup.ItemText>使用しない</RadioGroup.ItemText>
                 </RadioGroup.Item>
-                {availableCoupons.map((coupon) => (
+                {couponGroups.map((group) => (
                   <RadioGroup.Item
-                    key={coupon.userCouponId}
-                    value={coupon.userCouponId}
+                    key={group.couponId}
+                    value={group.representativeUserCouponId}
                   >
                     <RadioGroup.ItemHiddenInput />
                     <RadioGroup.ItemControl>
@@ -400,13 +440,14 @@ function BookingPageInner() {
                     <RadioGroup.ItemText asChild>
                       <styled.div>
                         <Text fontWeight="medium">
-                          {coupon.couponName}（¥
-                          {coupon.amountJPY.toLocaleString()} 割引）
+                          {group.couponName}（¥
+                          {group.amountJPY.toLocaleString()} 割引 / あと{" "}
+                          {group.remainingCount} 回利用可能）
                         </Text>
-                        {coupon.expiresAt && (
+                        {group.expiresAt && (
                           <Text textStyle="sm" color="fg.muted" mt="1">
                             有効期限:{" "}
-                            {new Date(coupon.expiresAt).toLocaleDateString(
+                            {new Date(group.expiresAt).toLocaleDateString(
                               "ja-JP",
                             )}
                           </Text>
