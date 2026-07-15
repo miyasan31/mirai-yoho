@@ -1,8 +1,5 @@
 import type { Timestamp } from "firebase-admin/firestore";
-import {
-  PricePlan,
-  type PricePlanStatus,
-} from "@/domain/price-plan/price-plan";
+import { PricePlan } from "@/domain/price-plan/price-plan";
 import type { IPricePlanRepository } from "@/domain/price-plan/price-plan-repository";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 import { db } from "@/infrastructure/firestore/firestore-customer";
@@ -16,10 +13,9 @@ interface PricePlanDoc {
   name: string;
   normalizedName: string;
   totalJPY: number;
-  status: PricePlanStatus;
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;
-  deletedAt?: Timestamp | Date | null;
+  archivedAt?: Timestamp | Date | null;
 }
 
 function toDate(value?: Timestamp | Date | null): Date | undefined {
@@ -35,10 +31,9 @@ function toDomain(doc: PricePlanDoc): PricePlan {
     pricePlanId: doc.pricePlanId,
     name: doc.name,
     totalJPY: doc.totalJPY,
-    status: doc.status,
     createdAt: toDate(doc.createdAt),
     updatedAt: toDate(doc.updatedAt),
-    deletedAt: toDate(doc.deletedAt),
+    archivedAt: toDate(doc.archivedAt),
   });
 }
 
@@ -50,10 +45,9 @@ function toFirestore(pricePlan: PricePlan): PricePlanDoc {
     name: pricePlan.getName(),
     normalizedName: pricePlan.getNormalizedName(),
     totalJPY: pricePlan.getTotalJPY(),
-    status: pricePlan.getStatus(),
     createdAt: pricePlan.getCreatedAt(),
     updatedAt: pricePlan.getUpdatedAt(),
-    deletedAt: pricePlan.getDeletedAt() ?? null,
+    archivedAt: pricePlan.getArchivedAt() ?? null,
   };
 }
 
@@ -88,7 +82,7 @@ export class FirestorePricePlanRepository implements IPricePlanRepository {
       .collection(COLLECTION)
       .where("organizationId", "==", organizationId)
       .where("consultantId", "==", consultantId)
-      .where("status", "==", "active")
+      .where("archivedAt", "==", null)
       .get();
     return snapshot.docs.map((doc) => toDomain(doc.data() as PricePlanDoc));
   }

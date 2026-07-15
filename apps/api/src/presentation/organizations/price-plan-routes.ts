@@ -4,8 +4,8 @@ import { Settings } from "@/domain/settings/settings";
 import { requireConsultant } from "@/infrastructure/auth/require-role";
 import { verifyConsultantAuth } from "@/infrastructure/auth/verify-auth";
 import {
+  createArchivePricePlanUseCase,
   createCreatePricePlanUseCase,
-  createDeletePricePlanUseCase,
   createPricePlanRepository,
   createSettingsRepository,
   createUpdatePricePlanUseCase,
@@ -85,8 +85,8 @@ pricePlanRoutes.patch(
     ) {
       return jsonError(400, "VALIDATION_ERROR", "name is required");
     }
-    if (body.restore !== undefined && typeof body.restore !== "boolean") {
-      return jsonError(400, "VALIDATION_ERROR", "restore must be a boolean");
+    if (body.unarchive !== undefined && typeof body.unarchive !== "boolean") {
+      return jsonError(400, "VALIDATION_ERROR", "unarchive must be a boolean");
     }
 
     await createUpdatePricePlanUseCase().execute({
@@ -94,7 +94,7 @@ pricePlanRoutes.patch(
       consultantId: authUser.authUid,
       pricePlanId: param("pricePlanId"),
       name: body.name,
-      restore: body.restore,
+      unarchive: body.unarchive,
     });
 
     return Response.json({ success: true });
@@ -106,7 +106,7 @@ pricePlanRoutes.delete(
   deleteRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyConsultantAuth(request);
     requireConsultant(authUser, organizationId);
-    await createDeletePricePlanUseCase().execute({
+    await createArchivePricePlanUseCase().execute({
       organizationId,
       consultantId: authUser.authUid,
       pricePlanId: param("pricePlanId"),

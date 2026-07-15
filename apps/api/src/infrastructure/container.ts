@@ -16,8 +16,8 @@ import { UpdateConsultantUseCase } from "@/application/consultant/update-consult
 import { GetDashboardUseCase } from "@/application/dashboard/get-dashboard-use-case";
 import { CancelPaymentUseCase } from "@/application/payment/cancel-payment-use-case";
 import { FailPaymentUseCase } from "@/application/payment/fail-payment-use-case";
+import { ArchivePricePlanUseCase } from "@/application/price-plan/archive-price-plan-use-case";
 import { CreatePricePlanUseCase } from "@/application/price-plan/create-price-plan-use-case";
-import { DeletePricePlanUseCase } from "@/application/price-plan/delete-price-plan-use-case";
 import { UpdatePricePlanUseCase } from "@/application/price-plan/update-price-plan-use-case";
 import { UpdateBookingSettingsUseCase } from "@/application/settings/update-booking-settings-use-case";
 import { UpdateConsultantStatusesUseCase } from "@/application/settings/update-consultant-statuses-use-case";
@@ -208,8 +208,8 @@ export function createUpdatePricePlanUseCase() {
   return new UpdatePricePlanUseCase(new FirestorePricePlanRepository());
 }
 
-export function createDeletePricePlanUseCase() {
-  return new DeletePricePlanUseCase(new FirestorePricePlanRepository());
+export function createArchivePricePlanUseCase() {
+  return new ArchivePricePlanUseCase(new FirestorePricePlanRepository());
 }
 
 export function createCancelBookingUseCase() {

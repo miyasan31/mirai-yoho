@@ -10,13 +10,13 @@ import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
 import { useQueryClient } from "@tanstack/react-query";
-import { RotateCcw, Trash2 } from "lucide-react";
+import { Archive, RotateCcw } from "lucide-react";
 import type { FormEvent } from "react";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
 import {
+  useArchivePricePlan,
   useCreatePricePlan,
-  useDeletePricePlan,
   usePricePlans,
   useUpdatePricePlan,
 } from "@/hooks/use-price-plans";
@@ -31,7 +31,7 @@ export default function PricePlansPage() {
   const { data, isLoading } = usePricePlans();
   const createPricePlan = useCreatePricePlan();
   const updatePricePlan = useUpdatePricePlan();
-  const deletePricePlan = useDeletePricePlan();
+  const archivePricePlan = useArchivePricePlan();
   const [name, setName] = useState("");
   const [totalJPY, setTotalJPY] = useState("");
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
@@ -83,13 +83,13 @@ export default function PricePlansPage() {
     }
   };
 
-  const handleRestore = async (pricePlanId: string) => {
+  const handleUnarchive = async (pricePlanId: string) => {
     if (!organizationId) return;
     try {
       await updatePricePlan.mutateAsync({
         organizationId,
         pricePlanId,
-        data: { restore: true },
+        data: { unarchive: true },
       });
       await invalidatePricePlans();
       toaster.create({ type: "success", title: "料金プランを復元しました" });
@@ -98,12 +98,15 @@ export default function PricePlansPage() {
     }
   };
 
-  const handleDelete = async (pricePlanId: string) => {
+  const handleArchive = async (pricePlanId: string) => {
     if (!organizationId) return;
     try {
-      await deletePricePlan.mutateAsync({ organizationId, pricePlanId });
+      await archivePricePlan.mutateAsync({ organizationId, pricePlanId });
       await invalidatePricePlans();
-      toaster.create({ type: "success", title: "料金プランを削除しました" });
+      toaster.create({
+        type: "success",
+        title: "料金プランをアーカイブしました",
+      });
     } catch {
       // customFetch displays the server-side validation error.
     }
@@ -171,8 +174,8 @@ export default function PricePlansPage() {
         <Table.Body>
           {pricePlans.map((pricePlan) => {
             const isEditing = editingPlanId === pricePlan.pricePlanId;
-            const isMuted =
-              pricePlan.status === "deleted" || !pricePlan.isWithinCurrentRange;
+            const isArchived = pricePlan.archivedAt !== null;
+            const isMuted = isArchived || !pricePlan.isWithinCurrentRange;
             return (
               <Table.Row
                 key={pricePlan.pricePlanId}
@@ -207,8 +210,8 @@ export default function PricePlansPage() {
                 </Table.Cell>
                 <Table.Cell>¥{pricePlan.totalJPY.toLocaleString()}</Table.Cell>
                 <Table.Cell>
-                  {pricePlan.status === "deleted" ? (
-                    <Badge variant="outline">削除済み</Badge>
+                  {isArchived ? (
+                    <Badge variant="outline">アーカイブ済み</Badge>
                   ) : pricePlan.isWithinCurrentRange ? (
                     <Badge>有効</Badge>
                   ) : (
@@ -217,24 +220,24 @@ export default function PricePlansPage() {
                 </Table.Cell>
                 <Table.Cell>
                   <styled.div display="flex" gap="2">
-                    {pricePlan.status === "deleted" ? (
-                      <Tooltip content="復元" showArrow>
+                    {isArchived ? (
+                      <Tooltip content="アーカイブ解除" showArrow>
                         <IconButton
                           size="sm"
                           variant="subtle"
-                          onClick={() => handleRestore(pricePlan.pricePlanId)}
+                          onClick={() => handleUnarchive(pricePlan.pricePlanId)}
                         >
                           <RotateCcw size={16} />
                         </IconButton>
                       </Tooltip>
                     ) : (
-                      <Tooltip content="削除" showArrow>
+                      <Tooltip content="アーカイブ" showArrow>
                         <IconButton
                           size="sm"
                           variant="subtle"
-                          onClick={() => handleDelete(pricePlan.pricePlanId)}
+                          onClick={() => handleArchive(pricePlan.pricePlanId)}
                         >
-                          <Trash2 size={16} />
+                          <Archive size={16} />
                         </IconButton>
                       </Tooltip>
                     )}

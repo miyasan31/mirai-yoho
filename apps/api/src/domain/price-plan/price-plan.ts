@@ -1,18 +1,15 @@
 import { DomainError } from "@mirai-yoho/shared/domain-error";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 
-export type PricePlanStatus = "active" | "deleted";
-
 export interface PricePlanProps {
   organizationId: string;
   consultantId: string;
   pricePlanId: string;
   name: string;
   totalJPY: number;
-  status: PricePlanStatus;
   createdAt?: Date;
   updatedAt?: Date;
-  deletedAt?: Date;
+  archivedAt?: Date;
 }
 
 interface PricePlanCreateProps {
@@ -88,10 +85,9 @@ export class PricePlan extends AggregateRoot {
     private readonly pricePlanId: string,
     private name: string,
     private readonly totalJPY: number,
-    private status: PricePlanStatus,
     private readonly createdAt: Date,
     private updatedAt: Date,
-    private deletedAt: Date | undefined,
+    private archivedAt: Date | undefined,
   ) {
     super();
   }
@@ -105,7 +101,6 @@ export class PricePlan extends AggregateRoot {
       props.pricePlanId,
       validateName(props.name),
       props.totalJPY,
-      "active",
       now,
       now,
       undefined,
@@ -120,10 +115,9 @@ export class PricePlan extends AggregateRoot {
       props.pricePlanId,
       props.name,
       props.totalJPY,
-      props.status,
       createdAt,
       props.updatedAt ?? createdAt,
-      props.deletedAt,
+      props.archivedAt,
     );
   }
 
@@ -132,23 +126,21 @@ export class PricePlan extends AggregateRoot {
     this.updatedAt = new Date();
   }
 
-  delete(): void {
-    if (this.status === "deleted") return;
+  archive(): void {
+    if (this.archivedAt) return;
     const now = new Date();
-    this.status = "deleted";
-    this.deletedAt = now;
+    this.archivedAt = now;
     this.updatedAt = now;
   }
 
-  restore(): void {
-    if (this.status === "active") return;
-    this.status = "active";
-    this.deletedAt = undefined;
+  unarchive(): void {
+    if (!this.archivedAt) return;
+    this.archivedAt = undefined;
     this.updatedAt = new Date();
   }
 
   isActive(): boolean {
-    return this.status === "active";
+    return this.archivedAt === undefined;
   }
 
   getOrganizationId(): string {
@@ -175,10 +167,6 @@ export class PricePlan extends AggregateRoot {
     return this.totalJPY;
   }
 
-  getStatus(): PricePlanStatus {
-    return this.status;
-  }
-
   getSignature(): string {
     return getPricePlanSignature({
       name: this.name,
@@ -201,7 +189,7 @@ export class PricePlan extends AggregateRoot {
     return this.updatedAt;
   }
 
-  getDeletedAt(): Date | undefined {
-    return this.deletedAt;
+  getArchivedAt(): Date | undefined {
+    return this.archivedAt;
   }
 }

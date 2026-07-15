@@ -1,7 +1,7 @@
 import { useGetBookingPricePlans } from "@mirai-yoho/api-client/api/booking/booking";
 import {
+  useArchivePricePlan,
   useCreatePricePlan,
-  useDeletePricePlan,
   useListPricePlans,
   useUpdatePricePlan,
 } from "@mirai-yoho/api-client/api/consultant/consultant";
@@ -34,4 +34,4 @@ export function useBookingPricePlans(
   });
 }
 
-export { useCreatePricePlan, useDeletePricePlan, useUpdatePricePlan };
+export { useArchivePricePlan, useCreatePricePlan, useUpdatePricePlan };
