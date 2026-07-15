@@ -33,7 +33,7 @@
 | （新規） | `CORS_ALLOWED_ORIGINS` | CORS 許可オリジン |
 | `NEXT_PUBLIC_FIREBASE_*` / `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | 廃止（SPA 側 `VITE_*` へ移動） | - |
 
-> `CONSOLE_APP_URL` の変遷: 単一 Next.js 時代の `CONSOLE_APP_URL`（コンソール共通 URL）→ admin/consultant 分割時に `ADMIN_APP_URL` に一時改名 →（本 admin→console 完全移行で）再度 `CONSOLE_APP_URL` に戻した。`apps/api/env.d.ts` には型定義として `CONSULTANT_APP_URL` も残っているが、Secret Manager（`infra/terraform/gcp/common/api/main.tf` の `api_secret_ids`）にも `env.server.ts` のアクセサにも存在せず、実際には未使用。
+> `CONSOLE_APP_URL` の変遷: 単一 Next.js 時代の `CONSOLE_APP_URL`（コンソール共通 URL）→ admin/consultant 分割時に `ADMIN_APP_URL` に一時改名 →（本 admin→console 完全移行で）再度 `CONSOLE_APP_URL` に戻した。`apps/api/env.d.ts` には型定義として `CONSULTANT_APP_URL` も残っているが、Secret Manager（`infra/terraform/gcp/common/firebase/main.tf` の `runtime_secret_ids`。`common/api` はこれを `var.runtime_secret_ids` として受け取る）にも `env.server.ts` のアクセサにも存在せず、実際には未使用。
 
 ### SPA（ビルド時に GitHub Actions の environment vars から注入）
 
@@ -44,9 +44,9 @@
 ## Terraform が管理するもの（release ブランチ push で自動 apply）
 
 - Cloud Run service `api`（`common/api`。イメージは Terraform 管理外で `deploy-api.yml` が差し替える。`asia-northeast1`）
-- Secret Manager の新シークレット `API_URL` / `CONSOLE_APP_URL` / `USER_APP_URL` / `CORS_ALLOWED_ORIGINS`（作成と IAM。**値の投入は手動**: `make setup-secrets`。全キーは `infra/terraform/gcp/common/api/main.tf` の `api_secret_ids` 参照）
+- Secret Manager の新シークレット `API_URL` / `CONSOLE_APP_URL` / `USER_APP_URL` / `CORS_ALLOWED_ORIGINS`（作成と IAM。**値の投入は手動**: `make setup-secrets`。全キーは `infra/terraform/gcp/common/firebase/main.tf` の `runtime_secret_ids` 参照）
 - SPA 用 Firebase Hosting サイト `{project}-user` / `{project}-console` / `{project}-consultant`（`.firebaserc` の targets と一致）
-- SPA サイトのカスタムドメイン（`spa_hosting_custom_domains`。現状 console / consultant。DNS は外部管理のため `wait_dns_verification = false` で apply し、追加すべきレコードは output で提示）
+- SPA サイトのカスタムドメイン（`spa_hosting_custom_domains`。user / console / consultant すべてに設定済み。DNS は外部管理のため `wait_dns_verification = false` で apply し、追加すべきレコードは output で提示）
 - Firestore / Storage のセキュリティルール（`firestore.rules` / `storage.rules` を `google_firebaserules_ruleset/release` が読み込む。CLI では配信しない）
 - batch worker の `CONSOLE_APP_URL` シークレット参照
 - github-deployer の Hosting / Cloud Run デプロイ権限（既存の `roles/firebase.admin` + `roles/run.admin` でカバー）
@@ -82,7 +82,7 @@
 
 ドメイン移行に続き、`ADMIN_APP_URL` env / `/admin/*` API パス / `admin.*` 権限文字列などコード側の残った admin 参照を console に統一する際の運用手順。データ変更（Secret Manager と Firestore roles）を伴うため、段階的に実施する。
 
-**設計方針**: `CONSOLE_APP_URL` シークレットは Terraform 管理**外**として作成する（`app_hosting_secret_ids` には含めない）。Cloud Run / batch worker 側の IAM と env mount のみ Terraform が管理する。この設計により、Terraform apply の前に operator が secret に値を投入することができ、Cloud Run rollout 時に値なしで失敗するリスクを避ける。旧 `ADMIN_APP_URL` シークレットは `deletion_protection = true` のため Terraform 管理下で残し、完全移行後に手動削除する。
+**設計方針**: `CONSOLE_APP_URL` シークレットは Terraform 管理**外**として作成する（`common/firebase/main.tf` の `externally_managed_secret_ids` に含め、`terraform_managed_secret_ids` からは除外する）。Cloud Run / batch worker 側の IAM と env mount のみ Terraform が管理する。この設計により、Terraform apply の前に operator が secret に値を投入することができ、Cloud Run rollout 時に値なしで失敗するリスクを避ける。旧 `ADMIN_APP_URL` シークレットは `deletion_protection = true` のため Terraform 管理下で残し、完全移行後に手動削除する。
 
 ### 事前準備（PR マージ前 / Terraform apply 前）
 
@@ -113,11 +113,11 @@
    - Firestore roles の permissions が `console.*` 前置になっている
    - console SPA の各ページが 200、権限で保護されたページも roleId=admin ユーザーで開ける
 
-### クリーンアップ（動作確認後、別 PR で実施）
+### クリーンアップ（動作確認後、別 PR で実施） → ✅ 完了済み
 
 6. **旧 `ADMIN_APP_URL` Secret 削除** — 上記手順 §3–§5 の動作確認が完了し、Cloud Run api / batch worker が `CONSOLE_APP_URL` を使って正常稼働していることを確認してから実施する。
-   - Terraform 側の変更（`app_hosting_secret_ids` / `api_secret_ids` / `worker_secret_names_by_command.late-arrival-alerts` から `ADMIN_APP_URL` を削除）は別 PR でマージ済みの前提。
-   - マージ後、release/{dev,prod} push で走る terraform-apply.yml は `deletion_protection = true` のため destroy に失敗する。**この失敗は想定内**。事前に operator が dev / prod 各環境で以下を手動実行してから push する:
+   - Terraform 側の変更（`runtime_secret_ids` / `worker_secret_names_by_command.late-arrival-alerts` から `ADMIN_APP_URL` を削除）は完了済み。`ADMIN_APP_URL` は Secret Manager エントリ・Terraform 管理対象のいずれからも削除されている（`infra/terraform/gcp/common/firebase/main.tf` に「過去には `ADMIN_APP_URL` もこの扱いだった」という履歴コメントのみ残存）。
+   - 手順は以下の通り実施済み:
      ```bash
      # dev
      cd infra/terraform/gcp/dev
@@ -129,13 +129,13 @@
      terraform state rm 'module.firebase.google_secret_manager_secret.app_hosting["ADMIN_APP_URL"]'
      gcloud secrets delete ADMIN_APP_URL --project=mirai-yoho-prod
      ```
-   - 上記後に release/* push すれば apply が clean に通り、Cloud Run api / batch worker の env spec からも `ADMIN_APP_URL` が消える（既存 revision は影響なし、次回 rollout で反映）。
+   - Cloud Run api / batch worker の env spec からも `ADMIN_APP_URL` は既に消えている。
 
 ## デプロイフロー
 
 - `release/dev` / `release/prod` への push で:
   - `.github/workflows/deploy-hosting.yml` … SPA 3 つ（user / console / consultant）をビルドして Firebase Hosting にデプロイ
-  - `.github/workflows/deploy-batch-worker.yml` … worker イメージビルド + Terraform apply
+  - `.github/workflows/deploy-batch-worker.yml` … worker イメージビルド + Cloud Run Job 更新（`gcloud run jobs update`）。Terraform apply は別ワークフロー `.github/workflows/terraform-apply.yml`（`main` push 時）が担当
   - `.github/workflows/deploy-api.yml` … API イメージ（`apps/api/Dockerfile`）をビルドして Cloud Run service `api` を更新
 
 ## 開発メモ

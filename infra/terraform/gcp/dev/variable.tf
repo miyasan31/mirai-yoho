@@ -87,7 +87,7 @@ variable "firebase_storage_cors_origins" {
 }
 
 variable "spa_hosting_custom_domains" {
-  description = "Custom domains for the SPA Firebase Hosting sites, keyed by site (user / admin / consultant). Omit a key to skip custom domain management for that site."
+  description = "Custom domains for the SPA Firebase Hosting sites, keyed by site (user / console / consultant). Omit a key to skip custom domain management for that site."
   type        = map(string)
   default     = {}
 }

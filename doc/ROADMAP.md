@@ -84,6 +84,20 @@
 
 ---
 
+## Phase 5 — 機能拡張（Phase 4 後に main へマージ済み）
+
+> Phase 1〜4 策定後に追加された主要機能。API サーバーは Hono + Cloud Run 構成へ移行済み（詳細は `doc/DDD_DESIGN.md` §2, `doc/api-cloud-run-migration.md`）。
+
+| | タスク | 備考 |
+|---|---|---|
+| `[x]` | 認可・ロール管理システム（`Role` 集約、組織ごとのカスタムロール、`accounts.roleId` 化・`consultant` ロール廃止） | PR #81, #85, #99 |
+| `[x]` | 料金プラン（`PricePlan`）集約整備（`ConsultantPricePlan` から改名、`status` → `deletedAt` 一本化） | PR #110 |
+| `[x]` | クーポン機能（`Coupon` / `UserCoupon` 集約、発行・配布・予約適用の一連フロー） | PR #113 |
+| `[x]` | ダッシュボード機能（`GetDashboardUseCase`） | PR #87〜#98 |
+| `[x]` | `apps/admin` → `apps/console` リブランディング（`admin.*` → `console.*` ドメイン、API パス `/admin/*` → `/console/*`） | PR #100, #102, #104 |
+
+---
+
 ## 実装メモ
 
 ### Claude Code への引き渡し方

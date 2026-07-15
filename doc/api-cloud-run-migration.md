@@ -22,7 +22,7 @@ Next.js Route Handlers から **Hono（`@hono/node-server`）** へ移行し、e
 | レジストリ | `asia-northeast1-docker.pkg.dev/<project>/api/api:<git-sha>` |
 | 実行環境 | Cloud Run service `api`（`asia-northeast1`） |
 | ランタイム SA | `api-server@<project>.iam.gserviceaccount.com`（datastore.user / firebaseauth.admin / logging.logWriter + 各シークレットの secretAccessor） |
-| シークレット | App Hosting と同じ Secret Manager シークレットを env として注入（`common/api` の `api_secret_ids`） |
+| シークレット | App Hosting と同じ Secret Manager シークレットを env として注入（`common/firebase` の `runtime_secret_ids` を `common/api` が受け取る） |
 | デプロイ | `.github/workflows/deploy-api.yml`（`release/dev` `release/prod` への push で build → `gcloud run services update`） |
 | インフラ | `infra/terraform/gcp/common/api`（Cloud Run service / 公開 invoker / 任意のカスタムドメイン） |
 
@@ -48,7 +48,7 @@ Next.js Route Handlers から **Hono（`@hono/node-server`）** へ移行し、e
    Secret Manager の `API_URL` を新 URL に更新する。
 4. **App Hosting 撤去**: 疎通確認後、`apphosting.yaml` の削除と `common/firebase` の
    `google_firebase_app_hosting_*` / `google_developer_connect_*` リソース撤去を別 PR で行う
-   （`deletion_policy = PREVENT` のため state 操作が必要）。
+   （`deletion_policy = PREVENT` のため state 操作が必要）。 → ✅ 完了済み（詳細は `doc/app-hosting-teardown.md`）。
 
 ## メモ
 

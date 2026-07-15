@@ -144,7 +144,7 @@ Terraform の環境別設定は次の場所です。
 - `project_id`、`app_base_url`、`organization_ids`
 - `organization_operator_impersonators`（組織作成コマンドを実行するユーザーや CI）
 - Firestore / Storage のロケーションと Storage bucket 名
-- Firebase Web App、App Hosting、Developer Connect / GitHub 接続に関する ID
+- Firebase Web App に関する ID（API は Firebase App Hosting から Cloud Run へ移行済みのため、App Hosting / Developer Connect 関連の変数は不要。詳細は `doc/api-cloud-run-migration.md`）
 - `authorized_domains` と `firebase_storage_cors_origins`
 
 Terraform state 用 GCS bucket は Terraform の外で一度だけ作成します。開発環境の例です。
@@ -219,7 +219,7 @@ make setup-secrets-from-env:dev
 make setup-secrets-from-env-fish:dev
 ```
 
-API サーバーが参照する Secret は `common/api` の `api_secret_ids`、batch worker が参照する Secret は `common/batch` で管理します。Secret を追加したら Terraform 側の参照リストと env ファイルの両方に追加してから apply・投入します。SPA のブラウザ公開値（`VITE_*`）は Secret ではなく GitHub Environment の variables として管理され、`deploy-hosting.yml` のビルド時に注入されます。
+API サーバーが参照する Secret は `common/api`（`common/firebase` の `runtime_secret_ids` を受け取る）、batch worker が参照する Secret は `common/batch` で管理します。Secret を追加したら Terraform 側の参照リストと env ファイルの両方に追加してから apply・投入します。SPA のブラウザ公開値（`VITE_*`）は Secret ではなく GitHub Environment の variables として管理され、`deploy-hosting.yml` のビルド時に注入されます。
 
 Secret の追加・更新後は Cloud Run（`deploy-api.yml` の再実行、または `gcloud run services update`）を再デプロイして反映します。
 
@@ -227,11 +227,11 @@ Secret の詳しい運用・確認方法は [Secret Manager 運用手順](secret
 
 ### 3.5 継続デプロイ
 
-`release/dev` または `release/prod` への push で、GitHub Actions が以下を実行します。GitHub Environment ごとに `GCP_PROJECT_NUMBER` や SPA ビルド用の variables を設定し、`github-deployer` サービスアカウントへ Terraform state bucket の読み書き権限を付与してください。
+`release/dev` または `release/prod` への push で、GitHub Actions が以下を実行します。GitHub Environment ごとに `GCP_PROJECT_NUMBER` や SPA ビルド用の variables を設定し、`github-deployer` サービスアカウントへ Terraform state bucket の読み書き権限を付与してください。あわせて、PR 時の `terraform-plan.yml` は Environment を使わずリポジトリ変数 `GCP_PROJECT_NUMBER_DEV` / `GCP_PROJECT_NUMBER_PROD` を別途参照するため、こちらも設定してください。
 
 - `deploy-api.yml` … API イメージをビルドして Cloud Run service `api` を更新
 - `deploy-hosting.yml` … SPA（user / console / consultant）をビルドして Firebase Hosting にデプロイ
-- `deploy-batch-worker.yml` … Worker イメージをビルド・push し、該当環境へ Terraform apply
+- `deploy-batch-worker.yml` … Worker イメージをビルド・push し、Cloud Run Job を更新（`gcloud run jobs update`）。Terraform apply は別ワークフロー `terraform-apply.yml`（`main` push 時、`infra/terraform/**` 変更時）が担当
 
 ## 4. 組織作成フロー
 

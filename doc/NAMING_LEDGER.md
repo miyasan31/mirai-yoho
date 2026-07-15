@@ -1,7 +1,7 @@
 # 命名台帳 — Firestore / Domain / API
 
 > Version 2.0 | 2026-06-26（2026-07-12 追記: §6.5 更新 / **2026-07-14 改訂: `organization-` プレフィックス全廃。§6.3-B の混在許容方針を撤回。詳細は §0** / **2026-07-15 改訂: Firebase Auth uid の正準名を `authUid` に統一。§3.5 の `uid` 維持合意を撤回。詳細は §0.1** / **2026-07-15 改訂: `accounts.role` → `accounts.roleId` にリネームし `consultant` ロールを廃止。詳細は §3.5** / **2026-07-15 改訂: `accounts.authUid` → `accounts.accountId` にリネーム。accounts 集約主識別子命名を他集約 (consultantId / roleId / userId) に揃える。§0.1 の accounts 側 authUid 採用を撤回。詳細は §0.2**）  
-> 対象: 策定時点の全11コレクション + 横断命名ルール（その後 `organization-roles`/`users`/`user-zoom-credentials`/`user-coupons` が追加され現行14コレクション。詳細は §6.5）  
+> 対象: 策定時点の全11コレクション + 横断命名ルール（その後 `organization-roles`（現 `roles`）/`users`/`user-zoom-credentials`/`user-coupons`/`coupons` が追加され現行15コレクション。詳細は §6.5）  
 > 目的: 永続化・ドメイン・API の名称を整理し、今後の実装・リネームの基準とする
 
 ---
@@ -22,7 +22,7 @@
 - Firestore コレクション（`FIRESTORE_COLLECTIONS` のキー・値）
 - ドメイン層のクラス／型／ディレクトリ、infrastructure / presentation の識別子・ファイル名
 - 組織スコープ認可ヘルパー: `requireOrganizationRole → requireRole`、`requireOrganizationPermission → requirePermission`、`hasOrganizationPermission → hasPermission`、認証コンテキスト版 `getOrganizationAccount → getAccount`、`firestore.rules` の `hasOrganizationRole → hasRole`（未使用の重複 `require-role.ts` は削除）
-- OpenAPI スキーマ名 `OrganizationRole* → Role*`（`RoleInput` / `RoleUpdateInput` 含む。`pnpm generate` でクライアント再生成。生成物は gitignore、パス `/admin/roles` 等は元から prefix なし）
+- OpenAPI スキーマ名 `OrganizationRole* → Role*`（`RoleInput` / `RoleUpdateInput` 含む。`pnpm generate` でクライアント再生成。生成物は gitignore、パス `/console/roles` 等は元から prefix なし）
 
 **対象外（据え置き）**:
 - `organizations` コレクション本体（エンティティ名そのもの）／ OpenAPI の `OrganizationIdParam`（組織 ID パラメータ）
@@ -44,7 +44,7 @@
 - Firestore: `accounts.authUid` → **`accountId`**（値は同じ、Doc ID の形式・値も不変）
 - Domain: 新規 `Account` エンティティ + `IAccountRepository`（§3.5 の Repository 化 TODO を同時に解消）
 - 認証コンテキスト: `AuthUser.authUid` は **維持**（これは「認証セッションの Firebase Auth uid」で、accounts 集約のフィールドではないため）。ただし内部変数・関数引数のうち accounts 集約に紐づく `targetAuthUid` などは `targetAccountId` にリネーム
-- API: `ConsoleAccount.authUid` → **`accountId`**、`AuthUidParam` → **`AccountIdParam`**、path `/admin/accounts/{authUid}/*` → **`/admin/accounts/{accountId}/*`**、招待レスポンス `{ authUid }` → **`{ accountId }`**（`pnpm generate` でクライアント再生成）
+- API: `ConsoleAccount.authUid` → **`accountId`**、`AuthUidParam` → **`AccountIdParam`**、path `/console/accounts/{authUid}/*` → **`/console/accounts/{accountId}/*`**、招待レスポンス `{ authUid }` → **`{ accountId }`**（`pnpm generate` でクライアント再生成）
 - 併せて `ConsoleAccount.status` の enum を `pending`/`registered` から Firestore と揃えた **`active`/`invited`/`disabled`** に変更（§3.5 の合意を実装に反映）
 
 **触らないもの**:
@@ -70,7 +70,7 @@
 **適用範囲**:
 - Firestore: `accounts.uid` → **`authUid`**（doc ID `{organizationId}_{authUid}` の形式・値は不変）
 - 認証コンテキスト: `AuthUser.uid` → **`authUid`**（`load-auth-context.ts` のクエリ・`getAccountDocId` 引数含む）
-- API: `/auth/me` レスポンス・招待レスポンス・`ConsoleAccount` スキーマの `uid` → **`authUid`**、パスパラメータ `/admin/accounts/{uid}` → **`{authUid}`**（`UserIdParam` → `AuthUidParam`。`pnpm generate` でクライアント再生成）
+- API: `/auth/me` レスポンス・招待レスポンス・`ConsoleAccount` スキーマの `uid` → **`authUid`**、パスパラメータ `/console/accounts/{uid}` → **`{authUid}`**（`UserIdParam` → `AuthUidParam`。`pnpm generate` でクライアント再生成）
 - admin UI（accounts ページ）・監査ログ等の修飾付き複合名: `actorUid` / `targetUid` / `countAccountsByUid` → **`actorAuthUid` / `targetAuthUid` / `countAccountsByAuthUid`**
 
 **対象外（据え置き）**:
@@ -804,7 +804,7 @@ export const FIRESTORE_COLLECTIONS = {
 | user-preferences | 廃止 | 廃止済み（コード上に参照なし） |
 | `booking.zoomUrl` | `joinUrl` | 一致（`domain/booking/booking.ts`） |
 
-**未収録の新規コレクション**（台帳の集約時点になかった機能）: `organization-roles`, `users`, `user-zoom-credentials`, `user-coupons`（`apps/api/src/infrastructure/firestore/firestore-collections.ts`）。命名は他コレクションの規則（kebab-case、camelCase キー）と整合しているため追加監査は不要だが、台帳本文（§3.x）には未反映。
+**未収録の新規コレクション**（台帳の集約時点になかった機能）: `roles`（§0 リネーム前は `organization-roles`）, `users`, `user-zoom-credentials`, `user-coupons`, `coupons`（クーポンマスタ。`user-coupons` とは別集約）（`apps/api/src/infrastructure/firestore/firestore-collections.ts`）。命名は他コレクションの規則（kebab-case、camelCase キー）と整合しているため追加監査は不要だが、台帳本文（§3.x）には未反映。
 
 #### 第2回監査結論
 

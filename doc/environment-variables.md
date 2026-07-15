@@ -60,5 +60,5 @@
 | `STRIPE_WEBHOOK_SECRET` | Stripe Dashboard → Webhook エンドポイント作成時に発行（ローカルは `stripe listen` の出力） |
 | `RESEND_API_KEY` | [Resend](https://resend.com/) → API Keys |
 | `FIREBASE_PROJECT_ID` / `FIREBASE_CLIENT_EMAIL` / `FIREBASE_PRIVATE_KEY` | Firebase Console → プロジェクトの設定 → サービスアカウント → 新しい秘密鍵の生成（JSON 内の値） |
-| `VITE_FIREBASE_API_KEY` / `VITE_FIREBASE_AUTH_DOMAIN` / `VITE_FIREBASE_PROJECT_ID`（console / consultant SPA のビルド時に注入） | Firebase Console → プロジェクトの設定 → 全般 → ウェブアプリの構成 |
+| `VITE_FIREBASE_API_KEY` / `VITE_FIREBASE_AUTH_DOMAIN` / `VITE_FIREBASE_PROJECT_ID`（user / console / consultant SPA のビルド時に注入） | Firebase Console → プロジェクトの設定 → 全般 → ウェブアプリの構成 |
 | `LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL` | LINE WORKS の受信 Webhook（Incoming Webhook）作成時に発行される URL |
