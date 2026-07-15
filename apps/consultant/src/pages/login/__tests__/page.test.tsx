@@ -16,7 +16,7 @@ vi.mock("@mirai-yoho/ui/components/ui/toast", () => ({
   },
 }));
 
-vi.mock("@mirai-yoho/console-core/hooks/use-auth", () => ({
+vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => ({
     signIn: mockSignIn,
   }),

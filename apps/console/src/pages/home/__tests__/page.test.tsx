@@ -22,7 +22,7 @@ vi.mock("@/hooks/use-console-customers", () => ({
   ) => mockUseConsoleCustomers(params, options),
 }));
 
-vi.mock("@mirai-yoho/console-core/hooks/use-auth", () => ({
+vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => mockUseAuth(),
 }));
 

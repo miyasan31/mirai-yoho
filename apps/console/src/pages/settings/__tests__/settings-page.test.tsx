@@ -109,7 +109,7 @@ const defaultBusinessHours = {
   includePublicHolidays: true,
   exceptions: [],
 };
-vi.mock("@mirai-yoho/console-core/hooks/use-booking-settings", () => ({
+vi.mock("@/hooks/use-console-booking-settings", () => ({
   useConsoleBookingSettings: () => ({
     data: {
       data: {
@@ -140,7 +140,7 @@ vi.mock("@mirai-yoho/console-core/hooks/use-booking-settings", () => ({
     isPending: false,
   }),
 }));
-vi.mock("@mirai-yoho/console-core/hooks/use-auth", () => ({
+vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => mockUseAuth(),
 }));
 

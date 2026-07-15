@@ -43,7 +43,7 @@ vi.mock("@/components/sidebar-layout", () => ({
 }));
 
 const mockUseAuth = vi.fn();
-vi.mock("@mirai-yoho/console-core/hooks/use-auth", () => ({
+vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => mockUseAuth(),
 }));
 
@@ -72,7 +72,7 @@ describe("ConsultantLayout", () => {
     mockUseAuth.mockReturnValue({
       user: { email: "consultant@example.com" },
       isConsultant: true,
-      accounts: [
+      consultants: [
         {
           name: "Org Test",
           organizationId: "org-test",
@@ -111,7 +111,7 @@ describe("ConsultantLayout", () => {
     mockUseAuth.mockReturnValue({
       user: { email: "consultant@example.com" },
       isConsultant: true,
-      accounts: [
+      consultants: [
         {
           name: "Org Test",
           organizationId: "org-test",

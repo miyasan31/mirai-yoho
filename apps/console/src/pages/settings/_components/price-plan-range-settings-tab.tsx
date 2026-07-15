@@ -1,9 +1,9 @@
-import { useUpdateConsoleBookingSettings } from "@mirai-yoho/console-core/hooks/use-booking-settings";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
+import { useUpdateConsoleBookingSettings } from "@/hooks/use-console-booking-settings";
 import type { PersistedBusinessHours, PricePlanRange } from "./settings-types";
 
 type PricePlanRangeSettingsTabProps = {

@@ -1,4 +1,3 @@
-import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import {
@@ -12,6 +11,7 @@ import { Link } from "@tanstack/react-router";
 import { CalendarDays, CircleAlert, CreditCard, House } from "lucide-react";
 import { useMemo } from "react";
 import { styled } from "styled-system/jsx";
+import { useAuth } from "@/hooks/use-auth";
 import { useConsoleBookings } from "@/hooks/use-console-bookings";
 import { useConsoleCustomers } from "@/hooks/use-console-customers";
 import { useConsolePayments } from "@/hooks/use-console-payments";

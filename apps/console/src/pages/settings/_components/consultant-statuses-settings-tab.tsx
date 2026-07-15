@@ -1,7 +1,3 @@
-import {
-  useConsoleConsultantStatuses,
-  useUpdateConsoleConsultantStatuses,
-} from "@mirai-yoho/console-core/hooks/use-booking-settings";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
@@ -12,6 +8,10 @@ import { useEffect, useState } from "react";
 import type { FieldArrayWithId, UseFormRegister } from "react-hook-form";
 import { useFieldArray, useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
+import {
+  useConsoleConsultantStatuses,
+  useUpdateConsoleConsultantStatuses,
+} from "@/hooks/use-console-booking-settings";
 
 export type ConsultantStatusFormValues = {
   consultantStatuses: Array<{ statusId: string; name: string }>;

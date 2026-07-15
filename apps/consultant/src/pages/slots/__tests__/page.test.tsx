@@ -182,7 +182,7 @@ vi.mock("@mirai-yoho/shared/slot-availability", () => ({
   },
 }));
 
-vi.mock("@mirai-yoho/console-core/hooks/use-auth", () => ({
+vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => ({ user: { uid: "consultant-1" } }),
 }));
 

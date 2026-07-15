@@ -1,4 +1,3 @@
-import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { UNAUTHORIZED_EVENT_NAME } from "@mirai-yoho/console-core/lib/api-client";
 import { useNavigate } from "@tanstack/react-router";
@@ -16,6 +15,7 @@ import {
   SidebarLayout,
   SidebarLayoutSkeleton,
 } from "@/components/sidebar-layout";
+import { useAuth } from "@/hooks/use-auth";
 import { useConsultantProfile } from "@/hooks/use-consultant-profile";
 
 const NAV_ITEMS: Array<Omit<NavItem, "href"> & { path: string }> = [
@@ -34,7 +34,7 @@ export default function ConsultantLayout({
   const {
     user,
     isConsultant,
-    accounts,
+    consultants,
     currentOrganizationId,
     currentDisplayName,
     isLoading,
@@ -113,9 +113,9 @@ export default function ConsultantLayout({
         icon: item.icon,
       }))}
       organizationSwitcher={{
-        items: accounts.map((account) => ({
-          label: account.name,
-          value: account.organizationId,
+        items: consultants.map((consultant) => ({
+          label: consultant.name,
+          value: consultant.organizationId,
         })),
         value: currentOrganizationId,
         onChange: async (nextOrganizationId) => {

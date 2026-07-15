@@ -1,5 +1,3 @@
-import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
-import { useConsoleBookingSettings } from "@mirai-yoho/console-core/hooks/use-booking-settings";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { BusinessHours } from "@mirai-yoho/shared/business-hours";
 import { Tabs } from "@mirai-yoho/ui/components/ui";
@@ -7,6 +5,8 @@ import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { styled } from "styled-system/jsx";
+import { useAuth } from "@/hooks/use-auth";
+import { useConsoleBookingSettings } from "@/hooks/use-console-booking-settings";
 import { BookingSettingsTab } from "./_components/booking-settings-tab";
 import { BusinessHoursSettingsTab } from "./_components/business-hours-settings-tab";
 import { ConsultantStatusesSettingsTab } from "./_components/consultant-statuses-settings-tab";

@@ -1,9 +1,9 @@
-import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
 import { ErrorStatusPage } from "@mirai-yoho/ui/components/error-status-page";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Link } from "@tanstack/react-router";
 import { SearchX } from "lucide-react";
 import { BackNavigationButton } from "@/components/back-navigation-button";
+import { useAuth } from "@/hooks/use-auth";
 
 export default function NotFound() {
   const { currentOrganizationId } = useAuth();

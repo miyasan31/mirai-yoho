@@ -1,4 +1,3 @@
-import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import {
   AUTHORIZATION_PERMISSION_LABELS,
@@ -26,6 +25,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, ShieldCheck, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
+import { useAuth } from "@/hooks/use-auth";
 import {
   useConsoleRoles,
   useConsoleRolesQueryKey,
