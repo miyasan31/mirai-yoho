@@ -12,8 +12,7 @@ interface CouponDoc {
   type: CouponType;
   name: string;
   amountJPY: number;
-  batchSize?: number | null;
-  totalLimit?: number | null;
+  batchSize: number;
   expiresInDays: number;
   createdAt: Timestamp | Date;
   updatedAt: Timestamp | Date;
@@ -37,8 +36,7 @@ function toDomain(doc: CouponDoc): Coupon {
     type: doc.type,
     name: doc.name,
     amountJPY: doc.amountJPY,
-    batchSize: doc.batchSize ?? undefined,
-    totalLimit: doc.totalLimit ?? undefined,
+    batchSize: doc.batchSize,
     expiresInDays: doc.expiresInDays,
     createdAt: toRequiredDate(doc.createdAt),
     updatedAt: toRequiredDate(doc.updatedAt),
@@ -53,8 +51,7 @@ function toFirestore(coupon: Coupon): CouponDoc {
     type: coupon.getType(),
     name: coupon.getName(),
     amountJPY: coupon.getAmountJPY(),
-    batchSize: coupon.getBatchSize() ?? null,
-    totalLimit: coupon.getTotalLimit() ?? null,
+    batchSize: coupon.getBatchSize(),
     expiresInDays: coupon.getExpiresInDays(),
     createdAt: coupon.getCreatedAt(),
     updatedAt: coupon.getUpdatedAt(),

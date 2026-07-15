@@ -13,7 +13,7 @@ const amountSchema = v.pipe(
   v.minValue(1, "1円以上を入力してください"),
 );
 
-const positiveIntSchema = v.pipe(
+const batchSizeSchema = v.pipe(
   v.number("枚数を入力してください"),
   v.integer("整数で入力してください"),
   v.minValue(1, "1以上を入力してください"),
@@ -30,34 +30,13 @@ export const couponTypeSchema = v.picklist(
   "種別を選択してください",
 );
 
-export const couponCreateFormSchema = v.pipe(
-  v.object({
-    type: couponTypeSchema,
-    name: nameSchema,
-    amountJPY: amountSchema,
-    batchSize: v.optional(positiveIntSchema),
-    totalLimit: v.optional(positiveIntSchema),
-    expiresInDays: expiresInDaysSchema,
-  }),
-  v.forward(
-    v.check(({ type, batchSize }) => {
-      if (type === "welcome") {
-        return typeof batchSize === "number" && batchSize > 0;
-      }
-      return true;
-    }, "welcome には 1 ユーザーへの配布枚数を入力してください"),
-    ["batchSize"],
-  ),
-  v.forward(
-    v.check(({ type, totalLimit }) => {
-      if (type === "birthday") {
-        return typeof totalLimit === "number" && totalLimit > 0;
-      }
-      return true;
-    }, "birthday には全体の配布上限を入力してください"),
-    ["totalLimit"],
-  ),
-);
+export const couponCreateFormSchema = v.object({
+  type: couponTypeSchema,
+  name: nameSchema,
+  amountJPY: amountSchema,
+  batchSize: batchSizeSchema,
+  expiresInDays: expiresInDaysSchema,
+});
 
 export type CouponCreateFormValues = v.InferInput<
   typeof couponCreateFormSchema
@@ -66,8 +45,7 @@ export type CouponCreateFormValues = v.InferInput<
 export const couponUpdateFormSchema = v.object({
   name: nameSchema,
   amountJPY: amountSchema,
-  batchSize: v.optional(positiveIntSchema),
-  totalLimit: v.optional(positiveIntSchema),
+  batchSize: batchSizeSchema,
 });
 
 export type CouponUpdateFormValues = v.InferInput<

@@ -1501,7 +1501,7 @@ paths:
   /organizations/{organizationId}/customer/coupons/receive-birthday:
     post:
       operationId: receiveBirthdayCoupon
-      summary: 誕生月クーポンを受け取る（月内1回）
+      summary: 誕生月クーポンを受け取る（月内1回、batchSize 枚まとめて発行）
       tags: [customer]
       security:
         - bearerAuth: []
@@ -1514,10 +1514,11 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [userCouponId]
+                required: [issuedCount]
                 properties:
-                  userCouponId:
-                    type: string
+                  issuedCount:
+                    type: integer
+                    minimum: 0
 
 components:
   parameters:
@@ -2448,7 +2449,6 @@ components:
           name,
           amountJPY,
           batchSize,
-          totalLimit,
           expiresInDays,
           isActive,
           isArchived,
@@ -2468,13 +2468,7 @@ components:
         batchSize:
           type: integer
           minimum: 1
-          nullable: true
-          description: welcome のみ。1 ユーザーが 1 度の取得でもらう枚数。
-        totalLimit:
-          type: integer
-          minimum: 1
-          nullable: true
-          description: birthday のみ。全ユーザー合計の発行上限。
+          description: 1 度の取得で 1 ユーザーがもらう枚数
         expiresInDays:
           type: integer
           minimum: 1
@@ -2495,7 +2489,7 @@ components:
 
     CouponInput:
       type: object
-      required: [type, name, amountJPY, expiresInDays]
+      required: [type, name, amountJPY, batchSize, expiresInDays]
       properties:
         type:
           $ref: "#/components/schemas/CouponType"
@@ -2509,11 +2503,6 @@ components:
         batchSize:
           type: integer
           minimum: 1
-          description: welcome のときのみ指定
-        totalLimit:
-          type: integer
-          minimum: 1
-          description: birthday のときのみ指定
         expiresInDays:
           type: integer
           minimum: 1
@@ -2531,13 +2520,10 @@ components:
         batchSize:
           type: integer
           minimum: 1
-        totalLimit:
-          type: integer
-          minimum: 1
 
     AvailableCouponIneligibilityReason:
       type: string
-      enum: [already-received, not-in-birth-month, limit-reached]
+      enum: [already-received, not-in-birth-month]
 
     AvailableCoupon:
       type: object
@@ -2548,7 +2534,6 @@ components:
           name,
           amountJPY,
           batchSize,
-          totalLimit,
           expiresInDays,
           isReceivable,
           ineligibilityReason,
@@ -2566,11 +2551,6 @@ components:
         batchSize:
           type: integer
           minimum: 1
-          nullable: true
-        totalLimit:
-          type: integer
-          minimum: 1
-          nullable: true
         expiresInDays:
           type: integer
           minimum: 1

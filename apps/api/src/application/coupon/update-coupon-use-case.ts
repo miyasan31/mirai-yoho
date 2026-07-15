@@ -11,7 +11,6 @@ export interface UpdateCouponInput {
   name?: string;
   amountJPY?: number;
   batchSize?: number;
-  totalLimit?: number;
 }
 
 export class UpdateCouponUseCase {
@@ -34,9 +33,6 @@ export class UpdateCouponUseCase {
     }
     if (input.batchSize !== undefined) {
       coupon.updateBatchSize(input.batchSize);
-    }
-    if (input.totalLimit !== undefined) {
-      coupon.updateTotalLimit(input.totalLimit);
     }
 
     await this.couponRepository.save(coupon);

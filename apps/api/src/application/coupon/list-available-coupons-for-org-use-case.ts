@@ -5,16 +5,14 @@ import type { IUserCouponRepository } from "@/domain/user-coupon/user-coupon-rep
 
 export type AvailableCouponIneligibilityReason =
   | "already-received"
-  | "not-in-birth-month"
-  | "limit-reached";
+  | "not-in-birth-month";
 
 export interface AvailableCouponOutput {
   couponId: string;
   type: CouponType;
   name: string;
   amountJPY: number;
-  batchSize: number | null;
-  totalLimit: number | null;
+  batchSize: number;
   expiresInDays: number;
   isReceivable: boolean;
   ineligibilityReason: AvailableCouponIneligibilityReason | null;
@@ -50,8 +48,7 @@ export class ListAvailableCouponsForOrgUseCase {
         type: coupon.getType(),
         name: coupon.getName(),
         amountJPY: coupon.getAmountJPY(),
-        batchSize: coupon.getBatchSize() ?? null,
-        totalLimit: coupon.getTotalLimit() ?? null,
+        batchSize: coupon.getBatchSize(),
         expiresInDays: coupon.getExpiresInDays(),
         isReceivable: reason === null,
         ineligibilityReason: reason,
@@ -93,13 +90,6 @@ export class ListAvailableCouponsForOrgUseCase {
     });
     if (receivedThisMonth) return "already-received";
 
-    const totalLimit = coupon.getTotalLimit();
-    if (totalLimit !== undefined) {
-      const totalDistributed = await this.userCouponRepository.countByCouponId(
-        coupon.getCouponId(),
-      );
-      if (totalDistributed >= totalLimit) return "limit-reached";
-    }
     return null;
   }
 }

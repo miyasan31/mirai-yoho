@@ -37,7 +37,6 @@ const INELIGIBILITY_LABEL: Record<AvailableCouponIneligibilityReason, string> =
   {
     "already-received": "取得済み",
     "not-in-birth-month": "誕生月ではありません",
-    "limit-reached": "配布上限に達しました",
   };
 
 function OrganizationCouponsPage() {
@@ -58,15 +57,13 @@ function OrganizationCouponsPage() {
 
   const onReceive = async (coupon: AvailableCoupon) => {
     try {
-      if (coupon.type === "welcome") {
-        const result = await receiveWelcome.mutateAsync({ organizationId });
-        toaster.success({
-          title: `${coupon.name}を ${result.data.issuedCount} 枚受け取りました`,
-        });
-      } else {
-        await receiveBirthday.mutateAsync({ organizationId });
-        toaster.success({ title: `${coupon.name}を受け取りました` });
-      }
+      const result =
+        coupon.type === "welcome"
+          ? await receiveWelcome.mutateAsync({ organizationId })
+          : await receiveBirthday.mutateAsync({ organizationId });
+      toaster.success({
+        title: `${coupon.name}を ${result.data.issuedCount} 枚受け取りました`,
+      });
       await invalidate();
     } catch {
       // custom-fetch でエラー Toast 表示済み
@@ -149,10 +146,8 @@ function OrganizationCouponsPage() {
                   </Text>
                 </styled.div>
                 <Text textStyle="sm" color="fg.muted">
-                  受け取り後 {coupon.expiresInDays} 日間有効
-                  {coupon.type === "welcome" && coupon.batchSize
-                    ? ` / ${coupon.batchSize} 枚まとめて配布`
-                    : ""}
+                  {coupon.batchSize} 枚まとめて発行 / 受け取り後{" "}
+                  {coupon.expiresInDays} 日間有効
                 </Text>
               </styled.div>
               {coupon.isReceivable ? (

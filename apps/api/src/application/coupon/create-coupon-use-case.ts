@@ -11,8 +11,7 @@ export interface CreateCouponInput {
   type: CouponType;
   name: string;
   amountJPY: number;
-  batchSize?: number;
-  totalLimit?: number;
+  batchSize: number;
   expiresInDays: number;
 }
 
@@ -41,7 +40,6 @@ export class CreateCouponUseCase {
       name: input.name,
       amountJPY: input.amountJPY,
       batchSize: input.batchSize,
-      totalLimit: input.totalLimit,
       expiresInDays: input.expiresInDays,
     });
 

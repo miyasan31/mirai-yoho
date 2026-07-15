@@ -24,8 +24,7 @@ const createCouponBodySchema = v.object({
   type: couponTypeSchema,
   name: v.pipe(v.string(), v.minLength(1), v.maxLength(80)),
   amountJPY: v.pipe(v.number(), v.integer(), v.minValue(1)),
-  batchSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
-  totalLimit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
+  batchSize: v.pipe(v.number(), v.integer(), v.minValue(1)),
   expiresInDays: v.pipe(v.number(), v.integer(), v.minValue(1)),
 });
 
@@ -33,7 +32,6 @@ const updateCouponBodySchema = v.object({
   name: v.optional(v.pipe(v.string(), v.minLength(1), v.maxLength(80))),
   amountJPY: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
   batchSize: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
-  totalLimit: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
 });
 
 export const consoleCouponRoutes = new Hono();
@@ -79,7 +77,6 @@ consoleCouponRoutes.post(
       name: parsed.output.name,
       amountJPY: parsed.output.amountJPY,
       batchSize: parsed.output.batchSize,
-      totalLimit: parsed.output.totalLimit,
       expiresInDays: parsed.output.expiresInDays,
     });
     return Response.json(coupon, { status: 201 });
@@ -102,7 +99,6 @@ consoleCouponRoutes.patch(
       name: parsed.output.name,
       amountJPY: parsed.output.amountJPY,
       batchSize: parsed.output.batchSize,
-      totalLimit: parsed.output.totalLimit,
     });
     return Response.json(coupon);
   }),

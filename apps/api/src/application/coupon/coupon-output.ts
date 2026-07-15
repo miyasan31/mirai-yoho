@@ -5,8 +5,7 @@ export interface CouponOutput {
   type: CouponType;
   name: string;
   amountJPY: number;
-  batchSize: number | null;
-  totalLimit: number | null;
+  batchSize: number;
   expiresInDays: number;
   isActive: boolean;
   isArchived: boolean;
@@ -21,8 +20,7 @@ export function toCouponOutput(coupon: Coupon): CouponOutput {
     type: coupon.getType(),
     name: coupon.getName(),
     amountJPY: coupon.getAmountJPY(),
-    batchSize: coupon.getBatchSize() ?? null,
-    totalLimit: coupon.getTotalLimit() ?? null,
+    batchSize: coupon.getBatchSize(),
     expiresInDays: coupon.getExpiresInDays(),
     isActive: coupon.isActive(),
     isArchived: coupon.isArchived(),

@@ -10,7 +10,7 @@ export interface ReceiveBirthdayCouponInput {
 }
 
 export interface ReceiveBirthdayCouponOutput {
-  userCouponId: string;
+  issuedCount: number;
 }
 
 export class ReceiveBirthdayCouponUseCase {
@@ -36,14 +36,6 @@ export class ReceiveBirthdayCouponUseCase {
         404,
         "BIRTHDAY_COUPON_NOT_CONFIGURED",
         "This organization does not offer a birthday coupon",
-      );
-    }
-    const totalLimit = birthday.getTotalLimit();
-    if (!totalLimit) {
-      throw new AppError(
-        500,
-        "BIRTHDAY_COUPON_MISCONFIGURED",
-        "Birthday coupon is missing totalLimit",
       );
     }
 
@@ -79,30 +71,25 @@ export class ReceiveBirthdayCouponUseCase {
       );
     }
 
-    const totalDistributed = await this.userCouponRepository.countByCouponId(
-      birthday.getCouponId(),
-    );
-    if (totalDistributed >= totalLimit) {
-      throw new AppError(
-        409,
-        "BIRTHDAY_COUPON_LIMIT_REACHED",
-        "Birthday coupon distribution limit has been reached",
+    const expiresAt = birthday.calcExpiresAtFor(now);
+    const coupons: UserCoupon[] = [];
+    for (let i = 0; i < birthday.getBatchSize(); i++) {
+      coupons.push(
+        UserCoupon.receive({
+          userCouponId: crypto.randomUUID(),
+          userId: input.userId,
+          couponId: birthday.getCouponId(),
+          organizationId: input.organizationId,
+          amountJPY: birthday.getAmountJPY(),
+          couponName: birthday.getName(),
+          type: "birthday",
+          receivedAt: now,
+          expiresAt,
+        }),
       );
     }
+    await this.userCouponRepository.saveMany(coupons);
 
-    const userCoupon = UserCoupon.receive({
-      userCouponId: crypto.randomUUID(),
-      userId: input.userId,
-      couponId: birthday.getCouponId(),
-      organizationId: input.organizationId,
-      amountJPY: birthday.getAmountJPY(),
-      couponName: birthday.getName(),
-      type: "birthday",
-      receivedAt: now,
-      expiresAt: birthday.calcExpiresAtFor(now),
-    });
-    await this.userCouponRepository.save(userCoupon);
-
-    return { userCouponId: userCoupon.getUserCouponId() };
+    return { issuedCount: coupons.length };
   }
 }

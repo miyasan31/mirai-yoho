@@ -73,7 +73,6 @@ export default function ConsoleCouponsPage() {
       name: "",
       amountJPY: 1000,
       batchSize: 10,
-      totalLimit: undefined,
       expiresInDays: 90,
     },
   });
@@ -83,8 +82,7 @@ export default function ConsoleCouponsPage() {
     defaultValues: {
       name: "",
       amountJPY: 0,
-      batchSize: undefined,
-      totalLimit: undefined,
+      batchSize: 0,
     },
   });
 
@@ -93,13 +91,10 @@ export default function ConsoleCouponsPage() {
       editForm.reset({
         name: editing.name,
         amountJPY: editing.amountJPY,
-        batchSize: editing.batchSize ?? undefined,
-        totalLimit: editing.totalLimit ?? undefined,
+        batchSize: editing.batchSize,
       });
     }
   }, [editing, editForm]);
-
-  const selectedType = createForm.watch("type");
 
   const onCreate = async (values: CouponCreateFormValues) => {
     if (!organizationId) return;
@@ -110,9 +105,7 @@ export default function ConsoleCouponsPage() {
           type: values.type,
           name: values.name,
           amountJPY: values.amountJPY,
-          batchSize: values.type === "welcome" ? values.batchSize : undefined,
-          totalLimit:
-            values.type === "birthday" ? values.totalLimit : undefined,
+          batchSize: values.batchSize,
           expiresInDays: values.expiresInDays,
         },
       });
@@ -182,7 +175,6 @@ export default function ConsoleCouponsPage() {
                 name: "",
                 amountJPY: 1000,
                 batchSize: 10,
-                totalLimit: undefined,
                 expiresInDays: 90,
               });
               setCreateOpen(true);
@@ -228,11 +220,7 @@ export default function ConsoleCouponsPage() {
                 </Table.Cell>
                 <Table.Cell>{coupon.name}</Table.Cell>
                 <Table.Cell>¥{coupon.amountJPY.toLocaleString()}</Table.Cell>
-                <Table.Cell>
-                  {coupon.type === "welcome"
-                    ? `${coupon.batchSize ?? "-"} 枚/人`
-                    : `上限 ${coupon.totalLimit ?? "-"} 枚`}
-                </Table.Cell>
+                <Table.Cell>{coupon.batchSize} 枚/回</Table.Cell>
                 <Table.Cell>{coupon.expiresInDays}日</Table.Cell>
                 <Table.Cell>
                   {coupon.isArchived ? (
@@ -328,41 +316,21 @@ export default function ConsoleCouponsPage() {
                     </Field.ErrorText>
                   )}
                 </Field.Root>
-                {selectedType === "welcome" ? (
-                  <Field.Root invalid={!!createForm.formState.errors.batchSize}>
-                    <Field.Label>1ユーザーに配る枚数（batchSize）</Field.Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      {...createForm.register("batchSize", {
-                        valueAsNumber: true,
-                      })}
-                    />
-                    {createForm.formState.errors.batchSize && (
-                      <Field.ErrorText>
-                        {createForm.formState.errors.batchSize.message}
-                      </Field.ErrorText>
-                    )}
-                  </Field.Root>
-                ) : (
-                  <Field.Root
-                    invalid={!!createForm.formState.errors.totalLimit}
-                  >
-                    <Field.Label>全体の配布上限（totalLimit）</Field.Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      {...createForm.register("totalLimit", {
-                        valueAsNumber: true,
-                      })}
-                    />
-                    {createForm.formState.errors.totalLimit && (
-                      <Field.ErrorText>
-                        {createForm.formState.errors.totalLimit.message}
-                      </Field.ErrorText>
-                    )}
-                  </Field.Root>
-                )}
+                <Field.Root invalid={!!createForm.formState.errors.batchSize}>
+                  <Field.Label>1 度の取得で配る枚数</Field.Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    {...createForm.register("batchSize", {
+                      valueAsNumber: true,
+                    })}
+                  />
+                  {createForm.formState.errors.batchSize && (
+                    <Field.ErrorText>
+                      {createForm.formState.errors.batchSize.message}
+                    </Field.ErrorText>
+                  )}
+                </Field.Root>
                 <Field.Root
                   invalid={!!createForm.formState.errors.expiresInDays}
                 >
@@ -441,40 +409,21 @@ export default function ConsoleCouponsPage() {
                     </Field.ErrorText>
                   )}
                 </Field.Root>
-                {editing?.type === "welcome" && (
-                  <Field.Root invalid={!!editForm.formState.errors.batchSize}>
-                    <Field.Label>1ユーザーに配る枚数</Field.Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      {...editForm.register("batchSize", {
-                        valueAsNumber: true,
-                      })}
-                    />
-                    {editForm.formState.errors.batchSize && (
-                      <Field.ErrorText>
-                        {editForm.formState.errors.batchSize.message}
-                      </Field.ErrorText>
-                    )}
-                  </Field.Root>
-                )}
-                {editing?.type === "birthday" && (
-                  <Field.Root invalid={!!editForm.formState.errors.totalLimit}>
-                    <Field.Label>全体の配布上限</Field.Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      {...editForm.register("totalLimit", {
-                        valueAsNumber: true,
-                      })}
-                    />
-                    {editForm.formState.errors.totalLimit && (
-                      <Field.ErrorText>
-                        {editForm.formState.errors.totalLimit.message}
-                      </Field.ErrorText>
-                    )}
-                  </Field.Root>
-                )}
+                <Field.Root invalid={!!editForm.formState.errors.batchSize}>
+                  <Field.Label>1 度の取得で配る枚数</Field.Label>
+                  <Input
+                    type="number"
+                    min={1}
+                    {...editForm.register("batchSize", {
+                      valueAsNumber: true,
+                    })}
+                  />
+                  {editForm.formState.errors.batchSize && (
+                    <Field.ErrorText>
+                      {editForm.formState.errors.batchSize.message}
+                    </Field.ErrorText>
+                  )}
+                </Field.Root>
               </Dialog.Body>
               <Dialog.Footer>
                 <Dialog.CloseTrigger asChild>

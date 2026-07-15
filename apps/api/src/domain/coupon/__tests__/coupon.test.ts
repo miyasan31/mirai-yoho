@@ -17,24 +17,23 @@ const baseBirthdayProps = {
   type: "birthday" as const,
   name: "誕生月クーポン",
   amountJPY: 500,
-  totalLimit: 1000,
+  batchSize: 3,
   expiresInDays: 30,
 };
 
 describe("Coupon", () => {
   describe("create", () => {
-    it("welcome クーポンを生成できる（batchSize 必須）", () => {
+    it("welcome クーポンを生成できる", () => {
       const coupon = Coupon.create(baseWelcomeProps);
       expect(coupon.getType()).toBe("welcome");
       expect(coupon.getBatchSize()).toBe(10);
-      expect(coupon.getTotalLimit()).toBeUndefined();
+      expect(coupon.getExpiresInDays()).toBe(90);
     });
 
-    it("birthday クーポンを生成できる（totalLimit 必須）", () => {
+    it("birthday クーポンを生成できる", () => {
       const coupon = Coupon.create(baseBirthdayProps);
       expect(coupon.getType()).toBe("birthday");
-      expect(coupon.getTotalLimit()).toBe(1000);
-      expect(coupon.getBatchSize()).toBeUndefined();
+      expect(coupon.getBatchSize()).toBe(3);
     });
 
     it("amountJPY が 0 以下だと DomainError", () => {
@@ -43,41 +42,9 @@ describe("Coupon", () => {
       ).toThrow(DomainError);
     });
 
-    it("welcome に batchSize が無いと DomainError", () => {
-      const props = { ...baseWelcomeProps } as unknown as {
-        batchSize?: number;
-      };
-      delete props.batchSize;
+    it("batchSize が 0 以下だと DomainError", () => {
       expect(() =>
-        Coupon.create(props as unknown as typeof baseWelcomeProps),
-      ).toThrow(DomainError);
-    });
-
-    it("welcome に totalLimit を設定すると DomainError", () => {
-      expect(() =>
-        Coupon.create({
-          ...baseWelcomeProps,
-          totalLimit: 100,
-        } as unknown as typeof baseWelcomeProps),
-      ).toThrow(DomainError);
-    });
-
-    it("birthday に totalLimit が無いと DomainError", () => {
-      const props = { ...baseBirthdayProps } as unknown as {
-        totalLimit?: number;
-      };
-      delete props.totalLimit;
-      expect(() =>
-        Coupon.create(props as unknown as typeof baseBirthdayProps),
-      ).toThrow(DomainError);
-    });
-
-    it("birthday に batchSize を設定すると DomainError", () => {
-      expect(() =>
-        Coupon.create({
-          ...baseBirthdayProps,
-          batchSize: 3,
-        } as unknown as typeof baseBirthdayProps),
+        Coupon.create({ ...baseWelcomeProps, batchSize: 0 }),
       ).toThrow(DomainError);
     });
 
@@ -98,29 +65,34 @@ describe("Coupon", () => {
         Coupon.create({ ...baseWelcomeProps, expiresInDays: 0 }),
       ).toThrow(DomainError);
     });
+
+    it("未知の type は DomainError", () => {
+      expect(() =>
+        Coupon.create({
+          ...baseWelcomeProps,
+          type: "invalid" as unknown as "welcome",
+        }),
+      ).toThrow(DomainError);
+    });
   });
 
   describe("update", () => {
-    it("welcome の updateBatchSize で枚数を変更できる", () => {
+    it("rename で名前を変更できる", () => {
+      const coupon = Coupon.create(baseWelcomeProps);
+      coupon.rename("新しい名前");
+      expect(coupon.getName()).toBe("新しい名前");
+    });
+
+    it("updateAmount で金額を変更できる", () => {
+      const coupon = Coupon.create(baseWelcomeProps);
+      coupon.updateAmount(2000);
+      expect(coupon.getAmountJPY()).toBe(2000);
+    });
+
+    it("updateBatchSize で枚数を変更できる", () => {
       const coupon = Coupon.create(baseWelcomeProps);
       coupon.updateBatchSize(20);
       expect(coupon.getBatchSize()).toBe(20);
-    });
-
-    it("birthday に updateBatchSize すると DomainError", () => {
-      const coupon = Coupon.create(baseBirthdayProps);
-      expect(() => coupon.updateBatchSize(5)).toThrow(DomainError);
-    });
-
-    it("birthday の updateTotalLimit で上限を変更できる", () => {
-      const coupon = Coupon.create(baseBirthdayProps);
-      coupon.updateTotalLimit(2000);
-      expect(coupon.getTotalLimit()).toBe(2000);
-    });
-
-    it("welcome に updateTotalLimit すると DomainError", () => {
-      const coupon = Coupon.create(baseWelcomeProps);
-      expect(() => coupon.updateTotalLimit(500)).toThrow(DomainError);
     });
   });
 
