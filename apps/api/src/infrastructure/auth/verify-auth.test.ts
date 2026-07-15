@@ -1,11 +1,23 @@
-import { type AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
+import {
+  type AuthError,
+  verifyAccountAuth,
+  verifyConsultantAuth,
+  verifyEitherAuth,
+} from "@/infrastructure/auth/verify-auth";
 
-const { mockVerifyIdToken, mockActivateInvitedAccounts, mockLoadAuthUser } =
-  vi.hoisted(() => ({
-    mockVerifyIdToken: vi.fn(),
-    mockActivateInvitedAccounts: vi.fn(),
-    mockLoadAuthUser: vi.fn(),
-  }));
+const {
+  mockVerifyIdToken,
+  mockActivateInvitedAccounts,
+  mockLoadAccountAuthUser,
+  mockLoadConsultantAuthUser,
+  mockLoadAuthUser,
+} = vi.hoisted(() => ({
+  mockVerifyIdToken: vi.fn(),
+  mockActivateInvitedAccounts: vi.fn(),
+  mockLoadAccountAuthUser: vi.fn(),
+  mockLoadConsultantAuthUser: vi.fn(),
+  mockLoadAuthUser: vi.fn(),
+}));
 
 vi.mock("@/infrastructure/firebase/firebase-auth-admin", () => ({
   verifyIdToken: mockVerifyIdToken,
@@ -13,99 +25,178 @@ vi.mock("@/infrastructure/firebase/firebase-auth-admin", () => ({
 
 vi.mock("@/infrastructure/auth/load-auth-context", () => ({
   activateInvitedAccounts: mockActivateInvitedAccounts,
+  loadAccountAuthUser: mockLoadAccountAuthUser,
+  loadConsultantAuthUser: mockLoadConsultantAuthUser,
   loadAuthUser: mockLoadAuthUser,
 }));
 
-describe("verifyAuth", () => {
+function bearerRequest(token: string): Request {
+  return new Request("http://localhost/api/auth/me", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+}
+
+describe("verifyAccountAuth", () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it("activates invited accounts before loading auth user", async () => {
+  it("activates invited accounts, loads account-only user, and returns it", async () => {
     mockVerifyIdToken.mockResolvedValueOnce({ uid: "user-1" });
-    mockLoadAuthUser.mockResolvedValueOnce({
+    mockLoadAccountAuthUser.mockResolvedValueOnce({
       authUid: "user-1",
       accounts: [
         {
           organizationId: "org-1",
           name: "Org 1",
-          role: "admin",
+          roleId: "admin",
+          roleName: "管理者",
+          permissions: [],
           status: "active",
           createdAt: "2026-01-01T00:00:00.000Z",
         },
       ],
       currentOrganizationId: "org-1",
-      currentDisplayName: "Admin User",
+      currentDisplayName: "Admin",
     });
 
-    const request = new Request("http://localhost/api/auth/me", {
-      headers: {
-        Authorization: "Bearer test-token",
-      },
+    await expect(verifyAccountAuth(bearerRequest("t"))).resolves.toMatchObject({
+      authUid: "user-1",
     });
-
-    await verifyAuth(request);
-
-    expect(mockVerifyIdToken).toHaveBeenCalledWith("test-token");
     expect(mockActivateInvitedAccounts).toHaveBeenCalledWith("user-1");
-    expect(mockLoadAuthUser).toHaveBeenCalledWith("user-1");
-    expect(
-      mockActivateInvitedAccounts.mock.invocationCallOrder[0],
-    ).toBeLessThan(mockLoadAuthUser.mock.invocationCallOrder[0]);
+    expect(mockLoadAccountAuthUser).toHaveBeenCalledWith("user-1");
+    expect(mockLoadConsultantAuthUser).not.toHaveBeenCalled();
   });
 
-  it("allows invited users after activation across all roles", async () => {
-    const roles = ["admin", "operator", "consultant"] as const;
-
-    for (const role of roles) {
-      mockVerifyIdToken.mockResolvedValueOnce({ uid: `user-${role}` });
-      mockLoadAuthUser.mockResolvedValueOnce({
-        authUid: `user-${role}`,
-        accounts: [
-          {
-            organizationId: "org-1",
-            name: "Org 1",
-            role,
-            status: "active",
-            createdAt: "2026-01-01T00:00:00.000Z",
-          },
-        ],
-        currentOrganizationId: "org-1",
-        currentDisplayName: `${role} user`,
-      });
-
-      const request = new Request("http://localhost/api/auth/me", {
-        headers: {
-          Authorization: `Bearer token-${role}`,
-        },
-      });
-
-      await expect(verifyAuth(request)).resolves.toMatchObject({
-        authUid: `user-${role}`,
-      });
-      expect(mockActivateInvitedAccounts).toHaveBeenCalledWith(`user-${role}`);
-    }
-  });
-
-  it("throws NO_ROLE when accounts are still empty", async () => {
+  it("throws NO_ROLE when accounts are empty", async () => {
     mockVerifyIdToken.mockResolvedValueOnce({ uid: "user-2" });
-    mockLoadAuthUser.mockResolvedValueOnce({
+    mockLoadAccountAuthUser.mockResolvedValueOnce({
       authUid: "user-2",
       accounts: [],
       currentOrganizationId: null,
       currentDisplayName: null,
     });
 
-    const request = new Request("http://localhost/api/auth/me", {
-      headers: {
-        Authorization: "Bearer token-no-role",
-      },
-    });
-
-    await expect(verifyAuth(request)).rejects.toMatchObject({
+    await expect(verifyAccountAuth(bearerRequest("t"))).rejects.toMatchObject({
       code: "NO_ROLE",
       statusCode: 403,
     } satisfies Partial<AuthError>);
-    expect(mockActivateInvitedAccounts).toHaveBeenCalledWith("user-2");
+  });
+});
+
+describe("verifyConsultantAuth", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("loads consultant-only user and returns it (no account activation)", async () => {
+    mockVerifyIdToken.mockResolvedValueOnce({ uid: "consultant-1" });
+    mockLoadConsultantAuthUser.mockResolvedValueOnce({
+      authUid: "consultant-1",
+      consultants: [
+        {
+          organizationId: "org-1",
+          name: "相談員 一郎",
+          isActive: true,
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      currentOrganizationId: "org-1",
+      currentDisplayName: "相談員 一郎",
+    });
+
+    await expect(
+      verifyConsultantAuth(bearerRequest("t")),
+    ).resolves.toMatchObject({ authUid: "consultant-1" });
+    expect(mockLoadConsultantAuthUser).toHaveBeenCalledWith("consultant-1");
+    expect(mockLoadAccountAuthUser).not.toHaveBeenCalled();
+    expect(mockActivateInvitedAccounts).not.toHaveBeenCalled();
+  });
+
+  it("throws NO_ROLE when consultants are empty", async () => {
+    mockVerifyIdToken.mockResolvedValueOnce({ uid: "not-consultant" });
+    mockLoadConsultantAuthUser.mockResolvedValueOnce({
+      authUid: "not-consultant",
+      consultants: [],
+      currentOrganizationId: null,
+      currentDisplayName: null,
+    });
+
+    await expect(
+      verifyConsultantAuth(bearerRequest("t")),
+    ).rejects.toMatchObject({
+      code: "NO_ROLE",
+      statusCode: 403,
+    } satisfies Partial<AuthError>);
+  });
+});
+
+describe("verifyEitherAuth", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("allows account-only users", async () => {
+    mockVerifyIdToken.mockResolvedValueOnce({ uid: "admin-1" });
+    mockLoadAuthUser.mockResolvedValueOnce({
+      authUid: "admin-1",
+      accounts: [
+        {
+          organizationId: "org-1",
+          name: "Org 1",
+          roleId: "admin",
+          roleName: "管理者",
+          permissions: [],
+          status: "active",
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      consultants: [],
+      currentOrganizationId: "org-1",
+      currentDisplayName: "Admin",
+    });
+
+    await expect(verifyEitherAuth(bearerRequest("t"))).resolves.toMatchObject({
+      authUid: "admin-1",
+    });
+    expect(mockActivateInvitedAccounts).toHaveBeenCalledWith("admin-1");
+  });
+
+  it("allows consultant-only users", async () => {
+    mockVerifyIdToken.mockResolvedValueOnce({ uid: "consultant-1" });
+    mockLoadAuthUser.mockResolvedValueOnce({
+      authUid: "consultant-1",
+      accounts: [],
+      consultants: [
+        {
+          organizationId: "org-1",
+          name: "相談員 一郎",
+          isActive: true,
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      currentOrganizationId: "org-1",
+      currentDisplayName: "相談員 一郎",
+    });
+
+    await expect(verifyEitherAuth(bearerRequest("t"))).resolves.toMatchObject({
+      authUid: "consultant-1",
+    });
+  });
+
+  it("throws NO_ROLE when both accounts and consultants are empty", async () => {
+    mockVerifyIdToken.mockResolvedValueOnce({ uid: "user-2" });
+    mockLoadAuthUser.mockResolvedValueOnce({
+      authUid: "user-2",
+      accounts: [],
+      consultants: [],
+      currentOrganizationId: null,
+      currentDisplayName: null,
+    });
+
+    await expect(verifyEitherAuth(bearerRequest("t"))).rejects.toMatchObject({
+      code: "NO_ROLE",
+      statusCode: 403,
+    } satisfies Partial<AuthError>);
   });
 });

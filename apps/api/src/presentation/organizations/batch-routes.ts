@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { requirePermission } from "@/infrastructure/auth/require-permission";
-import { verifyAuth } from "@/infrastructure/auth/verify-auth";
+import { verifyAccountAuth } from "@/infrastructure/auth/verify-auth";
 import { verifyCloudSchedulerAuth } from "@/infrastructure/auth/verify-cloud-scheduler-auth";
 import {
   createBatchChargeUseCase,
@@ -36,7 +36,7 @@ async function authorizeBatchExecution(
     };
   }
 
-  const authUser = await verifyAuth(request);
+  const authUser = await verifyAccountAuth(request);
   requirePermission(authUser, organizationId, "console.payments.charge");
   return { type: "user", principal: authUser.authUid };
 }

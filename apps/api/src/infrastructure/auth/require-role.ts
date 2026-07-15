@@ -1,12 +1,13 @@
 import type {
   Account,
-  AuthUser,
+  AccountAuthUser,
   Consultant,
+  ConsultantAuthUser,
 } from "@/infrastructure/auth/auth-types";
 import { AuthError } from "@/infrastructure/auth/verify-auth";
 
 export function getAccount(
-  authUser: AuthUser,
+  authUser: AccountAuthUser,
   organizationId: string,
 ): Account | undefined {
   return authUser.accounts.find(
@@ -16,7 +17,7 @@ export function getAccount(
 }
 
 export function getConsultant(
-  authUser: AuthUser,
+  authUser: ConsultantAuthUser,
   organizationId: string,
 ): Consultant | undefined {
   return authUser.consultants.find(
@@ -26,7 +27,7 @@ export function getConsultant(
 }
 
 export function requireRoleId(
-  authUser: AuthUser,
+  authUser: AccountAuthUser,
   organizationId: string,
   ...allowedRoleIds: string[]
 ): Account {
@@ -52,7 +53,7 @@ export function requireRoleId(
 }
 
 export function requireConsultant(
-  authUser: AuthUser,
+  authUser: ConsultantAuthUser,
   organizationId: string,
 ): Consultant {
   const consultant = getConsultant(authUser, organizationId);

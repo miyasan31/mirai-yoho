@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import type { ConsultantStatusProps } from "@/domain/settings/consultant-status";
 import { Settings } from "@/domain/settings/settings";
 import { requirePermission } from "@/infrastructure/auth/require-permission";
-import { verifyAuth } from "@/infrastructure/auth/verify-auth";
+import { verifyAccountAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createSettingsRepository,
   createUpdateBookingSettingsUseCase,
@@ -47,7 +47,7 @@ export const consoleSettingsRoutes = new Hono();
 consoleSettingsRoutes.get(
   "/console/settings/booking",
   getRoute(async ({ organizationId, request }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requirePermission(authUser, organizationId, "console.settings.read");
     const settings =
       await createSettingsRepository().findByOrganizationId(organizationId);
@@ -59,7 +59,7 @@ consoleSettingsRoutes.get(
 consoleSettingsRoutes.get(
   "/console/settings/consultant-statuses",
   getRoute(async ({ organizationId, request }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requirePermission(authUser, organizationId, "console.settings.read");
     const settings =
       await createSettingsRepository().findByOrganizationId(organizationId);
@@ -71,7 +71,7 @@ consoleSettingsRoutes.get(
 consoleSettingsRoutes.patch(
   "/console/settings/consultant-statuses",
   patchRoute(async ({ organizationId, request }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requirePermission(
       authUser,
       organizationId,
@@ -98,7 +98,7 @@ consoleSettingsRoutes.patch(
 consoleSettingsRoutes.patch(
   "/console/settings/booking",
   patchRoute(async ({ organizationId, request }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requirePermission(authUser, organizationId, "console.settings.manage");
     const body = await request.json();
     if (typeof body.consultantSelectionEnabled !== "boolean") {

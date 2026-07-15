@@ -1,9 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
+import { AuthError, verifyEitherAuth } from "@/infrastructure/auth/verify-auth";
 import { GET } from "../me";
 
 vi.mock("@/infrastructure/auth/verify-auth", () => ({
-  verifyAuth: vi.fn(),
+  verifyEitherAuth: vi.fn(),
   AuthError: class extends Error {
     statusCode: number;
     code: string;
@@ -18,7 +18,7 @@ vi.mock("@/infrastructure/auth/verify-auth", () => ({
 
 describe("GET /api/auth/me", () => {
   it("returns no-store for success response", async () => {
-    vi.mocked(verifyAuth).mockResolvedValueOnce({
+    vi.mocked(verifyEitherAuth).mockResolvedValueOnce({
       authUid: "authUid-1",
       accounts: [],
       consultants: [],
@@ -37,7 +37,7 @@ describe("GET /api/auth/me", () => {
   });
 
   it("returns no-store for auth error response", async () => {
-    vi.mocked(verifyAuth).mockRejectedValueOnce(
+    vi.mocked(verifyEitherAuth).mockRejectedValueOnce(
       new AuthError(401, "UNAUTHORIZED", "Unauthorized"),
     );
 

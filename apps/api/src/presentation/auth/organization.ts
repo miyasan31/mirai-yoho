@@ -1,11 +1,11 @@
 import { setLastOrganizationId } from "@/infrastructure/auth/load-auth-context";
 import { getAccount } from "@/infrastructure/auth/require-role";
-import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
+import { AuthError, verifyEitherAuth } from "@/infrastructure/auth/verify-auth";
 import { withNoStore } from "../cache-control";
 
 export async function PATCH(request: Request) {
   try {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyEitherAuth(request);
     const body = (await request.json()) as { organizationId?: string };
 
     if (!body.organizationId) {

@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { requirePermission } from "@/infrastructure/auth/require-permission";
 import { getConsultant } from "@/infrastructure/auth/require-role";
-import { verifyAuth } from "@/infrastructure/auth/verify-auth";
+import { verifyEitherAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createCreateSlotUseCase,
   createDeleteSlotUseCase,
@@ -13,7 +13,7 @@ export const slotRoutes = new Hono();
 slotRoutes.post(
   "/slots",
   postRoute(async ({ organizationId, request }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyEitherAuth(request);
     const consultant = getConsultant(authUser, organizationId);
     if (!consultant) {
       requirePermission(authUser, organizationId, "console.slots.manage");
@@ -50,7 +50,7 @@ slotRoutes.post(
 slotRoutes.delete(
   "/slots/:slotId",
   deleteRoute(async ({ organizationId, request, param }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyEitherAuth(request);
     const consultant = getConsultant(authUser, organizationId);
     if (!consultant) {
       requirePermission(authUser, organizationId, "console.slots.manage");

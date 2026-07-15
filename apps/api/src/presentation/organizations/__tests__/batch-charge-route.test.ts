@@ -80,7 +80,9 @@ vi.mock("@/infrastructure/auth/verify-cloud-scheduler-auth", () => ({
 
 vi.mock("@/infrastructure/auth/verify-auth", () => ({
   AuthError: mocks.AuthError,
-  verifyAuth: mocks.verifyAuth,
+  verifyAccountAuth: mocks.verifyAuth,
+  verifyConsultantAuth: mocks.verifyAuth,
+  verifyEitherAuth: mocks.verifyAuth,
 }));
 
 vi.mock("@/infrastructure/auth/require-role", () => ({

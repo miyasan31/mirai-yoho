@@ -1,6 +1,9 @@
 import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-permission";
 import { SYSTEM_ADMIN_ROLE_ID } from "@/domain/authorization/role";
-import type { Account, AuthUser } from "@/infrastructure/auth/auth-types";
+import type {
+  Account,
+  AccountAuthUser,
+} from "@/infrastructure/auth/auth-types";
 import { AuthError } from "@/infrastructure/auth/verify-auth";
 
 export function hasPermission(
@@ -11,7 +14,7 @@ export function hasPermission(
 }
 
 export function requirePermission(
-  authUser: AuthUser,
+  authUser: AccountAuthUser,
   organizationId: string,
   permission: AuthorizationPermission,
 ): Account {
@@ -41,7 +44,7 @@ export function requirePermission(
 }
 
 export function requireSystemAdminRole(
-  authUser: AuthUser,
+  authUser: AccountAuthUser,
   organizationId: string,
 ): Account {
   const account = authUser.accounts.find(
