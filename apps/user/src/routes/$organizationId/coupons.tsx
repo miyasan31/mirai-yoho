@@ -6,7 +6,6 @@ import {
 } from "@mirai-yoho/api-client/api/customer/customer";
 import type {
   AvailableCoupon,
-  AvailableCouponIneligibilityReason,
   CouponType,
 } from "@mirai-yoho/api-client/schemas";
 import { Badge } from "@mirai-yoho/ui/components/ui/badge";
@@ -32,12 +31,6 @@ const COUPON_TYPE_COLOR: Record<CouponType, "green" | "purple"> = {
   welcome: "green",
   birthday: "purple",
 };
-
-const INELIGIBILITY_LABEL: Record<AvailableCouponIneligibilityReason, string> =
-  {
-    "already-received": "取得済み",
-    "not-in-birth-month": "誕生月ではありません",
-  };
 
 function OrganizationCouponsPage() {
   const { organizationId } = Route.useParams();
@@ -95,7 +88,8 @@ function OrganizationCouponsPage() {
     );
   }
 
-  const coupons = availableQuery.data?.data?.coupons ?? null;
+  const allCoupons = availableQuery.data?.data?.coupons ?? null;
+  const receivableCoupons = allCoupons?.filter((c) => c.isReceivable) ?? null;
   const isPending = receiveWelcome.isPending || receiveBirthday.isPending;
 
   return (
@@ -117,13 +111,13 @@ function OrganizationCouponsPage() {
 
       {availableQuery.isError ? (
         <Text color="fg.error">クーポンの取得に失敗しました</Text>
-      ) : coupons === null ? (
+      ) : receivableCoupons === null ? (
         <Spinner />
-      ) : coupons.length === 0 ? (
+      ) : receivableCoupons.length === 0 ? (
         <Text color="fg.muted">現在取得可能なクーポンはありません。</Text>
       ) : (
         <styled.ul display="flex" flexDir="column" gap="2">
-          {coupons.map((coupon) => (
+          {receivableCoupons.map((coupon) => (
             <styled.li
               key={coupon.couponId}
               border="1px solid"
@@ -150,21 +144,13 @@ function OrganizationCouponsPage() {
                   {coupon.expiresInDays} 日間有効
                 </Text>
               </styled.div>
-              {coupon.isReceivable ? (
-                <Button
-                  size="sm"
-                  loading={isPending}
-                  onClick={() => onReceive(coupon)}
-                >
-                  取得
-                </Button>
-              ) : (
-                <Badge variant="subtle">
-                  {coupon.ineligibilityReason
-                    ? INELIGIBILITY_LABEL[coupon.ineligibilityReason]
-                    : "取得不可"}
-                </Badge>
-              )}
+              <Button
+                size="sm"
+                loading={isPending}
+                onClick={() => onReceive(coupon)}
+              >
+                取得
+              </Button>
             </styled.li>
           ))}
         </styled.ul>
