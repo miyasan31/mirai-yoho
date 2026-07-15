@@ -349,9 +349,29 @@ function BookingPageInner() {
             )}
           </Field.Root>
 
-          {availableCoupons.length > 0 && (
-            <Field.Root>
+          <Field.Root>
+            <styled.div
+              display="flex"
+              alignItems="center"
+              justifyContent="space-between"
+              gap="2"
+            >
               <Field.Label>クーポン（任意 / 1枚まで）</Field.Label>
+              <Link to="/$organizationId/coupons" params={{ organizationId }}>
+                <styled.span
+                  color="colorPalette.default"
+                  textDecoration="underline"
+                  textStyle="sm"
+                >
+                  取得画面へ →
+                </styled.span>
+              </Link>
+            </styled.div>
+            {availableCoupons.length === 0 ? (
+              <Text textStyle="sm" color="fg.muted">
+                利用可能なクーポンはありません。取得画面から受け取れます。
+              </Text>
+            ) : (
               <RadioGroup.Root
                 name="selectedUserCouponId"
                 value={selectedUserCouponId || "none"}
@@ -396,8 +416,8 @@ function BookingPageInner() {
                   </RadioGroup.Item>
                 ))}
               </RadioGroup.Root>
-            </Field.Root>
-          )}
+            )}
+          </Field.Root>
 
           {selectedPricePlan && (
             <styled.div
