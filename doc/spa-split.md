@@ -115,16 +115,21 @@
 
 ### クリーンアップ（動作確認後、別 PR で実施）
 
-6. **旧 `ADMIN_APP_URL` Secret 削除**:
-   - Terraform: `app_hosting_secret_ids` / `api_secret_ids` / `worker_secret_names_by_command.late-arrival-alerts` から `ADMIN_APP_URL` を削除する PR を作成
-   - Terraform apply は `deletion_protection = true` のため destroy に失敗する。手動で:
+6. **旧 `ADMIN_APP_URL` Secret 削除** — 上記手順 §3–§5 の動作確認が完了し、Cloud Run api / batch worker が `CONSOLE_APP_URL` を使って正常稼働していることを確認してから実施する。
+   - Terraform 側の変更（`app_hosting_secret_ids` / `api_secret_ids` / `worker_secret_names_by_command.late-arrival-alerts` から `ADMIN_APP_URL` を削除）は別 PR でマージ済みの前提。
+   - マージ後、release/{dev,prod} push で走る terraform-apply.yml は `deletion_protection = true` のため destroy に失敗する。**この失敗は想定内**。事前に operator が dev / prod 各環境で以下を手動実行してから push する:
      ```bash
+     # dev
      cd infra/terraform/gcp/dev
      terraform state rm 'module.firebase.google_secret_manager_secret.app_hosting["ADMIN_APP_URL"]'
      gcloud secrets delete ADMIN_APP_URL --project=mirai-yoho-dev
-     terraform apply
+
+     # prod
+     cd ../prod
+     terraform state rm 'module.firebase.google_secret_manager_secret.app_hosting["ADMIN_APP_URL"]'
+     gcloud secrets delete ADMIN_APP_URL --project=mirai-yoho-prod
      ```
-   - prod も同様。
+   - 上記後に release/* push すれば apply が clean に通り、Cloud Run api / batch worker の env spec からも `ADMIN_APP_URL` が消える（既存 revision は影響なし、次回 rollout で反映）。
 
 ## デプロイフロー
 
