@@ -54,7 +54,6 @@ export default function ConsoleConsultantsPage() {
     defaultValues: {
       name: "",
       email: "",
-      phone: "",
     },
   });
 
@@ -77,7 +76,6 @@ export default function ConsoleConsultantsPage() {
         data: {
           email: values.email,
           name: values.name,
-          phone: values.phone,
           roleId: "admin",
           isConsultant: true,
         },
@@ -175,15 +173,6 @@ export default function ConsoleConsultantsPage() {
                       {errors.email && (
                         <Field.ErrorText>
                           {errors.email.message}
-                        </Field.ErrorText>
-                      )}
-                    </Field.Root>
-                    <Field.Root invalid={!!errors.phone}>
-                      <Field.Label>電話番号</Field.Label>
-                      <Input type="tel" {...register("phone")} />
-                      {errors.phone && (
-                        <Field.ErrorText>
-                          {errors.phone.message}
                         </Field.ErrorText>
                       )}
                     </Field.Root>
