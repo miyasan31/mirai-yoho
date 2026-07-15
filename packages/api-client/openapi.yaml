@@ -1350,6 +1350,174 @@ paths:
         "200":
           description: OK
 
+  /organizations/{organizationId}/console/coupons:
+    get:
+      operationId: getConsoleCoupons
+      summary: クーポン一覧取得
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [coupons]
+                properties:
+                  coupons:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Coupon"
+    post:
+      operationId: createConsoleCoupon
+      summary: クーポン作成
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CouponInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Coupon"
+
+  /organizations/{organizationId}/console/coupons/{couponId}:
+    get:
+      operationId: getConsoleCoupon
+      summary: クーポン詳細取得
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: couponId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Coupon"
+    patch:
+      operationId: updateConsoleCoupon
+      summary: クーポン更新
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: couponId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CouponUpdateInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Coupon"
+    delete:
+      operationId: archiveConsoleCoupon
+      summary: クーポン archive（無効化）
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: couponId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+
+  /organizations/{organizationId}/console/coupons/{couponId}/distribute:
+    post:
+      operationId: distributeConsoleCoupon
+      summary: general クーポンを全顧客に一斉配布
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: couponId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DistributeCouponResult"
+
+  /organizations/{organizationId}/customer/coupons/receive-welcome:
+    post:
+      operationId: receiveWelcomeCoupon
+      summary: 初回登録特典（welcome）クーポンを受け取る
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReceiveWelcomeCouponResult"
+
+  /organizations/{organizationId}/customer/coupons/receive-birthday:
+    post:
+      operationId: receiveBirthdayCoupon
+      summary: 誕生月クーポンを受け取る（月内1回）
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [userCouponId]
+                properties:
+                  userCouponId:
+                    type: string
+
 components:
   parameters:
     OrganizationIdParam:
@@ -1480,6 +1648,9 @@ components:
           userCouponId,
           couponId,
           organizationId,
+          couponName,
+          amountJPY,
+          type,
           receivedAt,
           expiresAt,
           redeemedAt,
@@ -1492,14 +1663,23 @@ components:
           type: string
         organizationId:
           type: string
-          nullable: true
+        couponName:
+          type: string
+        amountJPY:
+          type: integer
+          minimum: 0
+        type:
+          $ref: "#/components/schemas/CouponType"
         receivedAt:
           type: string
+          format: date-time
         expiresAt:
           type: string
+          format: date-time
           nullable: true
         redeemedAt:
           type: string
+          format: date-time
           nullable: true
         isRedeemable:
           type: boolean
@@ -1584,6 +1764,8 @@ components:
         - console.accounts.password-reset
         - console.roles.read
         - console.roles.manage
+        - console.coupons.read
+        - console.coupons.manage
 
     Role:
       type: object
@@ -2136,6 +2318,9 @@ components:
           type: string
         selectionId:
           type: string
+        selectedUserCouponId:
+          type: string
+          description: 適用する UserCoupon の ID（1枚のみ、任意）
 
     PublicPricePlan:
       type: object
@@ -2248,3 +2433,124 @@ components:
           type: string
         message:
           type: string
+
+    CouponType:
+      type: string
+      enum: [welcome, birthday, general]
+
+    Coupon:
+      type: object
+      required:
+        [
+          couponId,
+          type,
+          name,
+          amountJPY,
+          distributionCount,
+          isActive,
+          isArchived,
+          createdAt,
+          updatedAt,
+        ]
+      properties:
+        couponId:
+          type: string
+        type:
+          $ref: "#/components/schemas/CouponType"
+        name:
+          type: string
+        amountJPY:
+          type: integer
+          minimum: 1
+        distributionCount:
+          type: integer
+          minimum: 1
+        startsAt:
+          type: string
+          format: date-time
+          nullable: true
+        expiresInDays:
+          type: integer
+          minimum: 1
+          nullable: true
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        isActive:
+          type: boolean
+        isArchived:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+        archivedAt:
+          type: string
+          format: date-time
+          nullable: true
+
+    CouponInput:
+      type: object
+      required: [type, name, amountJPY, distributionCount]
+      properties:
+        type:
+          $ref: "#/components/schemas/CouponType"
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        amountJPY:
+          type: integer
+          minimum: 1
+        distributionCount:
+          type: integer
+          minimum: 1
+        startsAt:
+          type: string
+          format: date-time
+        expiresInDays:
+          type: integer
+          minimum: 1
+        expiresAt:
+          type: string
+          format: date-time
+
+    CouponUpdateInput:
+      type: object
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        amountJPY:
+          type: integer
+          minimum: 1
+        distributionCount:
+          type: integer
+          minimum: 1
+
+    DistributeCouponResult:
+      type: object
+      required: [issuedCount, skippedCount, reachedLimit]
+      properties:
+        issuedCount:
+          type: integer
+          minimum: 0
+        skippedCount:
+          type: integer
+          minimum: 0
+        reachedLimit:
+          type: boolean
+
+    ReceiveWelcomeCouponResult:
+      type: object
+      required: [issuedCount, alreadyReceived]
+      properties:
+        issuedCount:
+          type: integer
+          minimum: 0
+        alreadyReceived:
+          type: boolean

@@ -13,6 +13,12 @@ import { SetupPaymentUseCase } from "@/application/booking/setup-payment-use-cas
 import { CreateConsultantUseCase } from "@/application/consultant/create-consultant-use-case";
 import { DeactivateConsultantUseCase } from "@/application/consultant/deactivate-consultant-use-case";
 import { UpdateConsultantUseCase } from "@/application/consultant/update-consultant-use-case";
+import { ArchiveCouponUseCase } from "@/application/coupon/archive-coupon-use-case";
+import { CreateCouponUseCase } from "@/application/coupon/create-coupon-use-case";
+import { DistributeGeneralCouponUseCase } from "@/application/coupon/distribute-general-coupon-use-case";
+import { GetCouponUseCase } from "@/application/coupon/get-coupon-use-case";
+import { ListCouponsUseCase } from "@/application/coupon/list-coupons-use-case";
+import { UpdateCouponUseCase } from "@/application/coupon/update-coupon-use-case";
 import { GetDashboardUseCase } from "@/application/dashboard/get-dashboard-use-case";
 import { CancelPaymentUseCase } from "@/application/payment/cancel-payment-use-case";
 import { FailPaymentUseCase } from "@/application/payment/fail-payment-use-case";
@@ -33,7 +39,8 @@ import { SignupAnonymouslyUseCase } from "@/application/user/signup-anonymously-
 import { UpdateUserProfileUseCase } from "@/application/user/update-user-profile-use-case";
 import { WithdrawUserUseCase } from "@/application/user/withdraw-user-use-case";
 import { ListUserCouponsUseCase } from "@/application/user-coupon/list-user-coupons-use-case";
-import { ReceiveCouponUseCase } from "@/application/user-coupon/receive-coupon-use-case";
+import { ReceiveBirthdayCouponUseCase } from "@/application/user-coupon/receive-birthday-coupon-use-case";
+import { ReceiveWelcomeCouponsUseCase } from "@/application/user-coupon/receive-welcome-coupons-use-case";
 import { envServer } from "@/config/env.server";
 import { AesGcmTokenCipher } from "@/infrastructure/crypto/aes-gcm-token-cipher";
 import { FirebaseAuthAdminService } from "@/infrastructure/firebase/firebase-auth-admin-service";
@@ -41,6 +48,7 @@ import { FirebaseUserContactService } from "@/infrastructure/firebase/firebase-u
 import { FirestoreAccountRepository } from "@/infrastructure/firestore/firestore-account-repository";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
+import { FirestoreCouponRepository } from "@/infrastructure/firestore/firestore-coupon-repository";
 import { FirestoreCustomerRepository } from "@/infrastructure/firestore/firestore-customer-repository";
 import { FirestoreOrganizationRepository } from "@/infrastructure/firestore/firestore-organization-repository";
 import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore-payment-repository";
@@ -185,6 +193,7 @@ export function createCreateBookingUseCase() {
     new FirestorePricePlanRepository(),
     new FirestoreSettingsRepository(),
     new FirestoreUserRepository(),
+    new FirestoreUserCouponRepository(),
   );
 }
 
@@ -222,6 +231,7 @@ export function createCancelBookingUseCase() {
     new FirestoreZoomSessionRepository(),
     new ZoomService(),
     new FirestoreCustomerRepository(),
+    new FirestoreUserCouponRepository(),
   );
 }
 
@@ -351,10 +361,54 @@ export function createWithdrawUserUseCase() {
   );
 }
 
-export function createReceiveCouponUseCase() {
-  return new ReceiveCouponUseCase(new FirestoreUserCouponRepository());
-}
-
 export function createListUserCouponsUseCase() {
   return new ListUserCouponsUseCase(new FirestoreUserCouponRepository());
+}
+
+export function createCouponRepository() {
+  return new FirestoreCouponRepository();
+}
+
+export function createCreateCouponUseCase() {
+  return new CreateCouponUseCase(new FirestoreCouponRepository());
+}
+
+export function createUpdateCouponUseCase() {
+  return new UpdateCouponUseCase(new FirestoreCouponRepository());
+}
+
+export function createArchiveCouponUseCase() {
+  return new ArchiveCouponUseCase(new FirestoreCouponRepository());
+}
+
+export function createListCouponsUseCase() {
+  return new ListCouponsUseCase(new FirestoreCouponRepository());
+}
+
+export function createGetCouponUseCase() {
+  return new GetCouponUseCase(new FirestoreCouponRepository());
+}
+
+export function createDistributeGeneralCouponUseCase() {
+  return new DistributeGeneralCouponUseCase(
+    new FirestoreCouponRepository(),
+    new FirestoreCustomerRepository(),
+    new FirestoreUserCouponRepository(),
+  );
+}
+
+export function createReceiveWelcomeCouponsUseCase() {
+  return new ReceiveWelcomeCouponsUseCase(
+    new FirestoreCouponRepository(),
+    new FirestoreUserCouponRepository(),
+  );
+}
+
+export function createReceiveBirthdayCouponUseCase() {
+  return new ReceiveBirthdayCouponUseCase(
+    new FirestoreCouponRepository(),
+    new FirestoreUserCouponRepository(),
+    new FirestoreUserRepository(),
+    new FirestoreCustomerRepository(),
+  );
 }

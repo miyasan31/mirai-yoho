@@ -56,6 +56,13 @@ vi.mock("@/hooks/use-price-plans", () => ({
   }),
 }));
 
+vi.mock("@mirai-yoho/api-client/api/customer/customer", () => ({
+  useGetCustomerCoupons: () => ({
+    data: { data: { coupons: [] } },
+    isLoading: false,
+  }),
+}));
+
 vi.mock("styled-system/css", () => ({
   css: () => "",
   cva: () => () => "",

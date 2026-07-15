@@ -33,7 +33,6 @@ declare namespace NodeJS {
 
     INVOICE_REGISTRATION_NUMBER?: string;
     CANCEL_TOKEN_SECRET?: string;
-    COUPON_WEBHOOK_SECRET?: string;
     LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL?: string;
   }
 }

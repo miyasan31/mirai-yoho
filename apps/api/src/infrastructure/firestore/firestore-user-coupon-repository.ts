@@ -1,4 +1,5 @@
 import type { Timestamp } from "firebase-admin/firestore";
+import type { CouponType } from "@/domain/coupon/coupon";
 import { UserCoupon } from "@/domain/user-coupon/user-coupon";
 import type { IUserCouponRepository } from "@/domain/user-coupon/user-coupon-repository";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
@@ -11,6 +12,9 @@ interface UserCouponDoc {
   userId: string;
   couponId: string;
   organizationId?: string;
+  amountJPY?: number;
+  couponName?: string;
+  type?: CouponType;
   receivedAt: Timestamp | Date;
   expiresAt?: Timestamp | Date;
   redeemedAt?: Timestamp | Date;
@@ -32,7 +36,12 @@ function toDomain(doc: UserCouponDoc): UserCoupon {
     userCouponId: doc.userCouponId,
     userId: doc.userId,
     couponId: doc.couponId,
-    organizationId: doc.organizationId,
+    // 旧データ互換: PR-2 以前の doc は organizationId が無い可能性がある。
+    // 空文字で埋め、UI では表示されない古いレコードとして扱う。
+    organizationId: doc.organizationId ?? "",
+    amountJPY: doc.amountJPY ?? 0,
+    couponName: doc.couponName ?? "",
+    type: doc.type ?? "general",
     receivedAt: toRequiredDate(doc.receivedAt),
     expiresAt: toDate(doc.expiresAt),
     redeemedAt: toDate(doc.redeemedAt),
@@ -41,7 +50,6 @@ function toDomain(doc: UserCouponDoc): UserCoupon {
 }
 
 function toFirestore(coupon: UserCoupon): UserCouponDoc {
-  const organizationId = coupon.getOrganizationId();
   const expiresAt = coupon.getExpiresAt();
   const redeemedAt = coupon.getRedeemedAt();
   const redeemedBookingId = coupon.getRedeemedBookingId();
@@ -49,7 +57,10 @@ function toFirestore(coupon: UserCoupon): UserCouponDoc {
     userCouponId: coupon.getUserCouponId(),
     userId: coupon.getUserId(),
     couponId: coupon.getCouponId(),
-    ...(organizationId !== undefined ? { organizationId } : {}),
+    organizationId: coupon.getOrganizationId(),
+    amountJPY: coupon.getAmountJPY(),
+    couponName: coupon.getCouponName(),
+    type: coupon.getType(),
     receivedAt: coupon.getReceivedAt(),
     ...(expiresAt ? { expiresAt } : {}),
     ...(redeemedAt ? { redeemedAt } : {}),
@@ -77,6 +88,18 @@ export class FirestoreUserCouponRepository implements IUserCouponRepository {
       );
   }
 
+  async findByUserIdAndCouponId(
+    userId: string,
+    couponId: string,
+  ): Promise<UserCoupon[]> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("userId", "==", userId)
+      .where("couponId", "==", couponId)
+      .get();
+    return snapshot.docs.map((doc) => toDomain(doc.data() as UserCouponDoc));
+  }
+
   async findRedeemableByUserId(
     userId: string,
     now: Date,
@@ -90,10 +113,34 @@ export class FirestoreUserCouponRepository implements IUserCouponRepository {
       .filter((coupon) => coupon.isRedeemable(now));
   }
 
+  async countByCouponId(couponId: string): Promise<number> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("couponId", "==", couponId)
+      .count()
+      .get();
+    return snapshot.data().count;
+  }
+
   async save(coupon: UserCoupon): Promise<void> {
     await db
       .collection(COLLECTION)
       .doc(coupon.getUserCouponId())
       .set(toFirestore(coupon));
+  }
+
+  async saveMany(coupons: UserCoupon[]): Promise<void> {
+    // Firestore batch は 500 write/batch まで
+    const BATCH_LIMIT = 500;
+    for (let i = 0; i < coupons.length; i += BATCH_LIMIT) {
+      const batch = db.batch();
+      for (const coupon of coupons.slice(i, i + BATCH_LIMIT)) {
+        batch.set(
+          db.collection(COLLECTION).doc(coupon.getUserCouponId()),
+          toFirestore(coupon),
+        );
+      }
+      await batch.commit();
+    }
   }
 }

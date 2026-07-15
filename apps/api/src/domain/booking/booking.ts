@@ -9,6 +9,11 @@ import type { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import type { ZoomUrl } from "@/domain/booking/zoom-url";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 
+interface AppliedCoupon {
+  userCouponId: string;
+  discountJPY: number;
+}
+
 interface BookingCreateProps {
   organizationId: string;
   bookingId: string;
@@ -21,6 +26,7 @@ interface BookingCreateProps {
   pricePlanId: string;
   pricePlanName: string;
   pricePlanTotalJPY: number;
+  appliedCoupon?: AppliedCoupon;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -28,7 +34,7 @@ interface BookingCreateProps {
 interface BookingProps
   extends Omit<
     BookingCreateProps,
-    "pricePlanId" | "pricePlanName" | "pricePlanTotalJPY"
+    "pricePlanId" | "pricePlanName" | "pricePlanTotalJPY" | "appliedCoupon"
   > {
   status: BookingStatus;
   cancelDeadlineAt: CancelDeadline;
@@ -38,6 +44,9 @@ interface BookingProps
   pricePlanId?: string;
   pricePlanName?: string;
   pricePlanTotalJPY?: number;
+  appliedUserCouponId?: string;
+  couponDiscountJPY?: number;
+  discountedTotalJPY?: number;
   lateArrivalAlertSentAt?: Date;
 }
 
@@ -60,6 +69,9 @@ export class Booking extends AggregateRoot {
     private readonly pricePlanId: string | undefined,
     private readonly pricePlanName: string | undefined,
     private readonly pricePlanTotalJPY: number | undefined,
+    private readonly appliedUserCouponId: string | undefined,
+    private readonly couponDiscountJPY: number | undefined,
+    private readonly discountedTotalJPY: number | undefined,
     private readonly createdAt: Date,
     private updatedAt: Date,
   ) {
@@ -68,6 +80,12 @@ export class Booking extends AggregateRoot {
 
   static create(props: BookingCreateProps): Booking {
     const now = new Date();
+    const appliedUserCouponId = props.appliedCoupon?.userCouponId;
+    const couponDiscountJPY = props.appliedCoupon?.discountJPY;
+    const discountedTotalJPY =
+      couponDiscountJPY !== undefined
+        ? Math.max(0, props.pricePlanTotalJPY - couponDiscountJPY)
+        : undefined;
     return new Booking(
       props.organizationId,
       props.bookingId,
@@ -86,6 +104,9 @@ export class Booking extends AggregateRoot {
       props.pricePlanId,
       props.pricePlanName,
       props.pricePlanTotalJPY,
+      appliedUserCouponId,
+      couponDiscountJPY,
+      discountedTotalJPY,
       props.createdAt ?? now,
       props.updatedAt ?? now,
     );
@@ -111,6 +132,9 @@ export class Booking extends AggregateRoot {
       props.pricePlanId,
       props.pricePlanName,
       props.pricePlanTotalJPY,
+      props.appliedUserCouponId,
+      props.couponDiscountJPY,
+      props.discountedTotalJPY,
       createdAt,
       props.updatedAt ?? createdAt,
     );
@@ -300,6 +324,25 @@ export class Booking extends AggregateRoot {
 
   getPricePlanTotalJPY(): number | undefined {
     return this.pricePlanTotalJPY;
+  }
+
+  getAppliedUserCouponId(): string | undefined {
+    return this.appliedUserCouponId;
+  }
+
+  getCouponDiscountJPY(): number | undefined {
+    return this.couponDiscountJPY;
+  }
+
+  getDiscountedTotalJPY(): number | undefined {
+    return this.discountedTotalJPY;
+  }
+
+  /**
+   * 割引適用後の請求対象金額。クーポン未適用時は税込プラン総額をそのまま返す。
+   */
+  getEffectiveTotalJPY(): number | undefined {
+    return this.discountedTotalJPY ?? this.pricePlanTotalJPY;
   }
 
   getCreatedAt(): Date {

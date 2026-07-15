@@ -3,12 +3,14 @@ import { batchRoutes } from "./batch-routes";
 import { bookingRoutes } from "./booking-routes";
 import { consoleAccountRoutes } from "./console-account-routes";
 import { consoleConsultantRoutes } from "./console-consultant-routes";
+import { consoleCouponRoutes } from "./console-coupon-routes";
 import { consoleListingRoutes } from "./console-listing-routes";
 import { consoleRoleRoutes } from "./console-role-routes";
 import { consoleSettingsRoutes } from "./console-settings-routes";
 import { consultantBookingRoutes } from "./consultant-booking-routes";
 import { consultantProfileRoutes } from "./consultant-profile-routes";
 import { customerBookingRoutes } from "./customer-bookings";
+import { customerCouponRoutes } from "./customer-coupon-routes";
 import { pricePlanRoutes } from "./price-plan-routes";
 import { publicRoutes } from "./public-routes";
 import { slotRoutes } from "./slot-routes";
@@ -31,6 +33,8 @@ export function createOrganizationRoutes(): Hono {
   routes.route("/:organizationId", consoleSettingsRoutes);
   routes.route("/:organizationId", consoleAccountRoutes);
   routes.route("/:organizationId", consoleRoleRoutes);
+  routes.route("/:organizationId", consoleCouponRoutes);
+  routes.route("/:organizationId", customerCouponRoutes);
 
   return routes;
 }

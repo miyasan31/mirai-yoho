@@ -45,7 +45,10 @@ export async function GET(request: Request) {
         coupons: coupons.map((coupon) => ({
           userCouponId: coupon.getUserCouponId(),
           couponId: coupon.getCouponId(),
-          organizationId: coupon.getOrganizationId() ?? null,
+          organizationId: coupon.getOrganizationId(),
+          couponName: coupon.getCouponName(),
+          amountJPY: coupon.getAmountJPY(),
+          type: coupon.getType(),
           receivedAt: coupon.getReceivedAt().toISOString(),
           expiresAt: coupon.getExpiresAt()?.toISOString() ?? null,
           redeemedAt: coupon.getRedeemedAt()?.toISOString() ?? null,

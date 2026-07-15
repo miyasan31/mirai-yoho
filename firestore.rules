@@ -113,5 +113,18 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /coupons/{couponId} {
+      allow read: if isActiveMember(resource.data.organizationId);
+      allow write: if false;
+    }
+
+    match /user-coupons/{userCouponId} {
+      // 顧客用の userId は User 集約の UUID（Firebase Auth UID とは別）なので
+      // クライアントから直接読ませない。参照は API 経由（Firebase Admin SDK が rules をバイパス）。
+      allow read: if resource.data.organizationId is string
+        && isOrganizationAdmin(resource.data.organizationId);
+      allow write: if false;
+    }
+
   }
 }

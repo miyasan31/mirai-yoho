@@ -32,6 +32,9 @@ interface BookingDoc {
   pricePlanId?: string;
   pricePlanName?: string;
   pricePlanTotalJPY?: number;
+  appliedUserCouponId?: string;
+  couponDiscountJPY?: number;
+  discountedTotalJPY?: number;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
@@ -62,6 +65,9 @@ function toDomain(doc: BookingDoc): Booking {
     pricePlanId: doc.pricePlanId,
     pricePlanName: doc.pricePlanName,
     pricePlanTotalJPY: doc.pricePlanTotalJPY,
+    appliedUserCouponId: doc.appliedUserCouponId,
+    couponDiscountJPY: doc.couponDiscountJPY,
+    discountedTotalJPY: doc.discountedTotalJPY,
     createdAt,
     updatedAt: doc.updatedAt?.toDate() ?? createdAt,
   });
@@ -90,6 +96,9 @@ function toFirestore(booking: Booking): Record<string, unknown> {
     pricePlanId: booking.getPricePlanId() ?? null,
     pricePlanName: booking.getPricePlanName() ?? null,
     pricePlanTotalJPY: booking.getPricePlanTotalJPY() ?? null,
+    appliedUserCouponId: booking.getAppliedUserCouponId() ?? null,
+    couponDiscountJPY: booking.getCouponDiscountJPY() ?? null,
+    discountedTotalJPY: booking.getDiscountedTotalJPY() ?? null,
     createdAt: booking.getCreatedAt(),
     updatedAt: booking.getUpdatedAt(),
   };

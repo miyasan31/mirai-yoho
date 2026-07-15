@@ -48,15 +48,15 @@ export class SetupPaymentUseCase {
       );
     }
 
-    const pricePlanTotalJPY = booking.getPricePlanTotalJPY();
-    if (pricePlanTotalJPY === undefined) {
+    const effectiveTotalJPY = booking.getEffectiveTotalJPY();
+    if (effectiveTotalJPY === undefined) {
       throw new AppError(
         400,
         "BOOKING_PRICE_PLAN_NOT_FOUND",
         "Booking price plan is not set",
       );
     }
-    const money = Money.fromTaxIncluded(pricePlanTotalJPY, TAX_RATE);
+    const money = Money.fromTaxIncluded(effectiveTotalJPY, TAX_RATE);
 
     if (input.paymentMethodType === "card") {
       const { setupIntentId, customerSecret } =

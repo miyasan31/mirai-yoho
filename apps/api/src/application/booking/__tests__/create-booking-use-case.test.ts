@@ -25,8 +25,63 @@ import { BirthDate } from "@/domain/user/birth-date";
 import { User } from "@/domain/user/user";
 import type { IUserRepository } from "@/domain/user/user-repository";
 import { UserZoomConnection } from "@/domain/user/user-zoom-connection";
+import type { UserCoupon } from "@/domain/user-coupon/user-coupon";
+import type { IUserCouponRepository } from "@/domain/user-coupon/user-coupon-repository";
 import type { ZoomSession } from "@/domain/zoom-session/zoom-session";
 import type { IZoomSessionRepository } from "@/domain/zoom-session/zoom-session-repository";
+
+class InMemoryUserCouponRepository implements IUserCouponRepository {
+  public coupons: UserCoupon[] = [];
+
+  async findById(userCouponId: string): Promise<UserCoupon | null> {
+    return (
+      this.coupons.find((c) => c.getUserCouponId() === userCouponId) ?? null
+    );
+  }
+
+  async findByUserId(userId: string): Promise<UserCoupon[]> {
+    return this.coupons.filter((c) => c.getUserId() === userId);
+  }
+
+  async findByUserIdAndCouponId(
+    userId: string,
+    couponId: string,
+  ): Promise<UserCoupon[]> {
+    return this.coupons.filter(
+      (c) => c.getUserId() === userId && c.getCouponId() === couponId,
+    );
+  }
+
+  async findRedeemableByUserId(
+    userId: string,
+    now: Date,
+  ): Promise<UserCoupon[]> {
+    return this.coupons.filter(
+      (c) => c.getUserId() === userId && c.isRedeemable(now),
+    );
+  }
+
+  async countByCouponId(couponId: string): Promise<number> {
+    return this.coupons.filter((c) => c.getCouponId() === couponId).length;
+  }
+
+  async save(coupon: UserCoupon): Promise<void> {
+    const index = this.coupons.findIndex(
+      (c) => c.getUserCouponId() === coupon.getUserCouponId(),
+    );
+    if (index >= 0) {
+      this.coupons[index] = coupon;
+    } else {
+      this.coupons.push(coupon);
+    }
+  }
+
+  async saveMany(coupons: UserCoupon[]): Promise<void> {
+    for (const c of coupons) {
+      await this.save(c);
+    }
+  }
+}
 
 const ORGANIZATION_ID = "org-1";
 const DEFAULT_PRICE_PLAN_NAME = "通常鑑定";
@@ -491,6 +546,7 @@ function createUseCase(
       pricePlanRepository,
       new InMemorySettingsRepository(),
       userRepository,
+      new InMemoryUserCouponRepository(),
     ),
     bookingRepository,
     customerRepository,

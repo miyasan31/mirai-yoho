@@ -5,6 +5,7 @@ import {
   House,
   LayoutDashboard,
   Settings,
+  TicketPercent,
   UserLock,
   UserRoundSearch,
   UserStar,
@@ -58,6 +59,12 @@ export const NAV_ITEMS: Array<
     label: "アカウント管理",
     icon: UserLock,
     permissions: ["console.accounts.read"],
+  },
+  {
+    path: "/coupons",
+    label: "クーポン管理",
+    icon: TicketPercent,
+    permissions: ["console.coupons.read"],
   },
   {
     path: "/settings",

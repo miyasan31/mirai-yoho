@@ -1,4 +1,5 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { useGetCustomerCoupons } from "@mirai-yoho/api-client/api/customer/customer";
 import {
   getBookingCutoffMinutes,
   isBeforeBookingDeadline,
@@ -67,6 +68,17 @@ function BookingPageInner() {
   const bookingCutoffExceeded =
     hasValidSelectedStartAt && !isBeforeBookingDeadline(selectedStartAt);
   const [selectionId, setPricePlanSelectionId] = useState("");
+  const [selectedUserCouponId, setSelectedUserCouponId] = useState<string>("");
+  const couponsQuery = useGetCustomerCoupons({
+    query: { enabled: Boolean(profile) },
+  });
+  const availableCoupons = (couponsQuery.data?.data?.coupons ?? []).filter(
+    (c) =>
+      c.organizationId === organizationId && c.isRedeemable && !c.redeemedAt,
+  );
+  const selectedCoupon =
+    availableCoupons.find((c) => c.userCouponId === selectedUserCouponId) ??
+    null;
   const pricePlansQuery = useBookingPricePlans(
     {
       slotId: slotId ?? undefined,
@@ -76,6 +88,12 @@ function BookingPageInner() {
     Boolean(slotId || hasDateRange),
   );
   const pricePlans = pricePlansQuery.data?.data?.pricePlans ?? [];
+  const selectedPricePlan =
+    pricePlans.find((p) => p.selectionId === selectionId) ?? null;
+  const discountedTotalJPY =
+    selectedPricePlan && selectedCoupon
+      ? Math.max(0, selectedPricePlan.totalJPY - selectedCoupon.amountJPY)
+      : (selectedPricePlan?.totalJPY ?? null);
 
   const {
     register,
@@ -164,6 +182,7 @@ function BookingPageInner() {
           customerBirthDate: values.customerBirthDate,
           consultantContent: values.consultantContent?.trim() || undefined,
           selectionId,
+          selectedUserCouponId: selectedUserCouponId || undefined,
         },
       });
 
@@ -329,6 +348,97 @@ function BookingPageInner() {
               </RadioGroup.Root>
             )}
           </Field.Root>
+
+          {availableCoupons.length > 0 && (
+            <Field.Root>
+              <Field.Label>クーポン（任意 / 1枚まで）</Field.Label>
+              <RadioGroup.Root
+                name="selectedUserCouponId"
+                value={selectedUserCouponId || "none"}
+                onValueChange={(details) =>
+                  setSelectedUserCouponId(
+                    details.value === "none" ? "" : (details.value ?? ""),
+                  )
+                }
+              >
+                <RadioGroup.Item value="none">
+                  <RadioGroup.ItemHiddenInput />
+                  <RadioGroup.ItemControl>
+                    <RadioGroup.Indicator />
+                  </RadioGroup.ItemControl>
+                  <RadioGroup.ItemText>使用しない</RadioGroup.ItemText>
+                </RadioGroup.Item>
+                {availableCoupons.map((coupon) => (
+                  <RadioGroup.Item
+                    key={coupon.userCouponId}
+                    value={coupon.userCouponId}
+                  >
+                    <RadioGroup.ItemHiddenInput />
+                    <RadioGroup.ItemControl>
+                      <RadioGroup.Indicator />
+                    </RadioGroup.ItemControl>
+                    <RadioGroup.ItemText asChild>
+                      <styled.div>
+                        <Text fontWeight="medium">
+                          {coupon.couponName}（¥
+                          {coupon.amountJPY.toLocaleString()} 割引）
+                        </Text>
+                        {coupon.expiresAt && (
+                          <Text textStyle="sm" color="fg.muted" mt="1">
+                            有効期限:{" "}
+                            {new Date(coupon.expiresAt).toLocaleDateString(
+                              "ja-JP",
+                            )}
+                          </Text>
+                        )}
+                      </styled.div>
+                    </RadioGroup.ItemText>
+                  </RadioGroup.Item>
+                ))}
+              </RadioGroup.Root>
+            </Field.Root>
+          )}
+
+          {selectedPricePlan && (
+            <styled.div
+              rounded="l2"
+              bg="bg.subtle"
+              p="3"
+              display="flex"
+              flexDir="column"
+              gap="1"
+            >
+              <styled.div display="flex" justifyContent="space-between">
+                <Text textStyle="sm">プラン料金</Text>
+                <Text textStyle="sm">
+                  ¥{selectedPricePlan.totalJPY.toLocaleString()}
+                </Text>
+              </styled.div>
+              {selectedCoupon && (
+                <styled.div
+                  display="flex"
+                  justifyContent="space-between"
+                  color="fg.success"
+                >
+                  <Text textStyle="sm">クーポン割引</Text>
+                  <Text textStyle="sm">
+                    -¥{selectedCoupon.amountJPY.toLocaleString()}
+                  </Text>
+                </styled.div>
+              )}
+              <styled.div
+                display="flex"
+                justifyContent="space-between"
+                borderTopWidth="1"
+                borderColor="border"
+                pt="1"
+                fontWeight="bold"
+              >
+                <Text>お支払い金額</Text>
+                <Text>¥{(discountedTotalJPY ?? 0).toLocaleString()}</Text>
+              </styled.div>
+            </styled.div>
+          )}
 
           <Field.Root invalid={!!errors.agreedToTerms}>
             <Controller
