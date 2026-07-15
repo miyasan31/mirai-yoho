@@ -1,15 +1,12 @@
 import { Hono } from "hono";
-import { evaluateChargeEligibility } from "@/application/booking/charge-eligibility";
-import { Settings } from "@/domain/settings/settings";
 import { requirePermission } from "@/infrastructure/auth/require-permission";
 import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
-  createBookingRepository,
-  createConsultantRepository,
   createCustomerRepository,
+  createGetDashboardUseCase,
+  createListAvailableSlotsUseCase,
+  createListBookingsWithChargeEligibilityUseCase,
   createPaymentRepository,
-  createSettingsRepository,
-  createSlotRepository,
 } from "@/infrastructure/container";
 import {
   INVALID_LIST_QUERY_MESSAGE,
@@ -45,61 +42,14 @@ consoleListingRoutes.get(
     const consultantId = account.isConsultant
       ? authUser.authUid
       : requestedConsultantId;
-    const repository = createSlotRepository();
-    const settings =
-      (await createSettingsRepository().findByOrganizationId(organizationId)) ??
-      Settings.createDefault(organizationId);
-    const businessHours = settings.getBusinessHours();
-
-    if (consultantId) {
-      const availableSlots = await repository.findAvailableByConsultantId(
-        organizationId,
-        consultantId,
-      );
-      const filteredSlots = availableSlots.filter((slot) =>
-        businessHours.containsRange(
-          slot.getTimeRange().getStartsAt(),
-          slot.getTimeRange().getEndsAt(),
-        ),
-      );
-
-      return noStoreJson({
-        slots: filteredSlots.map((s) => ({
-          slotId: s.getSlotId(),
-          consultantId: s.getConsultantId(),
-          startsAt: s.getTimeRange().getStartsAt().toISOString(),
-          endsAt: s.getTimeRange().getEndsAt().toISOString(),
-          isAvailable: !s.getIsAvailable(),
-        })),
-      });
-    }
-
-    const aggregatedSlots = await repository.findAllAvailable(organizationId);
-    const groupedSlots = new Map<
-      string,
-      { startsAt: string; endsAt: string }
-    >();
-
-    for (const slot of aggregatedSlots) {
-      if (
-        !businessHours.containsRange(
-          slot.getTimeRange().getStartsAt(),
-          slot.getTimeRange().getEndsAt(),
-        )
-      ) {
-        continue;
-      }
-      const startsAt = slot.getTimeRange().getStartsAt().toISOString();
-      const endsAt = slot.getTimeRange().getEndsAt().toISOString();
-      const key = `${startsAt}_${endsAt}`;
-      if (!groupedSlots.has(key)) {
-        groupedSlots.set(key, { startsAt, endsAt });
-      }
-    }
-
-    return noStoreJson({
-      aggregatedSlots: [...groupedSlots.values()],
+    const result = await createListAvailableSlotsUseCase().execute({
+      organizationId,
+      consultantId,
     });
+    if (result.mode === "per-consultant") {
+      return noStoreJson({ slots: result.slots });
+    }
+    return noStoreJson({ aggregatedSlots: result.aggregatedSlots });
   }),
 );
 
@@ -108,38 +58,10 @@ consoleListingRoutes.get(
   getRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
     requirePermission(authUser, organizationId, "console.dashboard.read");
-    const [bookings, payments, customers, consultants] = await Promise.all([
-      createBookingRepository().findAll(organizationId),
-      createPaymentRepository().findAll(organizationId),
-      createCustomerRepository().findAll(organizationId),
-      createConsultantRepository().findAllActive(organizationId),
-    ]);
-
-    const totalRevenue = payments
-      .filter((p) => p.getStatus().getValue() === "charged")
-      .reduce((sum, p) => sum + p.getMoney().getTotalJPY(), 0);
-
-    return noStoreJson({
+    const result = await createGetDashboardUseCase().execute({
       organizationId,
-      totalBookings: bookings.length,
-      totalPayments: payments.length,
-      totalCustomers: customers.length,
-      totalConsultants: consultants.length,
-      totalRevenue,
-      bookingsByStatus: {
-        pending: bookings.filter((b) => b.getStatus().getValue() === "pending")
-          .length,
-        confirmed: bookings.filter(
-          (b) => b.getStatus().getValue() === "confirmed",
-        ).length,
-        completed: bookings.filter(
-          (b) => b.getStatus().getValue() === "completed",
-        ).length,
-        cancelled: bookings.filter(
-          (b) => b.getStatus().getValue() === "cancelled",
-        ).length,
-      },
     });
+    return noStoreJson(result);
   }),
 );
 
@@ -152,45 +74,36 @@ consoleListingRoutes.get(
     if (!listQueryParams) {
       return jsonError(400, "VALIDATION_ERROR", INVALID_LIST_QUERY_MESSAGE);
     }
-    const bookingRepo = createBookingRepository();
-    const paymentRepo = createPaymentRepository();
     const status = requestUrl.searchParams.get("status");
-    const bookings = status
-      ? await bookingRepo.findByStatus(organizationId, status)
-      : await bookingRepo.findAll(organizationId);
-    const payments = await paymentRepo.findAll(organizationId);
-    const paymentByBookingId = new Map(
-      payments.map((payment) => [payment.getBookingId(), payment]),
-    );
+    const results =
+      await createListBookingsWithChargeEligibilityUseCase().execute({
+        organizationId,
+        scope: { kind: "console", status },
+        includeCustomers: false,
+      });
 
     const bookingItems = sortByTimestampDesc(
-      bookings.map((b) => {
-        const eligibility = evaluateChargeEligibility({
-          booking: b,
-          payment: paymentByBookingId.get(b.getBookingId()) ?? null,
-        });
-        return {
-          bookingId: b.getBookingId(),
-          customerId: b.getCustomerId(),
-          consultantId: b.getConsultantId(),
-          slotId: b.getSlotId(),
-          startsAt: b.getStartsAt().toISOString(),
-          status: b.getStatus().getValue(),
-          joinUrl: b.getJoinUrl()?.getValue() ?? null,
-          consultantJoinedAt: b.getConsultantJoinedAt()?.toISOString() ?? null,
-          lateArrivalAlertSentAt:
-            b.getLateArrivalAlertSentAt()?.toISOString() ?? null,
-          consultantMemo: b.getConsultantMemo().getFreeMemo(),
-          memoCustomerName: b.getConsultantMemo().getCustomerName(),
-          memoBirthDate: b.getConsultantMemo().getBirthDate(),
-          memoAppraisalDate: b.getConsultantMemo().getAppraisalDate(),
-          consultationContent: b.getConsultationContent() ?? null,
-          chargeable: eligibility.chargeable,
-          chargeDisabledReason: eligibility.reason,
-          createdAt: b.getCreatedAt().toISOString(),
-          updatedAt: b.getUpdatedAt().toISOString(),
-        };
-      }),
+      results.map(({ booking: b, eligibility }) => ({
+        bookingId: b.getBookingId(),
+        customerId: b.getCustomerId(),
+        consultantId: b.getConsultantId(),
+        slotId: b.getSlotId(),
+        startsAt: b.getStartsAt().toISOString(),
+        status: b.getStatus().getValue(),
+        joinUrl: b.getJoinUrl()?.getValue() ?? null,
+        consultantJoinedAt: b.getConsultantJoinedAt()?.toISOString() ?? null,
+        lateArrivalAlertSentAt:
+          b.getLateArrivalAlertSentAt()?.toISOString() ?? null,
+        consultantMemo: b.getConsultantMemo().getFreeMemo(),
+        memoCustomerName: b.getConsultantMemo().getCustomerName(),
+        memoBirthDate: b.getConsultantMemo().getBirthDate(),
+        memoAppraisalDate: b.getConsultantMemo().getAppraisalDate(),
+        consultationContent: b.getConsultationContent() ?? null,
+        chargeable: eligibility.chargeable,
+        chargeDisabledReason: eligibility.reason,
+        createdAt: b.getCreatedAt().toISOString(),
+        updatedAt: b.getUpdatedAt().toISOString(),
+      })),
       listQueryParams.sortBy,
     );
     const { items, pagination } = paginateArray(bookingItems, listQueryParams);

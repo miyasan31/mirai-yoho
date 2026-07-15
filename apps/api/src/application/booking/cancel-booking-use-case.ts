@@ -6,23 +6,13 @@ import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
+import { ZoomSession } from "@/domain/zoom-session/zoom-session";
 import type { IZoomSessionRepository } from "@/domain/zoom-session/zoom-session-repository";
 
 interface CancelBookingInput {
   organizationId: string;
   bookingId: string;
   cancelledBy: "customer" | "admin";
-}
-
-function toSessionDate(date: Date): string {
-  return date
-    .toLocaleDateString("ja-JP", {
-      timeZone: "Asia/Tokyo",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    })
-    .replace(/\//g, "-");
 }
 
 export class CancelBookingUseCase {
@@ -78,7 +68,9 @@ export class CancelBookingUseCase {
       slot.release();
     }
 
-    const sessionDate = toSessionDate(booking.getStartsAt());
+    const sessionDate = ZoomSession.sessionDateFromInstant(
+      booking.getStartsAt(),
+    );
     const session = await this.zoomSessionRepository.findByDate(
       input.organizationId,
       sessionDate,

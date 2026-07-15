@@ -1,13 +1,12 @@
-import { BusinessHours } from "@mirai-yoho/shared/business-hours";
 import { Hono } from "hono";
 import type { ConsultantStatusProps } from "@/domain/settings/consultant-status";
 import { Settings } from "@/domain/settings/settings";
 import { requirePermission } from "@/infrastructure/auth/require-permission";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
-  createConsultantRepository,
   createSettingsRepository,
-  createSlotRepository,
+  createUpdateBookingSettingsUseCase,
+  createUpdateConsultantStatusesUseCase,
 } from "@/infrastructure/container";
 import { toConsultantStatusesResponse } from "./consultant-status";
 import { getRoute, jsonError, noStoreJson, patchRoute } from "./route-handler";
@@ -87,28 +86,11 @@ consoleSettingsRoutes.patch(
         "consultantStatuses and defaultConsultantStatusId are required",
       );
     }
-
-    const settingsRepository = createSettingsRepository();
-    const settings =
-      (await settingsRepository.findByOrganizationId(organizationId)) ??
-      Settings.createDefault(organizationId);
-    settings.updateConsultantStatuses(parsed.statuses, parsed.defaultStatusId);
-    await settingsRepository.save(settings);
-
-    const statusIds = new Set(
-      settings.getConsultantStatuses().map((status) => status.statusId),
-    );
-    const consultantRepository = createConsultantRepository();
-    const consultants = await consultantRepository.findAll(organizationId);
-    await Promise.all(
-      consultants
-        .filter((consultant) => !statusIds.has(consultant.getStatusId()))
-        .map((consultant) => {
-          consultant.changeStatus(settings.getDefaultConsultantStatusId());
-          return consultantRepository.save(consultant);
-        }),
-    );
-
+    const settings = await createUpdateConsultantStatusesUseCase().execute({
+      organizationId,
+      statuses: parsed.statuses,
+      defaultStatusId: parsed.defaultStatusId,
+    });
     return Response.json(toConsultantStatusesResponse(settings));
   }),
 );
@@ -126,43 +108,12 @@ consoleSettingsRoutes.patch(
         "consultantSelectionEnabled must be a boolean",
       );
     }
-
-    const repository = createSettingsRepository();
-    const settings =
-      (await repository.findByOrganizationId(organizationId)) ??
-      Settings.createDefault(organizationId);
-    const nextBusinessHours = BusinessHours.create(
-      (body.businessHours ??
-        settings.getBusinessHours().toJSON()) as ReturnType<
-        BusinessHours["toJSON"]
-      >,
-    );
-    const nextPricePlanRange =
-      body.pricePlanRange ?? settings.getPricePlanRange().toJSON();
-    settings.updateConsultantSelectionEnabled(body.consultantSelectionEnabled);
-    settings.updateBusinessHours(nextBusinessHours.toJSON());
-    settings.updatePricePlanRange(nextPricePlanRange);
-    await repository.save(settings);
-
-    const slotRepository = createSlotRepository();
-    const now = new Date();
-    const allSlots = await slotRepository.findByOrganizationId(organizationId);
-    const removableSlotIds = allSlots
-      .filter((slot) => {
-        if (slot.getIsAvailable()) return false;
-        if (slot.getTimeRange().getStartsAt() <= now) return false;
-        return !nextBusinessHours.containsRange(
-          slot.getTimeRange().getStartsAt(),
-          slot.getTimeRange().getEndsAt(),
-        );
-      })
-      .map((slot) => slot.getSlotId());
-    await Promise.all(
-      removableSlotIds.map((slotId) =>
-        slotRepository.delete(organizationId, slotId),
-      ),
-    );
-
+    const settings = await createUpdateBookingSettingsUseCase().execute({
+      organizationId,
+      consultantSelectionEnabled: body.consultantSelectionEnabled,
+      businessHours: body.businessHours,
+      pricePlanRange: body.pricePlanRange,
+    });
     return Response.json(toBookingSettingsResponse(settings));
   }),
 );

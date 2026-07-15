@@ -4,11 +4,7 @@ import {
   SYSTEM_ADMIN_ONLY_PERMISSION_SET,
 } from "@mirai-yoho/shared/authorization-permission";
 import { Hono } from "hono";
-import {
-  isSystemRoleId,
-  Role,
-  SYSTEM_ADMIN_ROLE_ID,
-} from "@/domain/authorization/role";
+import { type Role, SYSTEM_ADMIN_ROLE_ID } from "@/domain/authorization/role";
 import {
   requirePermission,
   requireSystemAdminRole,
@@ -16,7 +12,10 @@ import {
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createAccountRepository,
+  createCreateRoleUseCase,
+  createDeleteRoleUseCase,
   createRoleRepository,
+  createUpdateRoleUseCase,
 } from "@/infrastructure/container";
 import {
   deleteRoute,
@@ -38,10 +37,6 @@ function toRoleResponse(role: Role, assignedCount = 0) {
     createdAt: role.getCreatedAt().toISOString(),
     updatedAt: role.getUpdatedAt().toISOString(),
   };
-}
-
-function isValidCustomRoleId(roleId: string): boolean {
-  return /^[a-z][a-z0-9-]{1,62}$/.test(roleId);
 }
 
 function parseRoleBody(body: unknown): {
@@ -120,33 +115,17 @@ consoleRoleRoutes.post(
     requireSystemAdminRole(authUser, organizationId);
     const body = await request.json();
     const parsed = parseRoleBody(body);
-    if (!parsed?.roleId || !isValidCustomRoleId(parsed.roleId)) {
-      return jsonError(
-        400,
-        "VALIDATION_ERROR",
-        "roleId must be kebab-case and 2-63 characters",
-      );
+    if (!parsed?.roleId) {
+      return jsonError(400, "VALIDATION_ERROR", "Invalid role payload");
     }
-    if (isSystemRoleId(parsed.roleId)) {
-      return jsonError(400, "VALIDATION_ERROR", "roleId is reserved");
-    }
-    const repository = createRoleRepository();
-    const existing = await repository.findById(organizationId, parsed.roleId);
-    if (existing) {
-      return jsonError(409, "ROLE_ALREADY_EXISTS", "Role already exists");
-    }
-    const role = Role.create({
+    const role = await createCreateRoleUseCase().execute({
       organizationId,
       roleId: parsed.roleId,
       name: parsed.name,
       description: parsed.description,
       permissions: parsed.permissions,
-      isSystem: false,
     });
-    await repository.save(role);
-    return Response.json(toRoleResponse(role), {
-      status: 201,
-    });
+    return Response.json(toRoleResponse(role), { status: 201 });
   }),
 );
 
@@ -155,30 +134,18 @@ consoleRoleRoutes.patch(
   patchRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
     requireSystemAdminRole(authUser, organizationId);
-    const roleId = param("roleId");
     const body = await request.json();
     const parsed = parseRoleBody(body);
     if (!parsed) {
       return jsonError(400, "VALIDATION_ERROR", "Invalid role payload");
     }
-    const repository = createRoleRepository();
-    const role = await repository.findById(organizationId, roleId);
-    if (!role) {
-      return jsonError(404, "NOT_FOUND", "Role not found");
-    }
-    if (role.getIsSystem()) {
-      return jsonError(
-        400,
-        "SYSTEM_ROLE_IMMUTABLE",
-        "System role cannot be edited",
-      );
-    }
-    role.update({
+    const role = await createUpdateRoleUseCase().execute({
+      organizationId,
+      roleId: param("roleId"),
       name: parsed.name,
       description: parsed.description,
       permissions: parsed.permissions,
     });
-    await repository.save(role);
     return Response.json(toRoleResponse(role));
   }),
 );
@@ -188,30 +155,10 @@ consoleRoleRoutes.delete(
   deleteRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
     requireSystemAdminRole(authUser, organizationId);
-    const roleId = param("roleId");
-    const repository = createRoleRepository();
-    const role = await repository.findById(organizationId, roleId);
-    if (!role) {
-      return jsonError(404, "NOT_FOUND", "Role not found");
-    }
-    if (role.getIsSystem()) {
-      return jsonError(
-        400,
-        "SYSTEM_ROLE_IMMUTABLE",
-        "System role cannot be deleted",
-      );
-    }
-    const assignedAccounts = (
-      await createAccountRepository().findByOrganizationId(organizationId)
-    ).filter((account) => account.getRoleId() === roleId);
-    if (assignedAccounts.length > 0) {
-      return jsonError(
-        409,
-        "ROLE_IN_USE",
-        "このロールはアカウントに割り当てられているため削除できません",
-      );
-    }
-    await repository.delete(organizationId, roleId);
+    await createDeleteRoleUseCase().execute({
+      organizationId,
+      roleId: param("roleId"),
+    });
     return Response.json({ success: true });
   }),
 );
