@@ -1,5 +1,6 @@
+import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { Calendar, MessageCircle, Shield } from "lucide-react";
 import { styled } from "styled-system/jsx";
 
@@ -17,13 +18,27 @@ function Home() {
       minH="100dvh"
       px="8"
     >
-      <styled.div textAlign="center" maxW="2xl" mb="12">
+      <styled.div textAlign="center" maxW="2xl" mb="8">
         <Text as="h1" textStyle="5xl" fontWeight="bold" mb="4">
           みらい予報
         </Text>
         <Text textStyle="lg" color="fg.muted" maxW="md" mx="auto">
           あなたの未来を一緒に考える、オンライン相談サービス
         </Text>
+      </styled.div>
+
+      <styled.div
+        display="flex"
+        flexDir={{ base: "column", sm: "row" }}
+        gap="3"
+        mb="12"
+      >
+        <Button asChild size="lg">
+          <Link to="/register">会員登録して始める</Link>
+        </Button>
+        <Button asChild size="lg" variant="outline">
+          <Link to="/mypage">ログイン</Link>
+        </Button>
       </styled.div>
 
       <styled.div
