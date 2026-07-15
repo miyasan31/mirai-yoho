@@ -1,8 +1,10 @@
 import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-permission";
 import type {
   Account,
+  AccountAuthUser,
   AuthUser,
   Consultant,
+  ConsultantAuthUser,
 } from "@/infrastructure/auth/auth-types";
 import {
   createAccountRepository,
@@ -27,33 +29,27 @@ export async function activateInvitedAccounts(
   await repo.saveAll(invited);
 }
 
-export async function loadAuthUser(accountId: string): Promise<AuthUser> {
+interface AccountViewsResult {
+  accountViews: Account[];
+  currentOrganizationId: string | null;
+  currentDisplayName: string | null;
+}
+
+async function buildAccountViews(
+  accountId: string,
+): Promise<AccountViewsResult> {
   const accountRepository = createAccountRepository();
   const organizationRepository = createOrganizationRepository();
-  const consultantRepository = createConsultantRepository();
-
-  const [accounts, consultants] = await Promise.all([
-    accountRepository.findByAccountId(accountId),
-    consultantRepository.findByConsultantId(accountId),
-  ]);
+  const accounts = await accountRepository.findByAccountId(accountId);
   const activeAccounts = accounts
     .filter((account) => account.getStatus() === "active")
     .sort(
       (left, right) =>
         left.getCreatedAt().getTime() - right.getCreatedAt().getTime(),
     );
-  const activeConsultants = consultants
-    .filter((consultant) => consultant.getIsActive())
-    .sort(
-      (left, right) =>
-        left.getCreatedAt().getTime() - right.getCreatedAt().getTime(),
-    );
 
   const organizationIds = [
-    ...new Set([
-      ...activeAccounts.map((account) => account.getOrganizationId()),
-      ...activeConsultants.map((consultant) => consultant.getOrganizationId()),
-    ]),
+    ...new Set(activeAccounts.map((account) => account.getOrganizationId())),
   ];
   const organizations = await organizationRepository.findByIds(organizationIds);
   const nameById = new Map<string, string>();
@@ -61,16 +57,13 @@ export async function loadAuthUser(accountId: string): Promise<AuthUser> {
     nameById.set(organization.getOrganizationId(), organization.getName());
   }
 
-  const accountOrganizationIds = activeAccounts.map((account) =>
-    account.getOrganizationId(),
-  );
   const roleRepository = new FirestoreRoleRepository();
   const roleByOrganizationAndRole = new Map<
     string,
     { name: string; permissions: AuthorizationPermission[] }
   >();
   const rolesByOrganization = await Promise.all(
-    [...new Set(accountOrganizationIds)].map(async (organizationId) => ({
+    organizationIds.map(async (organizationId) => ({
       organizationId,
       roles: await roleRepository.findByOrganizationId(organizationId),
     })),
@@ -99,34 +92,101 @@ export async function loadAuthUser(accountId: string): Promise<AuthUser> {
     };
   });
 
-  const consultantViews: Consultant[] = activeConsultants.map((consultant) => {
-    const organizationId = consultant.getOrganizationId();
-    return {
-      organizationId,
-      name: consultant.getProfile().getDisplayName(),
-      isActive: consultant.getIsActive(),
-      createdAt: consultant.getCreatedAt().toISOString(),
-    };
-  });
-
   const firstAccount = activeAccounts[0];
-  const firstConsultant = activeConsultants[0];
-  const currentOrganizationId =
-    accountViews[0]?.organizationId ??
-    consultantViews[0]?.organizationId ??
-    null;
-  const currentDisplayName =
-    firstAccount && firstAccount.getOrganizationId() === currentOrganizationId
-      ? (firstAccount.getName() ?? null)
-      : firstConsultant &&
-          firstConsultant.getOrganizationId() === currentOrganizationId
-        ? firstConsultant.getProfile().getDisplayName()
-        : null;
+  return {
+    accountViews,
+    currentOrganizationId: firstAccount?.getOrganizationId() ?? null,
+    currentDisplayName: firstAccount?.getName() ?? null,
+  };
+}
 
+interface ConsultantViewsResult {
+  consultantViews: Consultant[];
+  currentOrganizationId: string | null;
+  currentDisplayName: string | null;
+}
+
+async function buildConsultantViews(
+  consultantId: string,
+): Promise<ConsultantViewsResult> {
+  const consultantRepository = createConsultantRepository();
+  const organizationRepository = createOrganizationRepository();
+  const consultants =
+    await consultantRepository.findByConsultantId(consultantId);
+  const activeConsultants = consultants
+    .filter((consultant) => consultant.getIsActive())
+    .sort(
+      (left, right) =>
+        left.getCreatedAt().getTime() - right.getCreatedAt().getTime(),
+    );
+
+  const organizationIds = [
+    ...new Set(
+      activeConsultants.map((consultant) => consultant.getOrganizationId()),
+    ),
+  ];
+  await organizationRepository.findByIds(organizationIds);
+
+  const consultantViews: Consultant[] = activeConsultants.map((consultant) => ({
+    organizationId: consultant.getOrganizationId(),
+    name: consultant.getProfile().getDisplayName(),
+    isActive: consultant.getIsActive(),
+    createdAt: consultant.getCreatedAt().toISOString(),
+  }));
+
+  const firstConsultant = activeConsultants[0];
+  return {
+    consultantViews,
+    currentOrganizationId: firstConsultant?.getOrganizationId() ?? null,
+    currentDisplayName: firstConsultant?.getProfile().getDisplayName() ?? null,
+  };
+}
+
+export async function loadAccountAuthUser(
+  accountId: string,
+): Promise<AccountAuthUser> {
+  const { accountViews, currentOrganizationId, currentDisplayName } =
+    await buildAccountViews(accountId);
   return {
     authUid: accountId,
     accounts: accountViews,
+    currentOrganizationId,
+    currentDisplayName,
+  };
+}
+
+export async function loadConsultantAuthUser(
+  consultantId: string,
+): Promise<ConsultantAuthUser> {
+  const { consultantViews, currentOrganizationId, currentDisplayName } =
+    await buildConsultantViews(consultantId);
+  return {
+    authUid: consultantId,
     consultants: consultantViews,
+    currentOrganizationId,
+    currentDisplayName,
+  };
+}
+
+/**
+ * dual-context ルート専用: accounts と consultants の両方を引く。
+ * account 側があればそちらの currentOrganizationId を優先する。
+ */
+export async function loadAuthUser(authUid: string): Promise<AuthUser> {
+  const [account, consultant] = await Promise.all([
+    buildAccountViews(authUid),
+    buildConsultantViews(authUid),
+  ]);
+  const currentOrganizationId =
+    account.currentOrganizationId ?? consultant.currentOrganizationId ?? null;
+  const currentDisplayName =
+    account.currentOrganizationId === currentOrganizationId
+      ? account.currentDisplayName
+      : consultant.currentDisplayName;
+  return {
+    authUid,
+    accounts: account.accountViews,
+    consultants: consultant.consultantViews,
     currentOrganizationId,
     currentDisplayName,
   };

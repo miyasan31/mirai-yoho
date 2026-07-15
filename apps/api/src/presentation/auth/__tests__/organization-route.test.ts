@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 import { setLastOrganizationId } from "@/infrastructure/auth/load-auth-context";
 import { getAccount } from "@/infrastructure/auth/require-role";
-import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
+import { AuthError, verifyEitherAuth } from "@/infrastructure/auth/verify-auth";
 import { PATCH } from "../organization";
 
 vi.mock("@/infrastructure/auth/verify-auth", () => ({
-  verifyAuth: vi.fn(),
+  verifyEitherAuth: vi.fn(),
   AuthError: class extends Error {
     statusCode: number;
     code: string;
@@ -28,7 +28,7 @@ vi.mock("@/infrastructure/auth/load-auth-context", () => ({
 
 describe("PATCH /api/auth/organization", () => {
   it("returns no-store for success response", async () => {
-    vi.mocked(verifyAuth).mockResolvedValueOnce({
+    vi.mocked(verifyEitherAuth).mockResolvedValueOnce({
       authUid: "authUid-1",
       accounts: [],
       consultants: [],
@@ -60,7 +60,7 @@ describe("PATCH /api/auth/organization", () => {
   });
 
   it("returns no-store for auth error response", async () => {
-    vi.mocked(verifyAuth).mockRejectedValueOnce(
+    vi.mocked(verifyEitherAuth).mockRejectedValueOnce(
       new AuthError(401, "UNAUTHORIZED", "Unauthorized"),
     );
 

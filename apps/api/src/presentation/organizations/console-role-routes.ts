@@ -9,7 +9,7 @@ import {
   requirePermission,
   requireSystemAdminRole,
 } from "@/infrastructure/auth/require-permission";
-import { verifyAuth } from "@/infrastructure/auth/verify-auth";
+import { verifyAccountAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createAccountRepository,
   createCreateRoleUseCase,
@@ -79,7 +79,7 @@ export const consoleRoleRoutes = new Hono();
 consoleRoleRoutes.get(
   "/console/roles",
   getRoute(async ({ organizationId, request }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requirePermission(authUser, organizationId, "console.roles.read");
     const [roles, accounts] = await Promise.all([
       createRoleRepository().findByOrganizationId(organizationId),
@@ -111,7 +111,7 @@ consoleRoleRoutes.get(
 consoleRoleRoutes.post(
   "/console/roles",
   postRoute(async ({ organizationId, request }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requireSystemAdminRole(authUser, organizationId);
     const body = await request.json();
     const parsed = parseRoleBody(body);
@@ -132,7 +132,7 @@ consoleRoleRoutes.post(
 consoleRoleRoutes.patch(
   "/console/roles/:roleId",
   patchRoute(async ({ organizationId, request, param }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requireSystemAdminRole(authUser, organizationId);
     const body = await request.json();
     const parsed = parseRoleBody(body);
@@ -153,7 +153,7 @@ consoleRoleRoutes.patch(
 consoleRoleRoutes.delete(
   "/console/roles/:roleId",
   deleteRoute(async ({ organizationId, request, param }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requireSystemAdminRole(authUser, organizationId);
     await createDeleteRoleUseCase().execute({
       organizationId,

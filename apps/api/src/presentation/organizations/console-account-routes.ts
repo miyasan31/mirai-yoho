@@ -3,7 +3,7 @@ import {
   requirePermission,
   requireSystemAdminRole,
 } from "@/infrastructure/auth/require-permission";
-import { verifyAuth } from "@/infrastructure/auth/verify-auth";
+import { verifyAccountAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createAccountRepository,
   createRoleRepository,
@@ -42,7 +42,7 @@ export const consoleAccountRoutes = new Hono();
 consoleAccountRoutes.get(
   "/console/accounts",
   getRoute(async ({ organizationId, request, requestUrl }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requirePermission(authUser, organizationId, "console.accounts.read");
     const listQueryParams = parseListQueryParams(requestUrl.searchParams);
     if (!listQueryParams) {
@@ -91,7 +91,7 @@ consoleAccountRoutes.get(
 consoleAccountRoutes.post(
   "/console/accounts/invite",
   postRoute(async ({ organizationId, request, requestUrl }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     const actorAccount = requireSystemAdminRole(authUser, organizationId);
     const body = await request.json();
     const { email, roleId, name } = body;
@@ -151,7 +151,7 @@ consoleAccountRoutes.post(
 consoleAccountRoutes.post(
   "/console/accounts/:accountId/resend-invite",
   postRoute(async ({ organizationId, request, param }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requirePermission(
       authUser,
       organizationId,
@@ -194,7 +194,7 @@ consoleAccountRoutes.post(
 consoleAccountRoutes.post(
   "/console/accounts/:accountId/reset-password",
   postRoute(async ({ organizationId, request, param }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requirePermission(
       authUser,
       organizationId,
@@ -229,7 +229,7 @@ consoleAccountRoutes.post(
 consoleAccountRoutes.patch(
   "/console/accounts/:accountId/display-name",
   patchRoute(async ({ organizationId, request, param }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     const actorAccount = requirePermission(
       authUser,
       organizationId,
@@ -274,7 +274,7 @@ consoleAccountRoutes.patch(
 consoleAccountRoutes.patch(
   "/console/accounts/:accountId/role",
   patchRoute(async ({ organizationId, request, param }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requireSystemAdminRole(authUser, organizationId);
     const accountId = param("accountId");
     const body = await request.json();
@@ -326,7 +326,7 @@ consoleAccountRoutes.patch(
 consoleAccountRoutes.delete(
   "/console/accounts/:accountId",
   deleteRoute(async ({ organizationId, request, param }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requirePermission(authUser, organizationId, "console.accounts.delete");
     const accountId = param("accountId");
     const accountRepository = createAccountRepository();

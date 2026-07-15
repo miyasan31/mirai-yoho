@@ -6,7 +6,7 @@ import {
   requirePermission,
   requireSystemAdminRole,
 } from "@/infrastructure/auth/require-permission";
-import { verifyAuth } from "@/infrastructure/auth/verify-auth";
+import { verifyAccountAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createConsultantRepository,
   createCreateConsultantUseCase,
@@ -46,7 +46,7 @@ export const consoleConsultantRoutes = new Hono();
 consoleConsultantRoutes.get(
   "/console/consultants",
   getRoute(async ({ organizationId, request, requestUrl }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requirePermission(authUser, organizationId, "console.consultants.read");
     const listQueryParams = parseListQueryParams(requestUrl.searchParams);
     if (!listQueryParams) {
@@ -96,7 +96,7 @@ consoleConsultantRoutes.get(
 consoleConsultantRoutes.post(
   "/console/consultants/invite",
   postRoute(async ({ organizationId, request, requestUrl }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     const actorAccount = requireSystemAdminRole(authUser, organizationId);
     const body = await request.json();
     const { email, name } = body;
@@ -165,7 +165,7 @@ consoleConsultantRoutes.post(
 consoleConsultantRoutes.post(
   "/console/consultants",
   postRoute(async ({ organizationId, request }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requirePermission(authUser, organizationId, "console.consultants.manage");
     const body = await request.json();
     const { consultantId, name, bio, specialties, phone } = body;
@@ -200,7 +200,7 @@ consoleConsultantRoutes.post(
 consoleConsultantRoutes.patch(
   "/console/consultants/:consultantId",
   patchRoute(async ({ organizationId, request, param }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requirePermission(authUser, organizationId, "console.consultants.manage");
     const body = await request.json();
     if (body.statusId !== undefined) {
@@ -226,7 +226,7 @@ consoleConsultantRoutes.patch(
 consoleConsultantRoutes.delete(
   "/console/consultants/:consultantId",
   deleteRoute(async ({ organizationId, request, param }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requirePermission(authUser, organizationId, "console.consultants.manage");
     await createDeactivateConsultantUseCase().execute({
       organizationId,

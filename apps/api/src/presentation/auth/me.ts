@@ -1,9 +1,9 @@
-import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
+import { AuthError, verifyEitherAuth } from "@/infrastructure/auth/verify-auth";
 import { withNoStore } from "../cache-control";
 
 export async function GET(request: Request) {
   try {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyEitherAuth(request);
 
     return withNoStore(
       Response.json({

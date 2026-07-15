@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { toPricePlanOutput } from "@/application/price-plan/create-price-plan-use-case";
 import { Settings } from "@/domain/settings/settings";
 import { requireConsultant } from "@/infrastructure/auth/require-role";
-import { verifyAuth } from "@/infrastructure/auth/verify-auth";
+import { verifyConsultantAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createCreatePricePlanUseCase,
   createDeletePricePlanUseCase,
@@ -24,7 +24,7 @@ export const pricePlanRoutes = new Hono();
 pricePlanRoutes.get(
   "/consultant/price-plans",
   getRoute(async ({ organizationId, request }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyConsultantAuth(request);
     requireConsultant(authUser, organizationId);
     const settings =
       (await createSettingsRepository().findByOrganizationId(organizationId)) ??
@@ -52,7 +52,7 @@ pricePlanRoutes.get(
 pricePlanRoutes.post(
   "/consultant/price-plans",
   postRoute(async ({ organizationId, request }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyConsultantAuth(request);
     requireConsultant(authUser, organizationId);
     const body = await request.json();
     if (typeof body.name !== "string" || body.name.trim().length === 0) {
@@ -76,7 +76,7 @@ pricePlanRoutes.post(
 pricePlanRoutes.patch(
   "/consultant/price-plans/:pricePlanId",
   patchRoute(async ({ organizationId, request, param }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyConsultantAuth(request);
     requireConsultant(authUser, organizationId);
     const body = await request.json();
     if (
@@ -104,7 +104,7 @@ pricePlanRoutes.patch(
 pricePlanRoutes.delete(
   "/consultant/price-plans/:pricePlanId",
   deleteRoute(async ({ organizationId, request, param }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyConsultantAuth(request);
     requireConsultant(authUser, organizationId);
     await createDeletePricePlanUseCase().execute({
       organizationId,

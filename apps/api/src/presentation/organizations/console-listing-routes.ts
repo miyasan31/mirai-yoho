@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { requirePermission } from "@/infrastructure/auth/require-permission";
 import { getConsultant } from "@/infrastructure/auth/require-role";
-import { verifyAuth } from "@/infrastructure/auth/verify-auth";
+import { verifyEitherAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createCustomerRepository,
   createGetDashboardUseCase,
@@ -22,7 +22,7 @@ export const consoleListingRoutes = new Hono();
 consoleListingRoutes.get(
   "/console/slots",
   getRoute(async ({ organizationId, request, requestUrl }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyEitherAuth(request);
     const consultant = getConsultant(authUser, organizationId);
     if (!consultant) {
       requirePermission(authUser, organizationId, "console.slots.read");
@@ -44,7 +44,7 @@ consoleListingRoutes.get(
 consoleListingRoutes.get(
   "/console/dashboard",
   getRoute(async ({ organizationId, request }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyEitherAuth(request);
     requirePermission(authUser, organizationId, "console.dashboard.read");
     const result = await createGetDashboardUseCase().execute({
       organizationId,
@@ -56,7 +56,7 @@ consoleListingRoutes.get(
 consoleListingRoutes.get(
   "/console/bookings",
   getRoute(async ({ organizationId, request, requestUrl }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyEitherAuth(request);
     requirePermission(authUser, organizationId, "console.bookings.read");
     const listQueryParams = parseListQueryParams(requestUrl.searchParams);
     if (!listQueryParams) {
@@ -106,7 +106,7 @@ consoleListingRoutes.get(
 consoleListingRoutes.get(
   "/console/customers",
   getRoute(async ({ organizationId, request, requestUrl }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyEitherAuth(request);
     requirePermission(authUser, organizationId, "console.customers.read");
     const listQueryParams = parseListQueryParams(requestUrl.searchParams);
     if (!listQueryParams) {
@@ -139,7 +139,7 @@ consoleListingRoutes.get(
 consoleListingRoutes.get(
   "/console/payments",
   getRoute(async ({ organizationId, request, requestUrl }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyEitherAuth(request);
     requirePermission(authUser, organizationId, "console.payments.read");
     const listQueryParams = parseListQueryParams(requestUrl.searchParams);
     if (!listQueryParams) {

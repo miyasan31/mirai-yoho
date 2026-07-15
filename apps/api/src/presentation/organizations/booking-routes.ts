@@ -1,7 +1,10 @@
 import { Hono } from "hono";
 import { AppError } from "@/application/shared/app-error";
 import { requirePermission } from "@/infrastructure/auth/require-permission";
-import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
+import {
+  AuthError,
+  verifyAccountAuth,
+} from "@/infrastructure/auth/verify-auth";
 import { verifyCustomerAuth } from "@/infrastructure/auth/verify-customer-auth";
 import {
   createCancelBookingUseCase,
@@ -187,7 +190,7 @@ bookingRoutes.post(
         return publicForbidden("Invalid booking cancellation request");
       }
     } else {
-      const authUser = await verifyAuth(request);
+      const authUser = await verifyAccountAuth(request);
       requirePermission(authUser, organizationId, "console.bookings.cancel");
     }
 
@@ -204,7 +207,7 @@ bookingRoutes.post(
 bookingRoutes.post(
   "/bookings/:bookingId/charge",
   postRoute(async ({ organizationId, request, param }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyAccountAuth(request);
     requirePermission(authUser, organizationId, "console.payments.charge");
 
     const body = await request.json();

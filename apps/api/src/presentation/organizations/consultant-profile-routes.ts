@@ -4,7 +4,7 @@ import { UpdateProfileUseCase } from "@/application/consultant/update-profile-us
 import { envServer } from "@/config/env.server";
 import { Settings } from "@/domain/settings/settings";
 import { requireConsultant } from "@/infrastructure/auth/require-role";
-import { verifyAuth } from "@/infrastructure/auth/verify-auth";
+import { verifyConsultantAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createConsultantRepository,
   createSettingsRepository,
@@ -62,7 +62,7 @@ export const consultantProfileRoutes = new Hono();
 consultantProfileRoutes.get(
   "/consultant/profile",
   getRoute(async ({ organizationId, request }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyConsultantAuth(request);
     requireConsultant(authUser, organizationId);
     const consultant = await createConsultantRepository().findById(
       organizationId,
@@ -110,7 +110,7 @@ consultantProfileRoutes.get(
 consultantProfileRoutes.patch(
   "/consultant/profile",
   patchRoute(async ({ organizationId, request }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyConsultantAuth(request);
     requireConsultant(authUser, organizationId);
     const body = await request.json();
     if (!body.name || !Array.isArray(body.specialties)) {
@@ -140,7 +140,7 @@ consultantProfileRoutes.patch(
 consultantProfileRoutes.post(
   "/consultant/profile/avatar-upload-url",
   postRoute(async ({ organizationId, request }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyConsultantAuth(request);
     requireConsultant(authUser, organizationId);
     const body = await request.json();
     const contentType = body.contentType;
@@ -190,7 +190,7 @@ consultantProfileRoutes.post(
 consultantProfileRoutes.post(
   "/consultant/profile/avatar-publish",
   postRoute(async ({ organizationId, request }) => {
-    const authUser = await verifyAuth(request);
+    const authUser = await verifyConsultantAuth(request);
     requireConsultant(authUser, organizationId);
     const body = await request.json();
     const objectPath = body.objectPath;
