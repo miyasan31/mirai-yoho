@@ -13,6 +13,8 @@ import {
   useUpdateConsoleConsultantStatuses,
 } from "@/hooks/use-console-booking-settings";
 
+const STANDARD_CONSULTANT_STATUS_ID = "standard";
+
 export type ConsultantStatusFormValues = {
   consultantStatuses: Array<{ statusId: string; name: string }>;
   defaultConsultantStatusId: string;
@@ -73,6 +75,7 @@ function ConsultantStatusesSettingsTabView({
       <styled.div display="grid" gap="2">
         {fields.map((field, index) => {
           const status = statuses[index] ?? field;
+          const isStandard = status.statusId === STANDARD_CONSULTANT_STATUS_ID;
           return (
             <styled.div
               key={field.id}
@@ -131,8 +134,11 @@ function ConsultantStatusesSettingsTabView({
                   variant="plain"
                   size="sm"
                   colorPalette="red"
-                  disabled={fields.length <= 1 || isDisabled}
+                  disabled={isStandard || fields.length <= 1 || isDisabled}
                   onClick={() => onRemove(index)}
+                  title={
+                    isStandard ? "標準ステータスは削除できません" : undefined
+                  }
                 >
                   <Trash2 size={16} />
                   削除

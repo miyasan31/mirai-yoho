@@ -56,5 +56,12 @@ export function validateConsultantStatuses(
     );
   }
 
+  if (!seenStatusIds.has(DEFAULT_CONSULTANT_STATUS_ID)) {
+    throw new DomainError(
+      "STANDARD_CONSULTANT_STATUS_REQUIRED",
+      "Standard consultant status must not be removed",
+    );
+  }
+
   return normalizedStatuses;
 }
