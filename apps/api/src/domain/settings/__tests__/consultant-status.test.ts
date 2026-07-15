@@ -75,4 +75,21 @@ describe("consultant statuses", () => {
       ),
     ).toThrow(DomainError);
   });
+
+  it("rejects removal of standard status", () => {
+    expect(() =>
+      validateConsultantStatuses(
+        [{ statusId: "premium", name: "プレミアム" }],
+        "premium",
+      ),
+    ).toThrow(DomainError);
+  });
+
+  it("allows renaming standard status while keeping the id", () => {
+    const result = validateConsultantStatuses(
+      [{ statusId: "standard", name: "デフォルト" }],
+      "standard",
+    );
+    expect(result).toEqual([{ statusId: "standard", name: "デフォルト" }]);
+  });
 });
