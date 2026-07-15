@@ -71,6 +71,7 @@ vi.mock("lucide-react", () => ({
   House: () => <span>House</span>,
   LayoutDashboard: () => <span>LayoutDashboard</span>,
   Settings: () => <span>Settings</span>,
+  TicketPercent: () => <span>TicketPercent</span>,
   UserLock: () => <span>UserLock</span>,
   UserRoundSearch: () => <span>UserRoundSearch</span>,
   UserStar: () => <span>UserStar</span>,

@@ -6,7 +6,6 @@ import * as authOrganization from "@/presentation/auth/organization";
 import * as zoomAuthorize from "@/presentation/auth/zoom-authorize";
 import * as zoomCallback from "@/presentation/auth/zoom-callback";
 import * as zoomRevoke from "@/presentation/auth/zoom-revoke";
-import * as couponsReceive from "@/presentation/customer/coupons-receive";
 import * as customerMe from "@/presentation/customer/me";
 import * as customerMeCoupons from "@/presentation/customer/me-coupons";
 import * as customerSignup from "@/presentation/customer/signup";
@@ -38,9 +37,6 @@ export function createApp(): Hono {
   app.delete("/api/customer/me", (c) => customerMe.DELETE(c.req.raw));
   app.post("/api/customer/me/signup", (c) => customerSignup.POST(c.req.raw));
   app.get("/api/customer/me/coupons", (c) => customerMeCoupons.GET(c.req.raw));
-  app.post("/api/customer/coupons/receive", (c) =>
-    couponsReceive.POST(c.req.raw),
-  );
 
   app.post("/api/webhooks/stripe", (c) => stripeWebhook.POST(c.req.raw));
 

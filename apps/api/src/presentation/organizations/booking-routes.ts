@@ -60,6 +60,7 @@ bookingRoutes.post(
       customerBirthDate,
       consultantContent,
       selectionId,
+      selectedUserCouponId,
     } = body;
 
     if (
@@ -99,6 +100,10 @@ bookingRoutes.post(
       customerBirthDate: customerBirthDate.trim(),
       consultationContent: consultantContent,
       selectionId,
+      selectedUserCouponId:
+        typeof selectedUserCouponId === "string" && selectedUserCouponId
+          ? selectedUserCouponId
+          : undefined,
     });
 
     const bookingActionToken =

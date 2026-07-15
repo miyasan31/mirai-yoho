@@ -159,6 +159,9 @@ function ProfilePage() {
         <Field.Root invalid={!!errors.birthDate}>
           <Field.Label>生年月日</Field.Label>
           <Input id="birthDate" type="date" {...register("birthDate")} />
+          <Field.HelperText>
+            設定すると誕生月にはお得なクーポンが取得できます。
+          </Field.HelperText>
           {errors.birthDate && (
             <Field.ErrorText>{errors.birthDate.message}</Field.ErrorText>
           )}

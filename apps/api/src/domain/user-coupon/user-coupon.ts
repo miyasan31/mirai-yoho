@@ -1,11 +1,15 @@
 import { DomainError } from "@mirai-yoho/shared/domain-error";
+import type { CouponType } from "@/domain/coupon/coupon";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 
 interface UserCouponCreateProps {
   userCouponId: string;
   userId: string;
   couponId: string;
-  organizationId?: string;
+  organizationId: string;
+  amountJPY: number;
+  couponName: string;
+  type: CouponType;
   receivedAt?: Date;
   expiresAt?: Date;
 }
@@ -14,7 +18,10 @@ interface UserCouponReconstructProps {
   userCouponId: string;
   userId: string;
   couponId: string;
-  organizationId?: string;
+  organizationId: string;
+  amountJPY: number;
+  couponName: string;
+  type: CouponType;
   receivedAt: Date;
   expiresAt?: Date;
   redeemedAt?: Date;
@@ -26,7 +33,10 @@ export class UserCoupon extends AggregateRoot {
     private readonly userCouponId: string,
     private readonly userId: string,
     private readonly couponId: string,
-    private readonly organizationId: string | undefined,
+    private readonly organizationId: string,
+    private readonly amountJPY: number,
+    private readonly couponName: string,
+    private readonly type: CouponType,
     private readonly receivedAt: Date,
     private readonly expiresAt: Date | undefined,
     private redeemedAt: Date | undefined,
@@ -41,6 +51,9 @@ export class UserCoupon extends AggregateRoot {
       props.userId,
       props.couponId,
       props.organizationId,
+      props.amountJPY,
+      props.couponName,
+      props.type,
       props.receivedAt ?? new Date(),
       props.expiresAt,
       undefined,
@@ -54,6 +67,9 @@ export class UserCoupon extends AggregateRoot {
       props.userId,
       props.couponId,
       props.organizationId,
+      props.amountJPY,
+      props.couponName,
+      props.type,
       props.receivedAt,
       props.expiresAt,
       props.redeemedAt,
@@ -73,6 +89,17 @@ export class UserCoupon extends AggregateRoot {
     }
     this.redeemedAt = now;
     this.redeemedBookingId = bookingId;
+  }
+
+  restore(): void {
+    if (!this.redeemedAt) {
+      throw new DomainError(
+        "COUPON_NOT_REDEEMED",
+        "Coupon is not redeemed; nothing to restore",
+      );
+    }
+    this.redeemedAt = undefined;
+    this.redeemedBookingId = undefined;
   }
 
   isRedeemable(now: Date): boolean {
@@ -95,8 +122,20 @@ export class UserCoupon extends AggregateRoot {
     return this.couponId;
   }
 
-  getOrganizationId(): string | undefined {
+  getOrganizationId(): string {
     return this.organizationId;
+  }
+
+  getAmountJPY(): number {
+    return this.amountJPY;
+  }
+
+  getCouponName(): string {
+    return this.couponName;
+  }
+
+  getType(): CouponType {
+    return this.type;
   }
 
   getReceivedAt(): Date {

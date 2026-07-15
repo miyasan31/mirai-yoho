@@ -60,6 +60,10 @@ export class BirthDate {
     return BirthDate.calculateAge(this.value, referenceDate);
   }
 
+  getBirthMonth(): number {
+    return Number(this.value.split("-")[1]);
+  }
+
   equals(other: BirthDate): boolean {
     return this.value === other.value;
   }

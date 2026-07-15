@@ -6,6 +6,7 @@ import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
+import type { IUserCouponRepository } from "@/domain/user-coupon/user-coupon-repository";
 import { ZoomSession } from "@/domain/zoom-session/zoom-session";
 import type { IZoomSessionRepository } from "@/domain/zoom-session/zoom-session-repository";
 
@@ -25,6 +26,7 @@ export class CancelBookingUseCase {
     private readonly zoomSessionRepository: IZoomSessionRepository,
     private readonly zoomService: IZoomService,
     private readonly customerRepository: ICustomerRepository,
+    private readonly userCouponRepository: IUserCouponRepository,
   ) {}
 
   async execute(input: CancelBookingInput): Promise<void> {
@@ -92,11 +94,23 @@ export class CancelBookingUseCase {
       }
     }
 
+    // 適用中のクーポンを未使用状態に戻す（キャンセル時のクーポン戻し）
+    const appliedUserCouponId = booking.getAppliedUserCouponId();
+    const restoredCoupon = appliedUserCouponId
+      ? await this.userCouponRepository.findById(appliedUserCouponId)
+      : null;
+    if (restoredCoupon?.getRedeemedBookingId() === booking.getBookingId()) {
+      restoredCoupon.restore();
+    }
+
     await Promise.all([
       this.bookingRepository.save(booking),
       ...(payment ? [this.paymentRepository.save(payment)] : []),
       ...(slot ? [this.slotRepository.save(slot)] : []),
       ...(session ? [this.zoomSessionRepository.save(session)] : []),
+      ...(restoredCoupon?.getRedeemedAt() === undefined && restoredCoupon
+        ? [this.userCouponRepository.save(restoredCoupon)]
+        : []),
     ]);
 
     const events = booking.pullDomainEvents();

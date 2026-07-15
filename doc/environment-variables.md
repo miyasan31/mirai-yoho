@@ -12,7 +12,6 @@
 | `CANCEL_TOKEN_SECRET` | `openssl rand -hex 32` | 予約キャンセルトークンの HMAC-SHA256 署名鍵（`src/infrastructure/token/cancel-token-service.ts`） |
 | `ZOOM_OAUTH_STATE_SECRET` | `openssl rand -hex 32` | Zoom User OAuth の state パラメータの HMAC 署名鍵 |
 | `ZOOM_CREDENTIAL_ENCRYPTION_KEY` | `openssl rand -base64 32` | ユーザーの Zoom トークンを AES-256-GCM で暗号化する鍵（`src/infrastructure/crypto/aes-gcm-token-cipher.ts`） |
-| `COUPON_WEBHOOK_SECRET` | `openssl rand -hex 32` | クーポン付与 Webhook `POST /api/customer/coupons/receive` の認証用共有シークレット |
 
 ### 注意事項
 
@@ -20,7 +19,6 @@
 - **ローテーションの影響範囲**
   - `CANCEL_TOKEN_SECRET`: 変更すると発行済みのキャンセルトークン（メール送信済みのキャンセルリンク）がすべて無効になる
   - `ZOOM_CREDENTIAL_ENCRYPTION_KEY`: 変更すると保存済みの Zoom トークンが復号できなくなり、全ユーザーが Zoom 再連携になる
-- `COUPON_WEBHOOK_SECRET` は Webhook の呼び出し元（外部システム）にも同じ値を設定する。リクエストの `X-Coupon-Webhook-Secret` ヘッダーと単純比較される
 
 ## Zoom
 

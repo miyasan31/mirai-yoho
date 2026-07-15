@@ -13,4 +13,5 @@ export const FIRESTORE_COLLECTIONS = {
   users: "users",
   userZoomCredentials: "user-zoom-credentials",
   userCoupons: "user-coupons",
+  coupons: "coupons",
 } as const;

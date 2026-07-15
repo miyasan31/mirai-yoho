@@ -21,6 +21,8 @@ import type { Slot } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import { SlotSelectionPolicy } from "@/domain/slot/slot-selection-policy";
 import type { IUserRepository } from "@/domain/user/user-repository";
+import type { UserCoupon } from "@/domain/user-coupon/user-coupon";
+import type { IUserCouponRepository } from "@/domain/user-coupon/user-coupon-repository";
 import { ZoomSession } from "@/domain/zoom-session/zoom-session";
 import type { IZoomSessionRepository } from "@/domain/zoom-session/zoom-session-repository";
 
@@ -36,6 +38,7 @@ interface CreateBookingInput {
   customerBirthDate: string;
   consultationContent?: string;
   selectionId: string;
+  selectedUserCouponId?: string;
 }
 
 interface CreateBookingOutput {
@@ -65,6 +68,7 @@ export class CreateBookingUseCase {
     private readonly pricePlanRepository: IPricePlanRepository,
     private readonly settingsRepository: ISettingsRepository,
     private readonly userRepository: IUserRepository,
+    private readonly userCouponRepository: IUserCouponRepository,
   ) {}
 
   async execute(input: CreateBookingInput): Promise<CreateBookingOutput> {
@@ -92,6 +96,8 @@ export class CreateBookingUseCase {
 
     const bookingId = crypto.randomUUID();
     slot.reserve(bookingId);
+
+    const appliedCoupon = await this.resolveAppliedCoupon(input);
 
     const existingCustomer =
       await this.customerRepository.findByUserIdAndOrganizationId(
@@ -131,6 +137,12 @@ export class CreateBookingUseCase {
       pricePlanId: pricePlan.getPricePlanId(),
       pricePlanName: pricePlan.getName(),
       pricePlanTotalJPY: pricePlan.getTotalJPY(),
+      appliedCoupon: appliedCoupon
+        ? {
+            userCouponId: appliedCoupon.getUserCouponId(),
+            discountJPY: appliedCoupon.getAmountJPY(),
+          }
+        : undefined,
     });
 
     const consultant = await this.consultantRepository.findById(
@@ -193,6 +205,10 @@ export class CreateBookingUseCase {
     const joinUrl = ZoomUrl.create(session.getJoinUrl());
     booking.confirm(joinUrl);
 
+    if (appliedCoupon) {
+      appliedCoupon.redeem(bookingId, new Date());
+    }
+
     try {
       await this.emailService.sendBookingConfirmation({
         customerEmail: input.customerEmail,
@@ -216,9 +232,46 @@ export class CreateBookingUseCase {
       await this.slotRepository.save(slot);
       await this.bookingRepository.save(booking);
       await this.zoomSessionRepository.save(session);
+      if (appliedCoupon) {
+        await this.userCouponRepository.save(appliedCoupon);
+      }
     });
 
     return { bookingId, joinUrl: session.getJoinUrl() };
+  }
+
+  private async resolveAppliedCoupon(
+    input: CreateBookingInput,
+  ): Promise<UserCoupon | null> {
+    if (!input.selectedUserCouponId) return null;
+    const coupon = await this.userCouponRepository.findById(
+      input.selectedUserCouponId,
+    );
+    if (!coupon) {
+      throw new AppError(404, "COUPON_NOT_FOUND", "Selected coupon not found");
+    }
+    if (coupon.getUserId() !== input.userId) {
+      throw new AppError(
+        403,
+        "COUPON_OWNER_MISMATCH",
+        "Selected coupon does not belong to this user",
+      );
+    }
+    if (coupon.getOrganizationId() !== input.organizationId) {
+      throw new AppError(
+        403,
+        "COUPON_ORGANIZATION_MISMATCH",
+        "Selected coupon does not belong to this organization",
+      );
+    }
+    if (!coupon.isRedeemable(new Date())) {
+      throw new AppError(
+        409,
+        "COUPON_NOT_REDEEMABLE",
+        "Selected coupon is not redeemable (already used or expired)",
+      );
+    }
+    return coupon;
   }
 
   private async resolveSlotAndPricePlan(
