@@ -44,7 +44,6 @@ export const radioGroup = defineSlotRecipe({
       display: "inline-flex",
       flexShrink: 0,
       justifyContent: "center",
-      mt: "1",
       transition: "colors",
       _checked: {
         borderColor: "blue.9",
