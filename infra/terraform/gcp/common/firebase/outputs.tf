@@ -3,6 +3,11 @@ output "firebase_storage_bucket_name" {
   value       = var.manage_firebase_storage_bucket ? google_storage_bucket.firebase_default[0].name : var.firebase_storage_bucket_name
 }
 
+output "runtime_secret_ids" {
+  description = "Secret Manager シークレット ID の一覧。Cloud Run API / batch worker が env として参照するもの（externally-managed も含む全 union）。consumer は IAM binding と env mount にこれを使う。"
+  value       = local.runtime_secret_ids
+}
+
 output "spa_hosting_custom_domain_dns_records_to_add" {
   description = "DNS records to add in the external DNS provider for the SPA Firebase Hosting custom domains (each entry includes its site key)."
   value       = local.spa_hosting_custom_domain_dns_records_to_add
