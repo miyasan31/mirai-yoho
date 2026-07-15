@@ -13,14 +13,16 @@ const ROLE_COLLECTION = FIRESTORE_COLLECTIONS.roles;
 const SETTINGS_COLLECTION = FIRESTORE_COLLECTIONS.settings;
 
 async function main() {
-  const [organizationId, name, adminEmail] = process.argv.slice(2);
+  const [organizationId, name, adminEmail, adminName] = process.argv.slice(2);
 
   if (!organizationId || !name || !adminEmail) {
     console.error(
-      "Usage: pnpm dlx tsx --env-file=.env.local scripts/create-organization.ts <organizationId> <name> <adminEmail>",
+      "Usage: pnpm dlx tsx --env-file=.env.local scripts/create-organization.ts <organizationId> <name> <adminEmail> [adminName]",
     );
     process.exit(1);
   }
+
+  const normalizedAdminName = adminName?.trim() ? adminName.trim() : null;
 
   const existingOrganization = await db
     .collection(ORGANIZATION_COLLECTION)
@@ -62,6 +64,7 @@ async function main() {
       organizationId,
       roleId: "admin",
       status: userRecord.metadata.lastSignInTime ? "active" : "invited",
+      name: normalizedAdminName,
       createdAt: now,
       updatedAt: now,
     });
@@ -104,6 +107,7 @@ async function main() {
   console.log(`name: ${name}`);
   console.log(`adminUid: ${userRecord.uid}`);
   console.log(`adminEmail: ${adminEmail}`);
+  console.log(`adminName: ${normalizedAdminName ?? "(not set)"}`);
   console.log(`passwordResetLink: ${passwordResetLink}`);
 
   if (!userRecord.metadata.lastSignInTime) {
