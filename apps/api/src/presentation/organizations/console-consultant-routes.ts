@@ -1,5 +1,6 @@
+import crypto from "node:crypto";
 import { Hono } from "hono";
-import { SYSTEM_ADMIN_ROLE_ID } from "@/domain/authorization/role";
+import { AppError } from "@/application/shared/app-error";
 import { Settings } from "@/domain/settings/settings";
 import {
   requirePermission,
@@ -7,17 +8,20 @@ import {
 } from "@/infrastructure/auth/require-permission";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
-  createAccountRepository,
   createConsultantRepository,
   createCreateConsultantUseCase,
   createDeactivateConsultantUseCase,
-  createRoleRepository,
   createSettingsRepository,
   createUpdateConsultantUseCase,
 } from "@/infrastructure/container";
-import { getUsersByUids } from "@/infrastructure/firebase/firebase-auth-admin";
+import {
+  createUser,
+  generatePasswordResetLink,
+  getUser,
+  getUserByEmail,
+  getUsersByUids,
+} from "@/infrastructure/firebase/firebase-auth-admin";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
-import { provisionInvitedAccount } from "./console-invite-common";
 import {
   resolveConsultantStatus,
   toConsultantStatusResponse,
@@ -108,42 +112,38 @@ consoleConsultantRoutes.post(
       return jsonError(400, "VALIDATION_ERROR", "name must not be empty");
     }
 
-    const roleEntity = await createRoleRepository().findById(
-      organizationId,
-      SYSTEM_ADMIN_ROLE_ID,
-    );
-    if (!roleEntity) {
-      return jsonError(
-        500,
-        "SYSTEM_ROLE_MISSING",
-        "System admin role is not initialized for this organization",
+    const consultantRepository = createConsultantRepository();
+    let consultantId: string;
+    const userRecord = await getUserByEmail(email).catch(() => null);
+
+    if (userRecord) {
+      consultantId = userRecord.uid;
+      const existingConsultant = await consultantRepository.findById(
+        organizationId,
+        consultantId,
       );
+      if (existingConsultant) {
+        throw new AppError(
+          409,
+          "CONSULTANT_ALREADY_EXISTS",
+          "このメールアドレスは既にこの組織の相談員として登録されています",
+        );
+      }
+    } else {
+      consultantId = await createUser(email, crypto.randomUUID());
+      await getUser(consultantId);
     }
 
-    const { accountId, passwordResetLink } = await provisionInvitedAccount({
+    await createCreateConsultantUseCase().execute({
       organizationId,
-      email,
-      displayName: normalizedDisplayName,
-      roleId: SYSTEM_ADMIN_ROLE_ID,
-      accountRepository: createAccountRepository(),
+      consultantId,
+      name: normalizedDisplayName,
     });
 
-    const consultantRepository = createConsultantRepository();
-    const existingConsultant = await consultantRepository.findById(
-      organizationId,
-      accountId,
-    );
-    if (!existingConsultant) {
-      await createCreateConsultantUseCase().execute({
-        organizationId,
-        consultantId: accountId,
-        name: normalizedDisplayName,
-      });
-    }
-
+    const passwordResetLink = await generatePasswordResetLink(email);
     await new ResendEmailService().sendInvitation({
       email,
-      roleName: roleEntity.getName(),
+      roleName: "相談員",
       isConsultant: true,
       passwordResetLink,
     });
@@ -158,7 +158,7 @@ consoleConsultantRoutes.post(
       invitedAt: new Date().toISOString(),
     });
 
-    return Response.json({ accountId }, { status: 201 });
+    return Response.json({ consultantId }, { status: 201 });
   }),
 );
 

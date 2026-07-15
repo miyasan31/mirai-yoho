@@ -1,4 +1,8 @@
-import type { Account, AuthUser } from "@/infrastructure/auth/auth-types";
+import type {
+  Account,
+  AuthUser,
+  Consultant,
+} from "@/infrastructure/auth/auth-types";
 import { AuthError } from "@/infrastructure/auth/verify-auth";
 
 export function getAccount(
@@ -8,6 +12,16 @@ export function getAccount(
   return authUser.accounts.find(
     (account) =>
       account.organizationId === organizationId && account.status === "active",
+  );
+}
+
+export function getConsultant(
+  authUser: AuthUser,
+  organizationId: string,
+): Consultant | undefined {
+  return authUser.consultants.find(
+    (consultant) =>
+      consultant.organizationId === organizationId && consultant.isActive,
   );
 }
 
@@ -40,24 +54,16 @@ export function requireRoleId(
 export function requireConsultant(
   authUser: AuthUser,
   organizationId: string,
-): Account {
-  const account = getAccount(authUser, organizationId);
+): Consultant {
+  const consultant = getConsultant(authUser, organizationId);
 
-  if (!account) {
+  if (!consultant) {
     throw new AuthError(
       403,
       "FORBIDDEN",
-      `User does not belong to organization '${organizationId}'`,
+      `User is not an active consultant in organization '${organizationId}'`,
     );
   }
 
-  if (!account.isConsultant) {
-    throw new AuthError(
-      403,
-      "FORBIDDEN",
-      "Consultant role is required for this organization",
-    );
-  }
-
-  return account;
+  return consultant;
 }

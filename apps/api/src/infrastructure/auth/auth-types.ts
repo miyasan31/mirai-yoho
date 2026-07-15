@@ -6,14 +6,21 @@ export interface Account {
   roleId: string;
   roleName: string;
   permissions: AuthorizationPermission[];
-  isConsultant: boolean;
   status: "active" | "invited" | "disabled";
+  createdAt: string;
+}
+
+export interface Consultant {
+  organizationId: string;
+  name: string;
+  isActive: boolean;
   createdAt: string;
 }
 
 export interface AuthUser {
   authUid: string;
   accounts: Account[];
+  consultants: Consultant[];
   currentOrganizationId: string | null;
   currentDisplayName: string | null;
 }

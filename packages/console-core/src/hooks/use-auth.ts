@@ -15,13 +15,14 @@ import {
   useState,
 } from "react";
 import { envClient } from "../config/env.client";
-import type { Account } from "../lib/auth-types";
+import type { Account, Consultant } from "../lib/auth-types";
 import { auth } from "../lib/firebase";
 
 export interface AuthState {
   user: User | null;
   token: string | null;
   accounts: Account[];
+  consultants: Consultant[];
   currentOrganizationId: string | null;
   currentDisplayName: string | null;
   currentRoleId: string | null;
@@ -49,10 +50,18 @@ export interface AuthState {
 
 export const AuthContext = createContext<AuthState | null>(null);
 
+interface AuthMePayload {
+  accounts: Account[];
+  consultants: Consultant[];
+  currentOrganizationId: string | null;
+  currentDisplayName: string | null;
+}
+
 export function useAuthState(): AuthState {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
+  const [consultants, setConsultants] = useState<Consultant[]>([]);
   const [currentOrganizationId, setCurrentOrganizationIdState] = useState<
     string | null
   >(null);
@@ -61,62 +70,64 @@ export function useAuthState(): AuthState {
   );
   const [isLoading, setIsLoading] = useState(true);
 
-  const syncAuthContext = useCallback(async (nextUser: User | null) => {
-    if (!nextUser) {
-      setUser(null);
-      setToken(null);
-      setAccounts([]);
-      setCurrentOrganizationIdState(null);
-      setCurrentDisplayName(null);
-      return {
-        accounts: [],
-        currentOrganizationId: null,
-        currentDisplayName: null,
-      };
-    }
-
-    const idTokenResult = await nextUser.getIdTokenResult();
-    setUser(nextUser);
-    setToken(idTokenResult.token);
-
-    const response = await fetch(`${envClient.apiUrl}/api/auth/me`, {
-      headers: {
-        Authorization: `Bearer ${idTokenResult.token}`,
-      },
-    });
-
-    if (!response.ok) {
-      let errorMessage = "Failed to load auth context";
-
-      try {
-        const errorData = (await response.json()) as {
-          code?: string;
-          message?: string;
+  const syncAuthContext = useCallback(
+    async (nextUser: User | null): Promise<AuthMePayload> => {
+      if (!nextUser) {
+        setUser(null);
+        setToken(null);
+        setAccounts([]);
+        setConsultants([]);
+        setCurrentOrganizationIdState(null);
+        setCurrentDisplayName(null);
+        return {
+          accounts: [],
+          consultants: [],
+          currentOrganizationId: null,
+          currentDisplayName: null,
         };
-        if (errorData.code === "NO_ROLE") {
-          errorMessage =
-            "このアカウントはまだ組織に所属していません。管理者に確認してください。";
-        } else if (errorData.message) {
-          errorMessage = errorData.message;
-        }
-      } catch {
-        // ignore JSON parse failures and keep the fallback message
       }
 
-      throw new Error(errorMessage);
-    }
+      const idTokenResult = await nextUser.getIdTokenResult();
+      setUser(nextUser);
+      setToken(idTokenResult.token);
 
-    const data = (await response.json()) as {
-      accounts: Account[];
-      currentOrganizationId: string | null;
-      currentDisplayName: string | null;
-    };
+      const response = await fetch(`${envClient.apiUrl}/api/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${idTokenResult.token}`,
+        },
+      });
 
-    setAccounts(data.accounts);
-    setCurrentOrganizationIdState(data.currentOrganizationId);
-    setCurrentDisplayName(data.currentDisplayName);
-    return data;
-  }, []);
+      if (!response.ok) {
+        let errorMessage = "Failed to load auth context";
+
+        try {
+          const errorData = (await response.json()) as {
+            code?: string;
+            message?: string;
+          };
+          if (errorData.code === "NO_ROLE") {
+            errorMessage =
+              "このアカウントはまだ組織に所属していません。管理者に確認してください。";
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch {
+          // ignore JSON parse failures and keep the fallback message
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      const data = (await response.json()) as AuthMePayload;
+
+      setAccounts(data.accounts);
+      setConsultants(data.consultants ?? []);
+      setCurrentOrganizationIdState(data.currentOrganizationId);
+      setCurrentDisplayName(data.currentDisplayName);
+      return data;
+    },
+    [],
+  );
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -142,11 +153,15 @@ export function useAuthState(): AuthState {
       const currentAccount = data.accounts.find(
         (account) => account.organizationId === data.currentOrganizationId,
       );
+      const currentConsultant = (data.consultants ?? []).find(
+        (consultant) =>
+          consultant.organizationId === data.currentOrganizationId,
+      );
 
       return {
         currentOrganizationId: data.currentOrganizationId,
         currentRoleId: currentAccount?.roleId ?? null,
-        currentIsConsultant: currentAccount?.isConsultant ?? false,
+        currentIsConsultant: !!currentConsultant,
         currentPermissions: currentAccount?.permissions ?? [],
       };
     },
@@ -211,8 +226,11 @@ export function useAuthState(): AuthState {
   const currentAccount = accounts.find(
     (account) => account.organizationId === currentOrganizationId,
   );
+  const currentConsultant = consultants.find(
+    (consultant) => consultant.organizationId === currentOrganizationId,
+  );
   const currentRoleId = currentAccount?.roleId ?? null;
-  const currentIsConsultant = currentAccount?.isConsultant ?? false;
+  const currentIsConsultant = !!currentConsultant;
   const permissions = currentAccount?.permissions ?? [];
 
   const hasPermission = useCallback(
@@ -230,6 +248,7 @@ export function useAuthState(): AuthState {
       user,
       token,
       accounts,
+      consultants,
       currentOrganizationId,
       currentDisplayName,
       currentRoleId,
@@ -250,6 +269,7 @@ export function useAuthState(): AuthState {
       user,
       token,
       accounts,
+      consultants,
       currentOrganizationId,
       currentDisplayName,
       currentRoleId,

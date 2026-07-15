@@ -6,7 +6,6 @@ import {
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createAccountRepository,
-  createConsultantRepository,
   createRoleRepository,
 } from "@/infrastructure/container";
 import {
@@ -180,16 +179,11 @@ consoleAccountRoutes.post(
       organizationId,
       account.getRoleId(),
     );
-    const isConsultant =
-      (await createConsultantRepository().findById(
-        organizationId,
-        accountId,
-      )) !== null;
 
     await new ResendEmailService().sendInvitation({
       email: userRecord.email,
       roleName: roleEntity?.getName() ?? account.getRoleId(),
-      isConsultant,
+      isConsultant: false,
       passwordResetLink: await generatePasswordResetLink(userRecord.email),
     });
 

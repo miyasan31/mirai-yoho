@@ -137,6 +137,10 @@ class InMemoryConsultantRepository implements IConsultantRepository {
     return [];
   }
 
+  async findByConsultantId(): Promise<Consultant[]> {
+    return [];
+  }
+
   async save(): Promise<void> {}
 
   async delete(): Promise<void> {}

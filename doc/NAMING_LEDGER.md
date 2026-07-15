@@ -328,7 +328,7 @@
 
 ---
 
-### 3.5 `organization-accounts` → `accounts` ✅ 合意済み（2026-06-26 / 2026-07-14 改訂 §0 / 2026-07-15 改訂 §0.1 / **2026-07-15 改訂: `role` → `roleId` + `consultant` ロール廃止** / **2026-07-15 改訂: `authUid` → `accountId`（§0.2）**）
+### 3.5 `organization-accounts` → `accounts` ✅ 合意済み（2026-06-26 / 2026-07-14 改訂 §0 / 2026-07-15 改訂 §0.1 / **2026-07-15 改訂: `role` → `roleId` + `consultant` ロール廃止** / **2026-07-15 改訂: `authUid` → `accountId`（§0.2）** / **2026-07-15 改訂: 相談員は accounts を持たない排他モデルに移行（§3.5.1）**）
 
 **Doc ID**: `{organizationId}_{accountId}`（形式・値は維持。`accountId` の値 = Firebase Auth uid）
 
@@ -385,6 +385,36 @@
 - ~~`user-preferences`~~ 廃止（§3.10）
 
 **根拠**: `load-auth-context.ts`, `admin-account-routes.ts`, `openapi.yaml` (ConsoleAccount), `auth-types.ts`, `firestore.rules`
+
+#### 2026-07-15 追加（§3.5.1）: 排他モデルへ移行（相談員は accounts に doc を持たない）
+
+**決定**: 直前の直交モデル（相談員は accounts + consultants の両方に doc を持つ）を撤回し、**排他モデル** に切り替える。
+
+- 相談員招待 → `consultants/{organizationId}_{consultantId}` のみ作成、`accounts/{organizationId}_{accountId}` は作成しない
+- 管理者・オペレーター招待 → `accounts/{organizationId}_{accountId}` のみ作成（従来どおり）
+- 「管理者かつ相談員」の同居は表現しない
+
+**理由**:
+- 「相談員招待なのに accounts コレクションに書き込まれる」のが利用者の直感と噛み合わず、一覧 UI にも相談員が混在して見通しが悪かった
+- 認可は Account、業務プロフィールは Consultant という責務分離を Firestore ドキュメント境界とも一致させる
+- リリース前のため破壊的変更を許容
+
+**適用範囲**:
+- API: `AuthUser.consultants[]` を新設（`{ organizationId, name, isActive, createdAt }`）。`loadAuthUser` は `accounts` と `consultants` を独立に取得して両配列を返す
+- Auth ヘルパ: `requireConsultant(authUser, organizationId)` は `authUser.consultants[]` を参照（Account 前提を撤廃）。`getConsultant` を新設
+- `Account.isConsultant` プロパティを削除（相談員かどうかは `consultants[]` の存在で判定）
+- ルート: `/organizations/{organizationId}/console/accounts/invite` から `isConsultant` フラグ削除。`/console/consultants/invite` を新設し、Firebase Auth ユーザー + Consultant のみ作成（accountRepository は呼ばない）。409 判定は同一組織内の Consultant doc 存在で行う
+- ルート: `slot-routes` / `console-listing-routes` の `account.isConsultant` 参照を `getConsultant` に差し替え
+- Email: `sendInvitation({ roleName, isConsultant })` は温存（本文の文言切り替え用途で残す）
+- SPA (console-core / consultant): `AuthState.consultants[]` を追加、`currentIsConsultant` は `consultants[]` に組織 doc が存在するかで判定
+- OpenAPI: `inviteConsultant` レスポンスを `{ consultantId }` に変更（`accountId` を返さない）
+- `firestore.rules`: `isOrganizationConsultant(organizationId)` は引き続き `consultants/{organizationId}_{uid}` の存在チェックで OK（**変更不要**）
+
+**マイグレーション**: 既存データ量が少ないため、スクリプトは用意せず手動で以下を実施:
+1. 相談員として作られていた `accounts/{organizationId}_{authUid}` doc を Firestore コンソールから削除
+2. 対応する Firebase Auth ユーザーはそのまま（consultants doc から参照される）
+
+**根拠**: `apps/api/src/infrastructure/auth/auth-types.ts`, `apps/api/src/infrastructure/auth/load-auth-context.ts`, `apps/api/src/infrastructure/auth/require-role.ts`, `apps/api/src/presentation/organizations/console-consultant-routes.ts`, `apps/api/src/presentation/organizations/console-account-routes.ts`, `apps/api/src/presentation/organizations/slot-routes.ts`, `apps/api/src/presentation/organizations/console-listing-routes.ts`, `packages/console-core/src/hooks/use-auth.ts`
 
 ---
 

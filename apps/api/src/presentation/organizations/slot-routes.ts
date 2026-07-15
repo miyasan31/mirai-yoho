@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { requirePermission } from "@/infrastructure/auth/require-permission";
-import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
+import { getConsultant } from "@/infrastructure/auth/require-role";
+import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createCreateSlotUseCase,
   createDeleteSlotUseCase,
@@ -13,19 +14,8 @@ slotRoutes.post(
   "/slots",
   postRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    const account = authUser.accounts.find(
-      (candidate) =>
-        candidate.organizationId === organizationId &&
-        candidate.status === "active",
-    );
-    if (!account) {
-      throw new AuthError(
-        403,
-        "FORBIDDEN",
-        `User does not belong to organization '${organizationId}'`,
-      );
-    }
-    if (!account.isConsultant) {
+    const consultant = getConsultant(authUser, organizationId);
+    if (!consultant) {
       requirePermission(authUser, organizationId, "console.slots.manage");
     }
 
@@ -39,7 +29,7 @@ slotRoutes.post(
       );
     }
 
-    if (account.isConsultant && authUser.authUid !== consultantId) {
+    if (consultant && authUser.authUid !== consultantId) {
       return jsonError(
         403,
         "FORBIDDEN",
@@ -61,27 +51,14 @@ slotRoutes.delete(
   "/slots/:slotId",
   deleteRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    const account = authUser.accounts.find(
-      (candidate) =>
-        candidate.organizationId === organizationId &&
-        candidate.status === "active",
-    );
-    if (!account) {
-      throw new AuthError(
-        403,
-        "FORBIDDEN",
-        `User does not belong to organization '${organizationId}'`,
-      );
-    }
-    if (!account.isConsultant) {
+    const consultant = getConsultant(authUser, organizationId);
+    if (!consultant) {
       requirePermission(authUser, organizationId, "console.slots.manage");
     }
     await createDeleteSlotUseCase().execute({
       organizationId,
       slotId: param("slotId"),
-      requesterConsultantId: account.isConsultant
-        ? authUser.authUid
-        : undefined,
+      requesterConsultantId: consultant ? authUser.authUid : undefined,
     });
     return Response.json({ success: true });
   }),

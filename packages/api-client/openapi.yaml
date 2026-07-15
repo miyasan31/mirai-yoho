@@ -871,7 +871,7 @@ paths:
   /organizations/{organizationId}/console/consultants/invite:
     post:
       operationId: inviteConsultant
-      summary: 相談員招待（Account と Consultant を同時作成）
+      summary: 相談員招待（Consultant のみ作成、accounts コレクションには書き込まない）
       tags: [console]
       security:
         - bearerAuth: []
@@ -897,9 +897,9 @@ paths:
             application/json:
               schema:
                 type: object
-                required: [accountId]
+                required: [consultantId]
                 properties:
-                  accountId:
+                  consultantId:
                     type: string
 
   /organizations/{organizationId}/console/consultants/{id}:

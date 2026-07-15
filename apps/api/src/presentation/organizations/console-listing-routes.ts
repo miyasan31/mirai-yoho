@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { requirePermission } from "@/infrastructure/auth/require-permission";
-import { AuthError, verifyAuth } from "@/infrastructure/auth/verify-auth";
+import { getConsultant } from "@/infrastructure/auth/require-role";
+import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createCustomerRepository,
   createGetDashboardUseCase,
@@ -22,26 +23,13 @@ consoleListingRoutes.get(
   "/console/slots",
   getRoute(async ({ organizationId, request, requestUrl }) => {
     const authUser = await verifyAuth(request);
-    const account = authUser.accounts.find(
-      (candidate) =>
-        candidate.organizationId === organizationId &&
-        candidate.status === "active",
-    );
-    if (!account) {
-      throw new AuthError(
-        403,
-        "FORBIDDEN",
-        `User does not belong to organization '${organizationId}'`,
-      );
-    }
-    if (!account.isConsultant) {
+    const consultant = getConsultant(authUser, organizationId);
+    if (!consultant) {
       requirePermission(authUser, organizationId, "console.slots.read");
     }
 
     const requestedConsultantId = requestUrl.searchParams.get("consultantId");
-    const consultantId = account.isConsultant
-      ? authUser.authUid
-      : requestedConsultantId;
+    const consultantId = consultant ? authUser.authUid : requestedConsultantId;
     const result = await createListAvailableSlotsUseCase().execute({
       organizationId,
       consultantId,

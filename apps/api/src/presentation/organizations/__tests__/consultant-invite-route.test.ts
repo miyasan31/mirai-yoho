@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { Account } from "@/domain/account/account";
 
 const mocks = vi.hoisted(() => {
   class MockAuthError extends Error {
@@ -21,22 +20,16 @@ const mocks = vi.hoisted(() => {
     requireSystemAdminRole: vi.fn(),
     requireRoleId: vi.fn(),
     requireConsultant: vi.fn(),
-    accountFindById: vi.fn(),
-    accountSave: vi.fn(),
     createAccountRepository: vi.fn(),
     createUser: vi.fn(),
     getUser: vi.fn(),
     getUserByEmail: vi.fn(),
     generatePasswordResetLink: vi.fn(),
     sendInvitation: vi.fn(),
-    roleFindById: vi.fn(),
-    createRoleRepository: vi.fn(),
     consultantFindById: vi.fn(),
-    consultantSave: vi.fn(),
     createConsultantRepository: vi.fn(),
     createCreateConsultantUseCase: vi.fn(),
     createConsultantUseCaseExecute: vi.fn(),
-    settingsFindByOrganizationId: vi.fn(),
     createSettingsRepository: vi.fn(),
   };
 });
@@ -63,7 +56,7 @@ vi.mock("@/infrastructure/container", () => ({
   createCustomerRepository: vi.fn(),
   createDeactivateConsultantUseCase: vi.fn(),
   createNotifyLateConsultantArrivalUseCase: vi.fn(),
-  createRoleRepository: mocks.createRoleRepository,
+  createRoleRepository: vi.fn(),
   createSettingsRepository: mocks.createSettingsRepository,
   createPaymentRepository: vi.fn(),
   createSendConsultationReminderUseCase: vi.fn(),
@@ -136,42 +129,19 @@ function postInvite(body: Record<string, unknown>) {
   );
 }
 
-function makeExistingAccount(overrides: {
-  accountId: string;
-  roleId?: string;
-  status?: "active" | "invited" | "disabled";
-}): Account {
-  return Account.reconstruct({
-    organizationId: "org-1",
-    accountId: overrides.accountId,
-    roleId: overrides.roleId ?? "admin",
-    status: overrides.status ?? "active",
-    name: null,
-    createdAt: new Date("2026-01-01T00:00:00Z"),
-    updatedAt: new Date("2026-01-01T00:00:00Z"),
-  });
-}
-
 describe("consultant invite route", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.verifyAuth.mockResolvedValue({
       authUid: "admin-1",
       accounts: [],
+      consultants: [],
       currentOrganizationId: "org-1",
       currentDisplayName: "Admin",
     });
     mocks.requireSystemAdminRole.mockReturnValue({ roleId: "admin" });
-    mocks.createRoleRepository.mockReturnValue({
-      findById: mocks.roleFindById,
-    });
-    mocks.roleFindById.mockResolvedValue({
-      getRoleId: () => "admin",
-      getName: () => "管理者",
-    });
     mocks.createConsultantRepository.mockReturnValue({
       findById: mocks.consultantFindById,
-      save: mocks.consultantSave,
     });
     mocks.consultantFindById.mockResolvedValue(null);
     mocks.createCreateConsultantUseCase.mockReturnValue({
@@ -181,15 +151,8 @@ describe("consultant invite route", () => {
       consultantId: "new-auth-uid",
     });
     mocks.createSettingsRepository.mockReturnValue({
-      findByOrganizationId: mocks.settingsFindByOrganizationId,
+      findByOrganizationId: vi.fn().mockResolvedValue(null),
     });
-    mocks.settingsFindByOrganizationId.mockResolvedValue(null);
-    mocks.createAccountRepository.mockReturnValue({
-      findById: mocks.accountFindById,
-      save: mocks.accountSave,
-    });
-    mocks.accountFindById.mockResolvedValue(null);
-    mocks.accountSave.mockResolvedValue(undefined);
     mocks.createUser.mockResolvedValue("new-auth-uid");
     mocks.getUser.mockResolvedValue({ uid: "new-auth-uid", metadata: {} });
     mocks.getUserByEmail.mockRejectedValue(new Error("not found"));
@@ -199,7 +162,7 @@ describe("consultant invite route", () => {
     mocks.sendInvitation.mockResolvedValue(undefined);
   });
 
-  it("invites a new consultant and creates account + consultant", async () => {
+  it("invites a new consultant: creates Firebase user + Consultant (not Account)", async () => {
     const response = await postInvite({
       email: "consultant@example.com",
       name: "相談員 一郎",
@@ -207,21 +170,18 @@ describe("consultant invite route", () => {
 
     expect(response.status).toBe(201);
     await expect(response.json()).resolves.toEqual({
-      accountId: "new-auth-uid",
+      consultantId: "new-auth-uid",
     });
     expect(mocks.createUser).toHaveBeenCalledWith(
       "consultant@example.com",
       expect.any(String),
     );
-    expect(mocks.accountSave).toHaveBeenCalledTimes(1);
-    const savedAccount = mocks.accountSave.mock.calls[0][0] as Account;
-    expect(savedAccount.getRoleId()).toBe("admin");
-    expect(savedAccount.getStatus()).toBe("invited");
     expect(mocks.createConsultantUseCaseExecute).toHaveBeenCalledWith({
       organizationId: "org-1",
       consultantId: "new-auth-uid",
       name: "相談員 一郎",
     });
+    expect(mocks.createAccountRepository).not.toHaveBeenCalled();
     expect(mocks.sendInvitation).toHaveBeenCalledWith(
       expect.objectContaining({
         email: "consultant@example.com",
@@ -230,17 +190,14 @@ describe("consultant invite route", () => {
     );
   });
 
-  it("fails with 409 when the email already belongs to the same organization", async () => {
+  it("fails with 409 when the email is already a consultant in this organization", async () => {
     mocks.getUserByEmail.mockResolvedValue({
       uid: "existing-auth-uid",
       metadata: {},
     });
-    mocks.accountFindById.mockResolvedValue(
-      makeExistingAccount({
-        accountId: "existing-auth-uid",
-        status: "invited",
-      }),
-    );
+    mocks.consultantFindById.mockResolvedValue({
+      /* stand-in for an existing Consultant */
+    });
 
     const response = await postInvite({
       email: "consultant@example.com",
@@ -249,19 +206,19 @@ describe("consultant invite route", () => {
 
     expect(response.status).toBe(409);
     await expect(response.json()).resolves.toEqual({
-      code: "ACCOUNT_ALREADY_EXISTS",
-      message: "このメールアドレスは既にこの組織に登録されています",
+      code: "CONSULTANT_ALREADY_EXISTS",
+      message: "このメールアドレスは既にこの組織の相談員として登録されています",
     });
     expect(mocks.createConsultantUseCaseExecute).not.toHaveBeenCalled();
     expect(mocks.sendInvitation).not.toHaveBeenCalled();
   });
 
-  it("adds membership and creates consultant when the email belongs to another organization", async () => {
+  it("adds consultant when the email is a consultant in another organization", async () => {
     mocks.getUserByEmail.mockResolvedValue({
       uid: "other-org-auth-uid",
       metadata: {},
     });
-    mocks.accountFindById.mockResolvedValue(null);
+    mocks.consultantFindById.mockResolvedValue(null);
     mocks.createConsultantUseCaseExecute.mockResolvedValue({
       consultantId: "other-org-auth-uid",
     });
@@ -273,29 +230,8 @@ describe("consultant invite route", () => {
 
     expect(response.status).toBe(201);
     expect(mocks.createUser).not.toHaveBeenCalled();
-    expect(mocks.accountSave).toHaveBeenCalledTimes(1);
     expect(mocks.createConsultantUseCaseExecute).toHaveBeenCalledTimes(1);
-    expect(mocks.sendInvitation).toHaveBeenCalledTimes(1);
-  });
-
-  it("skips consultant creation when the consultant already exists in the organization", async () => {
-    mocks.getUserByEmail.mockResolvedValue({
-      uid: "other-org-auth-uid",
-      metadata: {},
-    });
-    mocks.accountFindById.mockResolvedValue(null);
-    mocks.consultantFindById.mockResolvedValue({
-      /* stand-in for an existing Consultant */
-    });
-
-    const response = await postInvite({
-      email: "consultant@example.com",
-      name: "相談員 三郎",
-    });
-
-    expect(response.status).toBe(201);
-    expect(mocks.accountSave).toHaveBeenCalledTimes(1);
-    expect(mocks.createConsultantUseCaseExecute).not.toHaveBeenCalled();
+    expect(mocks.createAccountRepository).not.toHaveBeenCalled();
     expect(mocks.sendInvitation).toHaveBeenCalledTimes(1);
   });
 });

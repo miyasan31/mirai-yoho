@@ -112,6 +112,14 @@ export class FirestoreConsultantRepository implements IConsultantRepository {
     ];
   }
 
+  async findByConsultantId(consultantId: string): Promise<Consultant[]> {
+    const snapshot = await db
+      .collection(COLLECTION)
+      .where("consultantId", "==", consultantId)
+      .get();
+    return snapshot.docs.map((doc) => toDomain(doc.data() as ConsultantDoc));
+  }
+
   async save(consultant: Consultant): Promise<void> {
     await db
       .collection(COLLECTION)

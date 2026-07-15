@@ -6,7 +6,13 @@ export interface Account {
   roleId: string;
   roleName: string;
   permissions: AuthorizationPermission[];
-  isConsultant: boolean;
   status: "active" | "invited" | "disabled";
+  createdAt: string;
+}
+
+export interface Consultant {
+  organizationId: string;
+  name: string;
+  isActive: boolean;
   createdAt: string;
 }

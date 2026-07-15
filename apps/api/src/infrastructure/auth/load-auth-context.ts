@@ -1,5 +1,9 @@
 import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-permission";
-import type { Account, AuthUser } from "@/infrastructure/auth/auth-types";
+import type {
+  Account,
+  AuthUser,
+  Consultant,
+} from "@/infrastructure/auth/auth-types";
 import {
   createAccountRepository,
   createConsultantRepository,
@@ -28,16 +32,28 @@ export async function loadAuthUser(accountId: string): Promise<AuthUser> {
   const organizationRepository = createOrganizationRepository();
   const consultantRepository = createConsultantRepository();
 
-  const accounts = await accountRepository.findByAccountId(accountId);
+  const [accounts, consultants] = await Promise.all([
+    accountRepository.findByAccountId(accountId),
+    consultantRepository.findByConsultantId(accountId),
+  ]);
   const activeAccounts = accounts
     .filter((account) => account.getStatus() === "active")
     .sort(
       (left, right) =>
         left.getCreatedAt().getTime() - right.getCreatedAt().getTime(),
     );
+  const activeConsultants = consultants
+    .filter((consultant) => consultant.getIsActive())
+    .sort(
+      (left, right) =>
+        left.getCreatedAt().getTime() - right.getCreatedAt().getTime(),
+    );
 
   const organizationIds = [
-    ...new Set(activeAccounts.map((account) => account.getOrganizationId())),
+    ...new Set([
+      ...activeAccounts.map((account) => account.getOrganizationId()),
+      ...activeConsultants.map((consultant) => consultant.getOrganizationId()),
+    ]),
   ];
   const organizations = await organizationRepository.findByIds(organizationIds);
   const nameById = new Map<string, string>();
@@ -45,13 +61,16 @@ export async function loadAuthUser(accountId: string): Promise<AuthUser> {
     nameById.set(organization.getOrganizationId(), organization.getName());
   }
 
+  const accountOrganizationIds = activeAccounts.map((account) =>
+    account.getOrganizationId(),
+  );
   const roleRepository = new FirestoreRoleRepository();
   const roleByOrganizationAndRole = new Map<
     string,
     { name: string; permissions: AuthorizationPermission[] }
   >();
   const rolesByOrganization = await Promise.all(
-    organizationIds.map(async (organizationId) => ({
+    [...new Set(accountOrganizationIds)].map(async (organizationId) => ({
       organizationId,
       roles: await roleRepository.findByOrganizationId(organizationId),
     })),
@@ -65,10 +84,6 @@ export async function loadAuthUser(accountId: string): Promise<AuthUser> {
     }
   }
 
-  const consultantOrganizationIds = new Set(
-    await consultantRepository.findOrganizationIdsByConsultantId(accountId),
-  );
-
   const accountViews: Account[] = activeAccounts.map((account) => {
     const organizationId = account.getOrganizationId();
     const roleKey = `${organizationId}_${account.getRoleId()}`;
@@ -79,22 +94,41 @@ export async function loadAuthUser(accountId: string): Promise<AuthUser> {
       roleName:
         roleByOrganizationAndRole.get(roleKey)?.name ?? account.getRoleId(),
       permissions: roleByOrganizationAndRole.get(roleKey)?.permissions ?? [],
-      isConsultant: consultantOrganizationIds.has(organizationId),
       status: account.getStatus(),
       createdAt: account.getCreatedAt().toISOString(),
     };
   });
 
-  const currentOrganizationId = accountViews[0]?.organizationId ?? null;
-  const currentAccount = activeAccounts.find(
-    (account) => account.getOrganizationId() === currentOrganizationId,
-  );
+  const consultantViews: Consultant[] = activeConsultants.map((consultant) => {
+    const organizationId = consultant.getOrganizationId();
+    return {
+      organizationId,
+      name: consultant.getProfile().getDisplayName(),
+      isActive: consultant.getIsActive(),
+      createdAt: consultant.getCreatedAt().toISOString(),
+    };
+  });
+
+  const firstAccount = activeAccounts[0];
+  const firstConsultant = activeConsultants[0];
+  const currentOrganizationId =
+    accountViews[0]?.organizationId ??
+    consultantViews[0]?.organizationId ??
+    null;
+  const currentDisplayName =
+    firstAccount && firstAccount.getOrganizationId() === currentOrganizationId
+      ? (firstAccount.getName() ?? null)
+      : firstConsultant &&
+          firstConsultant.getOrganizationId() === currentOrganizationId
+        ? firstConsultant.getProfile().getDisplayName()
+        : null;
 
   return {
     authUid: accountId,
     accounts: accountViews,
+    consultants: consultantViews,
     currentOrganizationId,
-    currentDisplayName: currentAccount?.getName() ?? null,
+    currentDisplayName,
   };
 }
 
