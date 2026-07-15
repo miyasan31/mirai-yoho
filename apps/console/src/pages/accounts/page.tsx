@@ -1,6 +1,5 @@
 import { createListCollection } from "@ark-ui/react/select";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
 import { useListQueryParams } from "@mirai-yoho/console-core/hooks/use-list-query-params";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
@@ -31,6 +30,7 @@ import {
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
+import { useAuth } from "@/hooks/use-auth";
 import {
   useConsoleAccounts,
   useConsoleAccountsQueryKey,

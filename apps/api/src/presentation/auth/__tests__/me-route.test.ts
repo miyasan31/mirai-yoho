@@ -21,6 +21,7 @@ describe("GET /api/auth/me", () => {
     vi.mocked(verifyAuth).mockResolvedValueOnce({
       authUid: "authUid-1",
       accounts: [],
+      consultants: [],
       currentOrganizationId: "org-1",
       currentDisplayName: "User",
     });

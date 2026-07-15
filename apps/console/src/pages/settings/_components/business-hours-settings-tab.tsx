@@ -1,5 +1,4 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { useUpdateConsoleBookingSettings } from "@mirai-yoho/console-core/hooks/use-booking-settings";
 import { BusinessHours } from "@mirai-yoho/shared/business-hours";
 import { Checkbox } from "@mirai-yoho/ui/components/ui";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
@@ -14,6 +13,7 @@ import type {
 } from "react-hook-form";
 import { Controller, useFieldArray, useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
+import { useUpdateConsoleBookingSettings } from "@/hooks/use-console-booking-settings";
 import {
   type BusinessHoursFormValues,
   businessHoursFormSchema,

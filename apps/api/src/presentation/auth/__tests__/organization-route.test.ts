@@ -31,6 +31,7 @@ describe("PATCH /api/auth/organization", () => {
     vi.mocked(verifyAuth).mockResolvedValueOnce({
       authUid: "authUid-1",
       accounts: [],
+      consultants: [],
       currentOrganizationId: "org-1",
       currentDisplayName: "User",
     });
@@ -38,7 +39,6 @@ describe("PATCH /api/auth/organization", () => {
       roleId: "admin",
       roleName: "管理者",
       permissions: [],
-      isConsultant: false,
       organizationId: "org-1",
       name: "テスト組織",
       status: "active",

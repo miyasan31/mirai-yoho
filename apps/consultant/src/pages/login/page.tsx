@@ -1,5 +1,4 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Field from "@mirai-yoho/ui/components/ui/field";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
@@ -9,6 +8,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { UserCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
+import { useAuth } from "@/hooks/use-auth";
 import { type LoginFormValues, loginFormSchema } from "./login-form-schema";
 
 export default function ConsultantLoginPage() {

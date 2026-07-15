@@ -1,12 +1,13 @@
 import {
   useDeleteConsoleConsultant,
   useGetConsoleConsultants,
+  useInviteConsultant,
   useUpdateConsoleConsultant,
 } from "@mirai-yoho/api-client/api/console/console";
 import type { GetConsoleConsultantsParams } from "@mirai-yoho/api-client/schemas";
 import { QUERY_STALE_TIME } from "@mirai-yoho/console-core/hooks/query-cache-policy";
-import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
+import { useAuth } from "@/hooks/use-auth";
 
 export function useConsoleConsultants(
   params?: GetConsoleConsultantsParams,
@@ -27,4 +28,8 @@ export function useConsoleConsultants(
   });
 }
 
-export { useUpdateConsoleConsultant, useDeleteConsoleConsultant };
+export {
+  useInviteConsultant,
+  useUpdateConsoleConsultant,
+  useDeleteConsoleConsultant,
+};

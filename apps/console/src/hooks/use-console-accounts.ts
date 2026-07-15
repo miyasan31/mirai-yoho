@@ -10,8 +10,8 @@ import {
 } from "@mirai-yoho/api-client/api/console/console";
 import type { GetConsoleAccountsParams } from "@mirai-yoho/api-client/schemas";
 import { QUERY_STALE_TIME } from "@mirai-yoho/console-core/hooks/query-cache-policy";
-import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
+import { useAuth } from "@/hooks/use-auth";
 
 export function useConsoleAccounts(params?: GetConsoleAccountsParams) {
   const { token } = useAuth();

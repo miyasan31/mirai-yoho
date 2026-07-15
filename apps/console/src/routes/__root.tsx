@@ -1,11 +1,8 @@
-import {
-  AuthContext,
-  useAuthState,
-} from "@mirai-yoho/console-core/hooks/use-auth";
 import { Toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { createRootRoute, Outlet } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import NotFound from "@/components/not-found";
+import { AuthContext, useAuthState } from "@/hooks/use-auth";
 
 function AuthProvider({ children }: { children: ReactNode }) {
   const authState = useAuthState();

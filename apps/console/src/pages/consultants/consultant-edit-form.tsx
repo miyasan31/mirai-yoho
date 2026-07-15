@@ -1,7 +1,6 @@
 import { createListCollection } from "@ark-ui/react/select";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { getGetConsoleConsultantsQueryKey } from "@mirai-yoho/api-client/api/console/console";
-import { useConsoleConsultantStatuses } from "@mirai-yoho/console-core/hooks/use-booking-settings";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Dialog from "@mirai-yoho/ui/components/ui/dialog";
@@ -14,6 +13,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
+import { useConsoleConsultantStatuses } from "@/hooks/use-console-booking-settings";
 import {
   useConsoleConsultants,
   useDeleteConsoleConsultant,

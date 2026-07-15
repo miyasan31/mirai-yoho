@@ -1,4 +1,3 @@
-import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { UNAUTHORIZED_EVENT_NAME } from "@mirai-yoho/console-core/lib/api-client";
 import { useNavigate } from "@tanstack/react-router";
@@ -8,6 +7,7 @@ import {
   SidebarLayout,
   SidebarLayoutSkeleton,
 } from "@/components/sidebar-layout";
+import { useAuth } from "@/hooks/use-auth";
 import { CONSOLE_NAV_PERMISSIONS, NAV_ITEMS } from "./nav-items";
 
 export default function ConsoleLayout({ children }: { children: ReactNode }) {

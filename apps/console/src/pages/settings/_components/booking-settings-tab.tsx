@@ -1,10 +1,10 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { useUpdateConsoleBookingSettings } from "@mirai-yoho/console-core/hooks/use-booking-settings";
 import { Checkbox } from "@mirai-yoho/ui/components/ui";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { Controller, useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
+import { useUpdateConsoleBookingSettings } from "@/hooks/use-console-booking-settings";
 import {
   type BookingSettingsFormValues,
   bookingSettingsFormSchema,

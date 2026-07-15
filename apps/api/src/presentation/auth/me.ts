@@ -9,6 +9,7 @@ export async function GET(request: Request) {
       Response.json({
         authUid: authUser.authUid,
         accounts: authUser.accounts,
+        consultants: authUser.consultants,
         currentOrganizationId: authUser.currentOrganizationId,
         currentDisplayName: authUser.currentDisplayName,
       }),

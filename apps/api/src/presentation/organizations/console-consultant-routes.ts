@@ -1,6 +1,11 @@
+import crypto from "node:crypto";
 import { Hono } from "hono";
+import { AppError } from "@/application/shared/app-error";
 import { Settings } from "@/domain/settings/settings";
-import { requirePermission } from "@/infrastructure/auth/require-permission";
+import {
+  requirePermission,
+  requireSystemAdminRole,
+} from "@/infrastructure/auth/require-permission";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createConsultantRepository,
@@ -9,7 +14,14 @@ import {
   createSettingsRepository,
   createUpdateConsultantUseCase,
 } from "@/infrastructure/container";
-import { getUsersByUids } from "@/infrastructure/firebase/firebase-auth-admin";
+import {
+  createUser,
+  generatePasswordResetLink,
+  getUser,
+  getUserByEmail,
+  getUsersByUids,
+} from "@/infrastructure/firebase/firebase-auth-admin";
+import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
 import {
   resolveConsultantStatus,
   toConsultantStatusResponse,
@@ -78,6 +90,75 @@ consoleConsultantRoutes.get(
     );
 
     return noStoreJson({ consultants: items, pagination });
+  }),
+);
+
+consoleConsultantRoutes.post(
+  "/console/consultants/invite",
+  postRoute(async ({ organizationId, request, requestUrl }) => {
+    const authUser = await verifyAuth(request);
+    const actorAccount = requireSystemAdminRole(authUser, organizationId);
+    const body = await request.json();
+    const { email, name } = body;
+
+    if (!email || typeof email !== "string") {
+      return jsonError(400, "VALIDATION_ERROR", "email is required");
+    }
+    if (!name || typeof name !== "string") {
+      return jsonError(400, "VALIDATION_ERROR", "name is required");
+    }
+    const normalizedDisplayName = name.trim();
+    if (!normalizedDisplayName) {
+      return jsonError(400, "VALIDATION_ERROR", "name must not be empty");
+    }
+
+    const consultantRepository = createConsultantRepository();
+    let consultantId: string;
+    const userRecord = await getUserByEmail(email).catch(() => null);
+
+    if (userRecord) {
+      consultantId = userRecord.uid;
+      const existingConsultant = await consultantRepository.findById(
+        organizationId,
+        consultantId,
+      );
+      if (existingConsultant) {
+        throw new AppError(
+          409,
+          "CONSULTANT_ALREADY_EXISTS",
+          "このメールアドレスは既にこの組織の相談員として登録されています",
+        );
+      }
+    } else {
+      consultantId = await createUser(email, crypto.randomUUID());
+      await getUser(consultantId);
+    }
+
+    await createCreateConsultantUseCase().execute({
+      organizationId,
+      consultantId,
+      name: normalizedDisplayName,
+    });
+
+    const passwordResetLink = await generatePasswordResetLink(email);
+    await new ResendEmailService().sendInvitation({
+      email,
+      roleName: "相談員",
+      isConsultant: true,
+      passwordResetLink,
+    });
+
+    console.info("Consultant invited", {
+      category: "security-audit",
+      endpoint: `POST ${requestUrl.pathname}`,
+      organizationId,
+      actorAuthUid: authUser.authUid,
+      actorRoleId: actorAccount.roleId,
+      targetEmail: email,
+      invitedAt: new Date().toISOString(),
+    });
+
+    return Response.json({ consultantId }, { status: 201 });
   }),
 );
 

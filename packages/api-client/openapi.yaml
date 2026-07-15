@@ -868,6 +868,40 @@ paths:
         "201":
           description: Created
 
+  /organizations/{organizationId}/console/consultants/invite:
+    post:
+      operationId: inviteConsultant
+      summary: 相談員招待（Consultant のみ作成、accounts コレクションには書き込まない）
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, name]
+              properties:
+                email:
+                  type: string
+                  format: email
+                name:
+                  type: string
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [consultantId]
+                properties:
+                  consultantId:
+                    type: string
+
   /organizations/{organizationId}/console/consultants/{id}:
     patch:
       operationId: updateConsoleConsultant
@@ -1193,7 +1227,7 @@ paths:
   /organizations/{organizationId}/console/accounts/invite:
     post:
       operationId: inviteAccount
-      summary: 組織アカウント招待（roleId で権限ロールを指定、isConsultant=true で相談員も同時作成）
+      summary: 組織アカウント招待（roleId で権限ロールを指定）
       tags: [console]
       security:
         - bearerAuth: []
@@ -1212,12 +1246,8 @@ paths:
                   format: email
                 name:
                   type: string
-                phone:
-                  type: string
                 roleId:
                   type: string
-                isConsultant:
-                  type: boolean
       responses:
         "201":
           description: Created

@@ -66,7 +66,7 @@ vi.mock("@mirai-yoho/ui/components/error-status-page", () => ({
 
 const useAuthMock = vi.fn();
 
-vi.mock("@mirai-yoho/console-core/hooks/use-auth", () => ({
+vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => useAuthMock(),
 }));
 

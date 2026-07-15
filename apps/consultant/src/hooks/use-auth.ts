@@ -1,4 +1,5 @@
-import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-permission";
+import { envClient } from "@mirai-yoho/console-core/config/env.client";
+import { auth } from "@mirai-yoho/console-core/lib/firebase";
 import {
   sendPasswordResetEmail as firebaseSendPasswordResetEmail,
   signOut as firebaseSignOut,
@@ -14,32 +15,29 @@ import {
   useMemo,
   useState,
 } from "react";
-import { envClient } from "../config/env.client";
-import type { Account } from "../lib/auth-types";
-import { auth } from "../lib/firebase";
+
+export interface Consultant {
+  organizationId: string;
+  name: string;
+  isActive: boolean;
+  createdAt: string;
+}
 
 export interface AuthState {
   user: User | null;
   token: string | null;
-  accounts: Account[];
+  consultants: Consultant[];
   currentOrganizationId: string | null;
   currentDisplayName: string | null;
-  currentRoleId: string | null;
-  roleId: string | null;
   currentIsConsultant: boolean;
   isConsultant: boolean;
-  permissions: AuthorizationPermission[];
-  hasPermission: (permission: AuthorizationPermission) => boolean;
-  hasAnyPermission: (permissions: AuthorizationPermission[]) => boolean;
   isLoading: boolean;
   signIn: (
     email: string,
     password: string,
   ) => Promise<{
     currentOrganizationId: string | null;
-    currentRoleId: string | null;
     currentIsConsultant: boolean;
-    currentPermissions: AuthorizationPermission[];
   }>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
   setCurrentOrganizationId: (organizationId: string) => Promise<void>;
@@ -49,10 +47,16 @@ export interface AuthState {
 
 export const AuthContext = createContext<AuthState | null>(null);
 
+interface AuthMePayload {
+  consultants: Consultant[];
+  currentOrganizationId: string | null;
+  currentDisplayName: string | null;
+}
+
 export function useAuthState(): AuthState {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
-  const [accounts, setAccounts] = useState<Account[]>([]);
+  const [consultants, setConsultants] = useState<Consultant[]>([]);
   const [currentOrganizationId, setCurrentOrganizationIdState] = useState<
     string | null
   >(null);
@@ -61,62 +65,61 @@ export function useAuthState(): AuthState {
   );
   const [isLoading, setIsLoading] = useState(true);
 
-  const syncAuthContext = useCallback(async (nextUser: User | null) => {
-    if (!nextUser) {
-      setUser(null);
-      setToken(null);
-      setAccounts([]);
-      setCurrentOrganizationIdState(null);
-      setCurrentDisplayName(null);
-      return {
-        accounts: [],
-        currentOrganizationId: null,
-        currentDisplayName: null,
-      };
-    }
-
-    const idTokenResult = await nextUser.getIdTokenResult();
-    setUser(nextUser);
-    setToken(idTokenResult.token);
-
-    const response = await fetch(`${envClient.apiUrl}/api/auth/me`, {
-      headers: {
-        Authorization: `Bearer ${idTokenResult.token}`,
-      },
-    });
-
-    if (!response.ok) {
-      let errorMessage = "Failed to load auth context";
-
-      try {
-        const errorData = (await response.json()) as {
-          code?: string;
-          message?: string;
+  const syncAuthContext = useCallback(
+    async (nextUser: User | null): Promise<AuthMePayload> => {
+      if (!nextUser) {
+        setUser(null);
+        setToken(null);
+        setConsultants([]);
+        setCurrentOrganizationIdState(null);
+        setCurrentDisplayName(null);
+        return {
+          consultants: [],
+          currentOrganizationId: null,
+          currentDisplayName: null,
         };
-        if (errorData.code === "NO_ROLE") {
-          errorMessage =
-            "このアカウントはまだ組織に所属していません。管理者に確認してください。";
-        } else if (errorData.message) {
-          errorMessage = errorData.message;
-        }
-      } catch {
-        // ignore JSON parse failures and keep the fallback message
       }
 
-      throw new Error(errorMessage);
-    }
+      const idTokenResult = await nextUser.getIdTokenResult();
+      setUser(nextUser);
+      setToken(idTokenResult.token);
 
-    const data = (await response.json()) as {
-      accounts: Account[];
-      currentOrganizationId: string | null;
-      currentDisplayName: string | null;
-    };
+      const response = await fetch(`${envClient.apiUrl}/api/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${idTokenResult.token}`,
+        },
+      });
 
-    setAccounts(data.accounts);
-    setCurrentOrganizationIdState(data.currentOrganizationId);
-    setCurrentDisplayName(data.currentDisplayName);
-    return data;
-  }, []);
+      if (!response.ok) {
+        let errorMessage = "Failed to load auth context";
+
+        try {
+          const errorData = (await response.json()) as {
+            code?: string;
+            message?: string;
+          };
+          if (errorData.code === "NO_ROLE") {
+            errorMessage =
+              "このアカウントはまだ組織に所属していません。管理者に確認してください。";
+          } else if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch {
+          // ignore JSON parse failures and keep the fallback message
+        }
+
+        throw new Error(errorMessage);
+      }
+
+      const data = (await response.json()) as AuthMePayload;
+
+      setConsultants(data.consultants ?? []);
+      setCurrentOrganizationIdState(data.currentOrganizationId);
+      setCurrentDisplayName(data.currentDisplayName);
+      return data;
+    },
+    [],
+  );
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
@@ -139,15 +142,14 @@ export function useAuthState(): AuthState {
         password,
       );
       const data = await syncAuthContext(credential.user);
-      const currentAccount = data.accounts.find(
-        (account) => account.organizationId === data.currentOrganizationId,
+      const currentConsultant = (data.consultants ?? []).find(
+        (consultant) =>
+          consultant.organizationId === data.currentOrganizationId,
       );
 
       return {
         currentOrganizationId: data.currentOrganizationId,
-        currentRoleId: currentAccount?.roleId ?? null,
-        currentIsConsultant: currentAccount?.isConsultant ?? false,
-        currentPermissions: currentAccount?.permissions ?? [],
+        currentIsConsultant: !!currentConsultant,
       };
     },
     [syncAuthContext],
@@ -208,37 +210,20 @@ export function useAuthState(): AuthState {
     }
   }, []);
 
-  const currentAccount = accounts.find(
-    (account) => account.organizationId === currentOrganizationId,
+  const currentConsultant = consultants.find(
+    (consultant) => consultant.organizationId === currentOrganizationId,
   );
-  const currentRoleId = currentAccount?.roleId ?? null;
-  const currentIsConsultant = currentAccount?.isConsultant ?? false;
-  const permissions = currentAccount?.permissions ?? [];
-
-  const hasPermission = useCallback(
-    (permission: AuthorizationPermission) => permissions.includes(permission),
-    [permissions],
-  );
-  const hasAnyPermission = useCallback(
-    (targetPermissions: AuthorizationPermission[]) =>
-      targetPermissions.some((permission) => permissions.includes(permission)),
-    [permissions],
-  );
+  const currentIsConsultant = !!currentConsultant;
 
   return useMemo(
     () => ({
       user,
       token,
-      accounts,
+      consultants,
       currentOrganizationId,
       currentDisplayName,
-      currentRoleId,
-      roleId: currentRoleId,
       currentIsConsultant,
       isConsultant: currentIsConsultant,
-      permissions,
-      hasPermission,
-      hasAnyPermission,
       isLoading,
       signIn,
       sendPasswordResetEmail,
@@ -249,14 +234,10 @@ export function useAuthState(): AuthState {
     [
       user,
       token,
-      accounts,
+      consultants,
       currentOrganizationId,
       currentDisplayName,
-      currentRoleId,
       currentIsConsultant,
-      permissions,
-      hasPermission,
-      hasAnyPermission,
       isLoading,
       signIn,
       sendPasswordResetEmail,

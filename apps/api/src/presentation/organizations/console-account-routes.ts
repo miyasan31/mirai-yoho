@@ -1,9 +1,4 @@
-import crypto from "node:crypto";
 import { Hono } from "hono";
-import { Account } from "@/domain/account/account";
-import { Consultant } from "@/domain/consultant/consultant";
-import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
-import { Settings } from "@/domain/settings/settings";
 import {
   requirePermission,
   requireSystemAdminRole,
@@ -11,19 +6,16 @@ import {
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createAccountRepository,
-  createConsultantRepository,
   createRoleRepository,
-  createSettingsRepository,
 } from "@/infrastructure/container";
 import {
-  createUser,
   deleteUser,
   generatePasswordResetLink,
   getUser,
-  getUserByEmail,
   getUsersByUids,
 } from "@/infrastructure/firebase/firebase-auth-admin";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
+import { provisionInvitedAccount } from "./console-invite-common";
 import { deleteConsoleUserWithAuthCleanup } from "./console-user-deletion";
 import {
   canUpdateDisplayNameTarget,
@@ -102,7 +94,7 @@ consoleAccountRoutes.post(
     const authUser = await verifyAuth(request);
     const actorAccount = requireSystemAdminRole(authUser, organizationId);
     const body = await request.json();
-    const { email, roleId, name, phone, isConsultant } = body;
+    const { email, roleId, name } = body;
 
     if (!email || typeof email !== "string") {
       return jsonError(400, "VALIDATION_ERROR", "email is required");
@@ -125,72 +117,19 @@ consoleAccountRoutes.post(
     if (!normalizedDisplayName) {
       return jsonError(400, "VALIDATION_ERROR", "name must not be empty");
     }
-    const shouldCreateConsultant = isConsultant === true;
 
-    const accountRepository = createAccountRepository();
-    let accountId: string;
-    let userRecord = await getUserByEmail(email).catch(() => null);
-
-    if (userRecord) {
-      accountId = userRecord.uid;
-      // 同一組織に既にアカウントがある場合は招待失敗。
-      // 別組織にのみ存在する場合はこの組織への所属を追加する（後続の save で作成）
-      const existingAccount = await accountRepository.findById(
-        organizationId,
-        accountId,
-      );
-      if (existingAccount) {
-        return jsonError(
-          409,
-          "ACCOUNT_ALREADY_EXISTS",
-          "このメールアドレスは既にこの組織に登録されています",
-        );
-      }
-    } else {
-      accountId = await createUser(email, crypto.randomUUID());
-      userRecord = await getUser(accountId);
-    }
-
-    const account = Account.invite({
+    const { accountId, passwordResetLink } = await provisionInvitedAccount({
       organizationId,
-      accountId,
+      email,
+      displayName: normalizedDisplayName,
       roleId: normalizedRoleId,
-      name: normalizedDisplayName,
+      accountRepository: createAccountRepository(),
     });
-    if (userRecord.metadata.lastSignInTime) {
-      account.activate();
-    }
-    await accountRepository.save(account);
 
-    if (shouldCreateConsultant) {
-      const repo = createConsultantRepository();
-      const existing = await repo.findById(organizationId, accountId);
-      if (!existing) {
-        const settings =
-          (await createSettingsRepository().findByOrganizationId(
-            organizationId,
-          )) ?? Settings.createDefault(organizationId);
-        await repo.save(
-          Consultant.create({
-            organizationId,
-            consultantId: accountId,
-            profile: ConsultantProfile.create(
-              normalizedDisplayName,
-              "",
-              [],
-              typeof phone === "string" ? phone.trim() : "",
-            ),
-            statusId: settings.getDefaultConsultantStatusId(),
-          }),
-        );
-      }
-    }
-
-    const passwordResetLink = await generatePasswordResetLink(email);
     await new ResendEmailService().sendInvitation({
       email,
       roleName: roleEntity.getName(),
-      isConsultant: shouldCreateConsultant,
+      isConsultant: false,
       passwordResetLink,
     });
 
@@ -202,7 +141,6 @@ consoleAccountRoutes.post(
       actorRoleId: actorAccount.roleId,
       targetEmail: email,
       targetRoleId: normalizedRoleId,
-      targetIsConsultant: shouldCreateConsultant,
       invitedAt: new Date().toISOString(),
     });
 
@@ -241,16 +179,11 @@ consoleAccountRoutes.post(
       organizationId,
       account.getRoleId(),
     );
-    const isConsultant =
-      (await createConsultantRepository().findById(
-        organizationId,
-        accountId,
-      )) !== null;
 
     await new ResendEmailService().sendInvitation({
       email: userRecord.email,
       roleName: roleEntity?.getName() ?? account.getRoleId(),
-      isConsultant,
+      isConsultant: false,
       passwordResetLink: await generatePasswordResetLink(userRecord.email),
     });
 

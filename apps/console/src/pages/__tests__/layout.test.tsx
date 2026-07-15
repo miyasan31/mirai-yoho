@@ -36,7 +36,7 @@ vi.mock("@/components/sidebar-layout", () => ({
 }));
 
 const mockUseAuth = vi.fn();
-vi.mock("@mirai-yoho/console-core/hooks/use-auth", () => ({
+vi.mock("@/hooks/use-auth", () => ({
   useAuth: () => mockUseAuth(),
 }));
 

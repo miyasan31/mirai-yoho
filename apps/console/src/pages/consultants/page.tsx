@@ -1,6 +1,5 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { getGetConsoleConsultantsQueryKey } from "@mirai-yoho/api-client/api/console/console";
-import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
 import { useListQueryParams } from "@mirai-yoho/console-core/hooks/use-list-query-params";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
@@ -22,8 +21,11 @@ import { Pencil, UserPlus, Users } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
-import { useInviteAccount } from "@/hooks/use-console-accounts";
-import { useConsoleConsultants } from "@/hooks/use-console-consultants";
+import { useAuth } from "@/hooks/use-auth";
+import {
+  useConsoleConsultants,
+  useInviteConsultant,
+} from "@/hooks/use-console-consultants";
 import {
   type ConsultantInviteFormValues,
   consultantInviteFormSchema,
@@ -41,7 +43,7 @@ export default function ConsoleConsultantsPage() {
     sortBy,
     sortOrder: "desc",
   });
-  const inviteAccount = useInviteAccount();
+  const inviteConsultant = useInviteConsultant();
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const {
@@ -54,7 +56,6 @@ export default function ConsoleConsultantsPage() {
     defaultValues: {
       name: "",
       email: "",
-      phone: "",
     },
   });
 
@@ -72,14 +73,11 @@ export default function ConsoleConsultantsPage() {
       return;
     }
     try {
-      await inviteAccount.mutateAsync({
+      await inviteConsultant.mutateAsync({
         organizationId,
         data: {
           email: values.email,
           name: values.name,
-          phone: values.phone,
-          roleId: "admin",
-          isConsultant: true,
         },
       });
       toaster.success({
@@ -178,15 +176,6 @@ export default function ConsoleConsultantsPage() {
                         </Field.ErrorText>
                       )}
                     </Field.Root>
-                    <Field.Root invalid={!!errors.phone}>
-                      <Field.Label>電話番号</Field.Label>
-                      <Input type="tel" {...register("phone")} />
-                      {errors.phone && (
-                        <Field.ErrorText>
-                          {errors.phone.message}
-                        </Field.ErrorText>
-                      )}
-                    </Field.Root>
                   </Dialog.Body>
                   <Dialog.Footer>
                     <Dialog.CloseTrigger asChild>
@@ -194,7 +183,7 @@ export default function ConsoleConsultantsPage() {
                     </Dialog.CloseTrigger>
                     <Button
                       type="submit"
-                      loading={inviteAccount.isPending}
+                      loading={inviteConsultant.isPending}
                       loadingText="送信中..."
                     >
                       招待メール送信
