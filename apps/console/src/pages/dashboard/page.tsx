@@ -4,7 +4,7 @@ import { Skeleton } from "@mirai-yoho/ui/components/ui/skeleton";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { CircleAlert } from "lucide-react";
 import { styled } from "styled-system/jsx";
-import { useAdminDashboard } from "@/hooks/use-admin-dashboard";
+import { useConsoleDashboard } from "@/hooks/use-console-dashboard";
 
 const BOOKING_STATUS_CONFIG: Record<
   string,
@@ -16,8 +16,8 @@ const BOOKING_STATUS_CONFIG: Record<
   cancelled: { label: "キャンセル", colorPalette: "red" },
 };
 
-export default function AdminDashboardPage() {
-  const { data, isLoading } = useAdminDashboard();
+export default function ConsoleDashboardPage() {
+  const { data, isLoading } = useConsoleDashboard();
 
   if (isLoading) {
     return (

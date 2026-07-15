@@ -36,6 +36,11 @@ variable "max_instance_count" {
   default     = 4
 }
 
+variable "runtime_secret_ids" {
+  description = "Cloud Run API サーバーが env として参照する Secret Manager シークレット ID の一覧。firebase モジュールの runtime_secret_ids output をそのまま渡すこと。"
+  type        = set(string)
+}
+
 variable "api_custom_domain" {
   description = "Custom domain to map to the Cloud Run API service. Set to null to skip domain mapping (run.app URL only)."
   type        = string

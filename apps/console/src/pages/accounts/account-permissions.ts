@@ -1,19 +1,23 @@
 const SYSTEM_ADMIN_ROLE_ID = "admin";
 
-export type AdminActorRoleId = string | null;
+export type ConsoleActorRoleId = string | null;
 
-export type AdminPanelAccountStatus = "active" | "invited" | "disabled";
+export type ConsolePanelAccountStatus = "active" | "invited" | "disabled";
 
-export function canManageAdminAccounts(actorRoleId: AdminActorRoleId): boolean {
+export function canManageConsoleAccounts(
+  actorRoleId: ConsoleActorRoleId,
+): boolean {
   return !!actorRoleId;
 }
 
-export function canInviteAdminAccounts(actorRoleId: AdminActorRoleId): boolean {
-  return canManageAdminAccounts(actorRoleId);
+export function canInviteConsoleAccounts(
+  actorRoleId: ConsoleActorRoleId,
+): boolean {
+  return canManageConsoleAccounts(actorRoleId);
 }
 
 export function canEditDisplayName(
-  actorRoleId: AdminActorRoleId,
+  actorRoleId: ConsoleActorRoleId,
   actorAccountId: string | undefined,
   targetAccountId: string,
 ): boolean {
@@ -24,26 +28,28 @@ export function canEditDisplayName(
 }
 
 export function canEditRole(
-  actorRoleId: AdminActorRoleId,
-  targetStatus: AdminPanelAccountStatus,
+  actorRoleId: ConsoleActorRoleId,
+  targetStatus: ConsolePanelAccountStatus,
 ): boolean {
   return actorRoleId === SYSTEM_ADMIN_ROLE_ID && targetStatus === "active";
 }
 
 export function canResendInvite(
-  actorRoleId: AdminActorRoleId,
-  targetStatus: AdminPanelAccountStatus,
+  actorRoleId: ConsoleActorRoleId,
+  targetStatus: ConsolePanelAccountStatus,
 ): boolean {
-  return canManageAdminAccounts(actorRoleId) && targetStatus === "invited";
+  return canManageConsoleAccounts(actorRoleId) && targetStatus === "invited";
 }
 
 export function canResetPassword(
-  actorRoleId: AdminActorRoleId,
-  targetStatus: AdminPanelAccountStatus,
+  actorRoleId: ConsoleActorRoleId,
+  targetStatus: ConsolePanelAccountStatus,
 ): boolean {
-  return canManageAdminAccounts(actorRoleId) && targetStatus === "active";
+  return canManageConsoleAccounts(actorRoleId) && targetStatus === "active";
 }
 
-export function canDeleteAdminAccount(actorRoleId: AdminActorRoleId): boolean {
-  return canManageAdminAccounts(actorRoleId);
+export function canDeleteConsoleAccount(
+  actorRoleId: ConsoleActorRoleId,
+): boolean {
+  return canManageConsoleAccounts(actorRoleId);
 }

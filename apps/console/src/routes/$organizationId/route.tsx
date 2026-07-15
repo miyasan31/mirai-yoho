@@ -1,14 +1,14 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
-import AdminLayout from "@/pages/layout";
+import ConsoleLayout from "@/pages/layout";
 
-function AdminLayoutRoute() {
+function ConsoleLayoutRoute() {
   return (
-    <AdminLayout>
+    <ConsoleLayout>
       <Outlet />
-    </AdminLayout>
+    </ConsoleLayout>
   );
 }
 
 export const Route = createFileRoute("/$organizationId")({
-  component: AdminLayoutRoute,
+  component: ConsoleLayoutRoute,
 });

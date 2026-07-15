@@ -42,13 +42,13 @@ function parseConsultantStatusesBody(
   };
 }
 
-export const adminSettingsRoutes = new Hono();
+export const consoleSettingsRoutes = new Hono();
 
-adminSettingsRoutes.get(
-  "/admin/settings/booking",
+consoleSettingsRoutes.get(
+  "/console/settings/booking",
   getRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requirePermission(authUser, organizationId, "admin.settings.read");
+    requirePermission(authUser, organizationId, "console.settings.read");
     const settings =
       await createSettingsRepository().findByOrganizationId(organizationId);
     const resolvedSettings = settings ?? Settings.createDefault(organizationId);
@@ -56,11 +56,11 @@ adminSettingsRoutes.get(
   }),
 );
 
-adminSettingsRoutes.get(
-  "/admin/settings/consultant-statuses",
+consoleSettingsRoutes.get(
+  "/console/settings/consultant-statuses",
   getRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requirePermission(authUser, organizationId, "admin.settings.read");
+    requirePermission(authUser, organizationId, "console.settings.read");
     const settings =
       await createSettingsRepository().findByOrganizationId(organizationId);
     const resolvedSettings = settings ?? Settings.createDefault(organizationId);
@@ -68,14 +68,14 @@ adminSettingsRoutes.get(
   }),
 );
 
-adminSettingsRoutes.patch(
-  "/admin/settings/consultant-statuses",
+consoleSettingsRoutes.patch(
+  "/console/settings/consultant-statuses",
   patchRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
     requirePermission(
       authUser,
       organizationId,
-      "admin.consultants.status.manage",
+      "console.consultants.status.manage",
     );
     const body = await request.json();
     const parsed = parseConsultantStatusesBody(body);
@@ -95,11 +95,11 @@ adminSettingsRoutes.patch(
   }),
 );
 
-adminSettingsRoutes.patch(
-  "/admin/settings/booking",
+consoleSettingsRoutes.patch(
+  "/console/settings/booking",
   patchRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requirePermission(authUser, organizationId, "admin.settings.manage");
+    requirePermission(authUser, organizationId, "console.settings.manage");
     const body = await request.json();
     if (typeof body.consultantSelectionEnabled !== "boolean") {
       return jsonError(

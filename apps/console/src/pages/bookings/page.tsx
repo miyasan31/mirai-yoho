@@ -13,10 +13,10 @@ import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
 import { AlertTriangle, CalendarDays } from "lucide-react";
 import { useMemo, useState } from "react";
 import { styled } from "styled-system/jsx";
-import { useAdminBookings } from "@/hooks/use-admin-bookings";
-import { useAdminConsultants } from "@/hooks/use-admin-consultants";
-import { useAdminCustomers } from "@/hooks/use-admin-customers";
 import { useChargePayment } from "@/hooks/use-booking";
+import { useConsoleBookings } from "@/hooks/use-console-bookings";
+import { useConsoleConsultants } from "@/hooks/use-console-consultants";
+import { useConsoleCustomers } from "@/hooks/use-console-customers";
 
 type CustomerSummary = {
   customerId: string;
@@ -146,21 +146,21 @@ function formatJoinedAt(value: string): string {
   });
 }
 
-export default function AdminBookingsPage() {
+export default function ConsoleBookingsPage() {
   const { organizationId } = useOrganizationRouting();
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
     useListQueryParams();
-  const bookingsQuery = useAdminBookings({
+  const bookingsQuery = useConsoleBookings({
     page,
     pageSize,
     sortBy,
     sortOrder: "desc",
   });
-  const customersQuery = useAdminCustomers(
+  const customersQuery = useConsoleCustomers(
     { page: 1, pageSize: 100, sortBy: "createdAt", sortOrder: "desc" },
     { enabled: true },
   );
-  const consultantsQuery = useAdminConsultants(
+  const consultantsQuery = useConsoleConsultants(
     { page: 1, pageSize: 100, sortBy: "createdAt", sortOrder: "desc" },
     { enabled: true },
   );

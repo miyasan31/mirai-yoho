@@ -26,7 +26,7 @@ slotRoutes.post(
       );
     }
     if (!account.isConsultant) {
-      requirePermission(authUser, organizationId, "admin.slots.manage");
+      requirePermission(authUser, organizationId, "console.slots.manage");
     }
 
     const body = await request.json();
@@ -74,7 +74,7 @@ slotRoutes.delete(
       );
     }
     if (!account.isConsultant) {
-      requirePermission(authUser, organizationId, "admin.slots.manage");
+      requirePermission(authUser, organizationId, "console.slots.manage");
     }
     await createDeleteSlotUseCase().execute({
       organizationId,

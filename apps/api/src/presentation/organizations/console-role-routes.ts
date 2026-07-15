@@ -74,13 +74,13 @@ function parseRoleBody(body: unknown): {
   };
 }
 
-export const adminRoleRoutes = new Hono();
+export const consoleRoleRoutes = new Hono();
 
-adminRoleRoutes.get(
-  "/admin/roles",
+consoleRoleRoutes.get(
+  "/console/roles",
   getRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requirePermission(authUser, organizationId, "admin.roles.read");
+    requirePermission(authUser, organizationId, "console.roles.read");
     const [roles, accounts] = await Promise.all([
       createRoleRepository().findByOrganizationId(organizationId),
       createAccountRepository().findByOrganizationId(organizationId),
@@ -108,8 +108,8 @@ adminRoleRoutes.get(
   }),
 );
 
-adminRoleRoutes.post(
-  "/admin/roles",
+consoleRoleRoutes.post(
+  "/console/roles",
   postRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
     requireSystemAdminRole(authUser, organizationId);
@@ -129,8 +129,8 @@ adminRoleRoutes.post(
   }),
 );
 
-adminRoleRoutes.patch(
-  "/admin/roles/:roleId",
+consoleRoleRoutes.patch(
+  "/console/roles/:roleId",
   patchRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
     requireSystemAdminRole(authUser, organizationId);
@@ -150,8 +150,8 @@ adminRoleRoutes.patch(
   }),
 );
 
-adminRoleRoutes.delete(
-  "/admin/roles/:roleId",
+consoleRoleRoutes.delete(
+  "/console/roles/:roleId",
   deleteRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
     requireSystemAdminRole(authUser, organizationId);

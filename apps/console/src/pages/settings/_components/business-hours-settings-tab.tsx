@@ -1,5 +1,5 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { useUpdateAdminBookingSettings } from "@mirai-yoho/console-core/hooks/use-booking-settings";
+import { useUpdateConsoleBookingSettings } from "@mirai-yoho/console-core/hooks/use-booking-settings";
 import { BusinessHours } from "@mirai-yoho/shared/business-hours";
 import { Checkbox } from "@mirai-yoho/ui/components/ui";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
@@ -301,7 +301,7 @@ export function BusinessHoursSettingsTab({
   pricePlanRange,
   onBusinessHoursSaved,
 }: BusinessHoursSettingsTabContainerProps) {
-  const updateBookingSettings = useUpdateAdminBookingSettings();
+  const updateBookingSettings = useUpdateConsoleBookingSettings();
   const form = useForm<BusinessHoursFormValues>({
     resolver: valibotResolver(businessHoursFormSchema),
     defaultValues: {

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { Account } from "@/domain/account/account";
-import { deleteAdminUserWithAuthCleanup } from "../admin-user-deletion";
+import { deleteConsoleUserWithAuthCleanup } from "../console-user-deletion";
 
 function buildAccount(): Account {
   return Account.reconstruct({
@@ -14,7 +14,7 @@ function buildAccount(): Account {
   });
 }
 
-describe("admin-user-deletion", () => {
+describe("console-user-deletion", () => {
   it("deletes account and auth user when this is the last account", async () => {
     const account = buildAccount();
     const countAccountsByAccountId = vi.fn().mockResolvedValue(1);
@@ -22,7 +22,7 @@ describe("admin-user-deletion", () => {
     const restoreAccount = vi.fn().mockResolvedValue(undefined);
     const deleteAuthUser = vi.fn().mockResolvedValue(undefined);
 
-    await deleteAdminUserWithAuthCleanup({
+    await deleteConsoleUserWithAuthCleanup({
       accountId: "user-1",
       account,
       countAccountsByAccountId,
@@ -44,7 +44,7 @@ describe("admin-user-deletion", () => {
     const restoreAccount = vi.fn().mockResolvedValue(undefined);
     const deleteAuthUser = vi.fn().mockResolvedValue(undefined);
 
-    await deleteAdminUserWithAuthCleanup({
+    await deleteConsoleUserWithAuthCleanup({
       accountId: "user-1",
       account,
       countAccountsByAccountId,
@@ -68,7 +68,7 @@ describe("admin-user-deletion", () => {
       .mockRejectedValue(new Error("firebase auth delete failed"));
 
     await expect(
-      deleteAdminUserWithAuthCleanup({
+      deleteConsoleUserWithAuthCleanup({
         accountId: "user-1",
         account,
         countAccountsByAccountId,

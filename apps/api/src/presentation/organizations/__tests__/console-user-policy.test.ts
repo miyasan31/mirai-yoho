@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isLastAdminSelfDemotion } from "../admin-user-policy";
+import { isLastAdminSelfDemotion } from "../console-user-policy";
 
 describe("admin user policy", () => {
   it("blocks the last admin from changing themself to any non-admin role", () => {

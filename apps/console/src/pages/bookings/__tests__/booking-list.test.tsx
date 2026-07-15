@@ -42,9 +42,9 @@ vi.mock("styled-system/recipes", () => ({
   tooltip: () => ({}),
 }));
 
-const mockUseAdminBookings = vi.fn();
-const mockUseAdminCustomers = vi.fn();
-const mockUseAdminConsultants = vi.fn();
+const mockUseConsoleBookings = vi.fn();
+const mockUseConsoleCustomers = vi.fn();
+const mockUseConsoleConsultants = vi.fn();
 const mockMutateAsync = vi.fn();
 
 vi.mock("@mirai-yoho/console-core/hooks/use-list-query-params", () => ({
@@ -58,22 +58,22 @@ vi.mock("@mirai-yoho/console-core/hooks/use-list-query-params", () => ({
   }),
 }));
 
-vi.mock("@/hooks/use-admin-bookings", () => ({
-  useAdminBookings: () => mockUseAdminBookings(),
+vi.mock("@/hooks/use-console-bookings", () => ({
+  useConsoleBookings: () => mockUseConsoleBookings(),
 }));
 
-vi.mock("@/hooks/use-admin-customers", () => ({
-  useAdminCustomers: (
+vi.mock("@/hooks/use-console-customers", () => ({
+  useConsoleCustomers: (
     params?: Record<string, unknown>,
     options?: { enabled?: boolean },
-  ) => mockUseAdminCustomers(params, options),
+  ) => mockUseConsoleCustomers(params, options),
 }));
 
-vi.mock("@/hooks/use-admin-consultants", () => ({
-  useAdminConsultants: (
+vi.mock("@/hooks/use-console-consultants", () => ({
+  useConsoleConsultants: (
     params?: Record<string, unknown>,
     options?: { enabled?: boolean },
-  ) => mockUseAdminConsultants(params, options),
+  ) => mockUseConsoleConsultants(params, options),
 }));
 
 vi.mock("@mirai-yoho/ui/components/list-controls", () => ({
@@ -187,7 +187,7 @@ vi.mock("lucide-react", () => ({
   CalendarDays: () => <span>CalendarDays</span>,
 }));
 
-import AdminBookingsPage from "../page";
+import ConsoleBookingsPage from "../page";
 
 function createBooking() {
   return {
@@ -202,44 +202,44 @@ function createBooking() {
   };
 }
 
-describe("AdminBookingsPage", () => {
+describe("ConsoleBookingsPage", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
   });
 
   it("shows loading state if any query is loading", () => {
-    mockUseAdminBookings.mockReturnValue({
+    mockUseConsoleBookings.mockReturnValue({
       data: { data: { bookings: [createBooking()] } },
       isLoading: false,
       error: null,
       refetch: vi.fn(),
     });
-    mockUseAdminCustomers.mockReturnValue({
+    mockUseConsoleCustomers.mockReturnValue({
       data: undefined,
       isLoading: true,
       error: null,
       refetch: vi.fn(),
     });
-    mockUseAdminConsultants.mockReturnValue({
+    mockUseConsoleConsultants.mockReturnValue({
       data: undefined,
       isLoading: false,
       error: null,
       refetch: vi.fn(),
     });
 
-    render(<AdminBookingsPage />);
+    render(<ConsoleBookingsPage />);
     expect(screen.getByTestId("table-skeleton")).toBeInTheDocument();
   });
 
   it("shows names on first table render and keeps charge action working", async () => {
-    mockUseAdminBookings.mockReturnValue({
+    mockUseConsoleBookings.mockReturnValue({
       data: { data: { bookings: [createBooking()] } },
       isLoading: false,
       error: null,
       refetch: vi.fn(),
     });
-    mockUseAdminCustomers.mockReturnValue({
+    mockUseConsoleCustomers.mockReturnValue({
       data: {
         data: {
           customers: [
@@ -257,7 +257,7 @@ describe("AdminBookingsPage", () => {
       error: null,
       refetch: vi.fn(),
     });
-    mockUseAdminConsultants.mockReturnValue({
+    mockUseConsoleConsultants.mockReturnValue({
       data: {
         data: {
           consultants: [
@@ -278,7 +278,7 @@ describe("AdminBookingsPage", () => {
     });
     mockMutateAsync.mockResolvedValue(undefined);
 
-    render(<AdminBookingsPage />);
+    render(<ConsoleBookingsPage />);
 
     expect(screen.getByText("顧客")).toBeInTheDocument();
     expect(screen.getByText("相談員")).toBeInTheDocument();
@@ -286,11 +286,11 @@ describe("AdminBookingsPage", () => {
     expect(screen.getByText("未確認")).toBeInTheDocument();
     expect(screen.getByText("山田 太郎")).toBeInTheDocument();
     expect(screen.getByText("佐藤 花子")).toBeInTheDocument();
-    expect(mockUseAdminCustomers).toHaveBeenCalledWith(
+    expect(mockUseConsoleCustomers).toHaveBeenCalledWith(
       { page: 1, pageSize: 100, sortBy: "createdAt", sortOrder: "desc" },
       { enabled: true },
     );
-    expect(mockUseAdminConsultants).toHaveBeenCalledWith(
+    expect(mockUseConsoleConsultants).toHaveBeenCalledWith(
       { page: 1, pageSize: 100, sortBy: "createdAt", sortOrder: "desc" },
       { enabled: true },
     );
@@ -307,13 +307,13 @@ describe("AdminBookingsPage", () => {
   });
 
   it("shows hover card details without additional fetch", async () => {
-    mockUseAdminBookings.mockReturnValue({
+    mockUseConsoleBookings.mockReturnValue({
       data: { data: { bookings: [createBooking()] } },
       isLoading: false,
       error: null,
       refetch: vi.fn(),
     });
-    mockUseAdminCustomers.mockReturnValue({
+    mockUseConsoleCustomers.mockReturnValue({
       data: {
         data: {
           customers: [
@@ -331,7 +331,7 @@ describe("AdminBookingsPage", () => {
       error: null,
       refetch: vi.fn(),
     });
-    mockUseAdminConsultants.mockReturnValue({
+    mockUseConsoleConsultants.mockReturnValue({
       data: {
         data: {
           consultants: [
@@ -351,7 +351,7 @@ describe("AdminBookingsPage", () => {
       refetch: vi.fn(),
     });
 
-    render(<AdminBookingsPage />);
+    render(<ConsoleBookingsPage />);
 
     fireEvent.mouseEnter(screen.getByText("山田 太郎"));
     fireEvent.mouseEnter(screen.getByText("佐藤 花子"));
@@ -369,8 +369,8 @@ describe("AdminBookingsPage", () => {
       expect(screen.getByText("自己紹介: 5年の相談実績")).toBeInTheDocument();
     });
 
-    expect(mockUseAdminCustomers).toHaveBeenCalledTimes(1);
-    expect(mockUseAdminConsultants).toHaveBeenCalledTimes(1);
+    expect(mockUseConsoleCustomers).toHaveBeenCalledTimes(1);
+    expect(mockUseConsoleConsultants).toHaveBeenCalledTimes(1);
   });
 
   it("shows error screen and retries when customers or consultants query fails", async () => {
@@ -378,26 +378,26 @@ describe("AdminBookingsPage", () => {
     const refetchCustomers = vi.fn();
     const refetchConsultants = vi.fn();
 
-    mockUseAdminBookings.mockReturnValue({
+    mockUseConsoleBookings.mockReturnValue({
       data: { data: { bookings: [createBooking()] } },
       isLoading: false,
       error: null,
       refetch: refetchBookings,
     });
-    mockUseAdminCustomers.mockReturnValue({
+    mockUseConsoleCustomers.mockReturnValue({
       data: undefined,
       isLoading: false,
       error: new Error("customers failed"),
       refetch: refetchCustomers,
     });
-    mockUseAdminConsultants.mockReturnValue({
+    mockUseConsoleConsultants.mockReturnValue({
       data: undefined,
       isLoading: false,
       error: null,
       refetch: refetchConsultants,
     });
 
-    render(<AdminBookingsPage />);
+    render(<ConsoleBookingsPage />);
 
     expect(
       screen.getByText("予約情報の表示に必要なデータ取得に失敗しました"),
@@ -413,7 +413,7 @@ describe("AdminBookingsPage", () => {
   });
 
   it("keeps fallback for unresolved ids", async () => {
-    mockUseAdminBookings.mockReturnValue({
+    mockUseConsoleBookings.mockReturnValue({
       data: {
         data: {
           bookings: [
@@ -429,20 +429,20 @@ describe("AdminBookingsPage", () => {
       error: null,
       refetch: vi.fn(),
     });
-    mockUseAdminCustomers.mockReturnValue({
+    mockUseConsoleCustomers.mockReturnValue({
       data: { data: { customers: [] } },
       isLoading: false,
       error: null,
       refetch: vi.fn(),
     });
-    mockUseAdminConsultants.mockReturnValue({
+    mockUseConsoleConsultants.mockReturnValue({
       data: { data: { consultants: [] } },
       isLoading: false,
       error: null,
       refetch: vi.fn(),
     });
 
-    render(<AdminBookingsPage />);
+    render(<ConsoleBookingsPage />);
 
     expect(screen.getByText("customer…")).toBeInTheDocument();
     expect(screen.getByText("consulta…")).toBeInTheDocument();

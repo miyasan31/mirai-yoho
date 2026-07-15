@@ -1,5 +1,5 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { getGetAdminConsultantsQueryKey } from "@mirai-yoho/api-client/api/admin/admin";
+import { getGetConsoleConsultantsQueryKey } from "@mirai-yoho/api-client/api/console/console";
 import { useAuth } from "@mirai-yoho/console-core/hooks/use-auth";
 import { useListQueryParams } from "@mirai-yoho/console-core/hooks/use-list-query-params";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
@@ -22,20 +22,20 @@ import { Pencil, UserPlus, Users } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
-import { useInviteAccount } from "@/hooks/use-admin-accounts";
-import { useAdminConsultants } from "@/hooks/use-admin-consultants";
+import { useInviteAccount } from "@/hooks/use-console-accounts";
+import { useConsoleConsultants } from "@/hooks/use-console-consultants";
 import {
   type ConsultantInviteFormValues,
   consultantInviteFormSchema,
 } from "./consultant-invite-form-schema";
 
-export default function AdminConsultantsPage() {
+export default function ConsoleConsultantsPage() {
   const { buildPath, organizationId } = useOrganizationRouting();
   const { roleId } = useAuth();
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
     useListQueryParams();
   const queryCustomer = useQueryClient();
-  const { data, isLoading } = useAdminConsultants({
+  const { data, isLoading } = useConsoleConsultants({
     page,
     pageSize,
     sortBy,
@@ -89,7 +89,7 @@ export default function AdminConsultantsPage() {
       reset();
       setInviteOpen(false);
       await queryCustomer.invalidateQueries({
-        queryKey: getGetAdminConsultantsQueryKey(organizationId),
+        queryKey: getGetConsoleConsultantsQueryKey(organizationId),
       });
     } catch {
       // custom-fetch.ts がエラー Toast を自動表示

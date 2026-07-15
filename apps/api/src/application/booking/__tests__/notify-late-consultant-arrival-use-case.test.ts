@@ -264,7 +264,7 @@ describe("NotifyLateConsultantArrivalUseCase", () => {
       consultantPhone: "090-1111-2222",
       customerName: "山田太郎",
       elapsedMinutes: 30,
-      adminBookingsUrl: "https://example.com/org-1/admin/bookings",
+      consoleBookingsUrl: "https://example.com/org-1/bookings",
     });
     expect(bookingRepository.savedBookings).toHaveLength(1);
     expect(booking.getLateArrivalAlertSentAt()).toEqual(NOW);

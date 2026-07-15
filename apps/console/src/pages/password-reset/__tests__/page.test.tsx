@@ -92,9 +92,9 @@ vi.mock("@mirai-yoho/ui/components/ui/text", () => ({
   },
 }));
 
-import AdminPasswordResetPage from "../page";
+import ConsolePasswordResetPage from "../page";
 
-describe("AdminPasswordResetPage", () => {
+describe("ConsolePasswordResetPage", () => {
   afterEach(() => {
     cleanup();
     vi.clearAllMocks();
@@ -103,7 +103,7 @@ describe("AdminPasswordResetPage", () => {
   it("shows success toast after submit", async () => {
     mockSendPasswordResetEmail.mockResolvedValueOnce(undefined);
 
-    render(<AdminPasswordResetPage />);
+    render(<ConsolePasswordResetPage />);
 
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "test@example.com" },
@@ -124,7 +124,7 @@ describe("AdminPasswordResetPage", () => {
       new Error("メール送信に失敗しました。時間をおいて再度お試しください。"),
     );
 
-    render(<AdminPasswordResetPage />);
+    render(<ConsolePasswordResetPage />);
 
     fireEvent.change(screen.getByRole("textbox"), {
       target: { value: "test@example.com" },
@@ -140,7 +140,7 @@ describe("AdminPasswordResetPage", () => {
   });
 
   it("shows only admin login back link", () => {
-    render(<AdminPasswordResetPage />);
+    render(<ConsolePasswordResetPage />);
 
     const link = screen.getByRole("link", { name: "管理者ログインに戻る" });
     expect(link.getAttribute("href")).toBe("/login");

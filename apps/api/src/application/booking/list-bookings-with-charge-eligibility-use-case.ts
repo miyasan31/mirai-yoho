@@ -12,7 +12,7 @@ interface ListBookingsInput {
   organizationId: string;
   scope:
     | { kind: "consultant"; consultantId: string }
-    | { kind: "admin"; status?: string | null };
+    | { kind: "console"; status?: string | null };
   includeCustomers: boolean;
 }
 
@@ -59,7 +59,7 @@ export class ListBookingsWithChargeEligibilityUseCase {
         input.scope.consultantId,
       );
     }
-    if (input.scope.status) {
+    if (input.scope.kind === "console" && input.scope.status) {
       return this.bookingRepository.findByStatus(
         input.organizationId,
         input.scope.status,

@@ -29,13 +29,13 @@ import {
   postRoute,
 } from "./route-handler";
 
-export const adminConsultantRoutes = new Hono();
+export const consoleConsultantRoutes = new Hono();
 
-adminConsultantRoutes.get(
-  "/admin/consultants",
+consoleConsultantRoutes.get(
+  "/console/consultants",
   getRoute(async ({ organizationId, request, requestUrl }) => {
     const authUser = await verifyAuth(request);
-    requirePermission(authUser, organizationId, "admin.consultants.read");
+    requirePermission(authUser, organizationId, "console.consultants.read");
     const listQueryParams = parseListQueryParams(requestUrl.searchParams);
     if (!listQueryParams) {
       return jsonError(400, "VALIDATION_ERROR", INVALID_LIST_QUERY_MESSAGE);
@@ -81,11 +81,11 @@ adminConsultantRoutes.get(
   }),
 );
 
-adminConsultantRoutes.post(
-  "/admin/consultants",
+consoleConsultantRoutes.post(
+  "/console/consultants",
   postRoute(async ({ organizationId, request }) => {
     const authUser = await verifyAuth(request);
-    requirePermission(authUser, organizationId, "admin.consultants.manage");
+    requirePermission(authUser, organizationId, "console.consultants.manage");
     const body = await request.json();
     const { consultantId, name, bio, specialties, phone } = body;
     if (!consultantId || !name) {
@@ -99,7 +99,7 @@ adminConsultantRoutes.post(
       requirePermission(
         authUser,
         organizationId,
-        "admin.consultants.status.manage",
+        "console.consultants.status.manage",
       );
     }
 
@@ -116,17 +116,17 @@ adminConsultantRoutes.post(
   }),
 );
 
-adminConsultantRoutes.patch(
-  "/admin/consultants/:consultantId",
+consoleConsultantRoutes.patch(
+  "/console/consultants/:consultantId",
   patchRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requirePermission(authUser, organizationId, "admin.consultants.manage");
+    requirePermission(authUser, organizationId, "console.consultants.manage");
     const body = await request.json();
     if (body.statusId !== undefined) {
       requirePermission(
         authUser,
         organizationId,
-        "admin.consultants.status.manage",
+        "console.consultants.status.manage",
       );
     }
     await createUpdateConsultantUseCase().execute({
@@ -142,11 +142,11 @@ adminConsultantRoutes.patch(
   }),
 );
 
-adminConsultantRoutes.delete(
-  "/admin/consultants/:consultantId",
+consoleConsultantRoutes.delete(
+  "/console/consultants/:consultantId",
   deleteRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAuth(request);
-    requirePermission(authUser, organizationId, "admin.consultants.manage");
+    requirePermission(authUser, organizationId, "console.consultants.manage");
     await createDeactivateConsultantUseCase().execute({
       organizationId,
       consultantId: param("consultantId"),
