@@ -207,7 +207,7 @@ export default function ConsoleCouponsPage() {
             クーポン管理
           </Text>
           <Text textStyle="sm" color="fg.muted">
-            初回登録特典（welcome）・誕生月・汎用（general）クーポンのマスターを管理します。
+            初回登録特典・誕生月・汎用クーポンのマスターを管理します。
           </Text>
         </styled.div>
         {canManage && (
@@ -342,9 +342,9 @@ export default function ConsoleCouponsPage() {
                     borderWidth="1"
                     borderColor="border"
                   >
-                    <option value="general">汎用（general）</option>
-                    <option value="welcome">初回登録特典（welcome）</option>
-                    <option value="birthday">誕生月（birthday）</option>
+                    <option value="general">汎用</option>
+                    <option value="welcome">初回登録特典</option>
+                    <option value="birthday">誕生月</option>
                   </styled.select>
                   {createForm.formState.errors.type && (
                     <Field.ErrorText>

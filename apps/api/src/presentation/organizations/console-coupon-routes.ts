@@ -27,9 +27,9 @@ const createCouponBodySchema = v.pipe(
     name: v.pipe(v.string(), v.minLength(1), v.maxLength(80)),
     amountJPY: v.pipe(v.number(), v.integer(), v.minValue(1)),
     distributionCount: v.pipe(v.number(), v.integer(), v.minValue(1)),
-    startsAt: v.optional(v.pipe(v.string(), v.isoDateTime())),
+    startsAt: v.optional(v.pipe(v.string(), v.isoTimestamp())),
     expiresInDays: v.optional(v.pipe(v.number(), v.integer(), v.minValue(1))),
-    expiresAt: v.optional(v.pipe(v.string(), v.isoDateTime())),
+    expiresAt: v.optional(v.pipe(v.string(), v.isoTimestamp())),
   }),
 );
 
