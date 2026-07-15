@@ -17,6 +17,7 @@ import { useUpdateConsoleBookingSettings } from "@/hooks/use-console-booking-set
 import {
   type BusinessHoursFormValues,
   businessHoursFormSchema,
+  getMinNewExceptionDate,
 } from "../business-hours-form-schema";
 import type { PricePlanRange } from "./settings-types";
 
@@ -168,6 +169,7 @@ function BusinessHoursSettingsTabView({
         {exceptionFields.map((field, index) => {
           const exception = exceptions[index];
           const isExceptionClosed = exception?.isClosed ?? field.isClosed;
+          const isNew = exception?.isNew ?? field.isNew;
           return (
             <styled.div
               key={field.id}
@@ -178,6 +180,7 @@ function BusinessHoursSettingsTabView({
             >
               <Input
                 type="date"
+                min={isNew ? getMinNewExceptionDate() : undefined}
                 {...register(`exceptions.${index}.date`)}
                 disabled={isDisabled}
               />
@@ -285,6 +288,7 @@ function toExceptions(
 ): BusinessHoursFormValues["exceptions"] {
   return businessHours.exceptions.map((item, index) => ({
     id: `${item.startDate}-${index}`,
+    isNew: false,
     date: item.startDate,
     isClosed: item.isClosed,
     startTime: item.timeWindows[0]?.startTime ?? "10:00",
@@ -381,10 +385,23 @@ export function BusinessHoursSettingsTab({
       isPending={updateBookingSettings.isPending}
       isReadOnly={isReadOnly}
       isInitialized
-      onSubmit={form.handleSubmit(save)}
+      onSubmit={form.handleSubmit(save, (errors) => {
+        if (errors.exceptions) {
+          toaster.create({
+            type: "error",
+            title: "新規の単日例外は一週間先以降の日付で入力してください",
+          });
+          return;
+        }
+        toaster.create({
+          type: "error",
+          title: "入力内容を確認してください",
+        });
+      })}
       onAddException={() =>
         fields.append({
           id: crypto.randomUUID(),
+          isNew: true,
           date: "",
           isClosed: true,
           startTime: "10:00",
