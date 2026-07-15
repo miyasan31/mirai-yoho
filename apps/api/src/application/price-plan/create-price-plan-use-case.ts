@@ -18,7 +18,6 @@ export interface PricePlanOutput {
   pricePlanId: string;
   name: string;
   totalJPY: number;
-  status: "active" | "deleted";
   selectionId: string;
   isWithinCurrentRange: boolean;
   createdAt: string;
@@ -34,7 +33,6 @@ export function toPricePlanOutput(params: {
     pricePlanId: params.pricePlan.getPricePlanId(),
     name: params.pricePlan.getName(),
     totalJPY: params.pricePlan.getTotalJPY(),
-    status: params.pricePlan.getStatus(),
     selectionId: params.pricePlan.getSelectionId(),
     isWithinCurrentRange: params.isWithinCurrentRange,
     createdAt: params.pricePlan.getCreatedAt().toISOString(),

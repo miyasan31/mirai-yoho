@@ -1,15 +1,12 @@
 import { DomainError } from "@mirai-yoho/shared/domain-error";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 
-export type PricePlanStatus = "active" | "deleted";
-
 export interface PricePlanProps {
   organizationId: string;
   consultantId: string;
   pricePlanId: string;
   name: string;
   totalJPY: number;
-  status: PricePlanStatus;
   createdAt?: Date;
   updatedAt?: Date;
   deletedAt?: Date;
@@ -88,7 +85,6 @@ export class PricePlan extends AggregateRoot {
     private readonly pricePlanId: string,
     private name: string,
     private readonly totalJPY: number,
-    private status: PricePlanStatus,
     private readonly createdAt: Date,
     private updatedAt: Date,
     private deletedAt: Date | undefined,
@@ -105,7 +101,6 @@ export class PricePlan extends AggregateRoot {
       props.pricePlanId,
       validateName(props.name),
       props.totalJPY,
-      "active",
       now,
       now,
       undefined,
@@ -120,7 +115,6 @@ export class PricePlan extends AggregateRoot {
       props.pricePlanId,
       props.name,
       props.totalJPY,
-      props.status,
       createdAt,
       props.updatedAt ?? createdAt,
       props.deletedAt,
@@ -133,22 +127,20 @@ export class PricePlan extends AggregateRoot {
   }
 
   delete(): void {
-    if (this.status === "deleted") return;
+    if (this.deletedAt) return;
     const now = new Date();
-    this.status = "deleted";
     this.deletedAt = now;
     this.updatedAt = now;
   }
 
   restore(): void {
-    if (this.status === "active") return;
-    this.status = "active";
+    if (!this.deletedAt) return;
     this.deletedAt = undefined;
     this.updatedAt = new Date();
   }
 
   isActive(): boolean {
-    return this.status === "active";
+    return this.deletedAt === undefined;
   }
 
   getOrganizationId(): string {
@@ -173,10 +165,6 @@ export class PricePlan extends AggregateRoot {
 
   getTotalJPY(): number {
     return this.totalJPY;
-  }
-
-  getStatus(): PricePlanStatus {
-    return this.status;
   }
 
   getSignature(): string {

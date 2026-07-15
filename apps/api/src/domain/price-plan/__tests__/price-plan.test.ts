@@ -24,11 +24,11 @@ describe("PricePlan", () => {
     const pricePlan = createPricePlan();
 
     pricePlan.delete();
-    expect(pricePlan.getStatus()).toBe("deleted");
+    expect(pricePlan.isActive()).toBe(false);
     expect(pricePlan.getDeletedAt()).toBeInstanceOf(Date);
 
     pricePlan.restore();
-    expect(pricePlan.getStatus()).toBe("active");
+    expect(pricePlan.isActive()).toBe(true);
     expect(pricePlan.getDeletedAt()).toBeUndefined();
   });
 });

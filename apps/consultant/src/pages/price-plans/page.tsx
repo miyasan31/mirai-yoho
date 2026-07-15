@@ -171,8 +171,8 @@ export default function PricePlansPage() {
         <Table.Body>
           {pricePlans.map((pricePlan) => {
             const isEditing = editingPlanId === pricePlan.pricePlanId;
-            const isMuted =
-              pricePlan.status === "deleted" || !pricePlan.isWithinCurrentRange;
+            const isDeleted = pricePlan.deletedAt !== null;
+            const isMuted = isDeleted || !pricePlan.isWithinCurrentRange;
             return (
               <Table.Row
                 key={pricePlan.pricePlanId}
@@ -207,7 +207,7 @@ export default function PricePlansPage() {
                 </Table.Cell>
                 <Table.Cell>¥{pricePlan.totalJPY.toLocaleString()}</Table.Cell>
                 <Table.Cell>
-                  {pricePlan.status === "deleted" ? (
+                  {isDeleted ? (
                     <Badge variant="outline">削除済み</Badge>
                   ) : pricePlan.isWithinCurrentRange ? (
                     <Badge>有効</Badge>
@@ -217,7 +217,7 @@ export default function PricePlansPage() {
                 </Table.Cell>
                 <Table.Cell>
                   <styled.div display="flex" gap="2">
-                    {pricePlan.status === "deleted" ? (
+                    {isDeleted ? (
                       <Tooltip content="復元" showArrow>
                         <IconButton
                           size="sm"

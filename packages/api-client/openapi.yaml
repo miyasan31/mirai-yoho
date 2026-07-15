@@ -2156,7 +2156,6 @@ components:
           pricePlanId,
           name,
           totalJPY,
-          status,
           selectionId,
           isWithinCurrentRange,
           createdAt,
@@ -2171,9 +2170,6 @@ components:
         totalJPY:
           type: integer
           minimum: 0
-        status:
-          type: string
-          enum: [active, deleted]
         selectionId:
           type: string
         isWithinCurrentRange:
