@@ -102,7 +102,7 @@ consoleAccountRoutes.post(
     const authUser = await verifyAuth(request);
     const actorAccount = requireSystemAdminRole(authUser, organizationId);
     const body = await request.json();
-    const { email, roleId, name, phone, isConsultant } = body;
+    const { email, roleId, name, isConsultant } = body;
 
     if (!email || typeof email !== "string") {
       return jsonError(400, "VALIDATION_ERROR", "email is required");
@@ -174,12 +174,7 @@ consoleAccountRoutes.post(
           Consultant.create({
             organizationId,
             consultantId: accountId,
-            profile: ConsultantProfile.create(
-              normalizedDisplayName,
-              "",
-              [],
-              typeof phone === "string" ? phone.trim() : "",
-            ),
+            profile: ConsultantProfile.create(normalizedDisplayName, "", []),
             statusId: settings.getDefaultConsultantStatusId(),
           }),
         );
