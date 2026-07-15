@@ -1,6 +1,7 @@
 import {
   useDeleteConsoleConsultant,
   useGetConsoleConsultants,
+  useInviteConsultant,
   useUpdateConsoleConsultant,
 } from "@mirai-yoho/api-client/api/console/console";
 import type { GetConsoleConsultantsParams } from "@mirai-yoho/api-client/schemas";
@@ -27,4 +28,8 @@ export function useConsoleConsultants(
   });
 }
 
-export { useUpdateConsoleConsultant, useDeleteConsoleConsultant };
+export {
+  useInviteConsultant,
+  useUpdateConsoleConsultant,
+  useDeleteConsoleConsultant,
+};

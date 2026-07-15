@@ -1,15 +1,23 @@
 import { Hono } from "hono";
+import { SYSTEM_ADMIN_ROLE_ID } from "@/domain/authorization/role";
 import { Settings } from "@/domain/settings/settings";
-import { requirePermission } from "@/infrastructure/auth/require-permission";
+import {
+  requirePermission,
+  requireSystemAdminRole,
+} from "@/infrastructure/auth/require-permission";
 import { verifyAuth } from "@/infrastructure/auth/verify-auth";
 import {
+  createAccountRepository,
   createConsultantRepository,
   createCreateConsultantUseCase,
   createDeactivateConsultantUseCase,
+  createRoleRepository,
   createSettingsRepository,
   createUpdateConsultantUseCase,
 } from "@/infrastructure/container";
 import { getUsersByUids } from "@/infrastructure/firebase/firebase-auth-admin";
+import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
+import { provisionInvitedAccount } from "./console-invite-common";
 import {
   resolveConsultantStatus,
   toConsultantStatusResponse,
@@ -78,6 +86,79 @@ consoleConsultantRoutes.get(
     );
 
     return noStoreJson({ consultants: items, pagination });
+  }),
+);
+
+consoleConsultantRoutes.post(
+  "/console/consultants/invite",
+  postRoute(async ({ organizationId, request, requestUrl }) => {
+    const authUser = await verifyAuth(request);
+    const actorAccount = requireSystemAdminRole(authUser, organizationId);
+    const body = await request.json();
+    const { email, name } = body;
+
+    if (!email || typeof email !== "string") {
+      return jsonError(400, "VALIDATION_ERROR", "email is required");
+    }
+    if (!name || typeof name !== "string") {
+      return jsonError(400, "VALIDATION_ERROR", "name is required");
+    }
+    const normalizedDisplayName = name.trim();
+    if (!normalizedDisplayName) {
+      return jsonError(400, "VALIDATION_ERROR", "name must not be empty");
+    }
+
+    const roleEntity = await createRoleRepository().findById(
+      organizationId,
+      SYSTEM_ADMIN_ROLE_ID,
+    );
+    if (!roleEntity) {
+      return jsonError(
+        500,
+        "SYSTEM_ROLE_MISSING",
+        "System admin role is not initialized for this organization",
+      );
+    }
+
+    const { accountId, passwordResetLink } = await provisionInvitedAccount({
+      organizationId,
+      email,
+      displayName: normalizedDisplayName,
+      roleId: SYSTEM_ADMIN_ROLE_ID,
+      accountRepository: createAccountRepository(),
+    });
+
+    const consultantRepository = createConsultantRepository();
+    const existingConsultant = await consultantRepository.findById(
+      organizationId,
+      accountId,
+    );
+    if (!existingConsultant) {
+      await createCreateConsultantUseCase().execute({
+        organizationId,
+        consultantId: accountId,
+        name: normalizedDisplayName,
+      });
+    }
+
+    await new ResendEmailService().sendInvitation({
+      email,
+      roleName: roleEntity.getName(),
+      isConsultant: true,
+      passwordResetLink,
+    });
+
+    console.info("Consultant invited", {
+      category: "security-audit",
+      endpoint: `POST ${requestUrl.pathname}`,
+      organizationId,
+      actorAuthUid: authUser.authUid,
+      actorRoleId: actorAccount.roleId,
+      targetEmail: email,
+      invitedAt: new Date().toISOString(),
+    });
+
+    return Response.json({ accountId }, { status: 201 });
   }),
 );
 

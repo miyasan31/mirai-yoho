@@ -22,8 +22,10 @@ import { Pencil, UserPlus, Users } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
-import { useInviteAccount } from "@/hooks/use-console-accounts";
-import { useConsoleConsultants } from "@/hooks/use-console-consultants";
+import {
+  useConsoleConsultants,
+  useInviteConsultant,
+} from "@/hooks/use-console-consultants";
 import {
   type ConsultantInviteFormValues,
   consultantInviteFormSchema,
@@ -41,7 +43,7 @@ export default function ConsoleConsultantsPage() {
     sortBy,
     sortOrder: "desc",
   });
-  const inviteAccount = useInviteAccount();
+  const inviteConsultant = useInviteConsultant();
 
   const [inviteOpen, setInviteOpen] = useState(false);
   const {
@@ -71,13 +73,11 @@ export default function ConsoleConsultantsPage() {
       return;
     }
     try {
-      await inviteAccount.mutateAsync({
+      await inviteConsultant.mutateAsync({
         organizationId,
         data: {
           email: values.email,
           name: values.name,
-          roleId: "admin",
-          isConsultant: true,
         },
       });
       toaster.success({
@@ -183,7 +183,7 @@ export default function ConsoleConsultantsPage() {
                     </Dialog.CloseTrigger>
                     <Button
                       type="submit"
-                      loading={inviteAccount.isPending}
+                      loading={inviteConsultant.isPending}
                       loadingText="送信中..."
                     >
                       招待メール送信
