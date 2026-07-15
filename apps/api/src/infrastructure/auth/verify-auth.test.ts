@@ -34,6 +34,7 @@ describe("verifyAuth", () => {
           createdAt: "2026-01-01T00:00:00.000Z",
         },
       ],
+      consultants: [],
       currentOrganizationId: "org-1",
       currentDisplayName: "Admin User",
     });
@@ -70,6 +71,7 @@ describe("verifyAuth", () => {
             createdAt: "2026-01-01T00:00:00.000Z",
           },
         ],
+        consultants: [],
         currentOrganizationId: "org-1",
         currentDisplayName: `${role} user`,
       });
@@ -87,11 +89,40 @@ describe("verifyAuth", () => {
     }
   });
 
-  it("throws NO_ROLE when accounts are still empty", async () => {
+  it("allows consultant-only users (accounts empty, consultants present)", async () => {
+    mockVerifyIdToken.mockResolvedValueOnce({ uid: "consultant-1" });
+    mockLoadAuthUser.mockResolvedValueOnce({
+      authUid: "consultant-1",
+      accounts: [],
+      consultants: [
+        {
+          organizationId: "org-1",
+          name: "相談員 一郎",
+          isActive: true,
+          createdAt: "2026-01-01T00:00:00.000Z",
+        },
+      ],
+      currentOrganizationId: "org-1",
+      currentDisplayName: "相談員 一郎",
+    });
+
+    const request = new Request("http://localhost/api/auth/me", {
+      headers: {
+        Authorization: "Bearer token-consultant",
+      },
+    });
+
+    await expect(verifyAuth(request)).resolves.toMatchObject({
+      authUid: "consultant-1",
+    });
+  });
+
+  it("throws NO_ROLE when both accounts and consultants are empty", async () => {
     mockVerifyIdToken.mockResolvedValueOnce({ uid: "user-2" });
     mockLoadAuthUser.mockResolvedValueOnce({
       authUid: "user-2",
       accounts: [],
+      consultants: [],
       currentOrganizationId: null,
       currentDisplayName: null,
     });

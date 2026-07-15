@@ -25,8 +25,12 @@ export async function verifyAuth(request: Request): Promise<AuthUser> {
   await activateInvitedAccounts(decoded.uid);
   const authUser = await loadAuthUser(decoded.uid);
 
-  if (authUser.accounts.length === 0) {
-    throw new AuthError(403, "NO_ROLE", "User has no assigned role");
+  if (authUser.accounts.length === 0 && authUser.consultants.length === 0) {
+    throw new AuthError(
+      403,
+      "NO_ROLE",
+      "User is not assigned to any organization as account or consultant",
+    );
   }
 
   return authUser;
