@@ -72,6 +72,7 @@ module "api" {
   api_image                        = var.api_image
   api_server_service_account_email = module.service_accounts.api_server_service_account_email
   api_custom_domain                = var.api_custom_domain
+  runtime_secret_ids               = module.firebase.runtime_secret_ids
 
   depends_on = [
     module.project_services,

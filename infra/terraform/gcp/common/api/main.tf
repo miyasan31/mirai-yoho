@@ -1,36 +1,9 @@
-locals {
-  # Cloud Run API サーバーがランタイムで参照する Secret Manager シークレット。
-  # 実体は firebase モジュール（google_secret_manager_secret.app_hosting）で作成済みのものを参照する。
-  api_secret_ids = toset([
-    "API_URL",
-    "USER_APP_URL",
-    "CONSOLE_APP_URL",
-    "CANCEL_TOKEN_SECRET",
-    "COUPON_WEBHOOK_SECRET",
-    "CORS_ALLOWED_ORIGINS",
-    "FIREBASE_CLIENT_EMAIL",
-    "FIREBASE_PRIVATE_KEY",
-    "FIREBASE_PROJECT_ID",
-    "FIREBASE_STORAGE_BUCKET",
-    "INVOICE_REGISTRATION_NUMBER",
-    "LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL",
-    "RESEND_API_KEY",
-    "RESEND_FROM_EMAIL",
-    "STRIPE_SECRET_KEY",
-    "STRIPE_WEBHOOK_SECRET",
-    "ZOOM_ACCOUNT_ID",
-    "ZOOM_CLIENT_ID",
-    "ZOOM_CLIENT_SECRET",
-    "ZOOM_HOST_USER_ID",
-    "ZOOM_USER_OAUTH_CLIENT_ID",
-    "ZOOM_USER_OAUTH_CLIENT_SECRET",
-    "ZOOM_OAUTH_STATE_SECRET",
-    "ZOOM_CREDENTIAL_ENCRYPTION_KEY",
-  ])
-}
+# Cloud Run API サーバーがランタイムで参照する Secret Manager シークレット。
+# 実体は firebase モジュール（google_secret_manager_secret.app_hosting）で作成済みのものを参照する。
+# シークレット ID の一覧は var.runtime_secret_ids（= firebase モジュールの runtime_secret_ids output）から受け取る。
 
 resource "google_secret_manager_secret_iam_member" "api_can_read_secrets" {
-  for_each = local.api_secret_ids
+  for_each = var.runtime_secret_ids
 
   project   = var.project_id
   secret_id = each.value
@@ -69,7 +42,7 @@ resource "google_cloud_run_v2_service" "api" {
       }
 
       dynamic "env" {
-        for_each = local.api_secret_ids
+        for_each = var.runtime_secret_ids
         content {
           name = env.value
           value_source {
