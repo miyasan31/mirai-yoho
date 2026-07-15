@@ -38,6 +38,10 @@ function ProfilePage() {
     refreshProfile,
   } = useCustomerAuth();
 
+  const googleProviderData = user?.providerData.find(
+    (p) => p.providerId === "google.com",
+  );
+
   const {
     register,
     handleSubmit,
@@ -45,8 +49,9 @@ function ProfilePage() {
   } = useForm<ProfileFormValues>({
     resolver: valibotResolver(profileFormSchema),
     defaultValues: {
-      displayName: profile?.displayName ?? "",
-      primaryEmail: profile?.primaryEmail ?? "",
+      displayName:
+        profile?.displayName ?? googleProviderData?.displayName ?? "",
+      primaryEmail: profile?.primaryEmail ?? googleProviderData?.email ?? "",
       birthDate: profile?.birthDate ?? "",
     },
   });
@@ -57,7 +62,9 @@ function ProfilePage() {
         await signupOrLink({
           displayName: values.displayName,
           birthDate: values.birthDate,
-          primaryEmail: values.primaryEmail || undefined,
+          primaryEmail:
+            values.primaryEmail || googleProviderData?.email || undefined,
+          providerUid: googleProviderData?.uid ?? undefined,
         });
       } else {
         await updateCustomerProfile({
