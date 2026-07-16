@@ -62,12 +62,18 @@ export class CancelBookingUseCase {
       }
     }
 
-    const slot = await this.slotRepository.findById(
-      input.organizationId,
-      booking.getSlotId(),
-    );
-    if (slot) {
-      slot.release();
+    const occupiedSlotIds = booking.getAllOccupiedSlotIds();
+    const occupiedSlots = (
+      await Promise.all(
+        occupiedSlotIds.map((slotId) =>
+          this.slotRepository.findById(input.organizationId, slotId),
+        ),
+      )
+    ).filter((s): s is NonNullable<typeof s> => s !== null);
+    for (const slot of occupiedSlots) {
+      if (!slot.getIsAvailable()) {
+        slot.release();
+      }
     }
 
     const sessionDate = ZoomSession.sessionDateFromInstant(
@@ -106,7 +112,7 @@ export class CancelBookingUseCase {
     await Promise.all([
       this.bookingRepository.save(booking),
       ...(payment ? [this.paymentRepository.save(payment)] : []),
-      ...(slot ? [this.slotRepository.save(slot)] : []),
+      ...occupiedSlots.map((slot) => this.slotRepository.save(slot)),
       ...(session ? [this.zoomSessionRepository.save(session)] : []),
       ...(restoredCoupon?.getRedeemedAt() === undefined && restoredCoupon
         ? [this.userCouponRepository.save(restoredCoupon)]

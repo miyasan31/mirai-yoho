@@ -33,6 +33,7 @@ class InMemoryBookingRepository implements IBookingRepository {
     return this.bookings;
   }
   async save(): Promise<void> {}
+  async saveInTx(): Promise<void> {}
 }
 
 class InMemoryCustomerRepository implements ICustomerRepository {
@@ -118,8 +119,11 @@ function createBooking(
     bookingId,
     customerId,
     consultantId,
-    slotId: `${bookingId}-slot`,
+    usageSlotIds: [`${bookingId}-slot-1`, `${bookingId}-slot-2`],
+    bufferSlotIds: [`${bookingId}-buffer`],
     startsAt: new Date("2026-05-01T10:00:00.000Z"),
+    endsAt: new Date("2026-05-01T10:30:00.000Z"),
+    durationMinutes: 30,
     consultantMemo: ConsultantMemo.empty(),
     pricePlanId: "plan-1",
     pricePlanName: "通常鑑定",

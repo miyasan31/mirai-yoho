@@ -3,6 +3,8 @@ import { useGetCustomerCoupons } from "@mirai-yoho/api-client/api/customer/custo
 import {
   getBookingCutoffMinutes,
   isBeforeBookingDeadline,
+  SUPPORTED_DURATION_MINUTES,
+  type SupportedDurationMinutes,
 } from "@mirai-yoho/shared/slot-availability";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
@@ -17,7 +19,7 @@ import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, CalendarX } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Controller, useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { useCreateBooking } from "@/hooks/use-booking";
@@ -30,20 +32,33 @@ import {
 } from "./-booking-form-schema";
 
 interface BookingSearch {
-  slotId?: string;
   consultantId?: string;
   startsAt?: string;
-  endsAt?: string;
+  durationMinutes?: number;
 }
 
 export const Route = createFileRoute("/$organizationId/booking/")({
-  validateSearch: (search: Record<string, unknown>): BookingSearch => ({
-    slotId: typeof search.slotId === "string" ? search.slotId : undefined,
-    consultantId:
-      typeof search.consultantId === "string" ? search.consultantId : undefined,
-    startsAt: typeof search.startsAt === "string" ? search.startsAt : undefined,
-    endsAt: typeof search.endsAt === "string" ? search.endsAt : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): BookingSearch => {
+    const durationRaw = search.durationMinutes;
+    const duration =
+      typeof durationRaw === "number"
+        ? durationRaw
+        : typeof durationRaw === "string"
+          ? Number(durationRaw)
+          : undefined;
+    return {
+      consultantId:
+        typeof search.consultantId === "string"
+          ? search.consultantId
+          : undefined,
+      startsAt:
+        typeof search.startsAt === "string" ? search.startsAt : undefined,
+      durationMinutes:
+        typeof duration === "number" && Number.isFinite(duration)
+          ? duration
+          : undefined,
+    };
+  },
   component: BookingPage,
 });
 
@@ -57,16 +72,17 @@ export function BookingPage() {
 
 function BookingPageInner() {
   const { profile } = useCustomerAuth();
-  const { slotId, startsAt, endsAt } = Route.useSearch();
+  const { consultantId, startsAt } = Route.useSearch();
   const { organizationId } = Route.useParams();
   const navigate = useNavigate();
-  const hasDateRange = Boolean(startsAt && endsAt);
   const selectedStartAt =
     typeof startsAt === "string" ? new Date(startsAt) : null;
   const hasValidSelectedStartAt =
     selectedStartAt !== null && !Number.isNaN(selectedStartAt.getTime());
   const bookingCutoffExceeded =
     hasValidSelectedStartAt && !isBeforeBookingDeadline(selectedStartAt);
+  const [durationMinutes, setDurationMinutes] =
+    useState<SupportedDurationMinutes>(30);
   const [selectionId, setPricePlanSelectionId] = useState("");
   const [selectedUserCouponId, setSelectedUserCouponId] = useState<string>("");
   const couponsQuery = useGetCustomerCoupons({
@@ -76,8 +92,6 @@ function BookingPageInner() {
     (c) =>
       c.organizationId === organizationId && c.isRedeemable && !c.redeemedAt,
   );
-  // couponId ごとにまとめて 1 行として提示する。radio の value は代表 userCouponId
-  // （最も早く期限切れになるもの）を選び、選択時にその ID を送信する。
   const couponGroups = Object.values(
     availableCoupons.reduce<
       Record<
@@ -95,7 +109,6 @@ function BookingPageInner() {
       const existing = acc[c.couponId];
       if (existing) {
         existing.remainingCount += 1;
-        // より早く期限切れになるものを代表に選ぶ
         if (
           c.expiresAt &&
           (!existing.expiresAt || c.expiresAt < existing.expiresAt)
@@ -121,15 +134,29 @@ function BookingPageInner() {
     null;
   const pricePlansQuery = useBookingPricePlans(
     {
-      slotId: slotId ?? undefined,
-      startsAt: slotId ? undefined : (startsAt ?? undefined),
-      endsAt: slotId ? undefined : (endsAt ?? undefined),
+      startsAt: startsAt ?? "",
+      consultantId: consultantId ?? undefined,
     },
-    Boolean(slotId || hasDateRange),
+    Boolean(startsAt),
   );
-  const pricePlans = pricePlansQuery.data?.data?.pricePlans ?? [];
+  const allPricePlans = pricePlansQuery.data?.data?.pricePlans ?? [];
+  const availableDurations = useMemo(() => {
+    const availableSet = new Set<number>();
+    for (const plan of allPricePlans) {
+      if (plan.isAvailableAtStart) availableSet.add(plan.durationMinutes);
+    }
+    return availableSet;
+  }, [allPricePlans]);
+  const pricePlansForDuration = useMemo(
+    () =>
+      allPricePlans.filter(
+        (plan) =>
+          plan.durationMinutes === durationMinutes && plan.isAvailableAtStart,
+      ),
+    [allPricePlans, durationMinutes],
+  );
   const selectedPricePlan =
-    pricePlans.find((p) => p.selectionId === selectionId) ?? null;
+    pricePlansForDuration.find((p) => p.selectionId === selectionId) ?? null;
   const discountedTotalJPY =
     selectedPricePlan && selectedCoupon
       ? Math.max(0, selectedPricePlan.totalJPY - selectedCoupon.amountJPY)
@@ -155,14 +182,31 @@ function BookingPageInner() {
   const createBooking = useCreateBooking();
 
   useEffect(() => {
-    if (selectionId) return;
-    const firstPricePlan = pricePlans[0];
-    if (firstPricePlan) {
-      setPricePlanSelectionId(firstPricePlan.selectionId);
+    if (availableDurations.size === 0) return;
+    if (!availableDurations.has(durationMinutes)) {
+      const first = SUPPORTED_DURATION_MINUTES.find((d) =>
+        availableDurations.has(d),
+      );
+      if (first) setDurationMinutes(first);
     }
-  }, [selectionId, pricePlans]);
+  }, [availableDurations, durationMinutes]);
 
-  if (!slotId && !hasDateRange) {
+  useEffect(() => {
+    if (selectionId) {
+      const stillValid = pricePlansForDuration.some(
+        (p) => p.selectionId === selectionId,
+      );
+      if (stillValid) return;
+    }
+    const first = pricePlansForDuration[0];
+    if (first) {
+      setPricePlanSelectionId(first.selectionId);
+    } else if (selectionId) {
+      setPricePlanSelectionId("");
+    }
+  }, [selectionId, pricePlansForDuration]);
+
+  if (!startsAt) {
     return (
       <styled.div py="16" px="8">
         <EmptyState
@@ -213,9 +257,9 @@ function BookingPageInner() {
       const result = await createBooking.mutateAsync({
         organizationId,
         data: {
-          slotId: slotId ?? undefined,
-          startsAt: startsAt ?? undefined,
-          endsAt: endsAt ?? undefined,
+          consultantId: consultantId ?? undefined,
+          startsAt,
+          durationMinutes,
           customerName: values.customerName,
           customerEmail: values.customerEmail,
           customerPhone: values.customerPhone,
@@ -261,9 +305,9 @@ function BookingPageInner() {
         予約情報入力
       </Text>
       <Text textStyle="sm" color="fg.muted" mb="6">
-        {slotId
-          ? "以下の情報を入力して予約を確定してください"
-          : "以下の情報を入力すると、相談員を自動で割り当てて予約を確定します"}
+        {consultantId
+          ? "相談時間を選び、必要事項を入力して予約を確定してください"
+          : "相談時間を選ぶと、相談員を自動で割り当てて予約を確定します"}
       </Text>
 
       <styled.div
@@ -279,6 +323,50 @@ function BookingPageInner() {
           flexDirection="column"
           gap="5"
         >
+          <Field.Root>
+            <Field.Label>
+              相談時間
+              <Field.RequiredIndicator />
+            </Field.Label>
+            <styled.div
+              display="grid"
+              gridTemplateColumns={{
+                base: "repeat(2, 1fr)",
+                md: "repeat(4, 1fr)",
+              }}
+              gap="2"
+            >
+              {SUPPORTED_DURATION_MINUTES.map((duration) => {
+                const isAvailable = availableDurations.has(duration);
+                const isSelected = duration === durationMinutes;
+                return (
+                  <styled.button
+                    key={duration}
+                    type="button"
+                    disabled={!isAvailable}
+                    onClick={() => setDurationMinutes(duration)}
+                    px="3"
+                    py="3"
+                    rounded="l2"
+                    border="1px solid"
+                    borderColor={isSelected ? "colorPalette.default" : "border"}
+                    bg={isSelected ? "colorPalette.subtle" : "bg.default"}
+                    cursor={isAvailable ? "pointer" : "not-allowed"}
+                    opacity={isAvailable ? 1 : 0.4}
+                    textAlign="center"
+                  >
+                    <Text fontWeight={isSelected ? "bold" : "medium"}>
+                      {duration}分
+                    </Text>
+                  </styled.button>
+                );
+              })}
+            </styled.div>
+            <Field.HelperText>
+              予約直後の 15 分はバッファ時間として確保されます
+            </Field.HelperText>
+          </Field.Root>
+
           <Field.Root invalid={!!errors.customerName}>
             <Field.Label>
               お名前
@@ -354,7 +442,7 @@ function BookingPageInner() {
               料金プラン
               <Field.RequiredIndicator />
             </Field.Label>
-            {pricePlans.length === 0 ? (
+            {pricePlansForDuration.length === 0 ? (
               <Text textStyle="sm" color="fg.muted">
                 現在選択できる料金プランがありません
               </Text>
@@ -366,7 +454,7 @@ function BookingPageInner() {
                   setPricePlanSelectionId(details.value ?? "")
                 }
               >
-                {pricePlans.map((pricePlan) => (
+                {pricePlansForDuration.map((pricePlan) => (
                   <RadioGroup.Item
                     key={pricePlan.selectionId}
                     value={pricePlan.selectionId}
@@ -546,7 +634,9 @@ function BookingPageInner() {
 
           <Button
             type="submit"
-            disabled={pricePlansQuery.isLoading || pricePlans.length === 0}
+            disabled={
+              pricePlansQuery.isLoading || pricePlansForDuration.length === 0
+            }
             loading={createBooking.isPending}
             loadingText="予約を作成中..."
           >

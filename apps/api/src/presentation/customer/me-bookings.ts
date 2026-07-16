@@ -56,6 +56,8 @@ export async function GET(request: Request) {
         organizationId: booking.getOrganizationId(),
         status: booking.getStatus().getValue(),
         startsAt: booking.getStartsAt().toISOString(),
+        endsAt: booking.getEndsAt().toISOString(),
+        durationMinutes: booking.getDurationMinutes(),
         cancelDeadlineAt: booking
           .getCancelDeadlineAt()
           .getValue()

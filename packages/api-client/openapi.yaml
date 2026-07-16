@@ -413,23 +413,17 @@ paths:
       tags: [booking]
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
-        - name: slotId
-          in: query
-          required: false
-          schema:
-            type: string
         - name: startsAt
           in: query
-          required: false
+          required: true
           schema:
             type: string
             format: date-time
-        - name: endsAt
+        - name: consultantId
           in: query
           required: false
           schema:
             type: string
-            format: date-time
       responses:
         "200":
           description: OK
@@ -1728,6 +1722,8 @@ components:
           bookingId,
           status,
           startsAt,
+          endsAt,
+          durationMinutes,
           consultantId,
           joinUrl,
           pricePlanName,
@@ -1741,6 +1737,11 @@ components:
           enum: [pending, confirmed, completed, cancelled]
         startsAt:
           type: string
+        endsAt:
+          type: string
+        durationMinutes:
+          type: integer
+          enum: [30, 60, 90, 120]
         consultantId:
           type: string
         joinUrl:
@@ -1760,6 +1761,8 @@ components:
           organizationId,
           status,
           startsAt,
+          endsAt,
+          durationMinutes,
           cancelDeadlineAt,
           consultantId,
         ]
@@ -1774,6 +1777,12 @@ components:
         startsAt:
           type: string
           format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        durationMinutes:
+          type: integer
+          enum: [30, 60, 90, 120]
         cancelDeadlineAt:
           type: string
           format: date-time
@@ -2070,8 +2079,11 @@ components:
           bookingId,
           customerId,
           consultantId,
-          slotId,
+          usageSlotIds,
+          bufferSlotIds,
           startsAt,
+          endsAt,
+          durationMinutes,
           status,
           chargeable,
           chargeDisabledReason,
@@ -2085,9 +2097,23 @@ components:
           type: string
         consultantId:
           type: string
-        slotId:
-          type: string
+        usageSlotIds:
+          type: array
+          items:
+            type: string
+          description: 相談時間として占有する 15 分 Slot の ID 群
+        bufferSlotIds:
+          type: array
+          items:
+            type: string
+          description: バッファ時間として占有する 15 分 Slot の ID 群
+        durationMinutes:
+          type: integer
+          enum: [30, 60, 90, 120]
         startsAt:
+          type: string
+          format: date-time
+        endsAt:
           type: string
           format: date-time
         status:
@@ -2377,16 +2403,19 @@ components:
           customerPhone,
           customerBirthDate,
           selectionId,
+          startsAt,
+          durationMinutes,
         ]
       properties:
-        slotId:
+        consultantId:
           type: string
+          description: 指定した相談員に予約する場合。省略時は自動割当。
         startsAt:
           type: string
           format: date-time
-        endsAt:
-          type: string
-          format: date-time
+        durationMinutes:
+          type: integer
+          enum: [30, 60, 90, 120]
         customerName:
           type: string
         customerEmail:
@@ -2407,7 +2436,8 @@ components:
 
     PublicPricePlan:
       type: object
-      required: [selectionId, name, totalJPY]
+      required:
+        [selectionId, name, totalJPY, durationMinutes, isAvailableAtStart]
       properties:
         selectionId:
           type: string
@@ -2416,6 +2446,12 @@ components:
         totalJPY:
           type: integer
           minimum: 0
+        durationMinutes:
+          type: integer
+          enum: [30, 60, 90, 120]
+        isAvailableAtStart:
+          type: boolean
+          description: 指定した開始時刻から連続 Slot + バッファが空いているか
 
     PricePlan:
       type: object
@@ -2424,6 +2460,7 @@ components:
           pricePlanId,
           name,
           totalJPY,
+          durationMinutes,
           selectionId,
           isWithinCurrentRange,
           createdAt,
@@ -2438,6 +2475,9 @@ components:
         totalJPY:
           type: integer
           minimum: 0
+        durationMinutes:
+          type: integer
+          enum: [30, 60, 90, 120]
         selectionId:
           type: string
         isWithinCurrentRange:
@@ -2456,13 +2496,16 @@ components:
 
     CreatePricePlanRequest:
       type: object
-      required: [name, totalJPY]
+      required: [name, totalJPY, durationMinutes]
       properties:
         name:
           type: string
         totalJPY:
           type: integer
           minimum: 0
+        durationMinutes:
+          type: integer
+          enum: [30, 60, 90, 120]
 
     UpdatePricePlanRequest:
       type: object

@@ -28,8 +28,11 @@ function createBooking(params: {
     bookingId: params.bookingId,
     customerId: params.customerId ?? "customer-1",
     consultantId: params.consultantId ?? "consultant-1",
-    slotId: `slot-${params.bookingId}`,
+    usageSlotIds: [`slot-${params.bookingId}-1`, `slot-${params.bookingId}-2`],
+    bufferSlotIds: [`slot-${params.bookingId}-buffer`],
     startsAt: new Date(params.startsAt),
+    endsAt: new Date(new Date(params.startsAt).getTime() + 30 * 60 * 1000),
+    durationMinutes: 30,
     consultantMemo: ConsultantMemo.empty(),
     pricePlanId: "plan-1",
     pricePlanName: "通常鑑定",
@@ -146,6 +149,9 @@ class InMemoryBookingRepository implements IBookingRepository {
   }
 
   async save(booking: Booking): Promise<void> {
+    this.savedBookings.push(booking);
+  }
+  async saveInTx(booking: Booking): Promise<void> {
     this.savedBookings.push(booking);
   }
 }
@@ -379,8 +385,11 @@ describe("SendConsultationReminderUseCase", () => {
       bookingId: "missing-zoom",
       customerId: "customer-1",
       consultantId: "consultant-1",
-      slotId: "slot-missing-zoom",
+      usageSlotIds: ["slot-missing-zoom-1", "slot-missing-zoom-2"],
+      bufferSlotIds: ["slot-missing-zoom-buffer"],
       startsAt: new Date("2026-05-01T09:40:00.000Z"),
+      endsAt: new Date("2026-05-01T10:10:00.000Z"),
+      durationMinutes: 30,
       status: BookingStatus.reconstruct("confirmed"),
       cancelDeadlineAt: CancelDeadline.create(
         new Date("2026-05-01T09:40:00.000Z"),

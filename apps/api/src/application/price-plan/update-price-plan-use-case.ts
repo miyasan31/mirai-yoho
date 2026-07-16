@@ -23,19 +23,18 @@ export class UpdatePricePlanUseCase {
     }
 
     if (input.name !== undefined) {
-      const currentSelection = parsePricePlanSelectionId(
-        pricePlan.getSelectionId(),
-      );
+      const durationMinutes = pricePlan.getDurationMinutes();
       const renamedSelection = parsePricePlanSelectionId(
-        `signature:${encodeURIComponent(input.name.trim().replace(/\s+/g, " ").toLowerCase())}:${pricePlan.getTotalJPY()}`,
+        `signature:${encodeURIComponent(input.name.trim().replace(/\s+/g, " ").toLowerCase())}:${durationMinutes}:${pricePlan.getTotalJPY()}`,
       );
-      if (!currentSelection || !renamedSelection) {
+      if (!renamedSelection) {
         throw new AppError(400, "VALIDATION_ERROR", "Invalid plan name");
       }
       const duplicated = await this.pricePlanRepository.findBySignature({
         organizationId: input.organizationId,
         consultantId: input.consultantId,
         normalizedName: renamedSelection.normalizedName,
+        durationMinutes: renamedSelection.durationMinutes,
         totalJPY: renamedSelection.totalJPY,
       });
       if (

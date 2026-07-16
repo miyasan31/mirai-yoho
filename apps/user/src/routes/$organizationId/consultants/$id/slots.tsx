@@ -11,6 +11,7 @@ import { useMemo } from "react";
 import { styled } from "styled-system/jsx";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import { useGetSlots } from "@/hooks/use-slots";
+import { collectBookableStartTimes } from "@/lib/continuous-slots";
 
 export const Route = createFileRoute("/$organizationId/consultants/$id/slots")({
   component: SlotsPage,
@@ -48,17 +49,22 @@ function SlotsPage() {
 
   const slots = data?.data?.slots ?? [];
 
-  const groupedSlots = useMemo(() => {
-    const groups: Record<string, typeof slots> = {};
-    for (const slot of slots) {
-      const dateKey = formatDate(slot.startsAt);
+  const bookableStarts = useMemo(
+    () => collectBookableStartTimes(slots),
+    [slots],
+  );
+
+  const groupedStarts = useMemo(() => {
+    const groups: Record<string, typeof bookableStarts> = {};
+    for (const candidate of bookableStarts) {
+      const dateKey = formatDate(candidate.startsAt);
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
-      groups[dateKey].push(slot);
+      groups[dateKey].push(candidate);
     }
     return Object.entries(groups);
-  }, [slots]);
+  }, [bookableStarts]);
 
   if (isLoading) {
     return (
@@ -98,14 +104,14 @@ function SlotsPage() {
 
       <styled.div mb="8">
         <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
-          空き枠を選択
+          開始時刻を選択
         </Text>
         <Text textStyle="sm" color="fg.muted">
-          ご希望の日時を選んでください
+          ご希望の開始時刻を選んでください（次の画面で相談時間を決めます）
         </Text>
       </styled.div>
 
-      {slots.length === 0 ? (
+      {bookableStarts.length === 0 ? (
         <EmptyState
           icon={CalendarX}
           message="現在利用可能な枠はありません"
@@ -113,7 +119,7 @@ function SlotsPage() {
         />
       ) : (
         <styled.div display="flex" flexDirection="column" gap="6">
-          {groupedSlots.map(([dateLabel, dateSlots]) => (
+          {groupedStarts.map(([dateLabel, candidates]) => (
             <div key={dateLabel}>
               <Text
                 as="h2"
@@ -127,11 +133,11 @@ function SlotsPage() {
                 {dateLabel}
               </Text>
               <styled.div display="flex" flexDirection="column" gap="2">
-                {dateSlots.map((slot) => (
+                {candidates.map((candidate) => (
                   <styled.a
-                    key={slot.slotId}
+                    key={candidate.startsAt}
                     href={buildPath(
-                      `/booking?slotId=${slot.slotId}&consultantId=${consultantId}&startsAt=${encodeURIComponent(slot.startsAt)}&endsAt=${encodeURIComponent(slot.endsAt)}`,
+                      `/booking?consultantId=${consultantId}&startsAt=${encodeURIComponent(candidate.startsAt)}`,
                     )}
                     shadow="xs"
                     border="1px solid"
@@ -158,7 +164,7 @@ function SlotsPage() {
                     }}
                   >
                     <Text fontWeight="medium">
-                      {formatTime(slot.startsAt)} 〜 {formatTime(slot.endsAt)}
+                      {formatTime(candidate.startsAt)} 開始
                     </Text>
                   </styled.a>
                 ))}

@@ -1,4 +1,5 @@
 import { DomainError } from "@mirai-yoho/shared/domain-error";
+import type { SupportedDurationMinutes } from "@mirai-yoho/shared/slot-availability";
 import {
   BookingCancelledEvent,
   BookingConfirmedEvent,
@@ -19,8 +20,11 @@ interface BookingCreateProps {
   bookingId: string;
   customerId: string;
   consultantId: string;
-  slotId: string;
+  usageSlotIds: string[];
+  bufferSlotIds: string[];
   startsAt: Date;
+  endsAt: Date;
+  durationMinutes: SupportedDurationMinutes;
   consultantMemo: ConsultantMemo;
   consultationContent?: string;
   pricePlanId: string;
@@ -56,8 +60,11 @@ export class Booking extends AggregateRoot {
     private readonly bookingId: string,
     private readonly customerId: string,
     private readonly consultantId: string,
-    private readonly slotId: string,
+    private readonly usageSlotIds: readonly string[],
+    private readonly bufferSlotIds: readonly string[],
     private readonly startsAt: Date,
+    private readonly endsAt: Date,
+    private readonly durationMinutes: SupportedDurationMinutes,
     private status: BookingStatus,
     private readonly cancelDeadlineAt: CancelDeadline,
     private joinUrl: ZoomUrl | undefined,
@@ -79,6 +86,12 @@ export class Booking extends AggregateRoot {
   }
 
   static create(props: BookingCreateProps): Booking {
+    if (props.usageSlotIds.length === 0) {
+      throw new DomainError(
+        "BOOKING_MISSING_USAGE_SLOTS",
+        "Booking must reference at least one usage slot",
+      );
+    }
     const now = new Date();
     const appliedUserCouponId = props.appliedCoupon?.userCouponId;
     const couponDiscountJPY = props.appliedCoupon?.discountJPY;
@@ -91,8 +104,11 @@ export class Booking extends AggregateRoot {
       props.bookingId,
       props.customerId,
       props.consultantId,
-      props.slotId,
+      [...props.usageSlotIds],
+      [...props.bufferSlotIds],
       props.startsAt,
+      props.endsAt,
+      props.durationMinutes,
       BookingStatus.create("pending"),
       CancelDeadline.create(props.startsAt),
       undefined,
@@ -119,8 +135,11 @@ export class Booking extends AggregateRoot {
       props.bookingId,
       props.customerId,
       props.consultantId,
-      props.slotId,
+      [...props.usageSlotIds],
+      [...props.bufferSlotIds],
       props.startsAt,
+      props.endsAt,
+      props.durationMinutes,
       props.status,
       props.cancelDeadlineAt,
       props.joinUrl,
@@ -157,6 +176,7 @@ export class Booking extends AggregateRoot {
         consultantId: this.consultantId,
         joinUrl: joinUrl.getValue(),
         startsAt: this.startsAt,
+        endsAt: this.endsAt,
       }),
     );
   }
@@ -274,12 +294,28 @@ export class Booking extends AggregateRoot {
     return this.consultantId;
   }
 
-  getSlotId(): string {
-    return this.slotId;
+  getUsageSlotIds(): readonly string[] {
+    return this.usageSlotIds;
+  }
+
+  getBufferSlotIds(): readonly string[] {
+    return this.bufferSlotIds;
+  }
+
+  getAllOccupiedSlotIds(): readonly string[] {
+    return [...this.usageSlotIds, ...this.bufferSlotIds];
   }
 
   getStartsAt(): Date {
     return this.startsAt;
+  }
+
+  getEndsAt(): Date {
+    return this.endsAt;
+  }
+
+  getDurationMinutes(): SupportedDurationMinutes {
+    return this.durationMinutes;
   }
 
   getStatus(): BookingStatus {
@@ -338,9 +374,6 @@ export class Booking extends AggregateRoot {
     return this.discountedTotalJPY;
   }
 
-  /**
-   * 割引適用後の請求対象金額。クーポン未適用時は税込プラン総額をそのまま返す。
-   */
   getEffectiveTotalJPY(): number | undefined {
     return this.discountedTotalJPY ?? this.pricePlanTotalJPY;
   }

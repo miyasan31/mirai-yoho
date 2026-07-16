@@ -7,6 +7,7 @@ function createPricePlan() {
     pricePlanId: "plan-1",
     name: " 通常  鑑定 ",
     totalJPY: 5000,
+    durationMinutes: 30,
   });
 }
 

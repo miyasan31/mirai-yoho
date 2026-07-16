@@ -13,6 +13,7 @@ import { usePublicBookingSettings } from "@/hooks/use-booking-settings";
 import { useGetConsultants } from "@/hooks/use-consultants";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import { useGetSlots } from "@/hooks/use-slots";
+import { collectBookableStartTimes } from "@/lib/continuous-slots";
 
 function formatDate(isoString: string): string {
   return format(parseISO(isoString), "yyyy/MM/dd (E)", { locale: ja });
@@ -90,17 +91,21 @@ export function ConsultantsPage() {
   );
 
   const aggregatedSlots = aggregatedData?.data?.aggregatedSlots ?? [];
+  const bookableStarts = useMemo(
+    () => collectBookableStartTimes(aggregatedSlots),
+    [aggregatedSlots],
+  );
   const groupedAggregatedSlots = useMemo(() => {
-    const groups: Record<string, typeof aggregatedSlots> = {};
-    for (const slot of aggregatedSlots) {
-      const dateKey = formatDate(slot.startsAt);
+    const groups: Record<string, typeof bookableStarts> = {};
+    for (const candidate of bookableStarts) {
+      const dateKey = formatDate(candidate.startsAt);
       if (!groups[dateKey]) {
         groups[dateKey] = [];
       }
-      groups[dateKey].push(slot);
+      groups[dateKey].push(candidate);
     }
     return Object.entries(groups);
-  }, [aggregatedSlots]);
+  }, [bookableStarts]);
 
   if (
     isLoadingSettings ||
@@ -264,7 +269,7 @@ export function ConsultantsPage() {
             ))}
           </styled.div>
         )
-      ) : aggregatedSlots.length === 0 ? (
+      ) : bookableStarts.length === 0 ? (
         <EmptyState
           icon={Users}
           message="現在利用可能な枠はありません"
@@ -272,7 +277,7 @@ export function ConsultantsPage() {
         />
       ) : (
         <styled.div display="flex" flexDirection="column" gap="6">
-          {groupedAggregatedSlots.map(([dateLabel, dateSlots]) => (
+          {groupedAggregatedSlots.map(([dateLabel, candidates]) => (
             <div key={dateLabel}>
               <Text
                 as="h2"
@@ -286,11 +291,11 @@ export function ConsultantsPage() {
                 {dateLabel}
               </Text>
               <styled.div display="flex" flexDirection="column" gap="2">
-                {dateSlots.map((slot) => (
+                {candidates.map((candidate) => (
                   <styled.a
-                    key={`${slot.startsAt}_${slot.endsAt}`}
+                    key={candidate.startsAt}
                     href={buildPath(
-                      `/booking?startsAt=${encodeURIComponent(slot.startsAt)}&endsAt=${encodeURIComponent(slot.endsAt)}`,
+                      `/booking?startsAt=${encodeURIComponent(candidate.startsAt)}`,
                     )}
                     shadow="xs"
                     border="1px solid"
@@ -309,7 +314,7 @@ export function ConsultantsPage() {
                     }}
                   >
                     <Text fontWeight="medium" mb="1">
-                      {formatTime(slot.startsAt)} 〜 {formatTime(slot.endsAt)}
+                      {formatTime(candidate.startsAt)} 開始
                     </Text>
                   </styled.a>
                 ))}

@@ -43,6 +43,7 @@ class InMemoryPricePlanRepository implements IPricePlanRepository {
     organizationId: string;
     consultantId: string;
     normalizedName: string;
+    durationMinutes: 30 | 60 | 90 | 120;
     totalJPY: number;
   }): Promise<PricePlan | null> {
     return (
@@ -51,6 +52,7 @@ class InMemoryPricePlanRepository implements IPricePlanRepository {
           pricePlan.getOrganizationId() === params.organizationId &&
           pricePlan.getConsultantId() === params.consultantId &&
           pricePlan.getNormalizedName() === params.normalizedName &&
+          pricePlan.getDurationMinutes() === params.durationMinutes &&
           pricePlan.getTotalJPY() === params.totalJPY,
       ) ?? null
     );
@@ -92,6 +94,7 @@ function createExistingPlan() {
     pricePlanId: "plan-1",
     name: "通常鑑定",
     totalJPY: 5000,
+    durationMinutes: 30,
   });
 }
 
@@ -105,6 +108,7 @@ describe("CreatePricePlanUseCase", () => {
         consultantId: CONSULTANT_ID,
         name: "無料相談",
         totalJPY: 0,
+        durationMinutes: 30,
       }),
     ).rejects.toMatchObject({
       code: "PRICE_PLAN_OUT_OF_RANGE",
@@ -123,6 +127,7 @@ describe("CreatePricePlanUseCase", () => {
         consultantId: CONSULTANT_ID,
         name: "通常鑑定",
         totalJPY: 5000,
+        durationMinutes: 30,
       }),
     ).rejects.toMatchObject({
       code: "PRICE_PLAN_ALREADY_ARCHIVED",

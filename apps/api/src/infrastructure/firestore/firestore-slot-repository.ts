@@ -1,11 +1,16 @@
-import { isBeforeBookingDeadline } from "@mirai-yoho/shared/slot-availability";
+import {
+  getSlotUnitMs,
+  isBeforeBookingDeadline,
+} from "@mirai-yoho/shared/slot-availability";
 import type { Timestamp } from "firebase-admin/firestore";
+import type { TransactionScope } from "@/domain/shared/transaction-scope";
 import type { Slot } from "@/domain/slot/slot";
 import { Slot as SlotEntity } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import { TimeRange } from "@/domain/slot/time-range";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 import { db } from "@/infrastructure/firestore/firestore-customer";
+import { toFirestoreTransaction } from "@/infrastructure/firestore/firestore-transaction-scope";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.slots;
 
@@ -268,11 +273,103 @@ export class FirestoreSlotRepository implements ISlotRepository {
     }
   }
 
+  async findByIdsInTx(
+    organizationId: string,
+    slotIds: readonly string[],
+    tx: TransactionScope,
+  ): Promise<Slot[]> {
+    if (slotIds.length === 0) return [];
+    const transaction = toFirestoreTransaction(tx);
+    const refs = slotIds.map((id) => db.collection(COLLECTION).doc(id));
+    const snapshots = await transaction.getAll(...refs);
+    const slots: Slot[] = [];
+    for (const snapshot of snapshots) {
+      if (!snapshot.exists) continue;
+      const slot = toDomain(snapshot.data() as SlotDoc);
+      if (slot.getOrganizationId() !== organizationId) continue;
+      slots.push(slot);
+    }
+    return slots;
+  }
+
+  async findAvailableChainByConsultant(
+    organizationId: string,
+    consultantId: string,
+    startsAt: Date,
+    requiredCount: number,
+  ): Promise<Slot[] | null> {
+    if (requiredCount <= 0) return [];
+    const slotUnitMs = getSlotUnitMs();
+    const endBoundary = new Date(
+      startsAt.getTime() + requiredCount * slotUnitMs,
+    );
+    try {
+      const snapshot = await db
+        .collection(COLLECTION)
+        .where("organizationId", "==", organizationId)
+        .where("consultantId", "==", consultantId)
+        .where("startsAt", ">=", startsAt)
+        .where("startsAt", "<", endBoundary)
+        .orderBy("startsAt", "asc")
+        .get();
+      const slots = snapshot.docs.map((doc) => toDomain(doc.data() as SlotDoc));
+      return this.validateChain(slots, startsAt, requiredCount);
+    } catch (error) {
+      if (!isFirestoreFailedPrecondition(error)) {
+        throw error;
+      }
+      const fallback = await db
+        .collection(COLLECTION)
+        .where("organizationId", "==", organizationId)
+        .where("consultantId", "==", consultantId)
+        .get();
+      const slots = fallback.docs
+        .map((doc) => toDomain(doc.data() as SlotDoc))
+        .filter((slot) => {
+          const t = slot.getTimeRange().getStartsAt().getTime();
+          return t >= startsAt.getTime() && t < endBoundary.getTime();
+        })
+        .sort(
+          (a, b) =>
+            a.getTimeRange().getStartsAt().getTime() -
+            b.getTimeRange().getStartsAt().getTime(),
+        );
+      return this.validateChain(slots, startsAt, requiredCount);
+    }
+  }
+
+  private validateChain(
+    slots: readonly Slot[],
+    startsAt: Date,
+    requiredCount: number,
+  ): Slot[] | null {
+    const slotUnitMs = getSlotUnitMs();
+    if (slots.length !== requiredCount) return null;
+    for (let i = 0; i < requiredCount; i++) {
+      const expected = startsAt.getTime() + i * slotUnitMs;
+      const slot = slots[i];
+      if (slot.getTimeRange().getStartsAt().getTime() !== expected) return null;
+      if (!slot.getIsAvailable()) return null;
+      if (!isBeforeBookingDeadline(slot.getTimeRange().getStartsAt())) {
+        return null;
+      }
+    }
+    return [...slots];
+  }
+
   async save(slot: Slot): Promise<void> {
     await db
       .collection(COLLECTION)
       .doc(slot.getSlotId())
       .set(toFirestore(slot));
+  }
+
+  async saveInTx(slot: Slot, tx: TransactionScope): Promise<void> {
+    const transaction = toFirestoreTransaction(tx);
+    transaction.set(
+      db.collection(COLLECTION).doc(slot.getSlotId()),
+      toFirestore(slot),
+    );
   }
 
   async delete(organizationId: string, slotId: string): Promise<void> {

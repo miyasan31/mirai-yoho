@@ -1,3 +1,7 @@
+import {
+  isSupportedDuration,
+  type SupportedDurationMinutes,
+} from "@mirai-yoho/shared/slot-availability";
 import type { Timestamp } from "firebase-admin/firestore";
 import { PricePlan } from "@/domain/price-plan/price-plan";
 import type { IPricePlanRepository } from "@/domain/price-plan/price-plan-repository";
@@ -13,6 +17,7 @@ interface PricePlanDoc {
   name: string;
   normalizedName: string;
   totalJPY: number;
+  durationMinutes: number;
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;
   archivedAt?: Timestamp | Date | null;
@@ -24,6 +29,15 @@ function toDate(value?: Timestamp | Date | null): Date | undefined {
   return value.toDate();
 }
 
+function assertSupportedDuration(value: number): SupportedDurationMinutes {
+  if (!isSupportedDuration(value)) {
+    throw new Error(
+      `Stored price plan has unsupported durationMinutes=${value}. Data reset is required.`,
+    );
+  }
+  return value;
+}
+
 function toDomain(doc: PricePlanDoc): PricePlan {
   return PricePlan.reconstruct({
     organizationId: doc.organizationId,
@@ -31,6 +45,7 @@ function toDomain(doc: PricePlanDoc): PricePlan {
     pricePlanId: doc.pricePlanId,
     name: doc.name,
     totalJPY: doc.totalJPY,
+    durationMinutes: assertSupportedDuration(doc.durationMinutes),
     createdAt: toDate(doc.createdAt),
     updatedAt: toDate(doc.updatedAt),
     archivedAt: toDate(doc.archivedAt),
@@ -45,6 +60,7 @@ function toFirestore(pricePlan: PricePlan): PricePlanDoc {
     name: pricePlan.getName(),
     normalizedName: pricePlan.getNormalizedName(),
     totalJPY: pricePlan.getTotalJPY(),
+    durationMinutes: pricePlan.getDurationMinutes(),
     createdAt: pricePlan.getCreatedAt(),
     updatedAt: pricePlan.getUpdatedAt(),
     archivedAt: pricePlan.getArchivedAt() ?? null,
@@ -91,6 +107,7 @@ export class FirestorePricePlanRepository implements IPricePlanRepository {
     organizationId: string;
     consultantId: string;
     normalizedName: string;
+    durationMinutes: SupportedDurationMinutes;
     totalJPY: number;
   }): Promise<PricePlan | null> {
     const snapshot = await db
@@ -98,6 +115,7 @@ export class FirestorePricePlanRepository implements IPricePlanRepository {
       .where("organizationId", "==", params.organizationId)
       .where("consultantId", "==", params.consultantId)
       .where("normalizedName", "==", params.normalizedName)
+      .where("durationMinutes", "==", params.durationMinutes)
       .where("totalJPY", "==", params.totalJPY)
       .limit(1)
       .get();

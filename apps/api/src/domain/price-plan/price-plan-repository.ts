@@ -1,3 +1,4 @@
+import type { SupportedDurationMinutes } from "@mirai-yoho/shared/slot-availability";
 import type { PricePlan } from "@/domain/price-plan/price-plan";
 
 export interface IPricePlanRepository {
@@ -17,6 +18,7 @@ export interface IPricePlanRepository {
     organizationId: string;
     consultantId: string;
     normalizedName: string;
+    durationMinutes: SupportedDurationMinutes;
     totalJPY: number;
   }): Promise<PricePlan | null>;
   save(pricePlan: PricePlan): Promise<void>;

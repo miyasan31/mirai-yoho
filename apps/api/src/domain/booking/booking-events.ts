@@ -9,6 +9,7 @@ export class BookingConfirmedEvent implements DomainEvent {
     consultantId: string;
     joinUrl: string;
     startsAt: Date;
+    endsAt: Date;
   };
 
   private constructor(payload: BookingConfirmedEvent["payload"]) {
