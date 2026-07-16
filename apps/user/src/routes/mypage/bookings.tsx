@@ -150,10 +150,8 @@ function BookingCard({ booking }: { booking: MyBooking }) {
   const isCancellable =
     (booking.status === "pending" || booking.status === "confirmed") &&
     cancelDeadlineMs > now;
-  const canJoin =
-    booking.status === "confirmed" &&
-    !!booking.joinUrl &&
-    startsAtMs - now < 30 * 60 * 1000;
+  const showJoinButton = booking.status === "confirmed" && !!booking.joinUrl;
+  const canJoinNow = startsAtMs - now < 30 * 60 * 1000;
 
   return (
     <styled.li
@@ -207,14 +205,31 @@ function BookingCard({ booking }: { booking: MyBooking }) {
       )}
 
       <styled.div display="flex" gap="2" flexWrap="wrap" mt="1">
-        {canJoin && booking.joinUrl && (
-          <Button asChild variant="solid" colorPalette="blue" size="sm">
-            <a href={booking.joinUrl} target="_blank" rel="noopener noreferrer">
+        {showJoinButton &&
+          booking.joinUrl &&
+          (canJoinNow ? (
+            <Button asChild variant="solid" colorPalette="blue" size="sm">
+              <a
+                href={booking.joinUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Video size={16} />
+                Zoom に参加
+              </a>
+            </Button>
+          ) : (
+            <Button
+              variant="solid"
+              colorPalette="blue"
+              size="sm"
+              disabled
+              title="開始30分前から参加できます"
+            >
               <Video size={16} />
               Zoom に参加
-            </a>
-          </Button>
-        )}
+            </Button>
+          ))}
         {isCancellable && <CancelButton bookingId={booking.bookingId} />}
       </styled.div>
     </styled.li>
