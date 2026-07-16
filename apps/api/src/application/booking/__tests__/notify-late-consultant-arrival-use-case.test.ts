@@ -99,6 +99,12 @@ class InMemoryBookingRepository implements IBookingRepository {
     );
   }
 
+  async findAllByCustomerId(customerId: string): Promise<Booking[]> {
+    return this.bookings.filter(
+      (booking) => booking.getCustomerId() === customerId,
+    );
+  }
+
   async findByStatus(_organizationId: string, status: string) {
     return this.bookings.filter(
       (booking) => booking.getStatus().getValue() === status,

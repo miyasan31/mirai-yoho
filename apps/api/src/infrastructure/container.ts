@@ -7,6 +7,7 @@ import { ChargePaymentUseCase } from "@/application/booking/charge-payment-use-c
 import { CompleteSetupUseCase } from "@/application/booking/complete-setup-use-case";
 import { CreateBookingUseCase } from "@/application/booking/create-booking-use-case";
 import { ListBookingsWithChargeEligibilityUseCase } from "@/application/booking/list-bookings-with-charge-eligibility-use-case";
+import { ListCustomerBookingsUseCase } from "@/application/booking/list-customer-bookings-use-case";
 import { NotifyLateConsultantArrivalUseCase } from "@/application/booking/notify-late-consultant-arrival-use-case";
 import { SendConsultationReminderUseCase } from "@/application/booking/send-consultation-reminder-use-case";
 import { SetupPaymentUseCase } from "@/application/booking/setup-payment-use-case";
@@ -127,6 +128,14 @@ export function createListBookingsWithChargeEligibilityUseCase() {
     new FirestoreBookingRepository(),
     new FirestorePaymentRepository(),
     new FirestoreCustomerRepository(),
+  );
+}
+
+export function createListCustomerBookingsUseCase() {
+  return new ListCustomerBookingsUseCase(
+    new FirestoreBookingRepository(),
+    new FirestoreCustomerRepository(),
+    new FirestoreConsultantRepository(),
   );
 }
 

@@ -4,8 +4,7 @@ import { AppError } from "@/application/shared/app-error";
 import { AuthError } from "@/infrastructure/auth/verify-auth";
 import { verifyCustomerAuth } from "@/infrastructure/auth/verify-customer-auth";
 import {
-  createBookingRepository,
-  createCustomerRepository,
+  createListCustomerBookingsUseCase,
   createUserRepository,
 } from "@/infrastructure/container";
 
@@ -40,22 +39,19 @@ customerBookingRoutes.get("/customers/me/bookings", async (c) => {
         "Customer has not signed up yet",
       );
     }
-    const customer =
-      await createCustomerRepository().findByUserIdAndOrganizationId(
-        user.getUserId(),
-        organizationId,
-      );
-    if (!customer) {
-      return Response.json({ bookings: [] });
-    }
-    const bookings = await createBookingRepository().findByCustomerId(
-      organizationId,
-      customer.getCustomerId(),
-    );
+    const results = await createListCustomerBookingsUseCase().execute({
+      userId: user.getUserId(),
+      scope: { organizationId },
+    });
     return Response.json({
-      bookings: bookings
-        .sort((a, b) => b.getStartsAt().getTime() - a.getStartsAt().getTime())
-        .map((booking) => ({
+      bookings: results
+        .slice()
+        .sort(
+          (a, b) =>
+            b.booking.getStartsAt().getTime() -
+            a.booking.getStartsAt().getTime(),
+        )
+        .map(({ booking }) => ({
           bookingId: booking.getBookingId(),
           status: booking.getStatus().getValue(),
           startsAt: booking.getStartsAt().toISOString(),

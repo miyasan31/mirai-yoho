@@ -128,6 +128,42 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/CustomerCoupon"
+  /customer/me/bookings:
+    get:
+      operationId: getMyBookings
+      summary: ログイン顧客の全予約（組織横断）
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [bookings]
+                properties:
+                  bookings:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MyBooking"
+  /customer/me/bookings/{bookingId}/cancel:
+    post:
+      operationId: cancelMyBooking
+      summary: ログイン顧客の予約キャンセル
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
   /organizations/{organizationId}/customers/me/bookings:
     get:
       operationId: getCustomerBookings
@@ -1715,6 +1751,51 @@ components:
           nullable: true
         pricePlanTotalJPY:
           type: number
+          nullable: true
+    MyBooking:
+      type: object
+      required:
+        [
+          bookingId,
+          organizationId,
+          status,
+          startsAt,
+          cancelDeadlineAt,
+          consultantId,
+        ]
+      properties:
+        bookingId:
+          type: string
+        organizationId:
+          type: string
+        status:
+          type: string
+          enum: [pending, confirmed, completed, cancelled]
+        startsAt:
+          type: string
+          format: date-time
+        cancelDeadlineAt:
+          type: string
+          format: date-time
+        consultantId:
+          type: string
+        consultantName:
+          type: string
+          nullable: true
+        joinUrl:
+          type: string
+          nullable: true
+        pricePlanName:
+          type: string
+          nullable: true
+        pricePlanTotalJPY:
+          type: integer
+          nullable: true
+        couponDiscountJPY:
+          type: integer
+          nullable: true
+        discountedTotalJPY:
+          type: integer
           nullable: true
     ConsoleAccount:
       type: object
