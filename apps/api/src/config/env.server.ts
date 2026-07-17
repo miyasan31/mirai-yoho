@@ -1,4 +1,5 @@
 const DEFAULT_EMAIL_DELIVERY_MODE = "resend";
+const DEFAULT_ZOOM_INTEGRATION_MODE = "live";
 
 function requireServerEnv(key: keyof NodeJS.ProcessEnv): string {
   const value = process.env[key];
@@ -38,6 +39,12 @@ export const envServer = {
   },
   get emailDeliveryMode(): string {
     return process.env.EMAIL_DELIVERY_MODE ?? DEFAULT_EMAIL_DELIVERY_MODE;
+  },
+  get zoomIntegrationMode(): "live" | "stub" {
+    return (
+      (process.env.ZOOM_INTEGRATION_MODE as "live" | "stub" | undefined) ??
+      DEFAULT_ZOOM_INTEGRATION_MODE
+    );
   },
   get cancelTokenSecret(): string {
     return requireServerEnv("CANCEL_TOKEN_SECRET");

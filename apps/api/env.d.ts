@@ -20,6 +20,8 @@ declare namespace NodeJS {
     RESEND_FROM_EMAIL?: string;
     EMAIL_DELIVERY_MODE?: "resend" | "log";
 
+    ZOOM_INTEGRATION_MODE?: "live" | "stub";
+
     FIREBASE_PROJECT_ID?: string;
     FIREBASE_CLIENT_EMAIL?: string;
     FIREBASE_PRIVATE_KEY?: string;
