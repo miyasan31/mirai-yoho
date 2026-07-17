@@ -1,4 +1,8 @@
 import { DomainError } from "@mirai-yoho/shared/domain-error";
+import {
+  isSupportedDuration,
+  type SupportedDurationMinutes,
+} from "@mirai-yoho/shared/slot-availability";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 
 export interface PricePlanProps {
@@ -7,6 +11,7 @@ export interface PricePlanProps {
   pricePlanId: string;
   name: string;
   totalJPY: number;
+  durationMinutes: SupportedDurationMinutes;
   createdAt?: Date;
   updatedAt?: Date;
   archivedAt?: Date;
@@ -18,6 +23,7 @@ interface PricePlanCreateProps {
   pricePlanId: string;
   name: string;
   totalJPY: number;
+  durationMinutes: SupportedDurationMinutes;
 }
 
 function normalizePlanName(name: string): string {
@@ -47,30 +53,50 @@ function validateTotalJPY(totalJPY: number): void {
   }
 }
 
+function validateDurationMinutes(
+  durationMinutes: number,
+): SupportedDurationMinutes {
+  if (!isSupportedDuration(durationMinutes)) {
+    throw new DomainError(
+      "INVALID_PRICE_PLAN_DURATION",
+      "Plan duration must be one of 30, 60, 90, 120 minutes",
+    );
+  }
+  return durationMinutes;
+}
+
 export function getPricePlanSignature(params: {
   name: string;
+  durationMinutes: SupportedDurationMinutes;
   totalJPY: number;
 }): string {
-  return `${normalizePlanName(params.name)}:${params.totalJPY}`;
+  return `${normalizePlanName(params.name)}:${params.durationMinutes}:${params.totalJPY}`;
 }
 
 export function createPricePlanSelectionId(params: {
   name: string;
+  durationMinutes: SupportedDurationMinutes;
   totalJPY: number;
 }): string {
-  return `signature:${encodeURIComponent(normalizePlanName(params.name))}:${params.totalJPY}`;
+  return `signature:${encodeURIComponent(normalizePlanName(params.name))}:${params.durationMinutes}:${params.totalJPY}`;
 }
 
-export function parsePricePlanSelectionId(
-  selectionId: string,
-): { normalizedName: string; totalJPY: number } | null {
-  const matched = /^signature:(.+):(\d+)$/.exec(selectionId);
+export function parsePricePlanSelectionId(selectionId: string): {
+  normalizedName: string;
+  durationMinutes: SupportedDurationMinutes;
+  totalJPY: number;
+} | null {
+  const matched = /^signature:(.+):(\d+):(\d+)$/.exec(selectionId);
   if (!matched) return null;
-  const totalJPY = Number(matched[2]);
-  if (!Number.isInteger(totalJPY)) return null;
+  const durationRaw = Number(matched[2]);
+  const totalJPY = Number(matched[3]);
+  if (!Number.isInteger(durationRaw) || !Number.isInteger(totalJPY))
+    return null;
+  if (!isSupportedDuration(durationRaw)) return null;
   try {
     return {
       normalizedName: decodeURIComponent(matched[1]),
+      durationMinutes: durationRaw,
       totalJPY,
     };
   } catch {
@@ -85,6 +111,7 @@ export class PricePlan extends AggregateRoot {
     private readonly pricePlanId: string,
     private name: string,
     private readonly totalJPY: number,
+    private readonly durationMinutes: SupportedDurationMinutes,
     private readonly createdAt: Date,
     private updatedAt: Date,
     private archivedAt: Date | undefined,
@@ -95,12 +122,14 @@ export class PricePlan extends AggregateRoot {
   static create(props: PricePlanCreateProps): PricePlan {
     const now = new Date();
     validateTotalJPY(props.totalJPY);
+    const duration = validateDurationMinutes(props.durationMinutes);
     return new PricePlan(
       props.organizationId,
       props.consultantId,
       props.pricePlanId,
       validateName(props.name),
       props.totalJPY,
+      duration,
       now,
       now,
       undefined,
@@ -109,12 +138,14 @@ export class PricePlan extends AggregateRoot {
 
   static reconstruct(props: PricePlanProps): PricePlan {
     const createdAt = props.createdAt ?? new Date(0);
+    const duration = validateDurationMinutes(props.durationMinutes);
     return new PricePlan(
       props.organizationId,
       props.consultantId,
       props.pricePlanId,
       props.name,
       props.totalJPY,
+      duration,
       createdAt,
       props.updatedAt ?? createdAt,
       props.archivedAt,
@@ -167,9 +198,14 @@ export class PricePlan extends AggregateRoot {
     return this.totalJPY;
   }
 
+  getDurationMinutes(): SupportedDurationMinutes {
+    return this.durationMinutes;
+  }
+
   getSignature(): string {
     return getPricePlanSignature({
       name: this.name,
+      durationMinutes: this.durationMinutes,
       totalJPY: this.totalJPY,
     });
   }
@@ -177,6 +213,7 @@ export class PricePlan extends AggregateRoot {
   getSelectionId(): string {
     return createPricePlanSelectionId({
       name: this.name,
+      durationMinutes: this.durationMinutes,
       totalJPY: this.totalJPY,
     });
   }

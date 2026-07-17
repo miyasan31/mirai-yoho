@@ -1,3 +1,7 @@
+import {
+  isSupportedDuration,
+  type SupportedDurationMinutes,
+} from "@mirai-yoho/shared/slot-availability";
 import type { Timestamp } from "firebase-admin/firestore";
 import type { Booking } from "@/domain/booking/booking";
 import { Booking as BookingEntity } from "@/domain/booking/booking";
@@ -6,8 +10,10 @@ import { BookingStatus } from "@/domain/booking/booking-status";
 import { CancelDeadline } from "@/domain/booking/cancel-deadline";
 import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
+import type { TransactionScope } from "@/domain/shared/transaction-scope";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
 import { db } from "@/infrastructure/firestore/firestore-customer";
+import { toFirestoreTransaction } from "@/infrastructure/firestore/firestore-transaction-scope";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.bookings;
 
@@ -16,8 +22,11 @@ interface BookingDoc {
   bookingId: string;
   customerId: string;
   consultantId: string;
-  slotId: string;
+  usageSlotIds: string[];
+  bufferSlotIds: string[];
   startsAt: Timestamp;
+  endsAt: Timestamp;
+  durationMinutes: number;
   status: string;
   cancelDeadlineAt: Timestamp;
   joinUrl?: string;
@@ -39,6 +48,15 @@ interface BookingDoc {
   updatedAt?: Timestamp;
 }
 
+function assertSupportedDuration(value: number): SupportedDurationMinutes {
+  if (!isSupportedDuration(value)) {
+    throw new Error(
+      `Stored booking has unsupported durationMinutes=${value}. Data reset is required.`,
+    );
+  }
+  return value;
+}
+
 function toDomain(doc: BookingDoc): Booking {
   const createdAt = doc.createdAt?.toDate() ?? new Date(0);
   return BookingEntity.reconstruct({
@@ -46,8 +64,11 @@ function toDomain(doc: BookingDoc): Booking {
     bookingId: doc.bookingId,
     customerId: doc.customerId,
     consultantId: doc.consultantId,
-    slotId: doc.slotId,
+    usageSlotIds: doc.usageSlotIds ?? [],
+    bufferSlotIds: doc.bufferSlotIds ?? [],
     startsAt: doc.startsAt.toDate(),
+    endsAt: doc.endsAt.toDate(),
+    durationMinutes: assertSupportedDuration(doc.durationMinutes),
     status: BookingStatus.reconstruct(doc.status),
     cancelDeadlineAt: CancelDeadline.reconstruct(doc.cancelDeadlineAt.toDate()),
     joinUrl: doc.joinUrl ? ZoomUrl.reconstruct(doc.joinUrl) : undefined,
@@ -79,8 +100,11 @@ function toFirestore(booking: Booking): Record<string, unknown> {
     bookingId: booking.getBookingId(),
     customerId: booking.getCustomerId(),
     consultantId: booking.getConsultantId(),
-    slotId: booking.getSlotId(),
+    usageSlotIds: [...booking.getUsageSlotIds()],
+    bufferSlotIds: [...booking.getBufferSlotIds()],
     startsAt: booking.getStartsAt(),
+    endsAt: booking.getEndsAt(),
+    durationMinutes: booking.getDurationMinutes(),
     status: booking.getStatus().getValue(),
     cancelDeadlineAt: booking.getCancelDeadlineAt().getValue(),
     joinUrl: booking.getJoinUrl()?.getValue() ?? null,
@@ -190,5 +214,13 @@ export class FirestoreBookingRepository implements IBookingRepository {
       .collection(COLLECTION)
       .doc(booking.getBookingId())
       .set(toFirestore(booking));
+  }
+
+  async saveInTx(booking: Booking, tx: TransactionScope): Promise<void> {
+    const transaction = toFirestoreTransaction(tx);
+    transaction.set(
+      db.collection(COLLECTION).doc(booking.getBookingId()),
+      toFirestore(booking),
+    );
   }
 }

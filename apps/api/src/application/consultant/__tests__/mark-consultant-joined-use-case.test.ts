@@ -14,8 +14,11 @@ function createBooking(startsAt = "2026-05-01T10:00:00.000Z") {
     bookingId: BOOKING_ID,
     customerId: "customer-1",
     consultantId: CONSULTANT_ID,
-    slotId: "slot-1",
+    usageSlotIds: ["slot-1", "slot-2"],
+    bufferSlotIds: ["slot-3"],
     startsAt: new Date(startsAt),
+    endsAt: new Date(new Date(startsAt).getTime() + 30 * 60 * 1000),
+    durationMinutes: 30,
     consultantMemo: ConsultantMemo.empty(),
     pricePlanId: "plan-1",
     pricePlanName: "通常鑑定",
@@ -57,6 +60,9 @@ class InMemoryBookingRepository implements IBookingRepository {
   }
 
   async save(booking: Booking): Promise<void> {
+    this.booking = booking;
+  }
+  async saveInTx(booking: Booking): Promise<void> {
     this.booking = booking;
   }
 }

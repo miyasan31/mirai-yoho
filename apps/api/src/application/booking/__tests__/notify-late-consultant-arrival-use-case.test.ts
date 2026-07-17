@@ -36,8 +36,13 @@ function createBooking(
     bookingId: overrides.bookingId ?? "booking-1",
     customerId: "customer-1",
     consultantId: "consultant-1",
-    slotId: "slot-1",
+    usageSlotIds: ["slot-1", "slot-2"],
+    bufferSlotIds: ["slot-3"],
     startsAt: overrides.startsAt ?? new Date("2026-05-01T10:00:00.000Z"),
+    endsAt: overrides.startsAt
+      ? new Date(overrides.startsAt.getTime() + 30 * 60 * 1000)
+      : new Date("2026-05-01T10:30:00.000Z"),
+    durationMinutes: 30,
     status: BookingStatus.reconstruct(overrides.status ?? "confirmed"),
     cancelDeadlineAt: CancelDeadline.reconstruct(
       new Date("2026-04-30T10:00:00.000Z"),
@@ -120,6 +125,9 @@ class InMemoryBookingRepository implements IBookingRepository {
   }
 
   async save(booking: Booking): Promise<void> {
+    this.savedBookings.push(booking);
+  }
+  async saveInTx(booking: Booking): Promise<void> {
     this.savedBookings.push(booking);
   }
 }

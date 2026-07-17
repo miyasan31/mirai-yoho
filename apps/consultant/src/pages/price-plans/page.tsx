@@ -1,4 +1,6 @@
+import type { CreatePricePlanRequestDurationMinutes } from "@mirai-yoho/api-client/schemas";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
+import { SUPPORTED_DURATION_MINUTES } from "@mirai-yoho/shared/slot-availability";
 import { Badge } from "@mirai-yoho/ui/components/ui/badge";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Field from "@mirai-yoho/ui/components/ui/field";
@@ -34,6 +36,8 @@ export default function PricePlansPage() {
   const archivePricePlan = useArchivePricePlan();
   const [name, setName] = useState("");
   const [totalJPY, setTotalJPY] = useState("");
+  const [durationMinutes, setDurationMinutes] =
+    useState<CreatePricePlanRequestDurationMinutes>(30);
   const [editingPlanId, setEditingPlanId] = useState<string | null>(null);
   const [editingName, setEditingName] = useState("");
   const pricePlans = data?.data?.pricePlans ?? [];
@@ -55,10 +59,12 @@ export default function PricePlansPage() {
         data: {
           name,
           totalJPY: Number(totalJPY),
+          durationMinutes,
         },
       });
       setName("");
       setTotalJPY("");
+      setDurationMinutes(30);
       await invalidatePricePlans();
       toaster.create({ type: "success", title: "料金プランを作成しました" });
     } catch {
@@ -138,7 +144,7 @@ export default function PricePlansPage() {
       <styled.form
         onSubmit={handleCreate}
         display="grid"
-        gridTemplateColumns={{ base: "1fr", md: "1fr 180px auto" }}
+        gridTemplateColumns={{ base: "1fr", md: "1fr 140px 140px auto" }}
         gap="3"
         alignItems="end"
       >
@@ -148,6 +154,31 @@ export default function PricePlansPage() {
             value={name}
             onChange={(event) => setName(event.target.value)}
           />
+        </Field.Root>
+        <Field.Root>
+          <Field.Label>相談時間</Field.Label>
+          <styled.select
+            value={durationMinutes}
+            onChange={(event) =>
+              setDurationMinutes(
+                Number(
+                  event.target.value,
+                ) as CreatePricePlanRequestDurationMinutes,
+              )
+            }
+            borderWidth="1px"
+            borderColor="border.default"
+            rounded="l2"
+            px="3"
+            py="2"
+            bg="bg.default"
+          >
+            {SUPPORTED_DURATION_MINUTES.map((minutes) => (
+              <option key={minutes} value={minutes}>
+                {minutes}分
+              </option>
+            ))}
+          </styled.select>
         </Field.Root>
         <Field.Root>
           <Field.Label>税込金額</Field.Label>
@@ -166,6 +197,7 @@ export default function PricePlansPage() {
         <Table.Head>
           <Table.Row>
             <Table.Header>プラン名</Table.Header>
+            <Table.Header>相談時間</Table.Header>
             <Table.Header>税込金額</Table.Header>
             <Table.Header>状態</Table.Header>
             <Table.Header>操作</Table.Header>
@@ -208,6 +240,7 @@ export default function PricePlansPage() {
                     </Button>
                   )}
                 </Table.Cell>
+                <Table.Cell>{pricePlan.durationMinutes}分</Table.Cell>
                 <Table.Cell>¥{pricePlan.totalJPY.toLocaleString()}</Table.Cell>
                 <Table.Cell>
                   {isArchived ? (

@@ -1,4 +1,5 @@
 import type { Booking } from "@/domain/booking/booking";
+import type { TransactionScope } from "@/domain/shared/transaction-scope";
 
 export interface IBookingRepository {
   findById(organizationId: string, bookingId: string): Promise<Booking | null>;
@@ -19,4 +20,5 @@ export interface IBookingRepository {
   ): Promise<Booking[]>;
   findAll(organizationId: string): Promise<Booking[]>;
   save(booking: Booking): Promise<void>;
+  saveInTx(booking: Booking, tx: TransactionScope): Promise<void>;
 }

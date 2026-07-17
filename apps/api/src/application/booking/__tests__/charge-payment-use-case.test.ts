@@ -59,6 +59,7 @@ class InMemoryBookingRepository implements IBookingRepository {
   }
 
   async save(_booking: Booking): Promise<void> {}
+  async saveInTx(_booking: Booking): Promise<void> {}
 }
 
 class InMemoryPaymentRepository implements IPaymentRepository {
@@ -140,8 +141,11 @@ function createConfirmedBooking(startsAt: string): Booking {
     bookingId: BOOKING_ID,
     customerId: CLIENT_ID,
     consultantId: "consultant-1",
-    slotId: "slot-1",
+    usageSlotIds: ["slot-1", "slot-2"],
+    bufferSlotIds: ["slot-3"],
     startsAt: new Date(startsAt),
+    endsAt: new Date(new Date(startsAt).getTime() + 30 * 60 * 1000),
+    durationMinutes: 30,
     consultantMemo: ConsultantMemo.create({
       customerName: "",
       birthDate: "",

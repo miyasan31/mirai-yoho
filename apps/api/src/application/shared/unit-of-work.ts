@@ -1,3 +1,5 @@
+import type { TransactionScope } from "@/domain/shared/transaction-scope";
+
 export interface IUnitOfWork {
-  runInTransaction(fn: () => Promise<void>): Promise<void>;
+  runInTransaction<T>(fn: (tx: TransactionScope) => Promise<T>): Promise<T>;
 }

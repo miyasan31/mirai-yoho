@@ -61,12 +61,20 @@ pricePlanRoutes.post(
     if (!Number.isInteger(body.totalJPY)) {
       return jsonError(400, "VALIDATION_ERROR", "totalJPY must be an integer");
     }
+    if (!Number.isInteger(body.durationMinutes)) {
+      return jsonError(
+        400,
+        "VALIDATION_ERROR",
+        "durationMinutes must be an integer",
+      );
+    }
 
     const result = await createCreatePricePlanUseCase().execute({
       organizationId,
       consultantId: authUser.authUid,
       name: body.name,
       totalJPY: body.totalJPY,
+      durationMinutes: body.durationMinutes,
     });
 
     return Response.json(result, { status: 201 });

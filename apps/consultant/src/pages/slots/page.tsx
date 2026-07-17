@@ -174,7 +174,7 @@ export default function ConsultantSlotsPage() {
       if (!ranges) {
         toaster.create({
           type: "error",
-          title: "30分単位で選択してください",
+          title: `${SLOT_UNIT_MINUTES}分単位で選択してください`,
         });
         return;
       }
@@ -359,7 +359,7 @@ export default function ConsultantSlotsPage() {
           dayPropGetter={dayPropGetter}
           slotPropGetter={slotPropGetter}
           step={SLOT_UNIT_MINUTES}
-          timeslots={2}
+          timeslots={60 / SLOT_UNIT_MINUTES}
           min={
             new Date(
               1970,

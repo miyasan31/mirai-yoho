@@ -37,19 +37,19 @@ async function main() {
   const db = getFirestore(app);
   const batch = db.batch();
 
-  // 今日から5日分、各日 10:00-17:00 の30分枠を作成
+  // 今日から5日分、各日 10:00-17:00 の 15 分枠を作成
   const now = new Date();
   let count = 0;
 
   for (let dayOffset = 1; dayOffset <= 5; dayOffset++) {
     for (let hour = 10; hour < 17; hour++) {
-      for (const minute of [0, 30]) {
+      for (const minute of [0, 15, 30, 45]) {
         const startsAt = new Date(now);
         startsAt.setDate(startsAt.getDate() + dayOffset);
         startsAt.setHours(hour, minute, 0, 0);
 
         const endsAt = new Date(startsAt);
-        endsAt.setMinutes(endsAt.getMinutes() + 30);
+        endsAt.setMinutes(endsAt.getMinutes() + 15);
 
         const slotId = crypto.randomUUID();
         const ref = db.collection(FIRESTORE_COLLECTIONS.slots).doc(slotId);
@@ -61,7 +61,7 @@ async function main() {
           startsAt,
           endsAt,
           bookingId: null,
-          isAvailable: false,
+          isAvailable: true,
         });
 
         count++;

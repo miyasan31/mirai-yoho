@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { isValidSlotRange } from "@mirai-yoho/shared/slot-availability";
+import { isValidMinimalSlotRange } from "@mirai-yoho/shared/slot-availability";
 import { AppError } from "@/application/shared/app-error";
 import { Settings } from "@/domain/settings/settings";
 import type { ISettingsRepository } from "@/domain/settings/settings-repository";
@@ -25,11 +25,11 @@ export class CreateSlotUseCase {
   ) {}
 
   async execute(input: CreateSlotInput): Promise<CreateSlotOutput> {
-    if (!isValidSlotRange(input.startsAt, input.endsAt)) {
+    if (!isValidMinimalSlotRange(input.startsAt, input.endsAt)) {
       throw new AppError(
         400,
         "VALIDATION_ERROR",
-        "Slots must be exactly 30 minutes and aligned to 30-minute boundaries",
+        "Slots must be exactly 15 minutes and aligned to 15-minute boundaries",
       );
     }
 

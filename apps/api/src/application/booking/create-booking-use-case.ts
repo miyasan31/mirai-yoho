@@ -1,4 +1,11 @@
 import { DomainError } from "@mirai-yoho/shared/domain-error";
+import {
+  getBufferSlotCount,
+  getSlotUnitMs,
+  getUsageSlotCount,
+  isSupportedDuration,
+  type SupportedDurationMinutes,
+} from "@mirai-yoho/shared/slot-availability";
 import { AppError } from "@/application/shared/app-error";
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IUnitOfWork } from "@/application/shared/unit-of-work";
@@ -29,9 +36,9 @@ import type { IZoomSessionRepository } from "@/domain/zoom-session/zoom-session-
 interface CreateBookingInput {
   organizationId: string;
   userId: string;
-  slotId?: string;
-  startsAt?: Date;
-  endsAt?: Date;
+  consultantId?: string;
+  startsAt: Date;
+  durationMinutes: number;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
@@ -44,6 +51,13 @@ interface CreateBookingInput {
 interface CreateBookingOutput {
   bookingId: string;
   joinUrl: string;
+}
+
+interface ResolvedContinuous {
+  consultantId: string;
+  usageSlots: Slot[];
+  bufferSlots: Slot[];
+  pricePlan: PricePlan;
 }
 
 function toBreakoutRoomParams(
@@ -72,6 +86,15 @@ export class CreateBookingUseCase {
   ) {}
 
   async execute(input: CreateBookingInput): Promise<CreateBookingOutput> {
+    if (!isSupportedDuration(input.durationMinutes)) {
+      throw new AppError(
+        400,
+        "VALIDATION_ERROR",
+        "durationMinutes must be one of 30, 60, 90, 120",
+      );
+    }
+    const durationMinutes: SupportedDurationMinutes = input.durationMinutes;
+
     const user = await this.userRepository.findById(input.userId);
     if (!user || !user.isActive()) {
       throw new AppError(404, "USER_NOT_FOUND", "User not found or withdrawn");
@@ -92,10 +115,15 @@ export class CreateBookingUseCase {
       );
     }
 
-    const { slot, pricePlan } = await this.resolveSlotAndPricePlan(input);
+    const resolved = await this.resolveContinuousAndPricePlan({
+      ...input,
+      durationMinutes,
+    });
 
     const bookingId = crypto.randomUUID();
-    slot.reserve(bookingId);
+    for (const slot of [...resolved.usageSlots, ...resolved.bufferSlots]) {
+      slot.reserve(bookingId);
+    }
 
     const appliedCoupon = await this.resolveAppliedCoupon(input);
 
@@ -125,18 +153,26 @@ export class CreateBookingUseCase {
       });
     }
 
+    const startsAt = resolved.usageSlots[0].getTimeRange().getStartsAt();
+    const endsAt = new Date(
+      startsAt.getTime() + resolved.usageSlots.length * getSlotUnitMs(),
+    );
+
     const booking = Booking.create({
       organizationId: input.organizationId,
       bookingId,
       customerId: customer.getCustomerId(),
-      consultantId: slot.getConsultantId(),
-      slotId: slot.getSlotId(),
-      startsAt: slot.getTimeRange().getStartsAt(),
+      consultantId: resolved.consultantId,
+      usageSlotIds: resolved.usageSlots.map((s) => s.getSlotId()),
+      bufferSlotIds: resolved.bufferSlots.map((s) => s.getSlotId()),
+      startsAt,
+      endsAt,
+      durationMinutes,
       consultantMemo: ConsultantMemo.empty(),
       consultationContent: input.consultationContent,
-      pricePlanId: pricePlan.getPricePlanId(),
-      pricePlanName: pricePlan.getName(),
-      pricePlanTotalJPY: pricePlan.getTotalJPY(),
+      pricePlanId: resolved.pricePlan.getPricePlanId(),
+      pricePlanName: resolved.pricePlan.getName(),
+      pricePlanTotalJPY: resolved.pricePlan.getTotalJPY(),
       appliedCoupon: appliedCoupon
         ? {
             userCouponId: appliedCoupon.getUserCouponId(),
@@ -147,16 +183,14 @@ export class CreateBookingUseCase {
 
     const consultant = await this.consultantRepository.findById(
       input.organizationId,
-      slot.getConsultantId(),
+      resolved.consultantId,
     );
     if (!consultant) {
       throw new DomainError("CONSULTANT_NOT_FOUND", "Consultant not found");
     }
     const consultantName = consultant.getProfile().getDisplayName();
 
-    const sessionDate = ZoomSession.sessionDateFromInstant(
-      slot.getTimeRange().getStartsAt(),
-    );
+    const sessionDate = ZoomSession.sessionDateFromInstant(startsAt);
     const existingSession = await this.zoomSessionRepository.findByDate(
       input.organizationId,
       sessionDate,
@@ -168,7 +202,7 @@ export class CreateBookingUseCase {
       if (existingSession) {
         session = existingSession;
         session.assignParticipant(
-          slot.getConsultantId(),
+          resolved.consultantId,
           consultantName,
           zoomEmail,
         );
@@ -183,7 +217,7 @@ export class CreateBookingUseCase {
           sessionDate,
         });
         session.assignParticipant(
-          slot.getConsultantId(),
+          resolved.consultantId,
           consultantName,
           zoomEmail,
         );
@@ -227,10 +261,12 @@ export class CreateBookingUseCase {
     }
     booking.pullDomainEvents();
 
-    await this.unitOfWork.runInTransaction(async () => {
+    await this.unitOfWork.runInTransaction(async (tx) => {
       await this.customerRepository.save(customer);
-      await this.slotRepository.save(slot);
-      await this.bookingRepository.save(booking);
+      for (const slot of [...resolved.usageSlots, ...resolved.bufferSlots]) {
+        await this.slotRepository.saveInTx(slot, tx);
+      }
+      await this.bookingRepository.saveInTx(booking, tx);
       await this.zoomSessionRepository.save(session);
       if (appliedCoupon) {
         await this.userCouponRepository.save(appliedCoupon);
@@ -274,9 +310,9 @@ export class CreateBookingUseCase {
     return coupon;
   }
 
-  private async resolveSlotAndPricePlan(
-    input: CreateBookingInput,
-  ): Promise<{ slot: Slot; pricePlan: PricePlan }> {
+  private async resolveContinuousAndPricePlan(
+    input: CreateBookingInput & { durationMinutes: SupportedDurationMinutes },
+  ): Promise<ResolvedContinuous> {
     const selection = parsePricePlanSelectionId(input.selectionId);
     if (!selection) {
       throw new AppError(
@@ -285,24 +321,42 @@ export class CreateBookingUseCase {
         "Price plan selection is invalid",
       );
     }
+    if (selection.durationMinutes !== input.durationMinutes) {
+      throw new AppError(
+        400,
+        "PRICE_PLAN_DURATION_MISMATCH",
+        "Selected plan duration does not match the requested duration",
+      );
+    }
     const settings =
       (await this.settingsRepository.findByOrganizationId(
         input.organizationId,
       )) ?? Settings.createDefault(input.organizationId);
     const pricePlanRange = settings.getPricePlanRange();
 
-    if (input.slotId) {
-      const slot = await this.slotRepository.findById(
+    const usageCount = getUsageSlotCount(input.durationMinutes);
+    const bufferCount = getBufferSlotCount();
+    const totalRequired = usageCount + bufferCount;
+
+    if (input.consultantId) {
+      const chain = await this.slotRepository.findAvailableChainByConsultant(
         input.organizationId,
-        input.slotId,
+        input.consultantId,
+        input.startsAt,
+        totalRequired,
       );
-      if (!slot) {
-        throw new Error("Slot not found");
+      if (!chain) {
+        throw new AppError(
+          409,
+          "SLOT_NOT_AVAILABLE",
+          "Requested time is no longer available",
+        );
       }
       const pricePlan = await this.findSelectablePricePlanForConsultant({
         organizationId: input.organizationId,
-        consultantId: slot.getConsultantId(),
+        consultantId: input.consultantId,
         normalizedName: selection.normalizedName,
+        durationMinutes: selection.durationMinutes,
         totalJPY: selection.totalJPY,
       });
       if (!pricePlan || !pricePlanRange.contains(pricePlan.getTotalJPY())) {
@@ -312,63 +366,88 @@ export class CreateBookingUseCase {
           "Selected price plan is not selectable",
         );
       }
-      return { slot, pricePlan };
-    }
-
-    if (!input.startsAt || !input.endsAt) {
-      throw new Error("Booking slot information is required");
-    }
-
-    const candidateSlots = await this.slotRepository.findAvailableByTimeRange(
-      input.organizationId,
-      input.startsAt,
-      input.endsAt,
-    );
-
-    const candidateSlotsWithPricePlans = await Promise.all(
-      candidateSlots.map(async (slot) => {
-        const pricePlan = await this.findSelectablePricePlanForConsultant({
-          organizationId: input.organizationId,
-          consultantId: slot.getConsultantId(),
-          normalizedName: selection.normalizedName,
-          totalJPY: selection.totalJPY,
-        });
-        if (!pricePlan || !pricePlanRange.contains(pricePlan.getTotalJPY())) {
-          return null;
-        }
-        return { slot, pricePlan };
-      }),
-    );
-    const selectableCandidates = candidateSlotsWithPricePlans.filter(
-      (candidate): candidate is { slot: Slot; pricePlan: PricePlan } =>
-        candidate !== null,
-    );
-
-    if (selectableCandidates.length === 0) {
-      throw new Error("Slot is no longer available");
+      return {
+        consultantId: input.consultantId,
+        usageSlots: chain.slice(0, usageCount),
+        bufferSlots: chain.slice(usageCount),
+        pricePlan,
+      };
     }
 
     const dailySlots = await this.slotRepository.findAvailableByDate(
       input.organizationId,
       input.startsAt,
     );
+    const slotsByConsultant = new Map<string, Slot[]>();
+    for (const slot of dailySlots) {
+      const consultantId = slot.getConsultantId();
+      const list = slotsByConsultant.get(consultantId) ?? [];
+      list.push(slot);
+      slotsByConsultant.set(consultantId, list);
+    }
+
+    const consultantsWithPlan: Array<{
+      consultantId: string;
+      availableSlots: Slot[];
+      pricePlan: PricePlan;
+    }> = [];
+    for (const [consultantId, slots] of slotsByConsultant) {
+      const pricePlan = await this.findSelectablePricePlanForConsultant({
+        organizationId: input.organizationId,
+        consultantId,
+        normalizedName: selection.normalizedName,
+        durationMinutes: selection.durationMinutes,
+        totalJPY: selection.totalJPY,
+      });
+      if (!pricePlan || !pricePlanRange.contains(pricePlan.getTotalJPY())) {
+        continue;
+      }
+      consultantsWithPlan.push({
+        consultantId,
+        availableSlots: slots,
+        pricePlan,
+      });
+    }
+
+    if (consultantsWithPlan.length === 0) {
+      throw new AppError(
+        409,
+        "SLOT_NOT_AVAILABLE",
+        "Requested time is no longer available",
+      );
+    }
+
     const availableCountByConsultant =
       SlotSelectionPolicy.countAvailableSlotsByConsultant(dailySlots);
 
-    const selected = SlotSelectionPolicy.selectByConsultantAvailability(
-      selectableCandidates,
-      availableCountByConsultant,
-    );
+    const selected =
+      SlotSelectionPolicy.selectContinuousSlotsByConsultantAvailability({
+        candidates: consultantsWithPlan,
+        requestedStartsAt: input.startsAt,
+        usageSlotCount: usageCount,
+        bufferSlotCount: bufferCount,
+        dailySlotsPerConsultant: availableCountByConsultant,
+      });
     if (!selected) {
-      throw new Error("Slot is no longer available");
+      throw new AppError(
+        409,
+        "SLOT_NOT_AVAILABLE",
+        "Requested time is no longer available",
+      );
     }
-    return selected;
+    return {
+      consultantId: selected.consultantId,
+      usageSlots: selected.usageSlots,
+      bufferSlots: selected.bufferSlots,
+      pricePlan: selected.pricePlan,
+    };
   }
 
   private async findSelectablePricePlanForConsultant(params: {
     organizationId: string;
     consultantId: string;
     normalizedName: string;
+    durationMinutes: SupportedDurationMinutes;
     totalJPY: number;
   }): Promise<PricePlan | null> {
     const pricePlan = await this.pricePlanRepository.findBySignature(params);

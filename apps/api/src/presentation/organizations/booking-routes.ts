@@ -51,9 +51,9 @@ bookingRoutes.post(
 
     const body = await request.json();
     const {
-      slotId,
+      consultantId,
       startsAt,
-      endsAt,
+      durationMinutes,
       customerName,
       customerEmail,
       customerPhone,
@@ -77,6 +77,16 @@ bookingRoutes.post(
         "customerName, customerEmail, customerPhone, customerBirthDate, selectionId are required",
       );
     }
+    if (typeof startsAt !== "string" || startsAt.length === 0) {
+      return jsonError(400, "VALIDATION_ERROR", "startsAt is required");
+    }
+    if (typeof durationMinutes !== "number") {
+      return jsonError(
+        400,
+        "VALIDATION_ERROR",
+        "durationMinutes must be a number",
+      );
+    }
 
     const birthDateValidation = validateCustomerBirthdate(customerBirthDate);
     if (!birthDateValidation.valid) {
@@ -91,9 +101,12 @@ bookingRoutes.post(
     const result = await useCase.execute({
       organizationId,
       userId: customerUser.getUserId(),
-      slotId: typeof slotId === "string" ? slotId : undefined,
-      startsAt: typeof startsAt === "string" ? new Date(startsAt) : undefined,
-      endsAt: typeof endsAt === "string" ? new Date(endsAt) : undefined,
+      consultantId:
+        typeof consultantId === "string" && consultantId
+          ? consultantId
+          : undefined,
+      startsAt: new Date(startsAt),
+      durationMinutes,
       customerName,
       customerEmail,
       customerPhone,

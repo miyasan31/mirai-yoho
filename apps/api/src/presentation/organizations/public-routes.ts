@@ -1,12 +1,10 @@
 import { Hono } from "hono";
-import { createPricePlanSelectionId } from "@/domain/price-plan/price-plan";
 import { Settings } from "@/domain/settings/settings";
 import {
   createConsultantRepository,
   createListAvailableSlotsUseCase,
-  createPricePlanRepository,
+  createListBookingPricePlansUseCase,
   createSettingsRepository,
-  createSlotRepository,
 } from "@/infrastructure/container";
 import { withNoStore, withPublicShortCache } from "../cache-control";
 import {
@@ -15,14 +13,6 @@ import {
 } from "./consultant-status";
 import { getRoute, jsonError } from "./route-handler";
 import { toBookingSettingsResponse } from "./settings-response";
-
-function toPublicPricePlanResponse(params: { name: string; totalJPY: number }) {
-  return {
-    selectionId: createPricePlanSelectionId(params),
-    name: params.name,
-    totalJPY: params.totalJPY,
-  };
-}
 
 export const publicRoutes = new Hono();
 
@@ -99,85 +89,25 @@ publicRoutes.get(
 publicRoutes.get(
   "/booking/price-plans",
   getRoute(async ({ organizationId, requestUrl }) => {
-    const slotId = requestUrl.searchParams.get("slotId");
     const startsAt = requestUrl.searchParams.get("startsAt");
-    const endsAt = requestUrl.searchParams.get("endsAt");
-    const settings =
-      (await createSettingsRepository().findByOrganizationId(organizationId)) ??
-      Settings.createDefault(organizationId);
-    const pricePlanRange = settings.getPricePlanRange();
-    const pricePlanRepository = createPricePlanRepository();
+    const consultantId = requestUrl.searchParams.get("consultantId");
 
-    if (slotId) {
-      const slot = await createSlotRepository().findById(
-        organizationId,
-        slotId,
-      );
-      if (!slot) {
-        return withPublicShortCache(
-          Response.json({ pricePlans: [] }),
-          "booking-price-plans",
-        );
-      }
-      const pricePlans = (
-        await pricePlanRepository.findActiveByConsultantId(
-          organizationId,
-          slot.getConsultantId(),
-        )
-      )
-        .filter((pricePlan) => pricePlanRange.contains(pricePlan.getTotalJPY()))
-        .map((pricePlan) =>
-          toPublicPricePlanResponse({
-            name: pricePlan.getName(),
-            totalJPY: pricePlan.getTotalJPY(),
-          }),
-        );
-
-      return withPublicShortCache(
-        Response.json({ pricePlans }),
-        "booking-price-plans",
-      );
+    if (!startsAt) {
+      return jsonError(400, "VALIDATION_ERROR", "startsAt is required");
+    }
+    const startsAtDate = new Date(startsAt);
+    if (Number.isNaN(startsAtDate.getTime())) {
+      return jsonError(400, "VALIDATION_ERROR", "startsAt is invalid");
     }
 
-    if (!startsAt || !endsAt) {
-      return jsonError(
-        400,
-        "VALIDATION_ERROR",
-        "slotId or startsAt/endsAt is required",
-      );
-    }
-
-    const slots = await createSlotRepository().findAvailableByTimeRange(
+    const result = await createListBookingPricePlansUseCase().execute({
       organizationId,
-      new Date(startsAt),
-      new Date(endsAt),
-    );
-    const consultantIds = [
-      ...new Set(slots.map((slot) => slot.getConsultantId())),
-    ];
-    const plansByConsultant = await Promise.all(
-      consultantIds.map((consultantId) =>
-        pricePlanRepository.findActiveByConsultantId(
-          organizationId,
-          consultantId,
-        ),
-      ),
-    );
-    const uniquePlans = new Map<string, { name: string; totalJPY: number }>();
-    for (const plans of plansByConsultant) {
-      for (const pricePlan of plans) {
-        if (!pricePlanRange.contains(pricePlan.getTotalJPY())) continue;
-        uniquePlans.set(pricePlan.getSelectionId(), {
-          name: pricePlan.getName(),
-          totalJPY: pricePlan.getTotalJPY(),
-        });
-      }
-    }
+      startsAt: startsAtDate,
+      consultantId,
+    });
 
     return withPublicShortCache(
-      Response.json({
-        pricePlans: [...uniquePlans.values()].map(toPublicPricePlanResponse),
-      }),
+      Response.json({ pricePlans: result.pricePlans }),
       "booking-price-plans",
     );
   }),

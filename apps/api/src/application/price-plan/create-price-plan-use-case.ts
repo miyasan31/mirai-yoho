@@ -1,3 +1,7 @@
+import {
+  isSupportedDuration,
+  type SupportedDurationMinutes,
+} from "@mirai-yoho/shared/slot-availability";
 import { AppError } from "@/application/shared/app-error";
 import {
   PricePlan,
@@ -12,12 +16,14 @@ interface CreatePricePlanInput {
   consultantId: string;
   name: string;
   totalJPY: number;
+  durationMinutes: number;
 }
 
 export interface PricePlanOutput {
   pricePlanId: string;
   name: string;
   totalJPY: number;
+  durationMinutes: SupportedDurationMinutes;
   selectionId: string;
   isWithinCurrentRange: boolean;
   createdAt: string;
@@ -33,6 +39,7 @@ export function toPricePlanOutput(params: {
     pricePlanId: params.pricePlan.getPricePlanId(),
     name: params.pricePlan.getName(),
     totalJPY: params.pricePlan.getTotalJPY(),
+    durationMinutes: params.pricePlan.getDurationMinutes(),
     selectionId: params.pricePlan.getSelectionId(),
     isWithinCurrentRange: params.isWithinCurrentRange,
     createdAt: params.pricePlan.getCreatedAt().toISOString(),
@@ -48,6 +55,15 @@ export class CreatePricePlanUseCase {
   ) {}
 
   async execute(input: CreatePricePlanInput): Promise<PricePlanOutput> {
+    if (!isSupportedDuration(input.durationMinutes)) {
+      throw new AppError(
+        400,
+        "VALIDATION_ERROR",
+        "Plan duration must be one of 30, 60, 90, 120 minutes",
+      );
+    }
+    const durationMinutes: SupportedDurationMinutes = input.durationMinutes;
+
     const settings =
       (await this.settingsRepository.findByOrganizationId(
         input.organizationId,
@@ -68,6 +84,7 @@ export class CreatePricePlanUseCase {
         pricePlanId: "validation-only",
         name: input.name,
         totalJPY: input.totalJPY,
+        durationMinutes,
       }).getSelectionId(),
     );
     if (!selection) {
@@ -78,6 +95,7 @@ export class CreatePricePlanUseCase {
       organizationId: input.organizationId,
       consultantId: input.consultantId,
       normalizedName: selection.normalizedName,
+      durationMinutes: selection.durationMinutes,
       totalJPY: selection.totalJPY,
     });
     if (duplicated) {
@@ -98,6 +116,7 @@ export class CreatePricePlanUseCase {
       pricePlanId: crypto.randomUUID(),
       name: input.name,
       totalJPY: input.totalJPY,
+      durationMinutes,
     });
 
     await this.pricePlanRepository.save(pricePlan);

@@ -55,6 +55,8 @@ customerBookingRoutes.get("/customers/me/bookings", async (c) => {
           bookingId: booking.getBookingId(),
           status: booking.getStatus().getValue(),
           startsAt: booking.getStartsAt().toISOString(),
+          endsAt: booking.getEndsAt().toISOString(),
+          durationMinutes: booking.getDurationMinutes(),
           consultantId: booking.getConsultantId(),
           joinUrl: booking.getJoinUrl()?.getValue() ?? null,
           pricePlanName: booking.getPricePlanName() ?? null,
