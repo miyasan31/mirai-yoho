@@ -29,6 +29,8 @@ import { CreatePricePlanUseCase } from "@/application/price-plan/create-price-pl
 import { UpdatePricePlanUseCase } from "@/application/price-plan/update-price-plan-use-case";
 import { UpdateBookingSettingsUseCase } from "@/application/settings/update-booking-settings-use-case";
 import { UpdateConsultantStatusesUseCase } from "@/application/settings/update-consultant-statuses-use-case";
+import type { IZoomService } from "@/application/shared/zoom-service";
+import type { IUserZoomOAuthService } from "@/application/shared/zoom-user-oauth-service";
 import { CreateSlotUseCase } from "@/application/slot/create-slot-use-case";
 import { DeleteSlotUseCase } from "@/application/slot/delete-slot-use-case";
 import { ListAvailableSlotsUseCase } from "@/application/slot/list-available-slots-use-case";
@@ -65,8 +67,22 @@ import { FirestoreZoomSessionRepository } from "@/infrastructure/firestore/fires
 import { LineWorksLateArrivalAlertService } from "@/infrastructure/line-works/line-works-late-arrival-alert-service";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
 import { StripeService } from "@/infrastructure/stripe/stripe-service";
+import { StubZoomService } from "@/infrastructure/zoom/stub-zoom-service";
+import { StubZoomUserOAuthService } from "@/infrastructure/zoom/stub-zoom-user-oauth-service";
 import { ZoomService } from "@/infrastructure/zoom/zoom-service";
 import { ZoomUserOAuthService } from "@/infrastructure/zoom/zoom-user-oauth-service";
+
+function createZoomService(): IZoomService {
+  return envServer.zoomIntegrationMode === "stub"
+    ? new StubZoomService()
+    : new ZoomService();
+}
+
+function createZoomUserOAuthServiceImpl(): IUserZoomOAuthService {
+  return envServer.zoomIntegrationMode === "stub"
+    ? new StubZoomUserOAuthService()
+    : new ZoomUserOAuthService();
+}
 
 export function createAccountRepository() {
   return new FirestoreAccountRepository();
@@ -192,7 +208,7 @@ export function createCreateBookingUseCase() {
     new FirestoreSlotRepository(),
     new FirestoreCustomerRepository(),
     new FirestoreBookingRepository(),
-    new ZoomService(),
+    createZoomService(),
     new FirestoreUnitOfWork(),
     new ResendEmailService(),
     new FirestoreZoomSessionRepository(),
@@ -244,7 +260,7 @@ export function createCancelBookingUseCase() {
     new StripeService(),
     new ResendEmailService(),
     new FirestoreZoomSessionRepository(),
-    new ZoomService(),
+    createZoomService(),
     new FirestoreCustomerRepository(),
     new FirestoreUserCouponRepository(),
   );
@@ -339,13 +355,13 @@ export function createTokenCipher() {
 }
 
 export function createZoomUserOAuthService() {
-  return new ZoomUserOAuthService();
+  return createZoomUserOAuthServiceImpl();
 }
 
 export function createConnectZoomAccountUseCase() {
   return new ConnectZoomAccountUseCase(
     new FirestoreUserRepository(),
-    new ZoomUserOAuthService(),
+    createZoomUserOAuthServiceImpl(),
     new AesGcmTokenCipher(envServer.zoomCredentialEncryptionKey),
   );
 }
@@ -353,7 +369,7 @@ export function createConnectZoomAccountUseCase() {
 export function createDisconnectZoomAccountUseCase() {
   return new DisconnectZoomAccountUseCase(
     new FirestoreUserRepository(),
-    new ZoomUserOAuthService(),
+    createZoomUserOAuthServiceImpl(),
     new AesGcmTokenCipher(envServer.zoomCredentialEncryptionKey),
   );
 }
@@ -369,7 +385,7 @@ export function createWithdrawUserUseCase() {
   return new WithdrawUserUseCase(
     new FirestoreUserRepository(),
     new FirestoreCustomerRepository(),
-    new ZoomUserOAuthService(),
+    createZoomUserOAuthServiceImpl(),
     new AesGcmTokenCipher(envServer.zoomCredentialEncryptionKey),
     new FirebaseAuthAdminService(),
     new FirestoreUnitOfWork(),
