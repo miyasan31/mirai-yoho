@@ -14,7 +14,7 @@ Issue・チャットに貼り付けないでください。
 Secret のコンテナと、実行サービスアカウントの参照権限（`roles/secretmanager.secretAccessor`）は
 Terraform で管理します。新しい Secret を追加するときは、値ではなく Secret 名を参照リストに追加します。
 
-- API サーバーが参照する Secret: `infra/terraform/gcp/common/api`（`api_secret_ids`）
+- API サーバーが参照する Secret: `infra/terraform/gcp/common/api`（`runtime_secret_ids`。実体は `common/firebase` の `runtime_secret_ids` local/output を受け取る）
 - batch worker が参照する Secret: `infra/terraform/gcp/common/batch`
 
 参照リストと env ファイルの両方に名前を追加してから、対象環境で Terraform を適用してください。

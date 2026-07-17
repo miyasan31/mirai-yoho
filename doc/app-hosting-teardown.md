@@ -1,5 +1,8 @@
 # Firebase App Hosting 撤去手順（Cloud Run 移行後のクリーンアップ）
 
+> **✅ 完了済み**: 本書に記載の手順・チェックリストは dev / prod ともに実施済み（`common/firebase/removed.tf` は
+> forget 完了後に削除済み、`firebase-app-hosting-compute` SA も削除済み）。本書は実施記録として残す。
+
 API は Firebase App Hosting から Cloud Run へ移行済み（[api-cloud-run-migration.md](./api-cloud-run-migration.md)）。
 本 PR で App Hosting 由来の設定・Terraform リソースをコードから撤去した。**GCP 上の実リソースを消すには
 Terraform state 操作と apply が必要**なため、その手順を以下にまとめる。
@@ -21,8 +24,8 @@ Terraform state 操作と apply が必要**なため、その手順を以下に�
   `firebaseapphosting.googleapis.com` の有効化を除去
 - `dev` / `prod` の変数・`.tfvars`・module 配線・出力・`moved.tf` から App Hosting 関連を除去
 - Makefile: `firebase apphosting:*` 依存を排除（`gcloud secrets` へ置換）、`list-apphosting-backends` /
-  `check-public-build-secrets` を削除、`APPHOSTING_SECRET_KEYS` → `API_SECRET_KEYS`、
-  `setup-apphosting-secrets-from-env*` → `setup-api-secrets-from-env*` にリネーム
+  `check-public-build-secrets` を削除、`APPHOSTING_SECRET_KEYS` → `SECRET_KEYS`（その後 `runtime_secret_ids`
+  一元化に伴い現在の名称）、`setup-apphosting-secrets-from-env*` → `setup-secrets-from-env*` にリネーム
 - スクリプト: `setup-apphosting-secrets-from-env.fish` → `setup-api-secrets-from-env.fish`
 
 ## 撤去しなかったもの（"app_hosting" の名前だが現役）
@@ -72,12 +75,12 @@ firebase apphosting:backends:delete mirai-yoho --project mirai-yoho-dev
 ### 4. 後片付け
 
 両環境で forget + 手動削除が完了したら、`common/firebase/removed.tf` を削除する PR を出す
-（残しておいても no-op だが、不要な `removed` ブロックは整理する）。
+（残しておいても no-op だが、不要な `removed` ブロックは整理する）。→ ✅ 完了済み（`removed.tf` は削除済み）。
 
 ## チェックリスト
 
-- [ ] `google_secret_manager_secret.app_hosting` と全 version が保持されている（Cloud Run / batch のシークレット）
-- [ ] `terraform plan` に App Hosting リソースの削除が出ない（state から除去済み）
-- [ ] dev → prod の順で apply し、両環境で API（Cloud Run）疎通に影響がない
-- [ ] `firebase apphosting:backends:list` が空
-- [ ] `firebase-app-hosting-compute` SA を削除済み
+- [x] `google_secret_manager_secret.app_hosting` と全 version が保持されている（Cloud Run / batch のシークレット）
+- [x] `terraform plan` に App Hosting リソースの削除が出ない（state から除去済み）
+- [x] dev → prod の順で apply し、両環境で API（Cloud Run）疎通に影響がない
+- [x] `firebase apphosting:backends:list` が空
+- [x] `firebase-app-hosting-compute` SA を削除済み

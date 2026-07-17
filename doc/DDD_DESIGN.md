@@ -48,6 +48,13 @@
 | キャンセル期限 | Cancel deadline | `CancelDeadline` | 相談開始 24 時間前 |
 | 予約確定 | Booking confirmed | `BookingConfirmedEvent` | Zoom Join URL 発行済み（決済とは非同期） |
 | バッチ課金 | Batch charge | `chargeMethod: 'batch'` | 深夜 0 時 Cloud Scheduler 実行 |
+| 組織 | Organization | `Organization` | マルチテナントの契約単位 |
+| アカウント | Account | `Account` | 組織に所属するオペレーター・相談員のログイン主体 |
+| ロール | Role | `Role` | 組織ごとにカスタム定義できる権限セット |
+| クーポン | Coupon | `Coupon` | 組織が発行するクーポンのマスタ |
+| 保有クーポン | UserCoupon | `UserCoupon` | ユーザーへ配布・予約に適用された `Coupon` のインスタンス |
+
+> §5.1 集約一覧・§3 サブドメイン分類・§4 境界付けられたコンテキストは予約・決済・相談員コンテキストを中心に記載しており、`Organization` / `Account` / `Role` / `Coupon` / `UserCoupon` / `PricePlan` / `ZoomSession` は §7.2 フォルダ構造にのみ反映されている（詳細は各集約のコード・`doc/NAMING_LEDGER.md` を参照）。
 
 ---
 
@@ -123,7 +130,7 @@ Booking（集約ルート）
 ├── startsAt: Date                  slots から複製（非正規化）
 ├── status: BookingStatus           pending|confirmed|completed|cancelled
 ├── cancelDeadlineAt: CancelDeadline  startsAt - 24h
-├── joinUrl?: ZoomUrl               confirm() 後にセット（Zoom Daily Session の Join URL）
+├── joinUrl?: ZoomUrl               confirm() 後にセット（Zoom Session の Join URL）
 ├── consultantMemo: ConsultantMemo  管理者・相談員のみ閲覧可
 ├── consultationContent?: string    顧客入力（任意）
 ├── pricePlanId / pricePlanName / pricePlanTotalJPY?  予約確定時点の料金プランを非正規化
@@ -245,9 +252,9 @@ apps/api/src/
 │   │   ├── payment-status.ts        ← VO
 │   │   ├── payment-strategy.ts
 │   │   └── payment-repository.ts
-│   ├── consultant/ · consultant-price-plan/
+│   ├── consultant/ · price-plan/
 │   ├── customer/ · user/ · user-coupon/
-│   ├── settings/ · authorization/
+│   ├── settings/ · authorization/ · account/ · organization/ · coupon/
 │   └── zoom-session/
 │
 ├── application/
@@ -284,15 +291,15 @@ apps/api/src/
        customerPhone / customerBirthDate / consultationContent? / selectionId（料金プラン選択）
 
 1. UserRepository.findById(userId)         ← アクティブ・Zoom 連携済みチェック
-2. 料金プラン・スロットを解決（selectionId → ConsultantPricePlan、slotId or 空き枠検索）
+2. 料金プラン・スロットを解決（selectionId → PricePlan、slotId or 空き枠検索）
 3. slot.reserve(newBookingId)              ← 二重予約・過去日時チェック（DomainError）
 4. CustomerRepository.findByUserIdAndOrganizationId() → 既存なければ Customer.create({...})
 5. Booking.create({...})                   ← status: pending。料金プランを非正規化して保持
-6. ZoomDailySessionRepository.findByDate() → 当日セッションが無ければ ZoomService.createDailyMeeting()、
+6. ZoomSessionRepository.findByDate() → 当日セッションが無ければ ZoomService.createDailyMeeting()、
    あれば ZoomService.updateBreakoutRooms()  ← 参加者をブレイクアウトルームへ割り当て
 7. booking.confirm(joinUrl)                ← BookingConfirmedEvent 発火（現状 UseCase は未使用）
 8. EmailService.sendBookingConfirmation()  ← 入力値から直接送信（イベント経由ではない）
-9. UnitOfWork.runInTransaction(customer, slot, booking, zoomDailySession)  ← Firestore トランザクション
+9. UnitOfWork.runInTransaction(customer, slot, booking, zoomSession)  ← Firestore トランザクション
 
 出力: { bookingId, joinUrl }
 ```
@@ -311,7 +318,7 @@ apps/api/src/
      immediate かつ charged → StripeService.refundPaymentIntent() → payment.refund()
      deferred かつ setup_pending|setup_complete → payment.cancel()（Stripe 側は未課金なので返金不要）
 5. SlotRepository.findById(booking.slotId) → slot.release()
-6. ZoomDailySessionRepository.findByDate() → 参加者を Breakout Room から除外し
+6. ZoomSessionRepository.findByDate() → 参加者を Breakout Room から除外し
    ZoomService.updateBreakoutRooms() を呼ぶ
 7. 各 Repository.save()（並列）
 8. booking.pullDomainEvents() → BookingCancelledEvent を判定し

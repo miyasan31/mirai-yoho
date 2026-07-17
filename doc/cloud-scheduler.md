@@ -62,9 +62,9 @@ make plan ENV=dev
 make apply ENV=dev
 ```
 
-続けて GitHub Environment の `dev` / `prod` ごとに `GCP_PROJECT_NUMBER` variable を設定し、Terraform state bucket に `github-deployer` サービスアカウントの読み書き権限を付与してください。
+続けて GitHub Environment の `dev` / `prod` ごとに `GCP_PROJECT_NUMBER` variable を設定し、Terraform state bucket に `github-deployer` サービスアカウントの読み書き権限を付与してください。あわせて、PR 時の `terraform-plan.yml` は Environment を使わずリポジトリ変数 `GCP_PROJECT_NUMBER_DEV` / `GCP_PROJECT_NUMBER_PROD` を別途参照するため、こちらも設定してください（Environment を指定すると plan まで承認待ちになるため）。
 
-以降は `release/dev` または `release/prod` への push（マージを含む）で GitHub Actions が Workload Identity Federation を使い、対応する環境へ Git SHA タグの Worker イメージを build・push して Terraform を apply します。認証は `miyasan31/mirai-yoho` のこれら2ブランチに限定されます。
+以降は `release/dev` または `release/prod` への push（マージを含む）で `deploy-batch-worker.yml` が Workload Identity Federation を使い、対応する環境へ Git SHA タグの Worker イメージを build・push して Cloud Run Job（`gcloud run jobs update`）を更新します。認証は `miyasan31/mirai-yoho` のこれら2ブランチに限定されます。Terraform apply は別ワークフロー `terraform-apply.yml` が `main` への push（`infra/terraform/**` 変更時）で実行し、現状 `dev` のみ有効です（`prod` は WIF 未整備のため無効化中）。
 
 Artifact Registry は最新10世代の Worker イメージを保持し、それ以外を自動削除します。cleanup policy はバックグラウンドで実行されるため、削除は設定変更からおおむね1日以内に反映されます。
 
@@ -75,7 +75,7 @@ Cloud Run Job は次で即時実行できます。`--wait` を付けると完了
 ```bash
 gcloud run jobs execute batch-consultation-reminders \
   --location=asia-northeast1 \
-  --project=project-prod \
+  --project=mirai-yoho-prod \
   --args=consultation-reminders,--organization-id,org-1 \
   --wait
 ```
