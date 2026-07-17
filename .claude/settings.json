@@ -1,0 +1,16 @@
+{
+  "hooks": {
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "p=$(jq -r '.worktree_path // empty'); log=\"$HOME/.claude/worktree-setup.log\"; if [ -n \"$p\" ] && cd \"$p\" && pnpm install >\"$log\" 2>&1 && pnpm generate >>\"$log\" 2>&1; then echo '{\"systemMessage\":\"worktree setup: pnpm install / pnpm generate 完了\"}'; else echo '{\"systemMessage\":\"worktree setup 失敗: ~/.claude/worktree-setup.log を確認し、worktree 内で pnpm install / pnpm generate を手動実行してください\"}'; fi",
+            "timeout": 600,
+            "statusMessage": "worktree セットアップ中 (pnpm install / pnpm generate)..."
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -27,7 +27,10 @@ user_invocable: true
 6. worktree を作成する
    - 既存ブランチがなければ `main` を基点に `git worktree add .worktrees/<branch-name> -b <branch-name> main`
    - 既存ブランチがあって未作成なら `git worktree add .worktrees/<branch-name> <branch-name>`
-7. 作業ディレクトリを切り替える
+7. 依存関係とコード生成をセットアップする
+   - worktree ディレクトリで `pnpm install` と `pnpm generate` を実行する
+   - 既存 worktree を再利用する場合も同様に実行する（冪等なので安全）
+8. 作業ディレクトリを切り替える
    - 以後のファイル確認、編集、テスト、コミットはその worktree を `cwd` として実行する
 
 ## ルール
