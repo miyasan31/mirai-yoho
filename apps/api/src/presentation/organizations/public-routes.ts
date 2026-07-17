@@ -3,7 +3,7 @@ import { Settings } from "@/domain/settings/settings";
 import {
   createConsultantRepository,
   createListAvailableSlotsUseCase,
-  createListBookingPricePlansUseCase,
+  createListPricePlanOptionsUseCase,
   createSettingsRepository,
 } from "@/infrastructure/container";
 import { withNoStore, withPublicShortCache } from "../cache-control";
@@ -11,7 +11,7 @@ import {
   resolveConsultantStatus,
   toConsultantStatusResponse,
 } from "./consultant-status";
-import { getRoute, jsonError } from "./route-handler";
+import { getRoute } from "./route-handler";
 import { toBookingSettingsResponse } from "./settings-response";
 
 export const publicRoutes = new Hono();
@@ -87,28 +87,18 @@ publicRoutes.get(
 );
 
 publicRoutes.get(
-  "/booking/price-plans",
+  "/price-plans",
   getRoute(async ({ organizationId, requestUrl }) => {
-    const startsAt = requestUrl.searchParams.get("startsAt");
     const consultantId = requestUrl.searchParams.get("consultantId");
 
-    if (!startsAt) {
-      return jsonError(400, "VALIDATION_ERROR", "startsAt is required");
-    }
-    const startsAtDate = new Date(startsAt);
-    if (Number.isNaN(startsAtDate.getTime())) {
-      return jsonError(400, "VALIDATION_ERROR", "startsAt is invalid");
-    }
-
-    const result = await createListBookingPricePlansUseCase().execute({
+    const result = await createListPricePlanOptionsUseCase().execute({
       organizationId,
-      startsAt: startsAtDate,
       consultantId,
     });
 
     return withPublicShortCache(
       Response.json({ pricePlans: result.pricePlans }),
-      "booking-price-plans",
+      "price-plans",
     );
   }),
 );
