@@ -52,6 +52,10 @@
 
 `ZOOM_USER_OAUTH_REDIRECT_URI` は任意。未設定なら `API_URL + /api/auth/zoom/callback` が使われる（ローカルは `API_URL` が `localhost` のため、上記の理由で明示設定が必要）。いずれの場合も Zoom アプリ側に登録した Redirect URL と完全一致していないと認可エラー（4700: 無効なリダイレクト）になる。
 
+### ローカル開発用の stub モード
+
+`ZOOM_INTEGRATION_MODE=stub` を設定すると、上記 2 つの Zoom アプリを用意せずに Zoom OAuth・会議作成をフェイクで済ませられる（`src/infrastructure/zoom/stub-zoom-service.ts` / `stub-zoom-user-oauth-service.ts`）。未設定時のデフォルトは `live`。**本番では絶対に `stub` にしないこと。**
+
 ## その他の外部サービス
 
 | 環境変数 | 取得元 |
