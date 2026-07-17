@@ -28,6 +28,7 @@ user_invocable: true
    - 既存ブランチがなければ `main` を基点に `git worktree add .worktrees/<branch-name> -b <branch-name> main`
    - 既存ブランチがあって未作成なら `git worktree add .worktrees/<branch-name> <branch-name>`
 7. 依存関係とコード生成をセットアップする
+   - 新規 worktree では先に `mise trust <worktree>/mise.toml` を実行する（未信頼のままだと pnpm install 中の prepare = husky が失敗する）
    - worktree ディレクトリで `pnpm install` と `pnpm generate` を実行する
    - 既存 worktree を再利用する場合も同様に実行する（冪等なので安全）
 8. 作業ディレクトリを切り替える
