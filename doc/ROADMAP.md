@@ -95,6 +95,10 @@
 | `[x]` | クーポン機能（`Coupon` / `UserCoupon` 集約、発行・配布・予約適用の一連フロー） | PR #113 |
 | `[x]` | ダッシュボード機能（`GetDashboardUseCase`） | PR #87〜#98 |
 | `[x]` | `apps/admin` → `apps/console` リブランディング（`admin.*` → `console.*` ドメイン、API パス `/admin/*` → `/console/*`） | PR #100, #102, #104 |
+| `[x]` | 匿名認証での会員登録（`/register` ページ） | PR #115 |
+| `[x]` | マイページに組織横断の予約一覧ページを追加（`ListCustomerBookingsUseCase`） | PR #118 |
+| `[x]` | 15 分単位の連続予約とバッファ機能 | PR #120 |
+| `[x]` | ローカル開発用 Zoom stub モード（`ZOOM_INTEGRATION_MODE=stub`） | PR #123 |
 
 ---
 

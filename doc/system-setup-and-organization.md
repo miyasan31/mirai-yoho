@@ -78,6 +78,8 @@ cp .env.example .env.local
 
 ローカルでメール送信を避けたい場合は、`EMAIL_DELIVERY_MODE=log` を設定します。設定しない場合の既定値は `resend` です。
 
+ローカルで Zoom アプリの登録を省略したい場合は、`ZOOM_INTEGRATION_MODE=stub` を設定します。Zoom の OAuth 認可・会議作成をフェイクの実装（`apps/api/src/infrastructure/zoom/stub-zoom-service.ts` / `stub-zoom-user-oauth-service.ts`）に差し替えます。設定しない場合の既定値は `live` で、**本番では絶対に `stub` にしないこと**。
+
 ローカルで Firebase Admin を使う場合は、サービスアカウント key を `.env.local` に置く代わりに Application Default Credentials とサービスアカウント impersonation を使います。この場合、`FIREBASE_PROJECT_ID` と `FIREBASE_STORAGE_BUCKET` を設定し、`FIREBASE_CLIENT_EMAIL` と `FIREBASE_PRIVATE_KEY` は空のままで構いません。
 
 実行環境や一時的な検証で private key を使う場合、`FIREBASE_PRIVATE_KEY` は key 内の改行を `\n` として 1 行で設定できます。サーバー側で実際の改行に復元されます。

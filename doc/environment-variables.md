@@ -52,6 +52,10 @@
 
 `ZOOM_USER_OAUTH_REDIRECT_URI` は任意。未設定なら `API_URL + /api/auth/zoom/callback` が使われる（ローカルは `API_URL` が `localhost` のため、上記の理由で明示設定が必要）。いずれの場合も Zoom アプリ側に登録した Redirect URL と完全一致していないと認可エラー（4700: 無効なリダイレクト）になる。
 
+### Zoom アプリ登録を省略する（stub モード）
+
+上記 2 つの Zoom アプリを用意しなくても、`ZOOM_INTEGRATION_MODE=stub` を設定すればローカルで予約フローを動かせる。OAuth 認可・会議作成をフェイクの実装に差し替えるだけで、Zoom アプリ側の設定は一切不要になる。未設定時の既定値は `live`。**本番では絶対に `stub` にしないこと**。
+
 ## その他の外部サービス
 
 | 環境変数 | 取得元 |

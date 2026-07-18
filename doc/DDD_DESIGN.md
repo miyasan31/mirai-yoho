@@ -39,7 +39,8 @@
 | ドメイン用語（日本語） | ユビキタス言語（英語） | コード上の名前 | 補足 |
 |---|---|---|---|
 | 予約 | Booking | `Booking` | キャンセルも含むライフサイクル全体 |
-| 予約枠 | Slot | `Slot` | 相談員が開けた時間枠。`Booking` と 1 対 1 |
+| 予約枠 | Slot | `Slot` | 相談員が開ける 15 分単位の時間枠。1 `Booking` は所要時間分の複数枠（利用枠）+ 前後バッファ枠を予約する（旧: 1 対 1。詳細は §5.2） |
+| バッファ枠 | Buffer slot | `bufferSlotIds` | 相談後の後片付け用に確保する 15 分枠（既定 1 枠）。空き枠検索では利用不可として扱う |
 | 相談員 | Consultant | `Consultant` | ≠ Advisor / Staff |
 | 顧客 | Customer | `Customer` | 匿名ユーザー |
 | カード登録（後日課金） | Setup | `Payment`（`status: setup_pending → setup_complete`） | Stripe SetupIntent。`paymentStrategy: 'deferred'` |
@@ -126,17 +127,22 @@ Booking（集約ルート）
 ├── bookingId: string               ID（Firestore 自動生成）
 ├── customerId: CustomerId          外部参照（別集約）
 ├── consultantId: ConsultantId      外部参照（別集約）
-├── slotId: SlotId                  外部参照（別集約）
-├── startsAt: Date                  slots から複製（非正規化）
+├── usageSlotIds: string[]          外部参照（別集約）。所要時間 ÷ 15分 の枠数（15/30/60/90分 → 1〜6枠）
+├── bufferSlotIds: string[]         外部参照（別集約）。相談後の片付け用バッファ枠（既定 1 枠）
+├── startsAt / endsAt: Date         slots から複製（非正規化）
+├── durationMinutes: SupportedDurationMinutes  30|60|90|120
 ├── status: BookingStatus           pending|confirmed|completed|cancelled
 ├── cancelDeadlineAt: CancelDeadline  startsAt - 24h
 ├── joinUrl?: ZoomUrl               confirm() 後にセット（Zoom Session の Join URL）
 ├── consultantMemo: ConsultantMemo  管理者・相談員のみ閲覧可
 ├── consultationContent?: string    顧客入力（任意）
 ├── pricePlanId / pricePlanName / pricePlanTotalJPY?  予約確定時点の料金プランを非正規化
+├── appliedUserCouponId? / couponDiscountJPY? / discountedTotalJPY?  クーポン適用時のみセット
 ├── consultantJoinedAt / consultationReminderEmailSentAt / lateArrivalAlertSentAt?: Date  バッチ処理の実行済みフラグ
 └── _domainEvents: DomainEvent[]    pullDomainEvents() で取り出す
 ```
+
+> 15 分単位の連続予約とバッファ機能（PR #120）: 所要時間は 15 分単位の `Slot` を `getUsageSlotCount()` 分連続予約する形に変更。予約確定後は `getBufferSlotCount()` 分のバッファ枠も追加で `reserve()` し、次の予約が間髪入れず入らないようにする（`@mirai-yoho/shared/slot-availability`）。
 
 > 決済（Stripe）は予約作成と非同期。`Payment` 集約は別途 `chargeMethod: 'batch' | 'manual'` で後日課金される（§8.1 参照）。
 
@@ -287,19 +293,21 @@ apps/api/src/
 ### 8.1 予約作成（`CreateBookingUseCase`）
 
 ```
-入力: organizationId / userId / slotId（or startsAt+endsAt） / customerName / customerEmail /
-       customerPhone / customerBirthDate / consultationContent? / selectionId（料金プラン選択）
+入力: organizationId / userId / consultantId? / startsAt / durationMinutes（30|60|90|120） /
+       customerName / customerEmail / customerPhone / customerBirthDate /
+       consultationContent? / selectionId（料金プラン選択） / selectedUserCouponId?
 
 1. UserRepository.findById(userId)         ← アクティブ・Zoom 連携済みチェック
-2. 料金プラン・スロットを解決（selectionId → PricePlan、slotId or 空き枠検索）
-3. slot.reserve(newBookingId)              ← 二重予約・過去日時チェック（DomainError）
+2. 連続予約枠を解決 ← getUsageSlotCount(durationMinutes) 分の利用枠 + getBufferSlotCount() 分の
+   バッファ枠を startsAt から連続する Slot として解決（SlotSelectionPolicy）、selectionId → PricePlan
+3. 各 usage/buffer slot.reserve(newBookingId) ← 二重予約・過去日時チェック（DomainError）
 4. CustomerRepository.findByUserIdAndOrganizationId() → 既存なければ Customer.create({...})
-5. Booking.create({...})                   ← status: pending。料金プランを非正規化して保持
+5. Booking.create({ usageSlotIds, bufferSlotIds, ... }) ← status: pending。料金プラン・クーポン割引を非正規化して保持
 6. ZoomSessionRepository.findByDate() → 当日セッションが無ければ ZoomService.createDailyMeeting()、
    あれば ZoomService.updateBreakoutRooms()  ← 参加者をブレイクアウトルームへ割り当て
 7. booking.confirm(joinUrl)                ← BookingConfirmedEvent 発火（現状 UseCase は未使用）
 8. EmailService.sendBookingConfirmation()  ← 入力値から直接送信（イベント経由ではない）
-9. UnitOfWork.runInTransaction(customer, slot, booking, zoomSession)  ← Firestore トランザクション
+9. UnitOfWork.runInTransaction(customer, usage/buffer slots, booking, zoomSession)  ← Firestore トランザクション
 
 出力: { bookingId, joinUrl }
 ```
@@ -317,7 +325,7 @@ apps/api/src/
 4. payment があれば戦略・状態で分岐：
      immediate かつ charged → StripeService.refundPaymentIntent() → payment.refund()
      deferred かつ setup_pending|setup_complete → payment.cancel()（Stripe 側は未課金なので返金不要）
-5. SlotRepository.findById(booking.slotId) → slot.release()
+5. SlotRepository.findById() で usageSlotIds + bufferSlotIds を取得 → 各 slot.release()
 6. ZoomSessionRepository.findByDate() → 参加者を Breakout Room から除外し
    ZoomService.updateBreakoutRooms() を呼ぶ
 7. 各 Repository.save()（並列）
