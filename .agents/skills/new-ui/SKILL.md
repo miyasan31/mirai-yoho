@@ -82,7 +82,6 @@ export const <Name> = styled(Field.Input, <name>); // or styled(ark.div, <name>)
 **パターン B: SlotRecipe + createStyleContext（Dialog, Select, Field など複合コンポーネント）**
 
 ```typescript
-"use client";
 import { <Name> } from "@ark-ui/react/<name>";
 import { ark } from "@ark-ui/react/factory";
 import type { ComponentProps } from "react";
@@ -103,7 +102,6 @@ export const Body = withContext(ark.div, "body");
 **パターン C: forwardRef + カスタムロジック（Button, Tooltip などロジック付き）**
 
 ```typescript
-"use client";
 import { ark } from "@ark-ui/react/factory";
 import { type ComponentProps, forwardRef } from "react";
 import { styled } from "styled-system/jsx";
@@ -146,7 +144,7 @@ export const <Name> = forwardRef<HTMLButtonElement, <Name>Props>(
 - Ark UI (`@ark-ui/react`) のプリミティブを使用すること
 - スタイリングは Panda CSS の recipe / slotRecipe で定義する
 - プロジェクトのカラートークン（`colorPalette` パターン）やセマンティックトークンに従う
-- `"use client"` は `createStyleContext` や `forwardRef` を使う場合に付ける
+- Vite + TanStack Router の SPA（Next.js ではない）。`"use client"` のような client directive は不要
 - アイコンは `lucide-react` から import する
 - ファイル名は kebab-case
 - コンポーネントの型は必ず export する
