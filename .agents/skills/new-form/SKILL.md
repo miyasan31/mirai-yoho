@@ -32,12 +32,12 @@ export type <FormName>Values = v.InferOutput<typeof <formName>Schema>;
 ### 2. フォームコンポーネント: `<formName>.tsx`
 
 ```typescript
-"use client";
-
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useForm } from "react-hook-form";
-import { css } from "styled-system/css";
-import { Button, Input, Field } from "@/components/ui";
+import { styled } from "styled-system/jsx";
+import { Button } from "@mirai-yoho/ui/components/ui/button";
+import * as Field from "@mirai-yoho/ui/components/ui/field";
+import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { <formName>Schema, type <FormName>Values } from "./<formName>Schema";
 
 type <FormName>Props = {
@@ -56,7 +56,7 @@ export function <FormName>({ onSubmit, defaultValues }: <FormName>Props) {
   });
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)}>
+    <styled.form onSubmit={handleSubmit(onSubmit)} display="flex" flexDir="column" gap="4">
       <Field.Root invalid={!!errors.name}>
         <Field.Label>名前</Field.Label>
         <Input {...register("name")} />
@@ -66,7 +66,7 @@ export function <FormName>({ onSubmit, defaultValues }: <FormName>Props) {
       <Button type="submit" loading={isSubmitting}>
         送信
       </Button>
-    </form>
+    </styled.form>
   );
 }
 ```
@@ -75,8 +75,8 @@ export function <FormName>({ onSubmit, defaultValues }: <FormName>Props) {
 
 - バリデーションは Valibot で定義する（Zod ではない）
 - リゾルバは `@hookform/resolvers/valibot` の `valibotResolver` を使う
-- フォームコンポーネントは `"use client"` を付ける
-- UI コンポーネントは `@/components/ui` の `Field`, `Input`, `Textarea`, `Select`, `Button` を使う
+- Next.js ではないため `"use client"` は付けない（Vite + TanStack Router の SPA）
+- UI コンポーネントは `@mirai-yoho/ui/components/ui/*`（`field`, `input`, `textarea`, `select`, `button` など）から個別 import する
 - スキーマファイルとフォームコンポーネントファイルを分離する
 - エラーメッセージは日本語で書く
 - `type` でフォーム値の型を export する（`v.InferOutput` を使用）
