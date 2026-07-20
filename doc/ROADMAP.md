@@ -95,6 +95,7 @@
 | `[x]` | クーポン機能（`Coupon` / `UserCoupon` 集約、発行・配布・予約適用の一連フロー） | PR #113 |
 | `[x]` | ダッシュボード機能（`GetDashboardUseCase`） | PR #87〜#98 |
 | `[x]` | `apps/admin` → `apps/console` リブランディング（`admin.*` → `console.*` ドメイン、API パス `/admin/*` → `/console/*`） | PR #100, #102, #104 |
+| `[x]` | 15分単位の連続予約・バッファ機能（`PricePlan.durationMinutes`（30/60/90/120分）、予約後 15分バッファを空き枠から自動除外、`@mirai-yoho/shared/slot-availability`） | PR #120 |
 
 ---
 

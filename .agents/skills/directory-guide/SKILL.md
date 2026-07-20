@@ -8,7 +8,9 @@ args: "[check]"
 # ディレクトリ設計ガイド
 
 bulletproof-react を参考にした、このプロジェクトのディレクトリ構成ガイドです。
-新しいファイルの配置先を判断する、または既存の配置をレビューするために使ってください。
+mirai-yoho は pnpm workspace モノレポ（`apps/*` + `packages/*`）で、Next.js ではなく
+Hono API（apps/api）と 3 つの Vite + TanStack Router SPA（apps/user / apps/console / apps/consultant）
+から構成されます。新しいファイルの配置先を判断する、または既存の配置をレビューするために使ってください。
 引数に `check` が指定された場合は、既存のディレクトリ構成の違反を検出・報告する。
 
 ---
@@ -16,143 +18,166 @@ bulletproof-react を参考にした、このプロジェクトのディレク�
 ## ディレクトリ構成
 
 ```
-src/
-├── app/                              # Presentation 層（Next.js App Router）
-│   ├── layout.tsx                    # ルートレイアウト
-│   ├── providers.tsx                 # クライアントプロバイダー
-│   ├── globals.css                   # グローバルスタイル
+mirai-yoho/                             # pnpm workspace モノレポ
+├── apps/
+│   ├── api/                            # Hono API サーバー + batch worker
+│   │   └── src/
+│   │       ├── domain/                 # Domain 層（外部依存ゼロ、@mirai-yoho/shared のみ import 可）
+│   │       │   ├── shared/             # aggregate-root.ts / domain-event.ts / transaction-scope.ts
+│   │       │   └── <aggregate>/        # booking, consultant, payment, user, organization ...
+│   │       │       ├── <aggregate>.ts            # 集約ルート
+│   │       │       ├── <value-object>.ts         # 値オブジェクト
+│   │       │       ├── <aggregate>-events.ts      # ドメインイベント
+│   │       │       └── <aggregate>-repository.ts  # Repository Interface
+│   │       │
+│   │       ├── application/            # Application 層（ユースケース）
+│   │       │   ├── shared/             # email-service.ts / stripe-service.ts / zoom-service.ts / unit-of-work.ts 等
+│   │       │   └── <aggregate>/
+│   │       │       └── <action>-<aggregate>-use-case.ts
+│   │       │
+│   │       ├── infrastructure/         # Infrastructure 層（外部サービス実装、サービスごとにディレクトリ）
+│   │       │   ├── firestore/          # firestore-<aggregate>-repository.ts
+│   │       │   ├── stripe/
+│   │       │   ├── resend/
+│   │       │   ├── zoom/
+│   │       │   ├── auth/ crypto/ firebase/ line-works/ token/
+│   │       │
+│   │       ├── presentation/           # Presentation 層（Hono ルーター）
+│   │       │   ├── organizations/      # <resource>-routes.ts（booking-routes.ts 等）+ error-mapper 等
+│   │       │   ├── auth/
+│   │       │   ├── customer/
+│   │       │   └── webhooks/
+│   │       │
+│   │       ├── worker/                 # batch worker（コマンドハンドラ）
+│   │       ├── server/                 # サーバーエントリ
+│   │       ├── config/
+│   │       └── lib/
 │   │
-│   ├── _hooks/                       # アプリ全体で使う共通フック
-│   │   ├── use-booking.ts            # TanStack Query フック
-│   │   └── booking-keys.ts           # Query Keys
+│   ├── user/                           # 顧客向け予約 SPA（Vite + TanStack Router、認証なし）
+│   │   └── src/
+│   │       ├── routes/                 # file-based routing。ページロジックをルートファイルに直接書く
+│   │       │   └── $organizationId/booking/
+│   │       │       ├── index.tsx                  # ページ本体（component）
+│   │       │       ├── -booking-auth-gate.tsx      # ページ固有コンポーネント（`-` プレフィックスで co-locate）
+│   │       │       └── -booking-form-schema.ts     # ページ固有 Valibot スキーマ
+│   │       ├── hooks/                  # アプリ内で共有するカスタムフック
+│   │       ├── lib/                    # api-client.ts / firebase.ts 等
+│   │       ├── components/             # 複数ルートで共有するコンポーネント
+│   │       └── config/
 │   │
-│   ├── api/                          # Route Handlers
-│   │   └── <resource>/
-│   │       ├── route.ts              # GET /api/<resource>
-│   │       └── [id]/
-│   │           └── route.ts          # GET /api/<resource>/:id
+│   ├── console/                        # 管理者・オペレーター向けコンソール SPA（console.miraiyohou.com）
+│   │   └── src/
+│   │       ├── routes/                 # 薄いラッパー（createFileRoute + pages/ の component を紐付けるだけ）
+│   │       │   └── $organizationId/bookings.tsx
+│   │       ├── pages/                  # 実ページ実装
+│   │       │   └── <name>/
+│   │       │       ├── page.tsx                    # ページ本体
+│   │       │       ├── __tests__/
+│   │       │       ├── <name>-form-schema.ts        # ページ固有スキーマ（ページ直下）
+│   │       │       └── _components/                 # 複数タブ等に分割する場合のみ（settings/ 参照）
+│   │       ├── hooks/
+│   │       └── components/
 │   │
-│   ├── (public)/                     # 公開ページ（Route Group）
-│   │   └── booking/
-│   │       ├── page.tsx
-│   │       ├── loading.tsx
-│   │       ├── _components/          # ページ固有コンポーネント
-│   │       │   ├── booking-form.tsx
-│   │       │   └── booking-calendar.tsx
-│   │       └── _hooks/              # ページ固有フック
-│   │           └── use-booking-filter.ts
-│   │
-│   └── (dashboard)/                  # 管理画面（Route Group）
-│       ├── layout.tsx                # 管理画面共通レイアウト
-│       ├── _components/              # Route Group 内共有コンポーネント
-│       │   └── sidebar.tsx
-│       ├── bookings/
-│       │   ├── page.tsx
-│       │   └── [id]/
-│       │       ├── page.tsx
-│       │       └── _components/
-│       │           └── booking-detail.tsx
-│       └── settings/
-│           └── page.tsx
+│   └── consultant/                     # 相談員向け SPA（consultant.miraiyohou.com、console と同じ構成）
+│       └── src/                        # routes/ + pages/(<name>/page.tsx, __tests__/) + hooks/ + components/
 │
-├── components/                       # 共有コンポーネント
-│   ├── ui/                           # UI プリミティブ（Ark UI ラッパー）
-│   │   ├── button.tsx
-│   │   ├── dialog.tsx
-│   │   └── index.ts                  # バレルエクスポート
-│   ├── error-boundary.tsx            # 汎用エラーバウンダリ
-│   └── empty-state.tsx               # 汎用空状態表示
-│
-├── domain/                           # Domain 層（ビジネスロジック）
-│   ├── shared/                       # 共有基盤
-│   │   ├── aggregate-root.ts
-│   │   ├── domain-event.ts
-│   │   └── domain-error.ts
-│   └── <aggregate>/                  # 集約ごとのディレクトリ
-│       ├── <aggregate>.ts            # 集約ルートエンティティ
-│       ├── <value-object>.ts         # 値オブジェクト
-│       ├── <aggregate>-events.ts     # ドメインイベント
-│       └── <aggregate>-repository.ts   # Repository Interface
-│
-├── application/                      # Application 層（ユースケース）
-│   ├── shared/                       # 共有サービスインターフェース
-│   │   ├── email-service.ts
-│   │   ├── stripe-service.ts
-│   │   ├── zoom-service.ts
-│   │   └── unit-of-work.ts
-│   └── <aggregate>/                  # 集約ごとのユースケース
-│       └── <action>-<aggregate>-use-case.ts
-│
-├── infrastructure/                   # Infrastructure 層（外部サービス実装）
-│   ├── firestore/                    # サービスごとにディレクトリ
-│   │   └── firestore-<aggregate>-repository.ts
-│   ├── stripe/
-│   │   └── stripe-service.ts
-│   ├── resend/
-│   │   └── resend-email-service.ts
-│   └── zoom/
-│       └── zoom-service.ts
-│
-└── theme/                            # Panda CSS テーマ設定
-    ├── recipes/                      # コンポーネントレシピ
-    │   ├── button.ts
-    │   └── index.ts
-    ├── tokens/                       # デザイントークン
-    │   ├── colors.ts
-    │   └── shadows.ts
-    ├── colors/                       # カラーパレット定義
-    │   ├── blue.ts
-    │   └── slate.ts
-    ├── text-styles.ts
-    ├── keyframes.ts
-    ├── conditions.ts
-    └── global-css.ts
+└── packages/
+    ├── api-client/                     # OpenAPI スペック + Orval 生成 React Query hooks
+    │   ├── openapi.yaml                # スペック本体（エンドポイント追加時はまずここを更新）
+    │   ├── orval.config.ts
+    │   └── src/
+    │       ├── custom-fetch.ts         # 手動管理。各アプリが configureApiClient() で初期化
+    │       └── generated/              # gitignore 済み。`pnpm generate` で再生成、手動編集しない
+    │
+    ├── console-core/                   # console / consultant のみが使う共有ロジック（panda 非依存）
+    │   └── src/
+    │       ├── hooks/                  # use-organization-routing.ts 等
+    │       ├── lib/                    # api-client.ts / firebase.ts / app-path.ts
+    │       └── config/                 # env.client.ts
+    │
+    ├── ui/                             # Panda CSS preset + Park UI / Ark UI ベースの共有コンポーネント（3 SPA 共通）
+    │   ├── panda.preset.ts             # miraiYohoPreset（各アプリの panda.config.ts の presets に渡す）
+    │   └── src/
+    │       ├── components/
+    │       │   ├── ui/                 # デザインシステムのプリミティブ（button.tsx, dialog.tsx, index.ts 等）
+    │       │   └── <name>.tsx          # empty-state.tsx 等、プリミティブでない共有コンポーネント
+    │       └── theme/
+    │           ├── recipes/            # コンポーネントレシピ + index.ts
+    │           ├── tokens/
+    │           └── colors/
+    │
+    └── shared/                         # フロントと API の両方で使う純粋ロジック（フレームワーク非依存）
+        └── src/
+            └── <name>.ts               # ファイル単位（サブディレクトリなし）。domain-error.ts, slot-availability.ts 等
 ```
+
+各パッケージは `package.json` の `exports` でサブパスを個別公開している（例:
+`@mirai-yoho/ui/components/ui`, `@mirai-yoho/shared/domain-error`,
+`@mirai-yoho/console-core/hooks/*`, `@mirai-yoho/api-client/api/*`）。
+新しいファイルを追加したら、他パッケージから import する必要があるものは `exports` にも追記する。
 
 ---
 
 ## 配置判断フローチャート
 
-ファイルをどこに置くか迷ったら、以下のフローに従う。
+ファイルをどこに置くか迷ったら、まず「どのパッケージか」を決め、次にパッケージ内の配置を決める。
 
 ```
 作りたいものは何？
 │
-├─ ビジネスロジック / ルール？
-│   ├─ エンティティ / 値オブジェクト → src/domain/<aggregate>/
-│   ├─ 複数集約をまたぐ処理 → src/application/<aggregate>/<action>-<aggregate>-use-case.ts
-│   └─ 外部サービスの抽象 → src/application/shared/<name>-service.ts
+├─ API のビジネスロジック / ルール（Firestore で永続化される集約）？
+│   ├─ エンティティ / 値オブジェクト → apps/api/src/domain/<aggregate>/
+│   ├─ 複数集約をまたぐ処理 → apps/api/src/application/<aggregate>/<action>-<aggregate>-use-case.ts
+│   └─ 外部サービスの抽象（Interface） → apps/api/src/application/shared/<name>-service.ts
 │
-├─ 外部サービスの具体実装？
-│   └─ src/infrastructure/<service>/
+├─ 外部サービスの具体実装（Firestore / Stripe / Zoom / Resend 等）？
+│   └─ apps/api/src/infrastructure/<service>/
 │
-├─ UI コンポーネント？
-│   ├─ デザインシステムのプリミティブ？（Button, Dialog 等）
-│   │   └─ src/components/ui/<name>.tsx
-│   ├─ 1 ページでしか使わない？
-│   │   └─ src/app/<route>/_components/<name>.tsx
-│   ├─ 同じ Route Group 内で共有？
-│   │   └─ src/app/<route-group>/_components/<name>.tsx
-│   └─ Route Group をまたいで共有？
-│       └─ src/components/<name>.tsx
+├─ API のエンドポイント（Hono ルーター）？
+│   └─ apps/api/src/presentation/organizations/<resource>-routes.ts
+│      （認証系は presentation/auth/、Webhook は presentation/webhooks/）
 │
-├─ カスタムフック？
-│   ├─ 1 ページでしか使わない？
-│   │   └─ src/app/<route>/_hooks/<name>.ts
-│   ├─ TanStack Query（データフェッチ）？
-│   │   └─ src/app/_hooks/<name>.ts
-│   └─ アプリ全体で使う汎用フック？
-│       └─ src/app/_hooks/<name>.ts
+├─ batch worker のコマンドハンドラ？
+│   └─ apps/api/src/worker/
 │
-├─ API エンドポイント？
-│   └─ src/app/api/<resource>/route.ts
+├─ SPA のページ / UI？ どのアプリか（apps/user / apps/console / apps/consultant）でパターンが違う
+│   │
+│   ├─ apps/user（ページロジックをルートファイルに直接書く）
+│   │   ├─ ページ → src/routes/<path>.tsx（file-based routing）
+│   │   └─ そのページでしか使わないコンポーネント / フック / スキーマ
+│   │       → 同じディレクトリに `-` プレフィックスで co-locate
+│   │         例: src/routes/$organizationId/booking/-booking-form-schema.ts
+│   │
+│   └─ apps/console, apps/consultant（route.tsx は薄いラッパー、実装は pages/ 配下）
+│       ├─ ルート定義（component を pages/<name>/page.tsx に紐付けるだけ） → src/routes/.../<name>.tsx
+│       ├─ ページ実装 → src/pages/<name>/page.tsx
+│       └─ ページを複数ブロックに分割したい場合のサブコンポーネント → src/pages/<name>/_components/<name>.tsx
+│
+├─ 3 SPA（user / console / consultant）すべてで共有する UI コンポーネント？
+│   ├─ Park UI / Ark UI ベースのデザインシステムプリミティブ → packages/ui/src/components/ui/<name>.tsx
+│   └─ それ以外の共有コンポーネント → packages/ui/src/components/<name>.tsx
+│
+├─ console / consultant の 2 SPA で共有する認証・API クライアント初期化・組織ルーティング等のロジック？
+│   └─ packages/console-core/src/{hooks,lib,config}/<name>.ts
+│      （apps/user はこのパッケージに依存しない。user 専用の同種ロジックは apps/user/src/{hooks,lib}/ に置く）
+│
+├─ 1 アプリ内の複数ページで共有するが、他アプリでは使わないコンポーネント / フック？
+│   └─ apps/<app>/src/{components,hooks}/<name>.ts(x)
+│
+├─ フロントエンドと API の両方で使う純粋ロジック（バリデーション、ドメインエラー基底クラス等）？
+│   └─ packages/shared/src/<name>.ts（package.json の exports にサブパスを追記）
+│
+├─ API クライアントの手動管理部分（custom fetch 等）？
+│   └─ packages/api-client/src/custom-fetch.ts
+│      （src/generated/ は Orval が生成する。openapi.yaml を更新して `pnpm generate` を実行、手動編集しない）
 │
 ├─ スタイリング（レシピ / トークン）？
-│   └─ src/theme/recipes/ or src/theme/tokens/
+│   └─ packages/ui/src/theme/recipes/ or packages/ui/src/theme/tokens/
 │
 └─ バリデーションスキーマ？
     └─ コンポーネントと同じディレクトリに配置
-       src/app/<route>/_components/<form-name>-schema.ts
+       apps/user:               src/routes/<route>/-<form-name>-schema.ts
+       apps/console/consultant: src/pages/<name>/<form-name>-schema.ts
 ```
 
 ---
@@ -164,16 +189,22 @@ src/
 ファイルは、それを使うコードの **最も近い共通の親ディレクトリ** に置く。
 
 ```
-# 良い例: booking-form は booking ページでしか使わない
-src/app/(public)/booking/
-  ├── page.tsx                    ← ここで使う
-  └── _components/
-      ├── booking-form.tsx        ← だからここに置く
-      └── booking-form-schema.ts  ← スキーマもセットで
+# 良い例（apps/user）: booking ページでしか使わないフォームは同じディレクトリに co-locate
+apps/user/src/routes/$organizationId/booking/
+  ├── index.tsx                    ← ここで使う
+  ├── -booking-auth-gate.tsx       ← だからここに置く（`-` プレフィックスでルーティング対象外）
+  └── -booking-form-schema.ts      ← スキーマもセットで
 
-# 悪い例: 1 ページでしか使わないのに components/ に置く
-src/components/
-  └── booking-form.tsx            ← NG: 遠すぎる
+# 良い例（apps/console）: settings ページ内の複数タブは _components/ に分割
+apps/console/src/pages/settings/
+  ├── page.tsx
+  └── _components/
+      ├── booking-settings-tab.tsx
+      └── business-hours-settings-tab.tsx
+
+# 悪い例: 1 ページでしか使わないのにアプリ共通 components/ に置く
+apps/user/src/components/
+  └── booking-form.tsx             ← NG: 遠すぎる
 ```
 
 ### 原則 2: 共有が増えたら引き上げる
@@ -182,18 +213,19 @@ src/components/
 
 | 使用箇所 | 配置先 | 例 |
 |---|---|---|
-| 1 ページのみ | `src/app/<route>/_components/` | 予約フォーム |
-| 同じ Route Group 内の複数ページ | `src/app/<route-group>/_components/` | ダッシュボードのサイドバー |
-| Route Group をまたぐ | `src/components/` | 空状態表示、エラーバウンダリ |
-| デザインシステムの一部 | `src/components/ui/` | Button, Dialog, Table |
+| 1 ページのみ | apps/user: `src/routes/<route>/-<name>.tsx`<br>console/consultant: `src/pages/<name>/_components/` | 予約フォーム |
+| 同じアプリ内の複数ページ | `apps/<app>/src/components/`, `apps/<app>/src/hooks/` | 戻るボタン等の共通コンポーネント |
+| console / consultant の 2 アプリで共有 | `packages/console-core/src/{hooks,lib}/` | 組織ルーティング、認証フック |
+| 3 SPA すべて（デザインシステム）で共有 | `packages/ui/src/components/` | 空状態表示、ステータスバッジ |
+| デザインシステムのプリミティブ | `packages/ui/src/components/ui/` | Button, Dialog, Table |
 
 ```
 # 引き上げの流れ
-# Step 1: 最初は booking ページ固有
-src/app/(public)/booking/_components/status-badge.tsx
+# Step 1: 最初は console の booking ページ固有
+apps/console/src/pages/bookings/_components/status-badge.tsx
 
-# Step 2: consultant ページでも使うことになった → 引き上げ
-src/components/status-badge.tsx
+# Step 2: consultant でも使うことになった → packages/ui へ引き上げ
+packages/ui/src/components/status-badge.tsx
 ```
 
 **引き上げるタイミング:**
@@ -204,33 +236,36 @@ src/components/status-badge.tsx
 - ページ固有のフォーム、フィルター、詳細表示
 - ページ固有のフック（SearchParams 管理など）
 
-### 原則 3: `_` プレフィックスでルーティング対象外にする
+### 原則 3: `-` プレフィックスでルーティング対象外にする（apps/user）
 
-Next.js App Router では `_` で始まるディレクトリはルーティング対象外になる。
+TanStack Router の file-based routing では、`-` で始まるファイル / ディレクトリはルート生成の対象外になる
+（Next.js の `_` プレフィックスとは異なるので注意）。ページロジックを `src/routes/` に直接書く apps/user で使う。
 
 ```
-src/app/(dashboard)/bookings/
-  ├── page.tsx              ← /bookings でアクセス可能
-  ├── _components/          ← ルーティング対象外（コンポーネント置き場）
-  │   └── booking-table.tsx
-  └── _hooks/               ← ルーティング対象外（フック置き場）
-      └── use-booking-list.ts
+apps/user/src/routes/$organizationId/booking/
+  ├── index.tsx              ← /$organizationId/booking でアクセス可能
+  ├── -booking-auth-gate.tsx ← ルーティング対象外（コンポーネント置き場）
+  └── -booking-form-schema.ts ← ルーティング対象外（スキーマ置き場）
 ```
 
-### 原則 4: 関心ごとでまとめる（DDD 層）
+apps/console / apps/consultant はページ実装を `src/pages/` に置き、`src/routes/` にはルート定義の薄いラッパー
+（`createFileRoute` + component の紐付け）しか置かないため、`src/routes/` 配下で `-` プレフィックスの
+co-located ファイルは基本的に発生しない。ページ内の分割は `src/pages/<name>/_components/` を使う。
 
-バックエンドは **集約** を軸にまとめる。同じ集約に関するものは同じディレクトリに入れる。
+### 原則 4: 関心ごとでまとめる（DDD 層、apps/api のみ）
+
+apps/api のドメインロジックは **集約** を軸にまとめる。同じ集約に関するものは同じディレクトリに入れる。
 
 ```
 # 「予約」に関するものは全て booking/ にまとまる
-src/domain/booking/
+apps/api/src/domain/booking/
   ├── booking.ts               # 集約ルート
   ├── booking-status.ts        # 値オブジェクト
   ├── booking-events.ts        # ドメインイベント
   ├── cancel-deadline.ts       # 値オブジェクト
-  └── booking-repository.ts     # Repository Interface
+  └── booking-repository.ts    # Repository Interface
 
-src/application/booking/
+apps/api/src/application/booking/
   ├── create-booking-use-case.ts
   └── cancel-booking-use-case.ts
 ```
@@ -238,41 +273,56 @@ src/application/booking/
 infrastructure 層は **サービス** を軸にまとめる。
 
 ```
-src/infrastructure/firestore/
+apps/api/src/infrastructure/firestore/
   ├── firestore-booking-repository.ts
-  ├── firestore-client-repository.ts
-  └── firestore-unit-of-work.ts
+  ├── firestore-consultant-repository.ts
+  └── ...
 ```
 
 ---
 
 ## 配置リファレンス表
 
+### apps/api（DDD 4 層）
+
 | 作りたいもの | 配置先 |
 |---|---|
-| ページ | `src/app/<route>/page.tsx` |
-| レイアウト | `src/app/<route>/layout.tsx` |
-| ローディング | `src/app/<route>/loading.tsx` |
-| エラー | `src/app/<route>/error.tsx` |
-| ページ固有コンポーネント | `src/app/<route>/_components/<name>.tsx` |
-| ページ固有フック | `src/app/<route>/_hooks/<name>.ts` |
-| ページ固有スキーマ | `src/app/<route>/_components/<name>-schema.ts` |
-| Route Group 内共有コンポーネント | `src/app/<route-group>/_components/<name>.tsx` |
-| 共有 UI プリミティブ | `src/components/ui/<name>.tsx` |
-| 共有コンポーネント | `src/components/<name>.tsx` |
-| アプリ共通フック | `src/app/_hooks/<name>.ts` |
-| Query Keys | `src/app/_hooks/<resource>-keys.ts` |
-| API エンドポイント | `src/app/api/<resource>/route.ts` |
-| 集約ルート | `src/domain/<aggregate>/<aggregate>.ts` |
-| 値オブジェクト | `src/domain/<aggregate>/<value-object>.ts` |
-| ドメインイベント | `src/domain/<aggregate>/<aggregate>-events.ts` |
-| Repository Interface | `src/domain/<aggregate>/<aggregate>-repository.ts` |
-| UseCase | `src/application/<aggregate>/<action>-<aggregate>-use-case.ts` |
-| サービス Interface | `src/application/shared/<name>-service.ts` |
-| Firestore 実装 | `src/infrastructure/firestore/firestore-<name>-repository.ts` |
-| 外部サービス実装 | `src/infrastructure/<service>/<name>-service.ts` |
-| レシピ | `src/theme/recipes/<name>.ts` |
-| デザイントークン | `src/theme/tokens/<name>.ts` |
+| 集約ルート | `apps/api/src/domain/<aggregate>/<aggregate>.ts` |
+| 値オブジェクト | `apps/api/src/domain/<aggregate>/<value-object>.ts` |
+| ドメインイベント | `apps/api/src/domain/<aggregate>/<aggregate>-events.ts` |
+| Repository Interface | `apps/api/src/domain/<aggregate>/<aggregate>-repository.ts` |
+| UseCase | `apps/api/src/application/<aggregate>/<action>-<aggregate>-use-case.ts` |
+| サービス Interface | `apps/api/src/application/shared/<name>-service.ts` |
+| Firestore 実装 | `apps/api/src/infrastructure/firestore/firestore-<name>-repository.ts` |
+| 外部サービス実装 | `apps/api/src/infrastructure/<service>/<name>-service.ts` |
+| Hono ルート | `apps/api/src/presentation/organizations/<resource>-routes.ts` |
+| batch ハンドラ | `apps/api/src/worker/` |
+
+### SPA（apps/user / apps/console / apps/consultant）
+
+| 作りたいもの | 配置先 |
+|---|---|
+| ページ（apps/user） | `apps/user/src/routes/<path>.tsx` |
+| ページ実装（console/consultant） | `apps/<app>/src/pages/<name>/page.tsx` |
+| ルート定義（console/consultant） | `apps/<app>/src/routes/.../<name>.tsx`（page.tsx を紐付ける薄いラッパー） |
+| ページ固有コンポーネント（user） | `apps/user/src/routes/<route>/-<name>.tsx` |
+| ページ固有コンポーネント（console/consultant） | `apps/<app>/src/pages/<name>/_components/<name>.tsx` |
+| ページ固有スキーマ（user） | `apps/user/src/routes/<route>/-<form-name>-schema.ts` |
+| ページ固有スキーマ（console/consultant） | `apps/<app>/src/pages/<name>/<form-name>-schema.ts` |
+| アプリ内共有コンポーネント / フック | `apps/<app>/src/{components,hooks}/<name>.ts(x)` |
+
+### packages（共有）
+
+| 作りたいもの | 配置先 |
+|---|---|
+| 共有 UI プリミティブ（3 SPA） | `packages/ui/src/components/ui/<name>.tsx` |
+| 共有コンポーネント（3 SPA） | `packages/ui/src/components/<name>.tsx` |
+| レシピ | `packages/ui/src/theme/recipes/<name>.ts` |
+| デザイントークン | `packages/ui/src/theme/tokens/<name>.ts` |
+| console/consultant 共有ロジック | `packages/console-core/src/{hooks,lib,config}/<name>.ts` |
+| フロント/API 共有の純粋ロジック | `packages/shared/src/<name>.ts` |
+| API クライアント手動管理部分 | `packages/api-client/src/custom-fetch.ts` |
+| OpenAPI スペック | `packages/api-client/openapi.yaml` |
 
 ---
 
@@ -288,9 +338,9 @@ src/infrastructure/firestore/
 | Repository Interface | kebab-case | `booking-repository.ts` |
 | ドメインイベント | kebab-case | `booking-events.ts` |
 | 値オブジェクト | kebab-case | `booking-status.ts` |
-| Query Keys | kebab-case | `booking-keys.ts` |
-| スキーマ | kebab-case | `booking-form-schema.ts` |
+| フォームスキーマ | kebab-case | `booking-form-schema.ts` |
 | レシピ | kebab-case | `button.ts` |
+| co-located ファイル（apps/user のルート配下） | `-` プレフィックス + kebab-case | `-booking-form-schema.ts` |
 
 ### export 名: PascalCase / camelCase
 
@@ -302,32 +352,51 @@ src/infrastructure/firestore/
 | Repository Interface | IPascalCase | `IBookingRepository` |
 | イベントクラス | PascalCase | `BookingConfirmedEvent` |
 | 値オブジェクトクラス | PascalCase | `BookingStatus` |
-| Query Keys | camelCase | `bookingKeys` |
 
-### URL パス: kebab-case
+### URL パス: kebab-case、動的セグメントは `$paramName`
 
 ```
 /booking
-/booking/[id]
-/consultant-profile
-/payment-history
+/$organizationId/booking
+/$organizationId/consultants/$id
+/mypage/password-reset
 ```
 
 Google の URL 構造ガイドラインに従い、URL には kebab-case を使う。
-Next.js のフォルダ名がそのまま URL パスになるため、ルートディレクトリ名も kebab-case にする。
+TanStack Router の file-based routing ではファイル名がそのまま URL パスになり、
+動的セグメントは `$paramName`（例: `$organizationId`, `$id`）で表す。Next.js の `[param]` 表記ではない点に注意。
 
 ---
 
 ## 依存方向
 
+### apps/api の DDD 4 層
+
 ```
-app (presentation) → application → domain ← infrastructure
+presentation → application → domain ← infrastructure
 ```
 
-- domain 層は他のどの層にも依存しない
-- infrastructure 層は domain 層のインターフェースを実装する
+- domain 層は他のどの層にも依存しない。外部ライブラリは import 禁止で、
+  純粋ロジックの `@mirai-yoho/shared` のみ import 可
+- infrastructure 層は domain 層のインターフェース（Repository Interface 等）を実装する
 - application 層は domain 層のエンティティとインターフェースに依存する
-- app 層は application 層の UseCase を呼び出す
+- presentation 層（Hono ルーター）は application 層の UseCase を呼び出す
+
+### モノレポ全体（apps ⇄ packages）
+
+```
+apps/user, apps/console, apps/consultant
+  → packages/api-client（API 呼び出しは必ず生成 hooks 経由）
+  → packages/ui（共有 UI コンポーネント / Panda preset）
+  → packages/shared（共有ロジック）
+
+apps/console, apps/consultant のみ
+  → packages/console-core（認証 / API クライアント初期化 / 組織ルーティング）
+```
+
+- packages/ui は他の `@mirai-yoho/*` パッケージに依存しない（Ark UI 等の外部ライブラリのみ）
+- SPA から `firebase-admin` / `stripe`（サーバー SDK）/ apps/api の domain・application・infrastructure 層を import しない
+- apps/api → apps/user 等、apps/api から SPA 側への依存もない
 
 ---
 
@@ -336,7 +405,7 @@ app (presentation) → application → domain ← infrastructure
 「クライアントが予約を作成できる」機能を一から作る場合、以下のファイルを作成する。
 
 ```
-src/
+apps/api/src/
 ├── domain/booking/                          # Step 1: ドメインモデル
 │   ├── booking.ts                           # 集約ルート
 │   ├── booking-status.ts                    # 値オブジェクト
@@ -350,79 +419,73 @@ src/
 ├── infrastructure/firestore/                # Step 3: 永続化
 │   └── firestore-booking-repository.ts      # Firestore 実装
 │
-├── app/
-│   ├── api/booking/                         # Step 4: API
-│   │   └── route.ts                         # POST /api/booking
-│   │
-│   ├── _hooks/                              # Step 5: データフェッチ
-│   │   ├── booking-keys.ts                  # Query Keys
-│   │   └── use-create-booking.ts            # useMutation フック
-│   │
-│   └── (public)/booking/                    # Step 6: 画面
-│       ├── page.tsx                          # 予約ページ（Server Component）
-│       ├── loading.tsx                       # ローディング
-│       └── _components/                      # ページ固有コンポーネント
-│           ├── booking-form.tsx              # フォーム（Client Component）
-│           └── booking-form-schema.ts        # Valibot スキーマ
-│
-└── theme/recipes/                           # Step 7（必要なら）: 新しい UI
-    └── calendar.ts                          # カレンダー用レシピ
+└── presentation/organizations/              # Step 4: API エンドポイント
+    └── booking-routes.ts                    # POST /organizations/:organizationId/bookings
+
+packages/api-client/
+└── openapi.yaml                             # Step 5: スペック更新 → `pnpm generate` で hooks 生成
+
+apps/user/src/routes/$organizationId/booking/ # Step 6: 画面（apps/user はページロジックを直接ルートに書く）
+├── index.tsx                                # ページ本体（生成された useCreateBooking 等を呼ぶ）
+├── -booking-auth-gate.tsx                   # ページ固有コンポーネント
+└── -booking-form-schema.ts                  # Valibot スキーマ
+
+packages/ui/src/theme/recipes/               # Step 7（必要なら）: 新しい UI
+└── calendar.ts                              # カレンダー用レシピ
 ```
 
-**作成順序:** domain → application → infrastructure → api → hooks → page → theme
+**作成順序:** domain → application → infrastructure → presentation（API）→ openapi.yaml + generate → SPA 画面 → theme
 
 ---
 
 ## アンチパターン集
 
-### 1. 「なんでも components/ に置く」
+### 1. 「なんでもアプリ共通 components/ に置く」
 
 ```
-# NG: 1 ページでしか使わないのに共有コンポーネントにしている
-src/components/
-  ├── booking-form.tsx        ← booking ページでしか使わない
-  ├── consultant-profile.tsx  ← consultant ページでしか使わない
-  └── settings-panel.tsx      ← settings ページでしか使わない
+# NG: 1 ページでしか使わないのにアプリ共通コンポーネントにしている
+apps/console/src/components/
+  ├── booking-list-filter.tsx  ← bookings ページでしか使わない
+  └── settings-panel.tsx       ← settings ページでしか使わない
 
 # OK: ページの近くに置く
-src/app/(public)/booking/_components/booking-form.tsx
-src/app/(public)/consultant/_components/consultant-profile.tsx
-src/app/(dashboard)/settings/_components/settings-panel.tsx
+apps/console/src/pages/bookings/_components/booking-list-filter.tsx
+apps/console/src/pages/settings/_components/settings-panel.tsx
 ```
 
 ### 2. 「utils / helpers ディレクトリを作る」
 
 ```
 # NG: 雑多な関数を utils/ に集める
-src/utils/
+apps/api/src/utils/
   ├── format-date.ts
   ├── calculate-price.ts     ← domain 層のロジックでは？
-  └── send-email.ts           ← infrastructure 層のロジックでは？
+  └── send-email.ts          ← infrastructure 層のロジックでは？
 
 # OK: 適切なレイヤーに置く
-src/domain/payment/money.ts          ← 価格計算はドメインロジック
-src/infrastructure/resend/...        ← メール送信は infrastructure
+apps/api/src/domain/payment/money.ts     ← 価格計算はドメインロジック
+apps/api/src/infrastructure/resend/...   ← メール送信は infrastructure
 ```
 
 ### 3. 「domain 層に外部ライブラリを import する」
 
 ```
 # NG
-src/domain/booking/booking.ts
+apps/api/src/domain/booking/booking.ts
   import { doc, getDoc } from "firebase-admin/firestore";  ← 禁止！
   import Stripe from "stripe";                              ← 禁止！
 
-# OK: domain 層は純粋な TypeScript のみ
-src/domain/booking/booking.ts
+# OK: domain 層は純粋な TypeScript + @mirai-yoho/shared のみ
+apps/api/src/domain/booking/booking.ts
   import { AggregateRoot } from "@/domain/shared/aggregate-root";
-  import { DomainError } from "@/domain/shared/domain-error";
+  import { DomainError } from "@mirai-yoho/shared/domain-error";
 ```
 
 ### 4. 「集約をまたいで直接操作する」
 
 ```
 # NG: booking の UseCase で payment を直接操作
-src/application/booking/create-booking-use-case.ts
+apps/api/src/application/booking/create-booking-use-case.ts
   payment.status = "captured";  ← 集約の外からメンバーを直接変更
 
 # OK: Payment 集約のメソッドを呼ぶ
@@ -432,38 +495,51 @@ src/application/booking/create-booking-use-case.ts
 ### 5. 「ページコンポーネントを巨大にする」
 
 ```
-# NG: page.tsx に全部詰め込む
-src/app/(public)/booking/page.tsx
-  ← フォーム、バリデーション、API 呼び出し、全部ここに...
+# NG（console/consultant）: page.tsx に全部詰め込む
+apps/console/src/pages/bookings/page.tsx
+  ← テーブル、フィルター、モーダル、全部ここに...
 
 # OK: 責務を分離する
-src/app/(public)/booking/
-  ├── page.tsx                      ← Server Component、データ取得 + レイアウトのみ
+apps/console/src/pages/bookings/
+  ├── page.tsx                      ← データ取得 + レイアウトのみ
   └── _components/
-      ├── booking-form.tsx          ← Client Component、フォームロジック
-      └── booking-form-schema.ts    ← バリデーション定義
+      ├── booking-filter.tsx        ← フィルター UI
+      └── booking-detail-modal.tsx  ← 詳細モーダル
 ```
 
 ### 6. 「barrel export を乱用する」
 
 ```
 # NG: 全ディレクトリに index.ts を作って re-export
-src/domain/booking/index.ts          ← 不要
-src/application/booking/index.ts     ← 不要
+apps/api/src/domain/booking/index.ts          ← 不要
+apps/api/src/application/booking/index.ts     ← 不要
 
-# OK: barrel export は UI コンポーネントとレシピだけ
-src/components/ui/index.ts           ← OK: import を簡潔にする価値がある
-src/theme/recipes/index.ts           ← OK: panda.config.ts で一括読み込み
+# OK: barrel export は共有 UI コンポーネントとレシピだけ
+packages/ui/src/components/ui/index.ts        ← OK: import を簡潔にする価値がある
+packages/ui/src/theme/recipes/index.ts        ← OK: panda.config.ts で一括読み込み
 ```
 
 ### 7. 「相対パスで遠くのファイルを import する」
 
 ```
 # NG
-import { Button } from "../../../../components/ui/button";
+import { Button } from "../../../../../packages/ui/src/components/ui/button";
 
-# OK: パスエイリアスを使う
-import { Button } from "@/components/ui";
+# OK: パッケージ経由 + パスエイリアスを使う
+import { Button } from "@mirai-yoho/ui/components/ui/button";
+import { useBooking } from "@/hooks/use-booking";  # 各アプリの tsconfig.json の @/* エイリアス
+```
+
+### 8. 「`packages/api-client/src/generated/` や `styled-system/` を手動編集する」
+
+```
+# NG
+packages/api-client/src/generated/api/booking/booking.ts  ← Orval が生成するため手動編集禁止
+apps/console/styled-system/                                 ← Panda CSS が生成するため手動編集禁止
+
+# OK: 元になるファイルを更新して再生成する
+packages/api-client/openapi.yaml   → `pnpm generate`
+packages/ui/panda.preset.ts 等     → 各アプリで Panda CSS のビルドが再生成
 ```
 
 ---
@@ -472,13 +548,15 @@ import { Button } from "@/components/ui";
 
 引数に `check` が指定された場合:
 
-1. `src/` 配下のディレクトリ構成をスキャンする
+1. `apps/*/src` と `packages/*/src` 配下のディレクトリ構成をスキャンする
 2. 以下の違反を検出する:
-   - コロケーション違反（1 ページでしか使わないのに `src/components/` に置かれている）
+   - コロケーション違反（1 ページでしか使わないのにアプリ共通 `components/` や `packages/ui` に置かれている）
    - `utils/` や `helpers/` のような曖昧なディレクトリが存在する
-   - domain 層に外部ライブラリの import がある
-   - 命名規則違反（kebab-case でないファイル名）
+   - apps/api の domain 層に `firebase-admin` / `stripe` 等の外部ライブラリの import がある
+   - 命名規則違反（kebab-case でないファイル名、apps/user のルート直下で `-` ではなく `_` プレフィックスを使っている等）
    - `../../../` が 3 つ以上並ぶ相対 import
-   - barrel export の乱用（`ui/index.ts` と `recipes/index.ts` 以外の不要な `index.ts`）
-   - URL パスが kebab-case でないルートディレクトリ
+   - barrel export の乱用（`packages/ui/src/components/ui/index.ts` と `packages/ui/src/theme/recipes/index.ts` 以外の不要な `index.ts`）
+   - URL パスが kebab-case でない、または動的セグメントが `$paramName` 形式でない
+   - `packages/api-client/src/generated/` や各パッケージの `styled-system/` への手動編集
+   - apps/console / apps/consultant で `route.tsx` にページ実装ロジックを直接書いている（`pages/<name>/page.tsx` に分離すべき）
 3. 違反箇所と正しい配置先を報告する

@@ -15,32 +15,32 @@ args: "<aggregate_name>"
 
 ## 作成するファイル
 
-以下のファイルを `src/domain/<aggregate_name>/` と `src/infrastructure/firestore/` に作成してください。
+以下のファイルを `apps/api/src/domain/<aggregate_name>/` と `apps/api/src/infrastructure/firestore/` に作成してください。
 
-### 1. 集約ルートエンティティ: `src/domain/<name>/<name>.ts`
+### 1. 集約ルートエンティティ: `apps/api/src/domain/<name>/<name>.ts`
 
-既存の `src/domain/booking/booking.ts` のパターンに従う:
+既存の `apps/api/src/domain/booking/booking.ts` のパターンに従う:
 - `AggregateRoot` を継承する
 - `private constructor` + `static create()` + `static reconstruct()` パターン
 - ビジネスロジックメソッド
 - getter メソッド
 
-### 2. Repository Interface: `src/domain/<name>/<name>-repository.ts`
+### 2. Repository Interface: `apps/api/src/domain/<name>/<name>-repository.ts`
 
-既存の `src/domain/booking/booking-repository.ts` のパターンに従う:
+既存の `apps/api/src/domain/booking/booking-repository.ts` のパターンに従う:
 - `findById` と `save` メソッドを持つ interface
 
-### 3. Firestore Repository 実装: `src/infrastructure/firestore/firestore<Name>Repository.ts`
+### 3. Firestore Repository 実装: `apps/api/src/infrastructure/firestore/firestore-<name>-repository.ts`
 
-既存の `src/infrastructure/firestore/firestoreBookingRepository.ts` のパターンに従う:
+既存の `apps/api/src/infrastructure/firestore/firestore-booking-repository.ts` のパターンに従う:
 - Repository Interface を implements する
 - メソッドは `throw new Error("Not implemented")` でスタブにする
 
 ## ルール
 
-- ファイル名は kebab-case（例: `notification.ts`, `notification-repository.ts`）
+- ファイル名は kebab-case（例: `notification.ts`, `notification-repository.ts`, `firestore-notification-repository.ts`）
 - Repository Interface の export 名は先頭に `I` を付ける（例: `INotificationRepository`）
 - domain 層には firebase-admin や stripe などの外部依存を import しない
 - import パスは `@/domain/...` のエイリアスを使用する
-- 集約ルートは必ず `@/domain/shared/aggregateRoot` の `AggregateRoot` を継承する
+- 集約ルートは必ず `@/domain/shared/aggregate-root` の `AggregateRoot` を継承する
 - ユーザーにどのような値オブジェクトやビジネスルールが必要か確認してから作成する

@@ -1,107 +1,91 @@
 ---
 name: new-search-params
-description: nuqs を使った型安全な SearchParams 管理フックを scaffold する
+description: TanStack Router の validateSearch を使った型安全な SearchParams 管理を scaffold する
 user_invocable: true
-args: "<params_name>"
+args: "<route_path>"
 ---
 
 # SearchParams 管理の作成
 
-nuqs を使って型安全な URL SearchParams 管理を scaffold してください。
+TanStack Router（file-based routing）の `validateSearch` を使って、対象ルートに型安全な URL SearchParams 管理を scaffold してください。
+
+このプロジェクトは nuqs も Next.js App Router も使いません。SPA（apps/user, apps/console, apps/consultant）はすべて Vite + TanStack Router で、search params はルートファイル自身の `validateSearch` オプションで管理します（`AGENTS.md` 参照）。
 
 ## 引数
 
-- `params_name`: パラメータグループ名（例: `bookingFilter`, `consultantSearch`）
+- `route_path`: 対象ルートファイルのパス（例: `apps/user/src/routes/$organizationId/booking/index.tsx`）
 
-## 作成するファイル
+## 編集するファイル
 
-### `src/app/_hooks/use<ParamsName>.ts`
+対象ルートファイル（新規ルートなら `new-page` 等で作成済みのファイル）に `validateSearch` を追加する。専用の hook ファイルは作らない。
 
 ```typescript
-"use client";
+import { createFileRoute } from "@tanstack/react-router";
 
-import {
-  parseAsString,
-  parseAsInteger,
-  parseAsStringEnum,
-  parseAsArrayOf,
-  useQueryStates,
-  createSearchParamsCache,
-} from "nuqs";
+interface <RouteName>Search {
+  consultantId?: string;
+  startsAt?: string;
+  durationMinutes?: number;
+}
 
-// パーサー定義
-const parsers = {
-  q: parseAsString.withDefault(""),
-  page: parseAsInteger.withDefault(1),
-  status: parseAsStringEnum(["pending", "confirmed", "cancelled"]),
-  sort: parseAsString.withDefault("createdAt"),
-};
+export const Route = createFileRoute("/$organizationId/booking/")({
+  validateSearch: (search: Record<string, unknown>): <RouteName>Search => {
+    const durationRaw = search.durationMinutes;
+    const duration =
+      typeof durationRaw === "number"
+        ? durationRaw
+        : typeof durationRaw === "string"
+          ? Number(durationRaw)
+          : undefined;
+    return {
+      consultantId:
+        typeof search.consultantId === "string"
+          ? search.consultantId
+          : undefined,
+      startsAt:
+        typeof search.startsAt === "string" ? search.startsAt : undefined,
+      durationMinutes:
+        typeof duration === "number" && Number.isFinite(duration)
+          ? duration
+          : undefined,
+    };
+  },
+  component: <RouteName>Page,
+});
+```
 
-// Server Component 用キャッシュ
-export const <paramsName>Cache = createSearchParamsCache(parsers);
+（実例: `apps/user/src/routes/$organizationId/booking/index.tsx`）
 
-// Client Component 用フック
-export function use<ParamsName>() {
-  return useQueryStates(parsers, {
-    shallow: false, // サーバーへの再フェッチが必要な場合
-  });
+### コンポーネント内での読み取り
+
+```typescript
+function <RouteName>Page() {
+  const { consultantId, startsAt } = Route.useSearch();
+  // ...
 }
 ```
 
-### 使い方の例
-
-**Server Component:**
+### 遷移時に search params を渡す
 
 ```typescript
-import { <paramsName>Cache } from "@/app/_hooks/use<ParamsName>";
-
-export default async function Page({
-  searchParams,
-}: {
-  searchParams: Promise<Record<string, string | string[]>>;
-}) {
-  const { q, page, status } = await <paramsName>Cache.parse(searchParams);
-  // サーバーサイドでパラメータを利用
-}
+navigate({
+  to: "/$organizationId/booking/payment",
+  params: { organizationId },
+  search: {
+    bookingId: responseData.bookingId,
+    bookingActionToken: responseData.bookingActionToken,
+  },
+});
 ```
 
-**Client Component:**
-
-```typescript
-"use client";
-
-import { use<ParamsName> } from "@/app/_hooks/use<ParamsName>";
-
-export function FilterBar() {
-  const [params, setParams] = use<ParamsName>();
-
-  return (
-    <input
-      value={params.q}
-      onChange={(e) => setParams({ q: e.target.value })}
-    />
-  );
-}
-```
-
-## 利用可能なパーサー
-
-- `parseAsString` — 文字列
-- `parseAsInteger` — 整数
-- `parseAsFloat` — 浮動小数点
-- `parseAsBoolean` — 真偽値
-- `parseAsStringEnum([...])` — 列挙型
-- `parseAsArrayOf(parser)` — 配列
-- `parseAsJson<T>()` — JSON
-- `parseAsIsoDate` — ISO 日付
+`<Link>` の場合も同様に `search={{ ... }}` prop を渡す。他の search params を保持したくない遷移では `search: {}` を明示する（実例: `apps/user/src/routes/register.tsx`）。
 
 ## ルール
 
-- パーサーは `parsers` オブジェクトにまとめて定義する
-- デフォルト値は `.withDefault()` で設定する
-- Server Component 用には `createSearchParamsCache` を export する
-- Client Component 用には `useQueryStates` を使ったカスタムフックを export する
-- NuqsAdapter は `src/app/providers.tsx` で設定済み
-- `shallow: false` はサーバーサイドのデータ再フェッチが必要な場合に使う
-- ファイル名は kebab-case（例: `use-booking-filter.ts`）
-- ユーザーに必要な SearchParams のフィールドを確認してから作成する
+- `validateSearch` は `(search: Record<string, unknown>) => <Type>` という関数として書く。すべてのフィールドは `typeof` チェックで安全に取り出し、無効な値は `undefined` にフォールバックする（信頼できない入力として扱う）
+- 型は `interface <RouteName>Search { ... }` としてルートファイル内に定義する（フィールドは基本 optional）。フォームの値検証（React Hook Form + Valibot）とは別物であり、search params の検証に Valibot は使わない
+- 数値を受け取るフィールドは `string`（クエリ文字列由来）と `number`（クライアント内遷移由来）の両方を考慮し、`Number()` 変換 + `Number.isFinite` チェックを行う
+- 読み取りは常に `Route.useSearch()` を使う（`useSearchParams` や自作フックは作らない）
+- 専用の hook ファイル（`use<Something>.ts`）は作らない。search params の型とロジックはルートファイルに閉じ込める
+- nuqs・zod・URLSearchParams の手動パースは使わない
+- ユーザーに必要な search params のフィールド（キー名・型・必須/任意）を確認してから編集する

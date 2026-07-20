@@ -16,18 +16,17 @@ args: "<component_name> [page_path]"
 
 ## 配置ルール
 
-- ページ固有のコンポーネント → `src/app/<page_path>/_components/<componentName>.tsx`
-- 複数ページで共有するコンポーネント → `src/components/<componentName>.tsx`
-
-`_components` ディレクトリはルーティング対象外にするための Next.js 規約。
+- `apps/console`, `apps/consultant`: ページは `src/pages/<page_path>/page.tsx`。ページ固有のコンポーネントは `src/pages/<page_path>/_components/<component-name>.tsx` に置く（`src/routes/` 配下の TanStack Router のファイルベースルーティングは `pages/` を走査しないため、`_components` は単なる整理用の慣習ディレクトリ）
+- `apps/user`: `src/routes/` 配下にページ固有コンポーネントを置く場合はファイル名先頭に `-` を付ける（例: `-booking-auth-gate.tsx`）。TanStack Router は `-` プレフィックスのファイル/ディレクトリをルート生成対象から除外する
+- 複数ページで共有するコンポーネント → `src/components/<component-name>.tsx`
 
 ## パターン
 
-### Server Component（デフォルト）
-
 ```typescript
-import { css } from "styled-system/css";
-import { Button, Text } from "@/components/ui";
+import { Button } from "@mirai-yoho/ui/components/ui/button";
+import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { styled } from "styled-system/jsx";
 
 type <Name>Props = {
   // props
@@ -35,40 +34,18 @@ type <Name>Props = {
 
 export function <Name>({ ... }: <Name>Props) {
   return (
-    <div className={css({ })}>
+    <styled.div>
       {/* コンテンツ */}
-    </div>
-  );
-}
-```
-
-### Client Component（インタラクションが必要な場合のみ）
-
-```typescript
-"use client";
-
-import { type ComponentProps, forwardRef } from "react";
-import { css } from "styled-system/css";
-import { Button, Text } from "@/components/ui";
-
-type <Name>Props = {
-  // props
-};
-
-export function <Name>({ ... }: <Name>Props) {
-  return (
-    <div className={css({ })}>
-      {/* コンテンツ */}
-    </div>
+    </styled.div>
   );
 }
 ```
 
 ## ルール
 
-- `"use client"` は本当に必要な場合（イベントハンドラ、hooks、ブラウザ API）だけ付ける
-- スタイリングは Panda CSS（`css()` / `styled()` / `styled-system/jsx`）
-- UI プリミティブは `@/components/ui` から import する
+- 画面遷移は `@tanstack/react-router` の `Link` / `useNavigate`（`next/navigation` は存在しない。Next.js からは移行済み）
+- スタイリングは Panda CSS（`styled-system/jsx` の `styled()` または `styled-system/css` の `css()`）
+- UI プリミティブは `packages/ui` の `@mirai-yoho/ui/components/ui/*` から import する
 - Props の型は `type` で定義する（`interface` ではなく）
 - ファイル名は kebab-case（例: `booking-calendar.tsx`）
 - コンポーネント名は PascalCase（例: `BookingCalendar`）

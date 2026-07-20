@@ -16,7 +16,7 @@ args: "<usecase_name> <aggregate_name>"
 
 ## 作成するファイル
 
-### `src/application/<aggregate_name>/<usecase_name>UseCase.ts`
+### `apps/api/src/application/<aggregate_name>/<usecase-name>-use-case.ts`
 
 既存の `src/application/booking/create-booking-use-case.ts` のパターンに従う:
 

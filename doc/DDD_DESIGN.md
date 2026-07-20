@@ -126,14 +126,17 @@ Booking（集約ルート）
 ├── bookingId: string               ID（Firestore 自動生成）
 ├── customerId: CustomerId          外部参照（別集約）
 ├── consultantId: ConsultantId      外部参照（別集約）
-├── slotId: SlotId                  外部参照（別集約）
-├── startsAt: Date                  slots から複製（非正規化）
+├── usageSlotIds: string[]          外部参照（別集約）。durationMinutes 分の 15分スロットを連続予約
+├── bufferSlotIds: string[]         外部参照（別集約）。予約後 15分分のバッファスロット（空き枠から自動除外）
+├── startsAt / endsAt: Date         slots から複製（非正規化）
+├── durationMinutes: SupportedDurationMinutes  30|60|90|120（PricePlan.durationMinutes と一致）
 ├── status: BookingStatus           pending|confirmed|completed|cancelled
 ├── cancelDeadlineAt: CancelDeadline  startsAt - 24h
 ├── joinUrl?: ZoomUrl               confirm() 後にセット（Zoom Session の Join URL）
 ├── consultantMemo: ConsultantMemo  管理者・相談員のみ閲覧可
 ├── consultationContent?: string    顧客入力（任意）
 ├── pricePlanId / pricePlanName / pricePlanTotalJPY?  予約確定時点の料金プランを非正規化
+├── appliedUserCouponId / couponDiscountJPY / discountedTotalJPY?  適用クーポンと割引後金額（任意）
 ├── consultantJoinedAt / consultationReminderEmailSentAt / lateArrivalAlertSentAt?: Date  バッチ処理の実行済みフラグ
 └── _domainEvents: DomainEvent[]    pullDomainEvents() で取り出す
 ```
@@ -287,19 +290,26 @@ apps/api/src/
 ### 8.1 予約作成（`CreateBookingUseCase`）
 
 ```
-入力: organizationId / userId / slotId（or startsAt+endsAt） / customerName / customerEmail /
-       customerPhone / customerBirthDate / consultationContent? / selectionId（料金プラン選択）
+入力: organizationId / userId / consultantId? / startsAt / durationMinutes（30|60|90|120） /
+       customerName / customerEmail / customerPhone / customerBirthDate /
+       consultationContent? / selectionId（料金プラン選択） / selectedUserCouponId?
 
 1. UserRepository.findById(userId)         ← アクティブ・Zoom 連携済みチェック
-2. 料金プラン・スロットを解決（selectionId → PricePlan、slotId or 空き枠検索）
-3. slot.reserve(newBookingId)              ← 二重予約・過去日時チェック（DomainError）
-4. CustomerRepository.findByUserIdAndOrganizationId() → 既存なければ Customer.create({...})
-5. Booking.create({...})                   ← status: pending。料金プランを非正規化して保持
-6. ZoomSessionRepository.findByDate() → 当日セッションが無ければ ZoomService.createDailyMeeting()、
+2. resolveContinuousAndPricePlan()         ← selectionId → PricePlan、durationMinutes 分の
+   15分スロットが startsAt から連続空きか（consultantId 未指定なら空いている相談員を横断探索）+
+   直後 1 コマ（15分）のバッファスロットの空き（SlotSelectionPolicy）
+3. usageSlot.reserve(newBookingId) / bufferSlot.reserve(newBookingId)（各コマ）
+   ← 二重予約・過去日時チェック（DomainError）。バッファは以後の空き枠検索から除外される
+4. resolveAppliedCoupon()                  ← selectedUserCouponId があれば UserCoupon を検証し割引額算出
+5. CustomerRepository.findByUserIdAndOrganizationId() → 既存なければ Customer.create({...})
+6. Booking.create({...})                   ← status: pending。usageSlotIds/bufferSlotIds・
+   料金プラン・適用クーポンを非正規化して保持
+7. ZoomSessionRepository.findByDate() → 当日セッションが無ければ ZoomService.createDailyMeeting()、
    あれば ZoomService.updateBreakoutRooms()  ← 参加者をブレイクアウトルームへ割り当て
-7. booking.confirm(joinUrl)                ← BookingConfirmedEvent 発火（現状 UseCase は未使用）
-8. EmailService.sendBookingConfirmation()  ← 入力値から直接送信（イベント経由ではない）
-9. UnitOfWork.runInTransaction(customer, slot, booking, zoomSession)  ← Firestore トランザクション
+8. booking.confirm(joinUrl)                ← BookingConfirmedEvent 発火（現状 UseCase は未使用）
+9. EmailService.sendBookingConfirmation()  ← 入力値から直接送信（イベント経由ではない）
+10. UnitOfWork.runInTransaction(customer, usageSlots, bufferSlots, booking, zoomSession)
+    ← Firestore トランザクション
 
 出力: { bookingId, joinUrl }
 ```
@@ -317,7 +327,8 @@ apps/api/src/
 4. payment があれば戦略・状態で分岐：
      immediate かつ charged → StripeService.refundPaymentIntent() → payment.refund()
      deferred かつ setup_pending|setup_complete → payment.cancel()（Stripe 側は未課金なので返金不要）
-5. SlotRepository.findById(booking.slotId) → slot.release()
+5. booking.getAllOccupiedSlotIds()（usageSlotIds + bufferSlotIds）を SlotRepository.findById() で取得
+   → 各 slot.release()
 6. ZoomSessionRepository.findByDate() → 参加者を Breakout Room から除外し
    ZoomService.updateBreakoutRooms() を呼ぶ
 7. 各 Repository.save()（並列）
