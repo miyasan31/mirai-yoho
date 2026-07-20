@@ -1,44 +1,17 @@
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import { Badge } from "@mirai-yoho/ui/components/ui/badge";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
+import * as RadioGroup from "@mirai-yoho/ui/components/ui/radio-group";
 import { Skeleton, SkeletonText } from "@mirai-yoho/ui/components/ui/skeleton";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
-import { Link } from "@tanstack/react-router";
-import { format, parseISO } from "date-fns";
-import { ja } from "date-fns/locale";
-import { CircleX, Users } from "lucide-react";
-import { useMemo } from "react";
+import { Link, useNavigate } from "@tanstack/react-router";
+import { CircleX, PackageSearch, Users } from "lucide-react";
+import { useState } from "react";
 import { styled } from "styled-system/jsx";
 import { usePublicBookingSettings } from "@/hooks/use-booking-settings";
 import { useGetConsultants } from "@/hooks/use-consultants";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
-import { useGetSlots } from "@/hooks/use-slots";
-import { collectBookableStartTimes } from "@/lib/continuous-slots";
-
-function formatDate(isoString: string): string {
-  return format(parseISO(isoString), "yyyy/MM/dd (E)", { locale: ja });
-}
-
-function formatTime(isoString: string): string {
-  return format(parseISO(isoString), "HH:mm");
-}
-
-function AggregatedSlotSkeleton() {
-  return (
-    <styled.div display="flex" flexDirection="column" gap="6">
-      {[0, 1, 2].map((groupIdx) => (
-        <div key={groupIdx}>
-          <Skeleton height="6" width="40%" mb="3" />
-          <styled.div display="flex" flexDirection="column" gap="2">
-            {[0, 1, 2].map((slotIdx) => (
-              <Skeleton key={slotIdx} height="16" width="full" rounded="l2" />
-            ))}
-          </styled.div>
-        </div>
-      ))}
-    </styled.div>
-  );
-}
+import { usePricePlanOptions } from "@/hooks/use-price-plans";
 
 function ConsultantCardSkeleton() {
   return (
@@ -64,8 +37,19 @@ function ConsultantCardSkeleton() {
   );
 }
 
+function AggregatedPlansSkeleton() {
+  return (
+    <styled.div display="flex" flexDirection="column" gap="3">
+      {[0, 1, 2].map((idx) => (
+        <Skeleton key={idx} height="20" width="full" rounded="l2" />
+      ))}
+    </styled.div>
+  );
+}
+
 export function ConsultantsPage() {
-  const { organizationId, buildPath } = useOrganizationRouting();
+  const { organizationId } = useOrganizationRouting();
+  const navigate = useNavigate();
   const {
     data: settingsData,
     isLoading: isLoadingSettings,
@@ -78,40 +62,36 @@ export function ConsultantsPage() {
     isSettingsResolved && consultantSelectionEnabled === true,
   );
   const {
-    data: aggregatedData,
-    isLoading: isLoadingAggregatedSlots,
-    error: aggregatedError,
-  } = useGetSlots(
+    data: aggregatedPlansData,
+    isLoading: isLoadingAggregatedPlans,
+    error: aggregatedPlansError,
+  } = usePricePlanOptions(
     {},
-    {
-      query: {
-        enabled: isSettingsResolved && consultantSelectionEnabled === false,
-      },
-    },
+    isSettingsResolved && consultantSelectionEnabled === false,
   );
 
-  const aggregatedSlots = aggregatedData?.data?.aggregatedSlots ?? [];
-  const bookableStarts = useMemo(
-    () => collectBookableStartTimes(aggregatedSlots),
-    [aggregatedSlots],
-  );
-  const groupedAggregatedSlots = useMemo(() => {
-    const groups: Record<string, typeof bookableStarts> = {};
-    for (const candidate of bookableStarts) {
-      const dateKey = formatDate(candidate.startsAt);
-      if (!groups[dateKey]) {
-        groups[dateKey] = [];
-      }
-      groups[dateKey].push(candidate);
-    }
-    return Object.entries(groups);
-  }, [bookableStarts]);
+  const aggregatedPlans = aggregatedPlansData?.data?.pricePlans ?? [];
+  const [selectionId, setSelectionId] = useState("");
+  const selectedPlan =
+    aggregatedPlans.find((plan) => plan.selectionId === selectionId) ?? null;
+
+  const handleProceedAggregated = () => {
+    if (!selectedPlan || !organizationId) return;
+    navigate({
+      to: "/$organizationId/slots",
+      params: { organizationId },
+      search: {
+        selectionId: selectedPlan.selectionId,
+        durationMinutes: selectedPlan.durationMinutes,
+      },
+    });
+  };
 
   if (
     isLoadingSettings ||
     (!settingsError && !isSettingsResolved) ||
     (consultantSelectionEnabled === true && isLoading) ||
-    (consultantSelectionEnabled === false && isLoadingAggregatedSlots)
+    (consultantSelectionEnabled === false && isLoadingAggregatedPlans)
   ) {
     return (
       <styled.div maxW="4xl" mx="auto" p="8">
@@ -129,7 +109,7 @@ export function ConsultantsPage() {
             <ConsultantCardSkeleton />
           </styled.div>
         ) : (
-          <AggregatedSlotSkeleton />
+          <AggregatedPlansSkeleton />
         )}
       </styled.div>
     );
@@ -138,7 +118,7 @@ export function ConsultantsPage() {
   if (
     settingsError ||
     (consultantSelectionEnabled === true && error) ||
-    (consultantSelectionEnabled === false && aggregatedError)
+    (consultantSelectionEnabled === false && aggregatedPlansError)
   ) {
     return (
       <EmptyState
@@ -146,7 +126,7 @@ export function ConsultantsPage() {
         message={
           consultantSelectionEnabled === true
             ? "相談員情報の取得に失敗しました"
-            : "空き枠情報の取得に失敗しました"
+            : "料金プラン情報の取得に失敗しました"
         }
         hint="しばらくしてからもう一度お試しください"
       />
@@ -159,12 +139,12 @@ export function ConsultantsPage() {
     <styled.div maxW="4xl" mx="auto" p="8">
       <styled.div mb="8">
         <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
-          {consultantSelectionEnabled ? "相談員一覧" : "予約可能な日時"}
+          {consultantSelectionEnabled ? "相談員一覧" : "料金プランを選択"}
         </Text>
         <Text textStyle="sm" color="fg.muted">
           {consultantSelectionEnabled === true
             ? "みらい予報の相談員を選んで予約できます"
-            : "日時を選ぶと、空き状況に応じて相談員を自動でご案内します"}
+            : "ご希望の相談時間と料金プランを選ぶと、空き状況に応じて相談員を自動でご案内します"}
         </Text>
       </styled.div>
 
@@ -256,71 +236,79 @@ export function ConsultantsPage() {
 
                 <Button asChild mt="auto">
                   <Link
-                    to="/$organizationId/consultants/$id/slots"
+                    to="/$organizationId/consultants/$id/plans"
                     params={{
                       organizationId: organizationId ?? "",
                       id: consultant.consultantId,
                     }}
                   >
-                    空き枠を見る
+                    プランを選択
                   </Link>
                 </Button>
               </styled.div>
             ))}
           </styled.div>
         )
-      ) : bookableStarts.length === 0 ? (
+      ) : aggregatedPlans.length === 0 ? (
         <EmptyState
-          icon={Users}
-          message="現在利用可能な枠はありません"
-          hint="相談員が新しい枠を追加すると、ここに表示されます"
+          icon={PackageSearch}
+          message="現在ご利用可能な料金プランがありません"
+          hint="相談員が新しいプランを追加すると、ここに表示されます"
         />
       ) : (
         <styled.div display="flex" flexDirection="column" gap="6">
-          {groupedAggregatedSlots.map(([dateLabel, candidates]) => (
-            <div key={dateLabel}>
-              <Text
-                as="h2"
-                textStyle="md"
-                fontWeight="bold"
-                mb="3"
-                pb="2"
-                borderBottom="1px solid"
-                borderColor="border"
-              >
-                {dateLabel}
-              </Text>
-              <styled.div display="flex" flexDirection="column" gap="2">
-                {candidates.map((candidate) => (
-                  <styled.a
-                    key={candidate.startsAt}
-                    href={buildPath(
-                      `/booking?startsAt=${encodeURIComponent(candidate.startsAt)}`,
-                    )}
-                    shadow="xs"
-                    border="1px solid"
-                    borderColor="border"
-                    rounded="l2"
-                    p="4"
-                    display="block"
-                    cursor="pointer"
-                    transition="all"
-                    transitionDuration="normal"
-                    textDecoration="none"
-                    color="fg.default"
-                    _hover={{
-                      borderColor: "colorPalette.default",
-                      shadow: "sm",
-                    }}
-                  >
-                    <Text fontWeight="medium" mb="1">
-                      {formatTime(candidate.startsAt)} 開始
-                    </Text>
-                  </styled.a>
-                ))}
-              </styled.div>
-            </div>
-          ))}
+          <RadioGroup.Root
+            name="selectionId"
+            value={selectionId}
+            onValueChange={(details) => setSelectionId(details.value ?? "")}
+          >
+            <styled.div display="flex" flexDirection="column" gap="3">
+              {aggregatedPlans.map((plan) => (
+                <RadioGroup.Item
+                  key={plan.selectionId}
+                  value={plan.selectionId}
+                >
+                  <RadioGroup.ItemHiddenInput />
+                  <RadioGroup.ItemControl />
+                  <RadioGroup.ItemText asChild>
+                    <styled.div
+                      display="flex"
+                      flexDirection="column"
+                      gap="1"
+                      flex="1"
+                    >
+                      <styled.div
+                        display="flex"
+                        justifyContent="space-between"
+                        alignItems="baseline"
+                        gap="3"
+                      >
+                        <Text fontWeight="medium">{plan.name}</Text>
+                        <Text
+                          fontWeight="bold"
+                          textStyle="lg"
+                          color="colorPalette.default"
+                        >
+                          ¥{plan.totalJPY.toLocaleString()}
+                        </Text>
+                      </styled.div>
+                      <Text textStyle="sm" color="fg.muted">
+                        {plan.durationMinutes}分
+                      </Text>
+                    </styled.div>
+                  </RadioGroup.ItemText>
+                </RadioGroup.Item>
+              ))}
+            </styled.div>
+          </RadioGroup.Root>
+
+          <Button
+            type="button"
+            onClick={handleProceedAggregated}
+            disabled={!selectedPlan}
+          >
+            予約枠の選択へ進む
+          </Button>
         </styled.div>
       )}
     </styled.div>

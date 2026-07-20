@@ -406,22 +406,17 @@ paths:
         "200":
           description: OK
 
-  /organizations/{organizationId}/booking/price-plans:
+  /organizations/{organizationId}/price-plans:
     get:
-      operationId: getBookingPricePlans
-      summary: 予約用料金プラン一覧取得
+      operationId: getPricePlans
+      summary: 予約用料金プラン一覧取得（開始時刻確定前）
       tags: [booking]
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
-        - name: startsAt
-          in: query
-          required: true
-          schema:
-            type: string
-            format: date-time
         - name: consultantId
           in: query
           required: false
+          description: 指定時はその相談員のプラン。未指定時は全相談員のプランを selectionId で dedupe した集約一覧
           schema:
             type: string
       responses:
@@ -436,7 +431,7 @@ paths:
                   pricePlans:
                     type: array
                     items:
-                      $ref: "#/components/schemas/PublicPricePlan"
+                      $ref: "#/components/schemas/PricePlanOption"
 
   /organizations/{organizationId}/settings/public:
     get:
@@ -2434,10 +2429,9 @@ components:
           type: string
           description: 適用する UserCoupon の ID（1枚のみ、任意）
 
-    PublicPricePlan:
+    PricePlanOption:
       type: object
-      required:
-        [selectionId, name, totalJPY, durationMinutes, isAvailableAtStart]
+      required: [selectionId, name, totalJPY, durationMinutes]
       properties:
         selectionId:
           type: string
@@ -2449,9 +2443,6 @@ components:
         durationMinutes:
           type: integer
           enum: [30, 60, 90, 120]
-        isAvailableAtStart:
-          type: boolean
-          description: 指定した開始時刻から連続 Slot + バッファが空いているか
 
     PricePlan:
       type: object

@@ -15,10 +15,9 @@ export interface StartCandidate {
   minimumEndsAt: string;
 }
 
-const MINIMUM_BOOKING_MINUTES = 30;
-
-export function collectBookableStartTimes(
+export function collectBookableStartTimesForDuration(
   slots: readonly RawSlot[],
+  durationMinutes: number,
 ): StartCandidate[] {
   if (slots.length === 0) return [];
   const slotUnitMs = getSlotUnitMs();
@@ -26,18 +25,18 @@ export function collectBookableStartTimes(
     (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
   );
   const requiredSlotCount =
-    getUsageSlotCount(MINIMUM_BOOKING_MINUTES) + getBufferSlotCount();
+    getUsageSlotCount(durationMinutes) + getBufferSlotCount();
   const startTimes = sorted.map((s) => new Date(s.startsAt).getTime());
   const candidates: StartCandidate[] = [];
 
   for (let i = 0; i < sorted.length; i++) {
     let ok = true;
     for (let j = 0; j < requiredSlotCount; j++) {
-      const expected = startTimes[i] + j * slotUnitMs;
       if (i + j >= sorted.length) {
         ok = false;
         break;
       }
+      const expected = startTimes[i] + j * slotUnitMs;
       if (startTimes[i + j] !== expected) {
         ok = false;
         break;
@@ -47,7 +46,7 @@ export function collectBookableStartTimes(
       candidates.push({
         startsAt: sorted[i].startsAt,
         minimumEndsAt: new Date(
-          startTimes[i] + MINIMUM_BOOKING_MINUTES * 60 * 1000,
+          startTimes[i] + durationMinutes * 60 * 1000,
         ).toISOString(),
       });
     }

@@ -19,7 +19,7 @@ interface SlotsSearch {
   durationMinutes: number;
 }
 
-export const Route = createFileRoute("/$organizationId/consultants/$id/slots")({
+export const Route = createFileRoute("/$organizationId/slots")({
   validateSearch: (search: Record<string, unknown>): SlotsSearch => {
     const durationRaw = search.durationMinutes;
     const duration =
@@ -34,7 +34,7 @@ export const Route = createFileRoute("/$organizationId/consultants/$id/slots")({
       durationMinutes: Number.isFinite(duration) ? duration : Number.NaN,
     };
   },
-  component: SlotsPage,
+  component: AggregatedSlotsPage,
 });
 
 function formatDate(isoString: string): string {
@@ -62,25 +62,25 @@ function SlotsSkeleton() {
   );
 }
 
-function SlotsPage() {
-  const { organizationId, id: consultantId } = Route.useParams();
+function AggregatedSlotsPage() {
+  const { organizationId } = Route.useParams();
   const { selectionId, durationMinutes } = Route.useSearch();
   const { buildPath } = useOrganizationRouting();
-  const { data, isLoading, error } = useGetSlots({ consultantId });
-  const pricePlansQuery = usePricePlanOptions({ consultantId });
+  const { data, isLoading, error } = useGetSlots({});
+  const pricePlansQuery = usePricePlanOptions({});
   const selectedPlan =
     pricePlansQuery.data?.data?.pricePlans.find(
       (plan) => plan.selectionId === selectionId,
     ) ?? null;
 
-  const slots = data?.data?.slots ?? [];
+  const aggregatedSlots = data?.data?.aggregatedSlots ?? [];
 
   const bookableStarts = useMemo(
     () =>
       Number.isFinite(durationMinutes)
-        ? collectBookableStartTimesForDuration(slots, durationMinutes)
+        ? collectBookableStartTimesForDuration(aggregatedSlots, durationMinutes)
         : [],
-    [slots, durationMinutes],
+    [aggregatedSlots, durationMinutes],
   );
 
   const groupedStarts = useMemo(() => {
@@ -104,10 +104,7 @@ function SlotsPage() {
           hint="料金プランを選び直してください"
         />
         <styled.div display="flex" justifyContent="center" mt="4">
-          <Link
-            to="/$organizationId/consultants/$id/plans"
-            params={{ organizationId, id: consultantId }}
-          >
+          <Link to="/$organizationId/consultants" params={{ organizationId }}>
             <styled.span
               color="colorPalette.default"
               textDecoration="underline"
@@ -146,10 +143,7 @@ function SlotsPage() {
       <styled.div display="flex" alignItems="center" gap="2" mb="4">
         <Tooltip content="料金プラン選択に戻る" showArrow>
           <IconButton variant="subtle" size="sm" asChild>
-            <Link
-              to="/$organizationId/consultants/$id/plans"
-              params={{ organizationId, id: consultantId }}
-            >
+            <Link to="/$organizationId/consultants" params={{ organizationId }}>
               <ArrowLeft size={18} />
             </Link>
           </IconButton>
@@ -164,7 +158,7 @@ function SlotsPage() {
           開始時刻を選択
         </Text>
         <Text textStyle="sm" color="fg.muted">
-          ご希望の開始時刻を選んでください
+          日時を選ぶと、空き状況に応じて相談員を自動でご案内します
         </Text>
       </styled.div>
 
@@ -223,7 +217,7 @@ function SlotsPage() {
                   <styled.a
                     key={candidate.startsAt}
                     href={buildPath(
-                      `/booking?consultantId=${consultantId}&startsAt=${encodeURIComponent(candidate.startsAt)}&selectionId=${encodeURIComponent(selectionId)}&durationMinutes=${durationMinutes}`,
+                      `/booking?startsAt=${encodeURIComponent(candidate.startsAt)}&selectionId=${encodeURIComponent(selectionId)}&durationMinutes=${durationMinutes}`,
                     )}
                     shadow="xs"
                     border="1px solid"
