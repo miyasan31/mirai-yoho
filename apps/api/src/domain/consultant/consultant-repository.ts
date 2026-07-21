@@ -5,6 +5,10 @@ export interface IConsultantRepository {
     organizationId: string,
     consultantId: string,
   ): Promise<Consultant | null>;
+  findByIds(
+    organizationId: string,
+    consultantIds: string[],
+  ): Promise<Consultant[]>;
   findAll(organizationId: string): Promise<Consultant[]>;
   findAllActive(organizationId: string): Promise<Consultant[]>;
   findOrganizationIdsByConsultantId(consultantId: string): Promise<string[]>;

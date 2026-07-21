@@ -79,6 +79,21 @@ export class FirestoreConsultantRepository implements IConsultantRepository {
     return toDomain(doc.data() as ConsultantDoc);
   }
 
+  async findByIds(
+    organizationId: string,
+    consultantIds: string[],
+  ): Promise<Consultant[]> {
+    const uniqueIds = [...new Set(consultantIds)];
+    if (uniqueIds.length === 0) return [];
+    const refs = uniqueIds.map((consultantId) =>
+      db.collection(COLLECTION).doc(`${organizationId}_${consultantId}`),
+    );
+    const snapshots = await db.getAll(...refs);
+    return snapshots
+      .filter((snapshot) => snapshot.exists)
+      .map((snapshot) => toDomain(snapshot.data() as ConsultantDoc));
+  }
+
   async findAllActive(organizationId: string): Promise<Consultant[]> {
     const snapshot = await db
       .collection(COLLECTION)

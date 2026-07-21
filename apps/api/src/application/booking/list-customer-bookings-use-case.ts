@@ -38,49 +38,46 @@ export class ListCustomerBookingsUseCase {
       return [];
     }
 
-    const bookingsPerCustomer = await Promise.all(
-      scopedCustomers.map((customer) =>
-        this.bookingRepository.findAllByCustomerId(customer.getCustomerId()),
-      ),
+    const customerIds = scopedCustomers.map((customer) =>
+      customer.getCustomerId(),
     );
-    const bookings = bookingsPerCustomer.flat();
+    const bookings =
+      await this.bookingRepository.findAllByCustomerIds(customerIds);
 
-    const uniqueConsultantKeys = new Map<
-      string,
-      { organizationId: string; consultantId: string }
-    >();
+    const consultantIdsByOrganization = new Map<string, Set<string>>();
     for (const booking of bookings) {
-      const key = `${booking.getOrganizationId()}::${booking.getConsultantId()}`;
-      if (!uniqueConsultantKeys.has(key)) {
-        uniqueConsultantKeys.set(key, {
-          organizationId: booking.getOrganizationId(),
-          consultantId: booking.getConsultantId(),
-        });
+      const orgId = booking.getOrganizationId();
+      const set = consultantIdsByOrganization.get(orgId) ?? new Set<string>();
+      set.add(booking.getConsultantId());
+      consultantIdsByOrganization.set(orgId, set);
+    }
+
+    const uniqueOrganizationIds = [...consultantIdsByOrganization.keys()];
+    const [organizations, consultantsByOrg] = await Promise.all([
+      this.organizationRepository.findByIds(uniqueOrganizationIds),
+      Promise.all(
+        [...consultantIdsByOrganization.entries()].map(
+          async ([orgId, consultantIdSet]) =>
+            [
+              orgId,
+              await this.consultantRepository.findByIds(orgId, [
+                ...consultantIdSet,
+              ]),
+            ] as const,
+        ),
+      ),
+    ]);
+
+    const consultantNameByKey = new Map<string, string | null>();
+    for (const [orgId, consultants] of consultantsByOrg) {
+      for (const consultant of consultants) {
+        consultantNameByKey.set(
+          `${orgId}::${consultant.getConsultantId()}`,
+          consultant.getProfile().getDisplayName(),
+        );
       }
     }
 
-    const consultantEntries = await Promise.all(
-      [...uniqueConsultantKeys.entries()].map(
-        async ([key, { organizationId, consultantId }]) => {
-          const consultant = await this.consultantRepository.findById(
-            organizationId,
-            consultantId,
-          );
-          return [
-            key,
-            consultant?.getProfile().getDisplayName() ?? null,
-          ] as const;
-        },
-      ),
-    );
-    const consultantNameByKey = new Map(consultantEntries);
-
-    const uniqueOrganizationIds = Array.from(
-      new Set(bookings.map((booking) => booking.getOrganizationId())),
-    );
-    const organizations = await this.organizationRepository.findByIds(
-      uniqueOrganizationIds,
-    );
     const organizationNameById = new Map(
       organizations.map((org) => [org.getOrganizationId(), org.getName()]),
     );

@@ -34,16 +34,28 @@ export class ListAvailableCouponsForOrgUseCase {
     input: ListAvailableCouponsForOrgInput,
   ): Promise<AvailableCouponOutput[]> {
     const now = new Date();
-    const [all, user] = await Promise.all([
+    const [all, user, userCoupons] = await Promise.all([
       this.couponRepository.findByOrganizationId(input.organizationId),
       this.userRepository.findById(input.userId),
+      this.userCouponRepository.findByUserId(input.userId),
     ]);
     const active = all.filter((c) => !c.isArchived());
 
-    const results: AvailableCouponOutput[] = [];
-    for (const coupon of active) {
-      const reason = await this.eligibility(coupon, user, input.userId, now);
-      results.push({
+    const userCouponsByCouponId = new Map<
+      string,
+      Awaited<ReturnType<IUserCouponRepository["findByUserId"]>>
+    >();
+    for (const userCoupon of userCoupons) {
+      const couponId = userCoupon.getCouponId();
+      const list = userCouponsByCouponId.get(couponId) ?? [];
+      list.push(userCoupon);
+      userCouponsByCouponId.set(couponId, list);
+    }
+
+    return active.map((coupon) => {
+      const existing = userCouponsByCouponId.get(coupon.getCouponId()) ?? [];
+      const reason = this.eligibility(coupon, user, existing, now);
+      return {
         couponId: coupon.getCouponId(),
         type: coupon.getType(),
         name: coupon.getName(),
@@ -52,22 +64,17 @@ export class ListAvailableCouponsForOrgUseCase {
         expiresInDays: coupon.getExpiresInDays(),
         isReceivable: reason === null,
         ineligibilityReason: reason,
-      });
-    }
-    return results;
+      };
+    });
   }
 
-  private async eligibility(
+  private eligibility(
     coupon: Coupon,
     user: Awaited<ReturnType<IUserRepository["findById"]>>,
-    userId: string,
+    existing: Awaited<ReturnType<IUserCouponRepository["findByUserId"]>>,
     now: Date,
-  ): Promise<AvailableCouponIneligibilityReason | null> {
+  ): AvailableCouponIneligibilityReason | null {
     if (coupon.getType() === "welcome") {
-      const existing = await this.userCouponRepository.findByUserIdAndCouponId(
-        userId,
-        coupon.getCouponId(),
-      );
       if (existing.length > 0) return "already-received";
       return null;
     }
@@ -77,10 +84,6 @@ export class ListAvailableCouponsForOrgUseCase {
     const birthMonth = user.getBirthDate().getBirthMonth();
     if (birthMonth !== now.getMonth() + 1) return "not-in-birth-month";
 
-    const existing = await this.userCouponRepository.findByUserIdAndCouponId(
-      userId,
-      coupon.getCouponId(),
-    );
     const receivedThisMonth = existing.some((c) => {
       const receivedAt = c.getReceivedAt();
       return (

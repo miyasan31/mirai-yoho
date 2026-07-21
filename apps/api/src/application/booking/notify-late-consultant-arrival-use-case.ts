@@ -47,8 +47,9 @@ export class NotifyLateConsultantArrivalUseCase {
     const consultantIds = targetBookings.map((booking) =>
       booking.getConsultantId(),
     );
-    const [customers, userContacts] = await Promise.all([
+    const [customers, consultants, userContacts] = await Promise.all([
       this.customerRepository.findByIds(input.organizationId, customerIds),
+      this.consultantRepository.findByIds(input.organizationId, consultantIds),
       this.userContactService.findByUids(consultantIds),
     ]);
     const customerById = new Map(
@@ -56,16 +57,20 @@ export class NotifyLateConsultantArrivalUseCase {
         (customer) => [customer.getCustomerId(), customer] as const,
       ),
     );
+    const consultantById = new Map(
+      consultants.map(
+        (consultant) => [consultant.getConsultantId(), consultant] as const,
+      ),
+    );
 
-    let notifiedCount = 0;
-    const errors: Array<{ bookingId: string; error: string }> = [];
+    const consoleBookingsUrl = this.buildConsoleBookingsUrl(
+      input.organizationId,
+    );
 
-    for (const booking of targetBookings) {
-      try {
-        const consultant = await this.consultantRepository.findById(
-          input.organizationId,
-          booking.getConsultantId(),
-        );
+    const results = await Promise.allSettled(
+      targetBookings.map(async (booking) => {
+        const consultant =
+          consultantById.get(booking.getConsultantId()) ?? null;
         const customer = customerById.get(booking.getCustomerId()) ?? null;
         const consultantProfile = consultant?.getProfile();
         const userContact = userContacts.get(booking.getConsultantId());
@@ -84,21 +89,30 @@ export class NotifyLateConsultantArrivalUseCase {
               (input.now.getTime() - booking.getStartsAt().getTime()) / 60_000,
             ),
           ),
-          consoleBookingsUrl: this.buildConsoleBookingsUrl(
-            input.organizationId,
-          ),
+          consoleBookingsUrl,
         });
 
         booking.markLateArrivalAlertSent(input.now);
         await this.bookingRepository.save(booking);
+      }),
+    );
+
+    let notifiedCount = 0;
+    const errors: Array<{ bookingId: string; error: string }> = [];
+    results.forEach((result, index) => {
+      const booking = targetBookings[index];
+      if (result.status === "fulfilled") {
         notifiedCount++;
-      } catch (error) {
+      } else {
         errors.push({
           bookingId: booking.getBookingId(),
-          error: error instanceof Error ? error.message : "Unknown error",
+          error:
+            result.reason instanceof Error
+              ? result.reason.message
+              : "Unknown error",
         });
       }
-    }
+    });
 
     return { targetCount: targetBookings.length, notifiedCount, errors };
   }

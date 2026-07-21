@@ -123,6 +123,44 @@ export class FirestoreRoleRepository implements RoleRepository {
     ];
   }
 
+  async findByOrganizationIds(
+    organizationIds: string[],
+  ): Promise<Map<string, Role[]>> {
+    const uniqueIds = [...new Set(organizationIds)];
+    const result = new Map<string, Role[]>();
+    if (uniqueIds.length === 0) return result;
+
+    for (const orgId of uniqueIds) {
+      result.set(orgId, [
+        Role.createSystemAdmin(orgId),
+        Role.createSystemOperator(orgId),
+      ]);
+    }
+
+    const CHUNK_SIZE = 30;
+    const chunks: string[][] = [];
+    for (let i = 0; i < uniqueIds.length; i += CHUNK_SIZE) {
+      chunks.push(uniqueIds.slice(i, i + CHUNK_SIZE));
+    }
+
+    const snapshots = await Promise.all(
+      chunks.map((chunk) =>
+        db.collection(COLLECTION).where("organizationId", "in", chunk).get(),
+      ),
+    );
+
+    for (const snapshot of snapshots) {
+      for (const doc of snapshot.docs) {
+        const data = doc.data() as RoleDoc;
+        if (isSystemRoleId(data.roleId)) continue;
+        const list = result.get(data.organizationId);
+        if (list) list.push(toDomain(data));
+      }
+    }
+
+    return result;
+  }
+
   async save(role: Role): Promise<void> {
     await db
       .collection(COLLECTION)
