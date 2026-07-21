@@ -20,6 +20,7 @@ import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { styled } from "styled-system/jsx";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetConsoleSlots } from "@/hooks/use-console-slots";
+import { useConsultantBookings } from "@/hooks/use-consultant-bookings";
 import { useConsultantCalendarQueryParams } from "@/hooks/use-consultant-calendar-query-params";
 import { useCreateSlot, useDeleteSlot } from "@/hooks/use-slots";
 
@@ -41,7 +42,7 @@ interface CalendarEvent {
   title: string;
   start: Date;
   end: Date;
-  type: "available";
+  type: "available" | "booking" | "buffer";
 }
 
 function startOfDate(date: Date): Date {
@@ -106,6 +107,12 @@ export default function ConsultantSlotsPage() {
       query: { enabled: !!user?.uid },
     },
   );
+  const { data: bookingsData } = useConsultantBookings({
+    page: 1,
+    pageSize: 100,
+    sortBy: "createdAt",
+    sortOrder: "desc",
+  });
   const { data: settingsData } = usePublicBookingSettings();
   const createSlot = useCreateSlot();
   const deleteSlot = useDeleteSlot();
@@ -124,14 +131,45 @@ export default function ConsultantSlotsPage() {
 
   const events: CalendarEvent[] = useMemo(() => {
     const slots = data?.data?.slots ?? [];
-    return slots.map((slot) => ({
+    const availableEvents: CalendarEvent[] = slots.map((slot) => ({
       id: slot.slotId,
       title: "予約可能",
       start: new Date(slot.startsAt),
       end: new Date(slot.endsAt),
-      type: "available" as const,
+      type: "available",
     }));
-  }, [data]);
+
+    const bookings = bookingsData?.data?.bookings ?? [];
+    const bookingEvents: CalendarEvent[] = [];
+    for (const booking of bookings) {
+      if (booking.status === "cancelled") continue;
+      const startsAt = new Date(booking.startsAt);
+      const endsAt = new Date(booking.endsAt);
+      const customerName = booking.customer?.name ?? null;
+      bookingEvents.push({
+        id: `booking-${booking.bookingId}`,
+        title: customerName ? `予約: ${customerName}` : "予約",
+        start: startsAt,
+        end: endsAt,
+        type: "booking",
+      });
+      const bufferMinutes = booking.bufferSlotIds.length * SLOT_UNIT_MINUTES;
+      if (bufferMinutes > 0) {
+        const bufferEnd = new Date(
+          endsAt.getTime() + bufferMinutes * 60 * 1000,
+        );
+        bookingEvents.push({
+          id: `buffer-${booking.bookingId}`,
+          title: `バッファ (${bufferMinutes}分)`,
+          start: endsAt,
+          end: bufferEnd,
+          type: "buffer",
+        });
+      }
+    }
+
+    return [...availableEvents, ...bookingEvents];
+  }, [data, bookingsData]);
 
   const handleSelectSlot = useCallback(
     async (slotInfo: SlotInfo) => {
@@ -215,7 +253,7 @@ export default function ConsultantSlotsPage() {
       if (hasOverlap) {
         toaster.create({
           type: "error",
-          title: "既存の予約可能枠と重複しています",
+          title: "既存の予約可能枠または予約と重複しています",
         });
         return;
       }
@@ -255,6 +293,7 @@ export default function ConsultantSlotsPage() {
   );
 
   const handleSelectEvent = useCallback((event: CalendarEvent) => {
+    if (event.type !== "available") return;
     setDeleteTarget(event);
   }, []);
 
@@ -276,7 +315,27 @@ export default function ConsultantSlotsPage() {
     }
   }, [deleteSlot, deleteTarget, organizationId, refetch]);
 
-  const eventStyleGetter = useCallback(() => {
+  const eventStyleGetter = useCallback((event: CalendarEvent) => {
+    if (event.type === "booking") {
+      return {
+        style: {
+          backgroundColor: "#2f855a",
+          borderColor: "#276749",
+          color: "#fff",
+          opacity: 0.9,
+        },
+      };
+    }
+    if (event.type === "buffer") {
+      return {
+        style: {
+          backgroundColor: "#a0aec0",
+          borderColor: "#718096",
+          color: "#fff",
+          opacity: 0.7,
+        },
+      };
+    }
     return {
       style: {
         backgroundColor: "#2661cf",
