@@ -3,6 +3,7 @@ import { AppError } from "@/application/shared/app-error";
 import { AuthError } from "@/infrastructure/auth/verify-auth";
 import { verifyCustomerAuth } from "@/infrastructure/auth/verify-customer-auth";
 import {
+  createBookingRepository,
   createCancelBookingUseCase,
   createListCustomerBookingsUseCase,
   createUserRepository,
@@ -95,6 +96,38 @@ export async function CANCEL(request: Request, bookingId: string) {
       cancelledBy: "customer",
     });
     return withNoStore(new Response(null, { status: 204 }));
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+export async function JOIN(request: Request, bookingId: string) {
+  try {
+    const userId = await resolveUserId(request);
+    const results = await createListCustomerBookingsUseCase().execute({
+      userId,
+    });
+    const owned = results.find(
+      ({ booking }) => booking.getBookingId() === bookingId,
+    );
+    if (!owned) {
+      return jsonError(404, "BOOKING_NOT_FOUND", "Booking not found");
+    }
+    const bookingRepository = createBookingRepository();
+    const booking = await bookingRepository.findById(
+      owned.booking.getOrganizationId(),
+      bookingId,
+    );
+    if (!booking) {
+      return jsonError(404, "BOOKING_NOT_FOUND", "Booking not found");
+    }
+    booking.markCustomerJoined(new Date());
+    await bookingRepository.save(booking);
+    return withNoStore(
+      Response.json({
+        customerJoinedAt: booking.getCustomerJoinedAt()?.toISOString() ?? null,
+      }),
+    );
   } catch (error) {
     return handleError(error);
   }

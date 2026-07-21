@@ -334,6 +334,53 @@ describe("Booking", () => {
     });
   });
 
+  describe("markCustomerJoined", () => {
+    it("confirmed 予約の入室時刻を記録できる", () => {
+      const booking = createConfirmedBooking();
+      const joinedAt = new Date("2026-05-01T09:50:00Z");
+
+      booking.markCustomerJoined(joinedAt);
+
+      expect(booking.getCustomerJoinedAt()).toEqual(joinedAt);
+    });
+
+    it("開始15分より前は記録できない", () => {
+      const booking = createConfirmedBooking();
+
+      expect(() =>
+        booking.markCustomerJoined(new Date("2026-05-01T09:44:59Z")),
+      ).toThrow(DomainError);
+    });
+
+    it("既に記録されている場合は何もしない (冪等)", () => {
+      const booking = createConfirmedBooking();
+      const first = new Date("2026-05-01T09:50:00Z");
+      const second = new Date("2026-05-01T09:52:00Z");
+
+      booking.markCustomerJoined(first);
+      booking.markCustomerJoined(second);
+
+      expect(booking.getCustomerJoinedAt()).toEqual(first);
+    });
+
+    it("cancelled は記録できない", () => {
+      const booking = createConfirmedBooking();
+      booking.cancel(cancelInput("admin"));
+
+      expect(() =>
+        booking.markCustomerJoined(new Date("2026-05-01T09:50:00Z")),
+      ).toThrow(DomainError);
+    });
+
+    it("pending は記録できない", () => {
+      const booking = createPendingBooking();
+
+      expect(() =>
+        booking.markCustomerJoined(new Date("2026-05-01T09:50:00Z")),
+      ).toThrow(DomainError);
+    });
+  });
+
   describe("markLateArrivalAlertSent", () => {
     it("遅刻アラート通知済み時刻を記録する", () => {
       const booking = createConfirmedBooking();

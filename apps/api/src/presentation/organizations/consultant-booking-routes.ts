@@ -49,6 +49,7 @@ consultantBookingRoutes.get(
         status: b.getStatus().getValue(),
         joinUrl: b.getJoinUrl()?.getValue() ?? null,
         consultantJoinedAt: b.getConsultantJoinedAt()?.toISOString() ?? null,
+        customerJoinedAt: b.getCustomerJoinedAt()?.toISOString() ?? null,
         lateArrivalAlertSentAt:
           b.getLateArrivalAlertSentAt()?.toISOString() ?? null,
         consultantMemo: b.getConsultantMemo().getFreeMemo(),

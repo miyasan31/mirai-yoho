@@ -1,3 +1,4 @@
+import type { CancelBookingUseCase } from "@/application/booking/cancel-booking-use-case";
 import { ChargePaymentUseCase } from "@/application/booking/charge-payment-use-case";
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IStripeService } from "@/application/shared/stripe-service";
@@ -8,12 +9,14 @@ import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 interface BatchChargeResult {
   chargedCount: number;
   completedCount: number;
+  noShowCount: number;
   errors: Array<{ bookingId: string; error: string }>;
 }
 
 type ProcessOutcome =
   | { kind: "charged" }
   | { kind: "completed" }
+  | { kind: "no_show" }
   | { kind: "skipped" }
   | { kind: "error"; error: string };
 
@@ -26,6 +29,7 @@ export class BatchChargeUseCase {
     private readonly customerRepository: ICustomerRepository,
     stripeService: IStripeService,
     emailService: IEmailService,
+    private readonly cancelBookingUseCase: CancelBookingUseCase,
   ) {
     this.chargeUseCase = new ChargePaymentUseCase(
       bookingRepository,
@@ -48,7 +52,12 @@ export class BatchChargeUseCase {
     );
 
     if (eligibleBookings.length === 0) {
-      return { chargedCount: 0, completedCount: 0, errors: [] };
+      return {
+        chargedCount: 0,
+        completedCount: 0,
+        noShowCount: 0,
+        errors: [],
+      };
     }
 
     const customerIds = eligibleBookings.map((booking) =>
@@ -69,15 +78,26 @@ export class BatchChargeUseCase {
 
     const outcomes = await Promise.all(
       eligibleBookings.map(async (booking): Promise<ProcessOutcome> => {
-        const payment = paymentByBookingId.get(booking.getBookingId()) ?? null;
-        if (!payment) {
-          return { kind: "error", error: "Payment not found" };
-        }
-
-        const strategy = payment.getPaymentStrategy();
-        const status = payment.getStatus().getValue();
-
         try {
+          if (!booking.getCustomerJoinedAt() && booking.getEndsAt() < now) {
+            await this.cancelBookingUseCase.execute({
+              organizationId,
+              bookingId: booking.getBookingId(),
+              cancelledBy: "admin",
+              categoryOverride: "no_show",
+            });
+            return { kind: "no_show" };
+          }
+
+          const payment =
+            paymentByBookingId.get(booking.getBookingId()) ?? null;
+          if (!payment) {
+            return { kind: "error", error: "Payment not found" };
+          }
+
+          const strategy = payment.getPaymentStrategy();
+          const status = payment.getStatus().getValue();
+
           if (strategy.isDeferred() && status === "setup_complete") {
             const customer = customerById.get(booking.getCustomerId());
             if (!customer) {
@@ -108,11 +128,13 @@ export class BatchChargeUseCase {
 
     let chargedCount = 0;
     let completedCount = 0;
+    let noShowCount = 0;
     const errors: Array<{ bookingId: string; error: string }> = [];
     outcomes.forEach((outcome, index) => {
       const booking = eligibleBookings[index];
       if (outcome.kind === "charged") chargedCount++;
       else if (outcome.kind === "completed") completedCount++;
+      else if (outcome.kind === "no_show") noShowCount++;
       else if (outcome.kind === "error") {
         errors.push({
           bookingId: booking.getBookingId(),
@@ -121,6 +143,6 @@ export class BatchChargeUseCase {
       }
     });
 
-    return { chargedCount, completedCount, errors };
+    return { chargedCount, completedCount, noShowCount, errors };
   }
 }

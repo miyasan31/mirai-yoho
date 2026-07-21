@@ -304,6 +304,7 @@ export function createBatchChargeUseCase() {
     new FirestoreCustomerRepository(),
     new StripeService(),
     new ResendEmailService(),
+    createCancelBookingUseCase(),
   );
 }
 

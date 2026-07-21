@@ -17,6 +17,7 @@ interface CancelBookingInput {
   organizationId: string;
   bookingId: string;
   cancelledBy: "customer" | "admin";
+  categoryOverride?: "no_show";
 }
 
 export class CancelBookingUseCase {
@@ -54,7 +55,10 @@ export class CancelBookingUseCase {
     ]);
 
     const now = new Date();
-    const category = CancellationCategory.forTime(booking.getStartsAt(), now);
+    const category =
+      input.categoryOverride === "no_show"
+        ? CancellationCategory.noShow()
+        : CancellationCategory.forTime(booking.getStartsAt(), now);
     const bookingTotalJPY = booking.getEffectiveTotalJPY() ?? 0;
     const cancellationFeeJPY = category.computeFeeJPY(bookingTotalJPY);
     const refundJPY = Math.max(0, bookingTotalJPY - cancellationFeeJPY);

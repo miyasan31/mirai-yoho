@@ -223,6 +223,24 @@ bookingRoutes.post(
 );
 
 bookingRoutes.post(
+  "/bookings/:bookingId/mark-no-show",
+  postRoute(async ({ organizationId, request, param }) => {
+    const authUser = await verifyAccountAuth(request);
+    requirePermission(authUser, organizationId, "console.bookings.cancel");
+
+    const bookingId = param("bookingId");
+    await createCancelBookingUseCase().execute({
+      organizationId,
+      bookingId,
+      cancelledBy: "admin",
+      categoryOverride: "no_show",
+    });
+
+    return Response.json({ success: true });
+  }),
+);
+
+bookingRoutes.post(
   "/bookings/:bookingId/charge",
   postRoute(async ({ organizationId, request, param }) => {
     const authUser = await verifyAccountAuth(request);

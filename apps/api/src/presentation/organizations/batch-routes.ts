@@ -162,12 +162,14 @@ batchRoutes.post(
         startedAt: startedAt.toISOString(),
         chargedCount: result.chargedCount,
         completedCount: result.completedCount,
+        noShowCount: result.noShowCount,
         errorCount: result.errors.length,
         errors: result.errors,
       });
       return Response.json({
         chargedCount: result.chargedCount,
         completedCount: result.completedCount,
+        noShowCount: result.noShowCount,
       });
     } catch (error) {
       console.error("Batch charge failed", {

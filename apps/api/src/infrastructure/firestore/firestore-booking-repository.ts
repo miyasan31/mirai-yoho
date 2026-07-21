@@ -32,6 +32,7 @@ interface BookingDoc {
   cancelDeadlineAt: Timestamp;
   joinUrl?: string;
   consultantJoinedAt?: Timestamp;
+  customerJoinedAt?: Timestamp;
   consultationReminderEmailSentAt?: Timestamp;
   lateArrivalAlertSentAt?: Timestamp;
   consultantMemo: string;
@@ -77,6 +78,7 @@ function toDomain(doc: BookingDoc): Booking {
     cancelDeadlineAt: CancelDeadline.reconstruct(doc.cancelDeadlineAt.toDate()),
     joinUrl: doc.joinUrl ? ZoomUrl.reconstruct(doc.joinUrl) : undefined,
     consultantJoinedAt: doc.consultantJoinedAt?.toDate(),
+    customerJoinedAt: doc.customerJoinedAt?.toDate(),
     consultationReminderEmailSentAt:
       doc.consultationReminderEmailSentAt?.toDate(),
     lateArrivalAlertSentAt: doc.lateArrivalAlertSentAt?.toDate(),
@@ -118,6 +120,7 @@ function toFirestore(booking: Booking): Record<string, unknown> {
     cancelDeadlineAt: booking.getCancelDeadlineAt().getValue(),
     joinUrl: booking.getJoinUrl()?.getValue() ?? null,
     consultantJoinedAt: booking.getConsultantJoinedAt() ?? null,
+    customerJoinedAt: booking.getCustomerJoinedAt() ?? null,
     consultationReminderEmailSentAt:
       booking.getConsultationReminderEmailSentAt() ?? null,
     lateArrivalAlertSentAt: booking.getLateArrivalAlertSentAt() ?? null,

@@ -164,6 +164,33 @@ paths:
       responses:
         "204":
           description: No Content
+  /customer/me/bookings/{bookingId}/join:
+    post:
+      operationId: joinMyBooking
+      summary: ログイン顧客の入室記録
+      description: 顧客が Zoom セッションに入室したことを記録する。二重呼び出しは冪等。
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [customerJoinedAt]
+                properties:
+                  customerJoinedAt:
+                    type: string
+                    format: date-time
+                    nullable: true
   /organizations/{organizationId}/customers/me/bookings:
     get:
       operationId: getCustomerBookings
@@ -355,6 +382,23 @@ paths:
                 token:
                   type: string
                   description: "顧客キャンセル時に必須。形式: bookingId.expiresAt.signature"
+      responses:
+        "200":
+          description: OK
+
+  /organizations/{organizationId}/bookings/{bookingId}/mark-no-show:
+    post:
+      operationId: markBookingNoShow
+      summary: 予約を無断キャンセル (no-show) として確定する
+      description: |
+        顧客が入室していない予約を管理者が手動で no-show としてマークするための管理エンドポイント。
+        キャンセル料は予約合計の全額。
+      tags: [booking]
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/BookingIdParam"
+      security:
+        - bearerAuth: []
       responses:
         "200":
           description: OK
@@ -2107,6 +2151,10 @@ components:
           format: uri
           nullable: true
         consultantJoinedAt:
+          type: string
+          format: date-time
+          nullable: true
+        customerJoinedAt:
           type: string
           format: date-time
           nullable: true
