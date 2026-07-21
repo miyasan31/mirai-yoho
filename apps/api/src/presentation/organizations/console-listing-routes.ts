@@ -92,6 +92,8 @@ consoleListingRoutes.get(
         consultationContent: b.getConsultationContent() ?? null,
         chargeable: eligibility.chargeable,
         chargeDisabledReason: eligibility.reason,
+        pricePlanName: b.getPricePlanName() ?? null,
+        pricePlanTotalJPY: b.getPricePlanTotalJPY() ?? null,
         createdAt: b.getCreatedAt().toISOString(),
         updatedAt: b.getUpdatedAt().toISOString(),
       })),
