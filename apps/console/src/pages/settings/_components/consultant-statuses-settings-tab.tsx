@@ -66,7 +66,7 @@ function ConsultantStatusesSettingsTabView({
     >
       <styled.div>
         <Text as="h2" textStyle="lg" fontWeight="semibold" mb="1">
-          占い師ステータス設定
+          ステータス設定
         </Text>
         <Text color="fg.muted" textStyle="sm">
           上にあるステータスほど重要度が高く表示されます。
