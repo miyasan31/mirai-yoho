@@ -200,8 +200,8 @@ describe("ConsoleSettingsPage", () => {
     const user = userEvent.setup();
     render(<ConsoleSettingsPage />);
 
-    await user.click(screen.getByRole("tab", { name: "占い師ステータス" }));
-    const panel = screen.getByRole("tabpanel", { name: "占い師ステータス" });
+    await user.click(screen.getByRole("tab", { name: "ステータス" }));
+    const panel = screen.getByRole("tabpanel", { name: "ステータス" });
 
     expect(within(panel).getByDisplayValue("プレミアム")).toBeInTheDocument();
     expect(within(panel).getByDisplayValue("標準")).toBeInTheDocument();
