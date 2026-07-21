@@ -12,7 +12,7 @@ concurrency:
 
 jobs:
   tsc:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     env:
       TZ: Asia/Tokyo
     steps:
@@ -24,7 +24,7 @@ jobs:
           pnpm --filter @mirai-yoho/api run tsc:test
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     env:
       TZ: Asia/Tokyo
     steps:
@@ -34,7 +34,7 @@ jobs:
         run: pnpm test
 
   lint-format:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     env:
       TZ: Asia/Tokyo
     steps:
@@ -46,7 +46,7 @@ jobs:
         run: pnpm exec biome check --formatter-enabled=true --linter-enabled=false --assist-enabled=false .
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     env:
       TZ: Asia/Tokyo
     steps:
@@ -56,7 +56,7 @@ jobs:
         run: pnpm build
 
   worker-docker-build:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Build worker image
