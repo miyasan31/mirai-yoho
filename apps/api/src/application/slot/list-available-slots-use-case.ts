@@ -5,7 +5,7 @@ import type { ISlotRepository } from "@/domain/slot/slot-repository";
 
 interface ListAvailableSlotsInput {
   organizationId: string;
-  consultantId?: string | null;
+  consultantId: string;
 }
 
 interface AvailableSlotOutput {
@@ -16,24 +16,9 @@ interface AvailableSlotOutput {
   isAvailable: boolean;
 }
 
-interface AggregatedSlotOutput {
-  startsAt: string;
-  endsAt: string;
-}
-
-interface ListAvailableSlotsPerConsultantOutput {
-  mode: "per-consultant";
+interface ListAvailableSlotsOutput {
   slots: AvailableSlotOutput[];
 }
-
-interface ListAvailableSlotsAggregatedOutput {
-  mode: "aggregated";
-  aggregatedSlots: AggregatedSlotOutput[];
-}
-
-type ListAvailableSlotsOutput =
-  | ListAvailableSlotsPerConsultantOutput
-  | ListAvailableSlotsAggregatedOutput;
 
 export class ListAvailableSlotsUseCase {
   constructor(
@@ -50,47 +35,19 @@ export class ListAvailableSlotsUseCase {
       )) ?? Settings.createDefault(input.organizationId);
     const businessHours = settings.getBusinessHours();
 
-    if (input.consultantId) {
-      const availableSlots =
-        await this.slotRepository.findAvailableByConsultantId(
-          input.organizationId,
-          input.consultantId,
-        );
-      const filteredSlots = availableSlots.filter((slot) =>
-        businessHours.containsRange(
-          slot.getTimeRange().getStartsAt(),
-          slot.getTimeRange().getEndsAt(),
-        ),
+    const availableSlots =
+      await this.slotRepository.findAvailableByConsultantId(
+        input.organizationId,
+        input.consultantId,
       );
-      return {
-        mode: "per-consultant",
-        slots: filteredSlots.map(toAvailableSlotOutput),
-      };
-    }
-
-    const aggregatedSlots = await this.slotRepository.findAllAvailable(
-      input.organizationId,
+    const filteredSlots = availableSlots.filter((slot) =>
+      businessHours.containsRange(
+        slot.getTimeRange().getStartsAt(),
+        slot.getTimeRange().getEndsAt(),
+      ),
     );
-    const groupedSlots = new Map<string, AggregatedSlotOutput>();
-    for (const slot of aggregatedSlots) {
-      if (
-        !businessHours.containsRange(
-          slot.getTimeRange().getStartsAt(),
-          slot.getTimeRange().getEndsAt(),
-        )
-      ) {
-        continue;
-      }
-      const startsAt = slot.getTimeRange().getStartsAt().toISOString();
-      const endsAt = slot.getTimeRange().getEndsAt().toISOString();
-      const key = `${startsAt}_${endsAt}`;
-      if (!groupedSlots.has(key)) {
-        groupedSlots.set(key, { startsAt, endsAt });
-      }
-    }
     return {
-      mode: "aggregated",
-      aggregatedSlots: [...groupedSlots.values()],
+      slots: filteredSlots.map(toAvailableSlotOutput),
     };
   }
 }

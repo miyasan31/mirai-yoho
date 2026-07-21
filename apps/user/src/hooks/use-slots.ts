@@ -8,7 +8,7 @@ import { QUERY_STALE_TIME } from "@/hooks/query-cache-policy";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export function useGetSlots(
-  params?: GetSlotsParams,
+  params: GetSlotsParams,
   options?: Record<string, unknown>,
 ) {
   const { organizationId } = useOrganizationRouting();
@@ -25,7 +25,8 @@ export function useGetSlots(
         enabled:
           ((options?.query as { enabled?: boolean } | undefined)?.enabled ??
             true) &&
-          Boolean(organizationId),
+          Boolean(organizationId) &&
+          Boolean(params.consultantId),
       },
     },
   );

@@ -224,7 +224,6 @@ export function createCreateBookingUseCase() {
 export function createListPricePlanOptionsUseCase() {
   return new ListPricePlanOptionsUseCase(
     new FirestorePricePlanRepository(),
-    new FirestoreConsultantRepository(),
     new FirestoreSettingsRepository(),
   );
 }

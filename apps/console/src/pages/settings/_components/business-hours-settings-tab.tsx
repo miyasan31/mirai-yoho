@@ -251,7 +251,6 @@ type BusinessHoursSettingsTabContainerProps = {
   isReadOnly: boolean;
   isLoading: boolean;
   initialBusinessHours: ReturnType<BusinessHours["toJSON"]>;
-  consultantSelectionEnabled: boolean;
   pricePlanRange: PricePlanRange;
   onBusinessHoursSaved: (value: ReturnType<BusinessHours["toJSON"]>) => void;
 };
@@ -301,7 +300,6 @@ export function BusinessHoursSettingsTab({
   isReadOnly,
   isLoading,
   initialBusinessHours,
-  consultantSelectionEnabled,
   pricePlanRange,
   onBusinessHoursSaved,
 }: BusinessHoursSettingsTabContainerProps) {
@@ -364,7 +362,7 @@ export function BusinessHoursSettingsTab({
       }).toJSON();
       await updateBookingSettings.mutateAsync({
         organizationId,
-        data: { consultantSelectionEnabled, businessHours, pricePlanRange },
+        data: { businessHours, pricePlanRange },
       });
       onBusinessHoursSaved(businessHours);
     } catch {

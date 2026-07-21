@@ -7,21 +7,15 @@ import { useEffect, useState } from "react";
 import { styled } from "styled-system/jsx";
 import { useAuth } from "@/hooks/use-auth";
 import { useConsoleBookingSettings } from "@/hooks/use-console-booking-settings";
-import { BookingSettingsTab } from "./_components/booking-settings-tab";
 import { BusinessHoursSettingsTab } from "./_components/business-hours-settings-tab";
 import { ConsultantStatusesSettingsTab } from "./_components/consultant-statuses-settings-tab";
 import { PricePlanRangeSettingsTab } from "./_components/price-plan-range-settings-tab";
 import type { PricePlanRange } from "./_components/settings-types";
 
-type SettingsTab =
-  | "booking"
-  | "business-hours"
-  | "consultant-statuses"
-  | "price";
+type SettingsTab = "business-hours" | "consultant-statuses" | "price";
 
 function isSettingsTab(value: string | null): value is SettingsTab {
   return (
-    value === "booking" ||
     value === "business-hours" ||
     value === "consultant-statuses" ||
     value === "price"
@@ -39,10 +33,8 @@ export default function ConsoleSettingsPage() {
   const canManageConsultantStatuses = hasPermission(
     "console.consultants.status.manage",
   );
-  const [currentTab, setCurrentTab] = useState<SettingsTab>("booking");
+  const [currentTab, setCurrentTab] = useState<SettingsTab>("business-hours");
   const [initialized, setInitialized] = useState(false);
-  const [consultantSelectionEnabled, setConsultantSelectionEnabled] =
-    useState(true);
   const [businessHours, setBusinessHours] = useState(
     BusinessHours.createDefault().toJSON(),
   );
@@ -53,7 +45,6 @@ export default function ConsoleSettingsPage() {
 
   useEffect(() => {
     if (initialized || !data?.data) return;
-    setConsultantSelectionEnabled(data.data.consultantSelectionEnabled);
     setBusinessHours(
       BusinessHours.create(
         data.data.businessHours ?? BusinessHours.createDefault().toJSON(),
@@ -65,7 +56,9 @@ export default function ConsoleSettingsPage() {
     setInitialized(true);
   }, [data, initialized]);
   useEffect(() => {
-    setCurrentTab(isSettingsTab(tabQueryValue) ? tabQueryValue : "booking");
+    setCurrentTab(
+      isSettingsTab(tabQueryValue) ? tabQueryValue : "business-hours",
+    );
   }, [tabQueryValue]);
   const changeTab = (tab: SettingsTab) => {
     setCurrentTab(tab);
@@ -99,9 +92,6 @@ export default function ConsoleSettingsPage() {
         variant="line"
       >
         <Tabs.List mb="4">
-          <Tabs.Trigger value="booking" disabled={isLoading}>
-            予約
-          </Tabs.Trigger>
           <Tabs.Trigger value="business-hours" disabled={isLoading}>
             営業時間
           </Tabs.Trigger>
@@ -113,19 +103,6 @@ export default function ConsoleSettingsPage() {
           </Tabs.Trigger>
           <Tabs.Indicator />
         </Tabs.List>
-        <Tabs.Content value="booking">
-          {initialized && (
-            <BookingSettingsTab
-              organizationId={organizationId ?? undefined}
-              isReadOnly={isReadOnly}
-              isLoading={isLoading || !initialized}
-              initialConsultantSelectionEnabled={consultantSelectionEnabled}
-              businessHours={businessHours}
-              pricePlanRange={pricePlanRange}
-              onConsultantSelectionChange={setConsultantSelectionEnabled}
-            />
-          )}
-        </Tabs.Content>
         <Tabs.Content value="business-hours">
           {initialized && (
             <BusinessHoursSettingsTab
@@ -133,7 +110,6 @@ export default function ConsoleSettingsPage() {
               isReadOnly={isReadOnly}
               isLoading={isLoading || !initialized}
               initialBusinessHours={businessHours}
-              consultantSelectionEnabled={consultantSelectionEnabled}
               pricePlanRange={pricePlanRange}
               onBusinessHoursSaved={setBusinessHours}
             />
@@ -151,7 +127,6 @@ export default function ConsoleSettingsPage() {
               organizationId={organizationId ?? undefined}
               isReadOnly={isReadOnly}
               isLoading={isLoading || !initialized}
-              consultantSelectionEnabled={consultantSelectionEnabled}
               businessHours={businessHours}
               initialPricePlanRange={pricePlanRange}
               onPricePlanRangeSaved={setPricePlanRange}

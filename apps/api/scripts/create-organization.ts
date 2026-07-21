@@ -91,7 +91,6 @@ async function main() {
   await db.collection(SETTINGS_COLLECTION).doc(organizationId).set(
     {
       organizationId,
-      consultantSelectionEnabled: true,
       consultantStatuses: defaultConsultantStatuses,
       defaultConsultantStatusId: defaultConsultantStatuses[0].statusId,
       createdAt: now,

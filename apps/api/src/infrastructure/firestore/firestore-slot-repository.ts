@@ -69,22 +69,6 @@ function toFirestore(slot: Slot): Record<string, unknown> {
   };
 }
 
-function getJstDayRange(date: Date): { start: Date; end: Date } {
-  const nineHoursInMs = 9 * 60 * 60 * 1000;
-  const shifted = new Date(date.getTime() + nineHoursInMs);
-  const startUtcMs =
-    Date.UTC(
-      shifted.getUTCFullYear(),
-      shifted.getUTCMonth(),
-      shifted.getUTCDate(),
-    ) - nineHoursInMs;
-
-  return {
-    start: new Date(startUtcMs),
-    end: new Date(startUtcMs + 24 * 60 * 60 * 1000),
-  };
-}
-
 export class FirestoreSlotRepository implements ISlotRepository {
   async findById(organizationId: string, slotId: string): Promise<Slot | null> {
     const doc = await db.collection(COLLECTION).doc(slotId).get();
@@ -99,47 +83,6 @@ export class FirestoreSlotRepository implements ISlotRepository {
       .where("organizationId", "==", organizationId)
       .get();
     return snapshot.docs.map((doc) => toDomain(doc.data() as SlotDoc));
-  }
-
-  async findAllAvailable(organizationId: string): Promise<Slot[]> {
-    try {
-      const snapshot = await db
-        .collection(COLLECTION)
-        .where("organizationId", "==", organizationId)
-        .where("isAvailable", "==", true)
-        .get();
-      return snapshot.docs
-        .map((doc) => toDomain(doc.data() as SlotDoc))
-        .filter((slot) =>
-          isBeforeBookingDeadline(slot.getTimeRange().getStartsAt()),
-        )
-        .sort(
-          (a, b) =>
-            a.getTimeRange().getStartsAt().getTime() -
-            b.getTimeRange().getStartsAt().getTime(),
-        );
-    } catch (error) {
-      if (!isFirestoreFailedPrecondition(error)) {
-        throw error;
-      }
-
-      const fallbackSnapshot = await db
-        .collection(COLLECTION)
-        .where("organizationId", "==", organizationId)
-        .get();
-      return fallbackSnapshot.docs
-        .map((doc) => toDomain(doc.data() as SlotDoc))
-        .filter(
-          (slot) =>
-            slot.getIsAvailable() &&
-            isBeforeBookingDeadline(slot.getTimeRange().getStartsAt()),
-        )
-        .sort(
-          (a, b) =>
-            a.getTimeRange().getStartsAt().getTime() -
-            b.getTimeRange().getStartsAt().getTime(),
-        );
-    }
   }
 
   async findByConsultantId(
@@ -223,54 +166,6 @@ export class FirestoreSlotRepository implements ISlotRepository {
           slot.getTimeRange().getEndsAt().getTime() === endsAt.getTime(),
       )
       .sort((a, b) => a.getConsultantId().localeCompare(b.getConsultantId()));
-  }
-
-  async findAvailableByDate(
-    organizationId: string,
-    date: Date,
-  ): Promise<Slot[]> {
-    const { start, end } = getJstDayRange(date);
-    try {
-      const snapshot = await db
-        .collection(COLLECTION)
-        .where("organizationId", "==", organizationId)
-        .where("startsAt", ">=", start)
-        .where("startsAt", "<", end)
-        .orderBy("startsAt", "asc")
-        .get();
-      return snapshot.docs
-        .map((doc) => toDomain(doc.data() as SlotDoc))
-        .filter(
-          (slot) =>
-            slot.getIsAvailable() &&
-            isBeforeBookingDeadline(slot.getTimeRange().getStartsAt()),
-        );
-    } catch (error) {
-      if (!isFirestoreFailedPrecondition(error)) {
-        throw error;
-      }
-
-      const fallbackSnapshot = await db
-        .collection(COLLECTION)
-        .where("organizationId", "==", organizationId)
-        .get();
-      return fallbackSnapshot.docs
-        .map((doc) => toDomain(doc.data() as SlotDoc))
-        .filter((slot) => {
-          if (!slot.getIsAvailable()) return false;
-          const startsAt = slot.getTimeRange().getStartsAt().getTime();
-          return (
-            startsAt >= start.getTime() &&
-            startsAt < end.getTime() &&
-            isBeforeBookingDeadline(slot.getTimeRange().getStartsAt())
-          );
-        })
-        .sort(
-          (a, b) =>
-            a.getTimeRange().getStartsAt().getTime() -
-            b.getTimeRange().getStartsAt().getTime(),
-        );
-    }
   }
 
   async findByIdsInTx(

@@ -10,7 +10,6 @@ interface GetBookingSettingsInput {
 
 interface GetBookingSettingsOutput {
   organizationId: string;
-  consultantSelectionEnabled: boolean;
   businessHours: BusinessHoursProps;
   pricePlanRange: PricePlanRangeProps;
 }
@@ -28,7 +27,6 @@ export class GetBookingSettingsUseCase {
     if (!settings) {
       return {
         organizationId,
-        consultantSelectionEnabled: true,
         businessHours: BusinessHours.createDefault().toJSON(),
         pricePlanRange: PricePlanRange.createDefault().toJSON(),
       };
@@ -36,7 +34,6 @@ export class GetBookingSettingsUseCase {
 
     return {
       organizationId: settings.getOrganizationId(),
-      consultantSelectionEnabled: settings.getConsultantSelectionEnabled(),
       businessHours: settings.getBusinessHours().toJSON(),
       pricePlanRange: settings.getPricePlanRange().toJSON(),
     };
