@@ -2134,6 +2134,12 @@ components:
         chargeDisabledReason:
           type: string
           nullable: true
+        pricePlanName:
+          type: string
+          nullable: true
+        pricePlanTotalJPY:
+          type: integer
+          nullable: true
         createdAt:
           type: string
           format: date-time

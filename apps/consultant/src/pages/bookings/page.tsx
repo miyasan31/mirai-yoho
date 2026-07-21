@@ -11,11 +11,33 @@ import * as Table from "@mirai-yoho/ui/components/ui/table";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
 import { Link } from "@tanstack/react-router";
+import { format, parseISO } from "date-fns";
+import { ja } from "date-fns/locale";
 import { CalendarX, ExternalLink, Pencil } from "lucide-react";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
 import { useConsultantBookings } from "@/hooks/use-consultant-bookings";
 import { ConsultantJoinControl } from "./consultant-join-control";
+
+function formatDateTimeRange(startsAtIso: string, endsAtIso: string): string {
+  const startsAt = parseISO(startsAtIso);
+  const endsAt = parseISO(endsAtIso);
+  const startLabel = format(startsAt, "yyyy/MM/dd (E) HH:mm", { locale: ja });
+  const endLabel = format(endsAt, "HH:mm");
+  return `${startLabel} 〜 ${endLabel}`;
+}
+
+function formatPricePlan(
+  name: string | null | undefined,
+  totalJPY: number | null | undefined,
+): string | null {
+  if (!name && totalJPY == null) return null;
+  if (name && totalJPY != null) {
+    return `${name}（¥${totalJPY.toLocaleString("ja-JP")}）`;
+  }
+  if (name) return name;
+  return `¥${(totalJPY ?? 0).toLocaleString("ja-JP")}`;
+}
 
 type CustomerSummary = {
   customerId: string;
@@ -102,7 +124,7 @@ export default function ConsultantBookingsPage() {
             担当予約の日時・ステータスを確認し、Zoom参加や鑑定メモ編集へ進む画面です。
           </Text>
         </styled.div>
-        <TableSkeleton columns={6} rows={5} />
+        <TableSkeleton columns={8} rows={5} />
       </styled.div>
     );
   }
@@ -132,6 +154,7 @@ export default function ConsultantBookingsPage() {
                 <Table.Header>日時</Table.Header>
                 <Table.Header>ステータス</Table.Header>
                 <Table.Header>顧客</Table.Header>
+                <Table.Header>料金プラン</Table.Header>
                 <Table.Header>Zoom</Table.Header>
                 <Table.Header>メモ</Table.Header>
                 <Table.Header>入室確認</Table.Header>
@@ -139,68 +162,81 @@ export default function ConsultantBookingsPage() {
               </Table.Row>
             </Table.Head>
             <Table.Body>
-              {bookings.map((b) => (
-                <Table.Row key={b.bookingId}>
-                  <Table.Cell>
-                    {new Date(b.startsAt).toLocaleString("ja-JP")}
-                  </Table.Cell>
-                  <Table.Cell>
-                    <BookingStatusBadge status={b.status} />
-                  </Table.Cell>
-                  <Table.Cell>
-                    <CustomerCell
-                      customerId={b.customerId}
-                      customer={b.customer ?? null}
-                    />
-                  </Table.Cell>
-                  <Table.Cell>
-                    {b.joinUrl ? (
-                      <Tooltip content="Zoom に参加" showArrow>
+              {bookings.map((b) => {
+                const pricePlanLabel = formatPricePlan(
+                  b.pricePlanName,
+                  b.pricePlanTotalJPY,
+                );
+                return (
+                  <Table.Row key={b.bookingId}>
+                    <Table.Cell>
+                      {formatDateTimeRange(b.startsAt, b.endsAt)}
+                    </Table.Cell>
+                    <Table.Cell>
+                      <BookingStatusBadge status={b.status} />
+                    </Table.Cell>
+                    <Table.Cell>
+                      <CustomerCell
+                        customerId={b.customerId}
+                        customer={b.customer ?? null}
+                      />
+                    </Table.Cell>
+                    <Table.Cell>
+                      {pricePlanLabel ? (
+                        <Text textStyle="sm">{pricePlanLabel}</Text>
+                      ) : (
+                        <Text color="fg.subtle">-</Text>
+                      )}
+                    </Table.Cell>
+                    <Table.Cell>
+                      {b.joinUrl ? (
+                        <Tooltip content="Zoom に参加" showArrow>
+                          <IconButton variant="subtle" size="sm" asChild>
+                            <a
+                              href={b.joinUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <ExternalLink size={16} />
+                            </a>
+                          </IconButton>
+                        </Tooltip>
+                      ) : (
+                        <Text color="fg.subtle">-</Text>
+                      )}
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Text
+                        color={b.consultantMemo ? "fg.default" : "fg.subtle"}
+                        truncate
+                        maxW="200px"
+                      >
+                        {b.consultantMemo || "-"}
+                      </Text>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <ConsultantJoinControl
+                        bookingId={b.bookingId}
+                        startsAt={b.startsAt}
+                        status={b.status}
+                        consultantJoinedAt={b.consultantJoinedAt ?? null}
+                        onJoined={() => {
+                          void refetch();
+                        }}
+                      />
+                    </Table.Cell>
+                    <Table.Cell>
+                      <Tooltip content="鑑定メモ編集" showArrow>
                         <IconButton variant="subtle" size="sm" asChild>
-                          <a
-                            href={b.joinUrl}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                          >
-                            <ExternalLink size={16} />
-                          </a>
+                          <Link to={buildPath(`/bookings/${b.bookingId}/memo`)}>
+                            <Pencil size={16} />
+                          </Link>
                         </IconButton>
                       </Tooltip>
-                    ) : (
-                      <Text color="fg.subtle">-</Text>
-                    )}
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Text
-                      color={b.consultantMemo ? "fg.default" : "fg.subtle"}
-                      truncate
-                      maxW="200px"
-                    >
-                      {b.consultantMemo || "-"}
-                    </Text>
-                  </Table.Cell>
-                  <Table.Cell>
-                    <ConsultantJoinControl
-                      bookingId={b.bookingId}
-                      startsAt={b.startsAt}
-                      status={b.status}
-                      consultantJoinedAt={b.consultantJoinedAt ?? null}
-                      onJoined={() => {
-                        void refetch();
-                      }}
-                    />
-                  </Table.Cell>
-                  <Table.Cell>
-                    <Tooltip content="鑑定メモ編集" showArrow>
-                      <IconButton variant="subtle" size="sm" asChild>
-                        <Link to={buildPath(`/bookings/${b.bookingId}/memo`)}>
-                          <Pencil size={16} />
-                        </Link>
-                      </IconButton>
-                    </Tooltip>
-                  </Table.Cell>
-                </Table.Row>
-              ))}
+                    </Table.Cell>
+                  </Table.Row>
+                );
+              })}
             </Table.Body>
           </Table.Root>
           <ListControls

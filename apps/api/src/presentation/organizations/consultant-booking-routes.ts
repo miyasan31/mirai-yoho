@@ -58,6 +58,8 @@ consultantBookingRoutes.get(
         consultationContent: b.getConsultationContent() ?? null,
         chargeable: eligibility.chargeable,
         chargeDisabledReason: eligibility.reason,
+        pricePlanName: b.getPricePlanName() ?? null,
+        pricePlanTotalJPY: b.getPricePlanTotalJPY() ?? null,
         customer: customer
           ? {
               customerId: customer.getCustomerId(),
