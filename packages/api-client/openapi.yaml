@@ -252,7 +252,7 @@ paths:
         - $ref: "#/components/parameters/OrganizationIdParam"
         - name: consultantId
           in: query
-          required: false
+          required: true
           schema:
             type: string
       responses:
@@ -415,8 +415,7 @@ paths:
         - $ref: "#/components/parameters/OrganizationIdParam"
         - name: consultantId
           in: query
-          required: false
-          description: 指定時はその相談員のプラン。未指定時は全相談員のプランを selectionId で dedupe した集約一覧
+          required: true
           schema:
             type: string
       responses:
@@ -820,7 +819,7 @@ paths:
         - $ref: "#/components/parameters/OrganizationIdParam"
         - name: consultantId
           in: query
-          required: false
+          required: true
           schema:
             type: string
       responses:
@@ -2044,28 +2043,14 @@ components:
         isAvailable:
           type: boolean
 
-    AggregatedSlot:
-      type: object
-      required: [startsAt, endsAt]
-      properties:
-        startsAt:
-          type: string
-          format: date-time
-        endsAt:
-          type: string
-          format: date-time
-
     GetSlots200:
       type: object
+      required: [slots]
       properties:
         slots:
           type: array
           items:
             $ref: "#/components/schemas/Slot"
-        aggregatedSlots:
-          type: array
-          items:
-            $ref: "#/components/schemas/AggregatedSlot"
 
     BookingDetail:
       type: object
@@ -2287,10 +2272,8 @@ components:
 
     BookingSettings:
       type: object
-      required: [consultantSelectionEnabled, businessHours, pricePlanRange]
+      required: [businessHours, pricePlanRange]
       properties:
-        consultantSelectionEnabled:
-          type: boolean
         businessHours:
           $ref: "#/components/schemas/BusinessHours"
         pricePlanRange:
@@ -2298,10 +2281,8 @@ components:
 
     PublicSettings:
       type: object
-      required: [consultantSelectionEnabled, businessHours, pricePlanRange]
+      required: [businessHours, pricePlanRange]
       properties:
-        consultantSelectionEnabled:
-          type: boolean
         businessHours:
           $ref: "#/components/schemas/BusinessHours"
         pricePlanRange:
@@ -2309,10 +2290,8 @@ components:
 
     UpdateBookingSettingsBody:
       type: object
-      required: [consultantSelectionEnabled, businessHours, pricePlanRange]
+      required: [businessHours, pricePlanRange]
       properties:
-        consultantSelectionEnabled:
-          type: boolean
         businessHours:
           $ref: "#/components/schemas/BusinessHours"
         pricePlanRange:
@@ -2393,6 +2372,7 @@ components:
       type: object
       required:
         [
+          consultantId,
           customerName,
           customerEmail,
           customerPhone,
@@ -2404,7 +2384,6 @@ components:
       properties:
         consultantId:
           type: string
-          description: 指定した相談員に予約する場合。省略時は自動割当。
         startsAt:
           type: string
           format: date-time

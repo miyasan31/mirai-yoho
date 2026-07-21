@@ -290,14 +290,13 @@ apps/api/src/
 ### 8.1 予約作成（`CreateBookingUseCase`）
 
 ```
-入力: organizationId / userId / consultantId? / startsAt / durationMinutes（30|60|90|120） /
+入力: organizationId / userId / consultantId / startsAt / durationMinutes（30|60|90|120） /
        customerName / customerEmail / customerPhone / customerBirthDate /
        consultationContent? / selectionId（料金プラン選択） / selectedUserCouponId?
 
 1. UserRepository.findById(userId)         ← アクティブ・Zoom 連携済みチェック
 2. resolveContinuousAndPricePlan()         ← selectionId → PricePlan、durationMinutes 分の
-   15分スロットが startsAt から連続空きか（consultantId 未指定なら空いている相談員を横断探索）+
-   直後 1 コマ（15分）のバッファスロットの空き（SlotSelectionPolicy）
+   15分スロットが startsAt から連続空きか + 直後 1 コマ（15分）のバッファスロットの空き
 3. usageSlot.reserve(newBookingId) / bufferSlot.reserve(newBookingId)（各コマ）
    ← 二重予約・過去日時チェック（DomainError）。バッファは以後の空き枠検索から除外される
 4. resolveAppliedCoupon()                  ← selectedUserCouponId があれば UserCoupon を検証し割引額算出

@@ -21,7 +21,6 @@ describe("consultant statuses", () => {
   it("restores default statuses for existing settings without status fields", () => {
     const settings = Settings.reconstruct({
       organizationId: "org-1",
-      consultantSelectionEnabled: true,
       businessHours,
     });
 

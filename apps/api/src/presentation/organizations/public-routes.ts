@@ -11,7 +11,7 @@ import {
   resolveConsultantStatus,
   toConsultantStatusResponse,
 } from "./consultant-status";
-import { getRoute } from "./route-handler";
+import { getRoute, jsonError } from "./route-handler";
 import { toBookingSettingsResponse } from "./settings-response";
 
 export const publicRoutes = new Hono();
@@ -54,18 +54,15 @@ publicRoutes.get(
     const consultantId = requestUrl.searchParams.get("consultantId");
     errorContext.endpoint = "GET /organizations/:organizationId/slots";
     errorContext.consultantId = consultantId;
+    if (!consultantId) {
+      return jsonError(400, "VALIDATION_ERROR", "consultantId is required");
+    }
     const result = await createListAvailableSlotsUseCase().execute({
       organizationId,
       consultantId,
     });
-    if (result.mode === "per-consultant") {
-      return withPublicShortCache(
-        Response.json({ slots: result.slots }),
-        "slots",
-      );
-    }
     return withPublicShortCache(
-      Response.json({ aggregatedSlots: result.aggregatedSlots }),
+      Response.json({ slots: result.slots }),
       "slots",
     );
   }),
@@ -90,6 +87,9 @@ publicRoutes.get(
   "/price-plans",
   getRoute(async ({ organizationId, requestUrl }) => {
     const consultantId = requestUrl.searchParams.get("consultantId");
+    if (!consultantId) {
+      return jsonError(400, "VALIDATION_ERROR", "consultantId is required");
+    }
 
     const result = await createListPricePlanOptionsUseCase().execute({
       organizationId,

@@ -26,7 +26,6 @@ import { Settings } from "@/domain/settings/settings";
 import type { ISettingsRepository } from "@/domain/settings/settings-repository";
 import type { Slot } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
-import { SlotSelectionPolicy } from "@/domain/slot/slot-selection-policy";
 import type { IUserRepository } from "@/domain/user/user-repository";
 import type { UserCoupon } from "@/domain/user-coupon/user-coupon";
 import type { IUserCouponRepository } from "@/domain/user-coupon/user-coupon-repository";
@@ -36,7 +35,7 @@ import type { IZoomSessionRepository } from "@/domain/zoom-session/zoom-session-
 interface CreateBookingInput {
   organizationId: string;
   userId: string;
-  consultantId?: string;
+  consultantId: string;
   startsAt: Date;
   durationMinutes: number;
   customerName: string;
@@ -338,108 +337,38 @@ export class CreateBookingUseCase {
     const bufferCount = getBufferSlotCount();
     const totalRequired = usageCount + bufferCount;
 
-    if (input.consultantId) {
-      const chain = await this.slotRepository.findAvailableChainByConsultant(
-        input.organizationId,
-        input.consultantId,
-        input.startsAt,
-        totalRequired,
-      );
-      if (!chain) {
-        throw new AppError(
-          409,
-          "SLOT_NOT_AVAILABLE",
-          "Requested time is no longer available",
-        );
-      }
-      const pricePlan = await this.findSelectablePricePlanForConsultant({
-        organizationId: input.organizationId,
-        consultantId: input.consultantId,
-        normalizedName: selection.normalizedName,
-        durationMinutes: selection.durationMinutes,
-        totalJPY: selection.totalJPY,
-      });
-      if (!pricePlan || !pricePlanRange.contains(pricePlan.getTotalJPY())) {
-        throw new AppError(
-          400,
-          "PRICE_PLAN_NOT_SELECTABLE",
-          "Selected price plan is not selectable",
-        );
-      }
-      return {
-        consultantId: input.consultantId,
-        usageSlots: chain.slice(0, usageCount),
-        bufferSlots: chain.slice(usageCount),
-        pricePlan,
-      };
-    }
-
-    const dailySlots = await this.slotRepository.findAvailableByDate(
+    const chain = await this.slotRepository.findAvailableChainByConsultant(
       input.organizationId,
+      input.consultantId,
       input.startsAt,
+      totalRequired,
     );
-    const slotsByConsultant = new Map<string, Slot[]>();
-    for (const slot of dailySlots) {
-      const consultantId = slot.getConsultantId();
-      const list = slotsByConsultant.get(consultantId) ?? [];
-      list.push(slot);
-      slotsByConsultant.set(consultantId, list);
-    }
-
-    const consultantsWithPlan: Array<{
-      consultantId: string;
-      availableSlots: Slot[];
-      pricePlan: PricePlan;
-    }> = [];
-    for (const [consultantId, slots] of slotsByConsultant) {
-      const pricePlan = await this.findSelectablePricePlanForConsultant({
-        organizationId: input.organizationId,
-        consultantId,
-        normalizedName: selection.normalizedName,
-        durationMinutes: selection.durationMinutes,
-        totalJPY: selection.totalJPY,
-      });
-      if (!pricePlan || !pricePlanRange.contains(pricePlan.getTotalJPY())) {
-        continue;
-      }
-      consultantsWithPlan.push({
-        consultantId,
-        availableSlots: slots,
-        pricePlan,
-      });
-    }
-
-    if (consultantsWithPlan.length === 0) {
+    if (!chain) {
       throw new AppError(
         409,
         "SLOT_NOT_AVAILABLE",
         "Requested time is no longer available",
       );
     }
-
-    const availableCountByConsultant =
-      SlotSelectionPolicy.countAvailableSlotsByConsultant(dailySlots);
-
-    const selected =
-      SlotSelectionPolicy.selectContinuousSlotsByConsultantAvailability({
-        candidates: consultantsWithPlan,
-        requestedStartsAt: input.startsAt,
-        usageSlotCount: usageCount,
-        bufferSlotCount: bufferCount,
-        dailySlotsPerConsultant: availableCountByConsultant,
-      });
-    if (!selected) {
+    const pricePlan = await this.findSelectablePricePlanForConsultant({
+      organizationId: input.organizationId,
+      consultantId: input.consultantId,
+      normalizedName: selection.normalizedName,
+      durationMinutes: selection.durationMinutes,
+      totalJPY: selection.totalJPY,
+    });
+    if (!pricePlan || !pricePlanRange.contains(pricePlan.getTotalJPY())) {
       throw new AppError(
-        409,
-        "SLOT_NOT_AVAILABLE",
-        "Requested time is no longer available",
+        400,
+        "PRICE_PLAN_NOT_SELECTABLE",
+        "Selected price plan is not selectable",
       );
     }
     return {
-      consultantId: selected.consultantId,
-      usageSlots: selected.usageSlots,
-      bufferSlots: selected.bufferSlots,
-      pricePlan: selected.pricePlan,
+      consultantId: input.consultantId,
+      usageSlots: chain.slice(0, usageCount),
+      bufferSlots: chain.slice(usageCount),
+      pricePlan,
     };
   }
 

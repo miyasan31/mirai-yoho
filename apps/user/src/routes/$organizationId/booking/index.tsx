@@ -88,6 +88,8 @@ function BookingPageInner() {
     typeof durationMinutes === "number" && isSupportedDuration(durationMinutes);
   const hasSelection =
     typeof selectionId === "string" && selectionId.length > 0;
+  const hasConsultant =
+    typeof consultantId === "string" && consultantId.length > 0;
 
   const [selectedUserCouponId, setSelectedUserCouponId] = useState<string>("");
   const couponsQuery = useGetCustomerCoupons({
@@ -137,10 +139,9 @@ function BookingPageInner() {
   const selectedCoupon =
     availableCoupons.find((c) => c.userCouponId === selectedUserCouponId) ??
     null;
-  const pricePlansQuery = usePricePlanOptions(
-    { consultantId: consultantId ?? undefined },
-    hasSelection,
-  );
+  const pricePlansQuery = usePricePlanOptions({
+    consultantId: consultantId ?? "",
+  });
   const selectedPlan =
     pricePlansQuery.data?.data?.pricePlans.find(
       (plan) => plan.selectionId === selectionId,
@@ -169,13 +170,13 @@ function BookingPageInner() {
 
   const createBooking = useCreateBooking();
 
-  if (!startsAt || !hasSelection || !hasValidDuration) {
+  if (!startsAt || !hasSelection || !hasValidDuration || !hasConsultant) {
     return (
       <styled.div py="16" px="8">
         <EmptyState
           icon={CalendarX}
           message="予約に必要な情報が不足しています"
-          hint="料金プランと予約枠を選択してください"
+          hint="相談員・料金プラン・予約枠を選択してください"
         />
         <styled.div display="flex" justifyContent="center" mt="4">
           <Button asChild variant="outline">
@@ -207,17 +208,11 @@ function BookingPageInner() {
     );
   }
 
-  const backLink = consultantId
-    ? {
-        to: "/$organizationId/consultants/$id/slots" as const,
-        params: { organizationId, id: consultantId },
-        search: { selectionId, durationMinutes },
-      }
-    : {
-        to: "/$organizationId/slots" as const,
-        params: { organizationId },
-        search: { selectionId, durationMinutes },
-      };
+  const backLink = {
+    to: "/$organizationId/consultants/$id/slots" as const,
+    params: { organizationId, id: consultantId },
+    search: { selectionId, durationMinutes },
+  };
 
   const onSubmit = async (values: BookingFormValues) => {
     if (!organizationId) return;
@@ -232,7 +227,7 @@ function BookingPageInner() {
       const result = await createBooking.mutateAsync({
         organizationId,
         data: {
-          consultantId: consultantId ?? undefined,
+          consultantId,
           startsAt,
           durationMinutes,
           customerName: values.customerName,

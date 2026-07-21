@@ -14,7 +14,6 @@ import {
 
 export interface SettingsProps {
   organizationId: string;
-  consultantSelectionEnabled: boolean;
   businessHours: BusinessHoursProps;
   consultantStatuses?: ConsultantStatusProps[];
   defaultConsultantStatusId?: string;
@@ -24,7 +23,6 @@ export interface SettingsProps {
 export class Settings {
   private constructor(
     private readonly organizationId: string,
-    private consultantSelectionEnabled: boolean,
     private businessHours: BusinessHours,
     private consultantStatuses: ConsultantStatusProps[],
     private defaultConsultantStatusId: string,
@@ -38,7 +36,6 @@ export class Settings {
       props.defaultConsultantStatusId ?? statuses[0].statusId;
     return new Settings(
       props.organizationId,
-      props.consultantSelectionEnabled,
       BusinessHours.create(props.businessHours),
       validateConsultantStatuses(statuses, defaultStatusId),
       defaultStatusId,
@@ -55,7 +52,6 @@ export class Settings {
       props.defaultConsultantStatusId ?? statuses[0].statusId;
     return new Settings(
       props.organizationId,
-      props.consultantSelectionEnabled,
       BusinessHours.reconstruct(props.businessHours),
       validateConsultantStatuses(statuses, defaultStatusId),
       defaultStatusId,
@@ -69,16 +65,11 @@ export class Settings {
     const statuses = createDefaultConsultantStatuses();
     return new Settings(
       organizationId,
-      true,
       BusinessHours.createDefault(),
       statuses,
       statuses[0].statusId,
       PricePlanRange.createDefault(),
     );
-  }
-
-  updateConsultantSelectionEnabled(enabled: boolean): void {
-    this.consultantSelectionEnabled = enabled;
   }
 
   updateBusinessHours(businessHours: BusinessHoursProps): void {
@@ -102,10 +93,6 @@ export class Settings {
 
   getOrganizationId(): string {
     return this.organizationId;
-  }
-
-  getConsultantSelectionEnabled(): boolean {
-    return this.consultantSelectionEnabled;
   }
 
   getBusinessHours(): BusinessHours {

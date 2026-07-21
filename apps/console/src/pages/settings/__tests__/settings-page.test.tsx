@@ -113,7 +113,6 @@ vi.mock("@/hooks/use-console-booking-settings", () => ({
   useConsoleBookingSettings: () => ({
     data: {
       data: {
-        consultantSelectionEnabled: true,
         businessHours: defaultBusinessHours,
       },
     },
@@ -160,31 +159,8 @@ describe("ConsoleSettingsPage", () => {
     currentTabParam = null;
   });
 
-  it("shows booking tab by default", () => {
+  it("shows business-hours tab by default", () => {
     render(<ConsoleSettingsPage />);
-    const tabPanels = screen.getAllByRole("tabpanel", { hidden: true });
-    const businessHoursPanel = tabPanels.find((panel) =>
-      panel.id.includes("content-business-hours"),
-    );
-
-    expect(screen.getByRole("tab", { name: "予約" })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    expect(screen.getByRole("tabpanel", { name: "予約" })).toHaveAttribute(
-      "data-state",
-      "open",
-    );
-    expect(businessHoursPanel).toHaveAttribute("data-state", "closed");
-  });
-
-  it("opens business-hours tab from query", () => {
-    currentTabParam = "business-hours";
-    render(<ConsoleSettingsPage />);
-    const tabPanels = screen.getAllByRole("tabpanel", { hidden: true });
-    const bookingPanel = tabPanels.find((panel) =>
-      panel.id.includes("content-booking"),
-    );
 
     expect(screen.getByRole("tab", { name: "営業時間" })).toHaveAttribute(
       "aria-selected",
@@ -194,17 +170,30 @@ describe("ConsoleSettingsPage", () => {
       "data-state",
       "open",
     );
-    expect(bookingPanel).toHaveAttribute("data-state", "closed");
+  });
+
+  it("opens price tab from query", () => {
+    currentTabParam = "price";
+    render(<ConsoleSettingsPage />);
+
+    expect(screen.getByRole("tab", { name: "料金" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    expect(screen.getByRole("tabpanel", { name: "料金" })).toHaveAttribute(
+      "data-state",
+      "open",
+    );
   });
 
   it("updates tab query when switching tabs", async () => {
     const user = userEvent.setup();
     render(<ConsoleSettingsPage />);
 
-    await user.click(screen.getByRole("tab", { name: "営業時間" }));
+    await user.click(screen.getByRole("tab", { name: "料金" }));
 
     expect(mockReplace).toHaveBeenCalled();
-    expect(currentTabParam).toBe("business-hours");
+    expect(currentTabParam).toBe("price");
   });
 
   it("shows consultant status settings", async () => {
@@ -222,59 +211,10 @@ describe("ConsoleSettingsPage", () => {
     ).toBeInTheDocument();
   });
 
-  it("keeps unsaved booking form state across tab switches", async () => {
-    const user = userEvent.setup();
-    render(<ConsoleSettingsPage />);
-
-    const bookingCheckbox = screen.getAllByRole("checkbox")[0];
-    expect(bookingCheckbox).toBeChecked();
-    await user.click(bookingCheckbox);
-    expect(bookingCheckbox).not.toBeChecked();
-
-    await user.click(screen.getByRole("tab", { name: "営業時間" }));
-    await user.click(screen.getByRole("tab", { name: "予約" }));
-
-    expect(screen.getAllByRole("checkbox")[0]).not.toBeChecked();
-  });
-
-  it("saves booking tab with persisted business hours", async () => {
-    mockUseAuth.mockReturnValue({ roleId: "admin", hasPermission: () => true });
-    mockMutateAsync.mockResolvedValue({
-      data: {
-        consultantSelectionEnabled: false,
-        businessHours: defaultBusinessHours,
-        pricePlanRange: {
-          minTotalJPY: 0,
-          maxTotalJPY: 100000,
-        },
-      },
-    });
-
-    const user = userEvent.setup();
-    render(<ConsoleSettingsPage />);
-
-    const bookingCheckbox = screen.getAllByRole("checkbox")[0];
-    await user.click(bookingCheckbox);
-    await user.click(screen.getByRole("button", { name: "保存" }));
-
-    expect(mockMutateAsync).toHaveBeenCalledWith({
-      organizationId: "org-test",
-      data: {
-        consultantSelectionEnabled: false,
-        businessHours: defaultBusinessHours,
-        pricePlanRange: {
-          minTotalJPY: 0,
-          maxTotalJPY: 100000,
-        },
-      },
-    });
-  });
-
   it("saves business-hours tab with edited exception", async () => {
     mockUseAuth.mockReturnValue({ roleId: "admin", hasPermission: () => true });
     mockMutateAsync.mockResolvedValue({
       data: {
-        consultantSelectionEnabled: true,
         businessHours: defaultBusinessHours,
       },
     });
@@ -282,7 +222,6 @@ describe("ConsoleSettingsPage", () => {
     const user = userEvent.setup();
     render(<ConsoleSettingsPage />);
 
-    await user.click(screen.getByRole("tab", { name: "営業時間" }));
     await user.click(screen.getByRole("button", { name: "例外日を追加" }));
 
     const dateInputs = Array.from(
@@ -303,7 +242,6 @@ describe("ConsoleSettingsPage", () => {
     expect(mockMutateAsync).toHaveBeenCalledWith({
       organizationId: "org-test",
       data: {
-        consultantSelectionEnabled: true,
         businessHours: {
           weekly: defaultBusinessHours.weekly,
           includePublicHolidays: true,
@@ -329,7 +267,6 @@ describe("ConsoleSettingsPage", () => {
     const user = userEvent.setup();
     render(<ConsoleSettingsPage />);
 
-    await user.click(screen.getByRole("tab", { name: "営業時間" }));
     await user.click(screen.getByRole("button", { name: "例外日を追加" }));
 
     const dateInput =
@@ -363,12 +300,7 @@ describe("ConsoleSettingsPage", () => {
     const user = userEvent.setup();
     render(<ConsoleSettingsPage />);
 
-    const checkboxes = screen.getAllByRole("checkbox");
     const saveButton = screen.getByRole("button", { name: "保存" });
-
-    expect(
-      checkboxes.every((checkbox) => checkbox.hasAttribute("disabled")),
-    ).toBe(true);
     expect(saveButton).toBeDisabled();
 
     await user.click(saveButton);

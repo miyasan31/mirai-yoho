@@ -9,7 +9,7 @@ import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organ
 import { useAuth } from "@/hooks/use-auth";
 
 export function useGetConsoleSlots(
-  params?: GetConsoleSlotsParams,
+  params: GetConsoleSlotsParams,
   options?: Record<string, unknown>,
 ) {
   const { isConsultant } = useAuth();

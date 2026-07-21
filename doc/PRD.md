@@ -401,8 +401,8 @@ pending ──── 仮決済失敗 or タイムアウト ───────
 | 項目 | 内容 |
 |---|---|
 | 認証 | 不要 |
-| クエリパラメータ | `consultantId`: 任意 |
-| レスポンス | `{ slots }` または `{ aggregatedSlots }` |
+| クエリパラメータ | `consultantId`: 必須 |
+| レスポンス | `{ slots }` |
 
 #### `POST /api/organizations/[organizationId]/bookings`
 

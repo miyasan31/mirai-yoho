@@ -9,7 +9,6 @@ export interface ISlotRepository {
     tx: TransactionScope,
   ): Promise<Slot[]>;
   findByOrganizationId(organizationId: string): Promise<Slot[]>;
-  findAllAvailable(organizationId: string): Promise<Slot[]>;
   findByConsultantId(
     organizationId: string,
     consultantId: string,
@@ -23,7 +22,6 @@ export interface ISlotRepository {
     startsAt: Date,
     endsAt: Date,
   ): Promise<Slot[]>;
-  findAvailableByDate(organizationId: string, date: Date): Promise<Slot[]>;
   findAvailableChainByConsultant(
     organizationId: string,
     consultantId: string,

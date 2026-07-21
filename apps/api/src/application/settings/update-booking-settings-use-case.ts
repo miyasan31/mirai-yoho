@@ -9,7 +9,6 @@ import type { ISettingsRepository } from "@/domain/settings/settings-repository"
 
 interface UpdateBookingSettingsInput {
   organizationId: string;
-  consultantSelectionEnabled: boolean;
   businessHours?: BusinessHoursProps;
   pricePlanRange?: PricePlanRangeProps;
 }
@@ -48,7 +47,6 @@ export class UpdateBookingSettingsUseCase {
     const nextPricePlanRange =
       input.pricePlanRange ?? settings.getPricePlanRange().toJSON();
 
-    settings.updateConsultantSelectionEnabled(input.consultantSelectionEnabled);
     settings.updateBusinessHours(nextBusinessHours.toJSON());
     settings.updatePricePlanRange(nextPricePlanRange);
 

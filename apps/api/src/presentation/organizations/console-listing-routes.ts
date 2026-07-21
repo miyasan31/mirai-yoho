@@ -30,14 +30,14 @@ consoleListingRoutes.get(
 
     const requestedConsultantId = requestUrl.searchParams.get("consultantId");
     const consultantId = consultant ? authUser.authUid : requestedConsultantId;
+    if (!consultantId) {
+      return jsonError(400, "VALIDATION_ERROR", "consultantId is required");
+    }
     const result = await createListAvailableSlotsUseCase().execute({
       organizationId,
       consultantId,
     });
-    if (result.mode === "per-consultant") {
-      return noStoreJson({ slots: result.slots });
-    }
-    return noStoreJson({ aggregatedSlots: result.aggregatedSlots });
+    return noStoreJson({ slots: result.slots });
   }),
 );
 

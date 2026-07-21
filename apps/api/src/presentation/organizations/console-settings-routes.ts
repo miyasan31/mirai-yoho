@@ -101,16 +101,8 @@ consoleSettingsRoutes.patch(
     const authUser = await verifyAccountAuth(request);
     requirePermission(authUser, organizationId, "console.settings.manage");
     const body = await request.json();
-    if (typeof body.consultantSelectionEnabled !== "boolean") {
-      return jsonError(
-        400,
-        "VALIDATION_ERROR",
-        "consultantSelectionEnabled must be a boolean",
-      );
-    }
     const settings = await createUpdateBookingSettingsUseCase().execute({
       organizationId,
-      consultantSelectionEnabled: body.consultantSelectionEnabled,
       businessHours: body.businessHours,
       pricePlanRange: body.pricePlanRange,
     });

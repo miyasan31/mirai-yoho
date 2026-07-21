@@ -77,6 +77,9 @@ bookingRoutes.post(
         "customerName, customerEmail, customerPhone, customerBirthDate, selectionId are required",
       );
     }
+    if (typeof consultantId !== "string" || consultantId.length === 0) {
+      return jsonError(400, "VALIDATION_ERROR", "consultantId is required");
+    }
     if (typeof startsAt !== "string" || startsAt.length === 0) {
       return jsonError(400, "VALIDATION_ERROR", "startsAt is required");
     }
@@ -101,10 +104,7 @@ bookingRoutes.post(
     const result = await useCase.execute({
       organizationId,
       userId: customerUser.getUserId(),
-      consultantId:
-        typeof consultantId === "string" && consultantId
-          ? consultantId
-          : undefined,
+      consultantId,
       startsAt: new Date(startsAt),
       durationMinutes,
       customerName,

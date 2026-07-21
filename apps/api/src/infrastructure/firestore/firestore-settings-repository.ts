@@ -10,7 +10,6 @@ const COLLECTION = FIRESTORE_COLLECTIONS.settings;
 
 interface SettingsDoc {
   organizationId: string;
-  consultantSelectionEnabled: boolean;
   businessHours?: ReturnType<BusinessHours["toJSON"]>;
   consultantStatuses?: ConsultantStatusProps[];
   defaultConsultantStatusId?: string;
@@ -20,7 +19,6 @@ interface SettingsDoc {
 function toDomain(doc: SettingsDoc): Settings {
   return Settings.reconstruct({
     organizationId: doc.organizationId,
-    consultantSelectionEnabled: doc.consultantSelectionEnabled,
     businessHours: doc.businessHours ?? BusinessHours.createDefault().toJSON(),
     consultantStatuses: doc.consultantStatuses,
     defaultConsultantStatusId: doc.defaultConsultantStatusId,
@@ -32,7 +30,6 @@ function toDomain(doc: SettingsDoc): Settings {
 function toFirestore(settings: Settings): SettingsDoc {
   return {
     organizationId: settings.getOrganizationId(),
-    consultantSelectionEnabled: settings.getConsultantSelectionEnabled(),
     businessHours: settings.getBusinessHours().toJSON(),
     consultantStatuses: settings.getConsultantStatuses(),
     defaultConsultantStatusId: settings.getDefaultConsultantStatusId(),

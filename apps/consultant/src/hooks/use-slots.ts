@@ -10,7 +10,7 @@ import { QUERY_STALE_TIME } from "@mirai-yoho/console-core/hooks/query-cache-pol
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 
 export function useGetSlots(
-  params?: GetSlotsParams,
+  params: GetSlotsParams,
   options?: Record<string, unknown>,
 ) {
   const { organizationId } = useOrganizationRouting();

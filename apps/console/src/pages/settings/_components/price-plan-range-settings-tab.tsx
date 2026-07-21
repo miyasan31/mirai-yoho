@@ -10,7 +10,6 @@ type PricePlanRangeSettingsTabProps = {
   organizationId: string | undefined;
   isReadOnly: boolean;
   isLoading: boolean;
-  consultantSelectionEnabled: boolean;
   businessHours: PersistedBusinessHours;
   initialPricePlanRange: PricePlanRange;
   onPricePlanRangeSaved: (value: PricePlanRange) => void;
@@ -20,7 +19,6 @@ export function PricePlanRangeSettingsTab({
   organizationId,
   isReadOnly,
   isLoading,
-  consultantSelectionEnabled,
   businessHours,
   initialPricePlanRange,
   onPricePlanRangeSaved,
@@ -38,7 +36,7 @@ export function PricePlanRangeSettingsTab({
     };
     await updateBookingSettings.mutateAsync({
       organizationId,
-      data: { consultantSelectionEnabled, businessHours, pricePlanRange },
+      data: { businessHours, pricePlanRange },
     });
     onPricePlanRangeSaved(pricePlanRange);
   };

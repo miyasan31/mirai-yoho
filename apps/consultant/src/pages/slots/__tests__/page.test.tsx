@@ -262,7 +262,6 @@ describe("ConsultantSlotsPage", () => {
     mockUsePublicBookingSettings.mockReturnValue({
       data: {
         data: {
-          consultantSelectionEnabled: true,
           businessHours: {
             weekly: Array.from({ length: 7 }, (_, dayOfWeek) => ({
               dayOfWeek,
@@ -379,7 +378,6 @@ describe("ConsultantSlotsPage", () => {
     mockUsePublicBookingSettings.mockReturnValue({
       data: {
         data: {
-          consultantSelectionEnabled: true,
           businessHours: {
             weekly: Array.from({ length: 7 }, (_, dayOfWeek) => ({
               dayOfWeek,
@@ -432,7 +430,6 @@ describe("ConsultantSlotsPage", () => {
     mockUsePublicBookingSettings.mockReturnValue({
       data: {
         data: {
-          consultantSelectionEnabled: true,
           businessHours: {
             weekly: Array.from({ length: 7 }, (_, dayOfWeek) => ({
               dayOfWeek,

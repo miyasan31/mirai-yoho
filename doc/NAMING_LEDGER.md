@@ -426,7 +426,6 @@
 |---|---|---|
 | コレクション | **`settings`** | **リネーム（§0）** |
 | 組織 ID | `organizationId` | 維持 |
-| 相談員選択可否 | `consultantSelectionEnabled` | 維持 |
 | 営業時間 | `businessHours`（ネスト維持） | 維持 |
 | 相談員ステータス（旧称: ランク） | `consultantStatuses` | **`consultantRanks` → `consultantStatuses` にリネーム（マイグレーション要）** |
 | デフォルトステータス ID（旧称: ランク） | `defaultConsultantStatusId` | **`defaultConsultantRankId` → `defaultConsultantStatusId` にリネーム** |
@@ -790,7 +789,6 @@ export const FIRESTORE_COLLECTIONS = {
 | Domain 名 vs コレクション名 | `ConsultantPricePlan`/`ZoomDailySession` vs 短縮コレクション名 | 許容（§6.3-D） |
 | `organization-*` vs 単体名混在 | コレクション粒度の意図的分離 | 許容（§6.3-B） |
 | `note` vs `consultantMemo` | 主体が異なるメモ | 許容（§6.3-E） |
-| `AggregatedSlot`（openapi） | 台帳未記載だが `startsAt`/`endsAt` に追随すれば OK | 実装時に openapi 更新で対応 |
 
 #### ✅ 台帳と現行コードのギャップ（2026-07-12 時点で解消済み）
 
