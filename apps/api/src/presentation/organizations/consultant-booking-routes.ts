@@ -3,7 +3,10 @@ import { MarkConsultantJoinedUseCase } from "@/application/consultant/mark-consu
 import { UpdateMemoUseCase } from "@/application/consultant/update-memo-use-case";
 import { requireConsultant } from "@/infrastructure/auth/require-role";
 import { verifyConsultantAuth } from "@/infrastructure/auth/verify-auth";
-import { createListBookingsWithChargeEligibilityUseCase } from "@/infrastructure/container";
+import {
+  createCancelBookingUseCase,
+  createListBookingsWithChargeEligibilityUseCase,
+} from "@/infrastructure/container";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
 import {
   INVALID_LIST_QUERY_MESSAGE,
@@ -97,6 +100,36 @@ consultantBookingRoutes.post(
       bookingId: param("bookingId"),
       consultantId: authUser.authUid,
       joinedAt: new Date(),
+    });
+
+    return Response.json({ success: true });
+  }),
+);
+
+consultantBookingRoutes.post(
+  "/consultant/bookings/:bookingId/cancel",
+  postRoute(async ({ organizationId, request, param }) => {
+    const authUser = await verifyConsultantAuth(request);
+    requireConsultant(authUser, organizationId);
+
+    const bookingId = param("bookingId");
+    const bookingRepository = new FirestoreBookingRepository();
+    const booking = await bookingRepository.findById(organizationId, bookingId);
+    if (!booking) {
+      return jsonError(404, "BOOKING_NOT_FOUND", "Booking not found");
+    }
+    if (booking.getConsultantId() !== authUser.authUid) {
+      return jsonError(
+        403,
+        "FORBIDDEN",
+        "Consultant can only cancel their own bookings",
+      );
+    }
+
+    await createCancelBookingUseCase().execute({
+      organizationId,
+      bookingId,
+      cancelledBy: "consultant",
     });
 
     return Response.json({ success: true });

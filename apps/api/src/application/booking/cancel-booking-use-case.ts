@@ -16,7 +16,7 @@ import type { IZoomSessionRepository } from "@/domain/zoom-session/zoom-session-
 interface CancelBookingInput {
   organizationId: string;
   bookingId: string;
-  cancelledBy: "customer" | "admin";
+  cancelledBy: "customer" | "admin" | "consultant";
   categoryOverride?: "no_show";
 }
 
@@ -58,7 +58,9 @@ export class CancelBookingUseCase {
     const category =
       input.categoryOverride === "no_show"
         ? CancellationCategory.noShow()
-        : CancellationCategory.forTime(booking.getStartsAt(), now);
+        : input.cancelledBy === "consultant"
+          ? CancellationCategory.reconstruct("before_previous_day")
+          : CancellationCategory.forTime(booking.getStartsAt(), now);
     const bookingTotalJPY = booking.getEffectiveTotalJPY() ?? 0;
     const cancellationFeeJPY = category.computeFeeJPY(bookingTotalJPY);
     const refundJPY = Math.max(0, bookingTotalJPY - cancellationFeeJPY);

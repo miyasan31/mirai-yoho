@@ -28,6 +28,11 @@ const mockUseJoinConsultantBooking = vi.fn();
 vi.mock("@/hooks/use-consultant-bookings", () => ({
   useConsultantBookings: () => mockUseConsultantBookings(),
   useJoinConsultantBooking: () => mockUseJoinConsultantBooking(),
+  useCancelConsultantBooking: () => ({
+    mutateAsync: vi.fn(),
+    isPending: false,
+    variables: undefined,
+  }),
 }));
 
 vi.mock("@mirai-yoho/console-core/hooks/use-list-query-params", () => ({
@@ -81,6 +86,7 @@ vi.mock("styled-system/recipes", () => ({
   button: Object.assign(() => ({}), {
     splitVariantProps: (props: Record<string, unknown>) => [{}, props],
   }),
+  dialog: () => ({}),
   group: () => ({}),
   spinner: () => ({}),
   tooltip: () => ({}),

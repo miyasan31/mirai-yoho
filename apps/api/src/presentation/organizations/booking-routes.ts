@@ -194,7 +194,7 @@ bookingRoutes.post(
       return jsonError(
         400,
         "VALIDATION_ERROR",
-        "cancelledBy must be 'customer' or 'admin'",
+        "cancelledBy must be 'customer' or 'admin' (consultant uses a dedicated endpoint)",
       );
     }
 

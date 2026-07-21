@@ -88,14 +88,18 @@ export class ResendEmailService implements IEmailService {
     customerName: string;
     consultantName: string;
     bookingId: string;
-    cancelledBy: "customer" | "admin";
+    cancelledBy: "customer" | "admin" | "consultant";
     startsAt: Date;
     cancellationCategory: "before_previous_day" | "on_the_day" | "no_show";
     cancellationFeeJPY: number;
     refundJPY: number;
   }): Promise<void> {
     const cancelledByText =
-      params.cancelledBy === "customer" ? "お客様" : "管理者";
+      params.cancelledBy === "customer"
+        ? "お客様"
+        : params.cancelledBy === "consultant"
+          ? "占い師"
+          : "管理者";
     const categoryText =
       params.cancellationCategory === "before_previous_day"
         ? "前日までのキャンセル（キャンセル料なし）"

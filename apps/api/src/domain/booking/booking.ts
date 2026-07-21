@@ -199,7 +199,7 @@ export class Booking extends AggregateRoot {
   }
 
   cancel(input: {
-    cancelledBy: "customer" | "admin";
+    cancelledBy: "customer" | "admin" | "consultant";
     category: CancellationCategory;
     at: Date;
   }): void {

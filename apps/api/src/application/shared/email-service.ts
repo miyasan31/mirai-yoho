@@ -13,7 +13,7 @@ export interface IEmailService {
     customerName: string;
     consultantName: string;
     bookingId: string;
-    cancelledBy: "customer" | "admin";
+    cancelledBy: "customer" | "admin" | "consultant";
     startsAt: Date;
     cancellationCategory: "before_previous_day" | "on_the_day" | "no_show";
     cancellationFeeJPY: number;

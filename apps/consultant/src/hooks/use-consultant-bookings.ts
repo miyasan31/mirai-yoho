@@ -1,4 +1,5 @@
 import {
+  useCancelConsultantBooking,
   useGetConsultantBookings,
   useJoinConsultantBooking,
   useUpdateConsultantMemo,
@@ -19,4 +20,8 @@ export function useConsultantBookings(params?: GetConsultantBookingsParams) {
   });
 }
 
-export { useJoinConsultantBooking, useUpdateConsultantMemo };
+export {
+  useCancelConsultantBooking,
+  useJoinConsultantBooking,
+  useUpdateConsultantMemo,
+};
