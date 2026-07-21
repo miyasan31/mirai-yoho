@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: blacksmith-2vcpu-ubuntu-2404
     environment: ${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}
     env:
       DEPLOY_ENV: ${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}
