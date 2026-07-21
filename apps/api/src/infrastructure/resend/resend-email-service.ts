@@ -68,7 +68,7 @@ export class ResendEmailService implements IEmailService {
 				<p>${params.customerName} 様</p>
 				<p>以下の内容でご予約を承りました。</p>
 				<ul>
-					<li><strong>相談員:</strong> ${params.consultantName}</li>
+					<li><strong>占い師:</strong> ${params.consultantName}</li>
 					<li><strong>日時:</strong> ${formatDatetime(params.startsAt)}</li>
 					<li><strong>予約ID:</strong> ${params.bookingId}</li>
 				</ul>
@@ -98,7 +98,7 @@ export class ResendEmailService implements IEmailService {
 				<p>${params.customerName} 様</p>
 				<p>${cancelledByText}によりご予約がキャンセルされました。</p>
 				<ul>
-					<li><strong>相談員:</strong> ${params.consultantName}</li>
+					<li><strong>占い師:</strong> ${params.consultantName}</li>
 					<li><strong>予約ID:</strong> ${params.bookingId}</li>
 				</ul>
 			`;
@@ -147,7 +147,7 @@ export class ResendEmailService implements IEmailService {
 				<p>${params.customerName} 様</p>
 				<p>ご予約の相談開始時刻が近づいています。</p>
 				<ul>
-					<li><strong>相談員:</strong> ${params.consultantName}</li>
+					<li><strong>占い師:</strong> ${params.consultantName}</li>
 					<li><strong>日時:</strong> ${formatDatetime(params.startsAt)}</li>
 					<li><strong>予約ID:</strong> ${params.bookingId}</li>
 				</ul>
@@ -169,7 +169,7 @@ export class ResendEmailService implements IEmailService {
     passwordResetLink: string;
   }): Promise<void> {
     const roleLine = params.isConsultant
-      ? `${params.roleName}（相談員）`
+      ? `${params.roleName}（占い師）`
       : params.roleName;
 
     const subject = "【みらい予報】アカウント招待のお知らせ";

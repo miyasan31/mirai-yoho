@@ -186,7 +186,7 @@ function VisitedOrganizationsSection({
                       {org.organizationName ?? org.organizationId}
                     </Text>
                     <Text textStyle="xs" color="fg.muted">
-                      相談員を選んで予約する
+                      占い師を選んで予約する
                     </Text>
                   </styled.div>
                   <ChevronRight size={18} color="var(--colors-fg-muted)" />

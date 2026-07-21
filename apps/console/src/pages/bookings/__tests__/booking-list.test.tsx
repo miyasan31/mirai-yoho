@@ -281,7 +281,7 @@ describe("ConsoleBookingsPage", () => {
     render(<ConsoleBookingsPage />);
 
     expect(screen.getByText("顧客")).toBeInTheDocument();
-    expect(screen.getByText("相談員")).toBeInTheDocument();
+    expect(screen.getByText("占い師")).toBeInTheDocument();
     expect(screen.getByText("入室確認")).toBeInTheDocument();
     expect(screen.getByText("未確認")).toBeInTheDocument();
     expect(screen.getByText("山田 太郎")).toBeInTheDocument();

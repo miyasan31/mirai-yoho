@@ -67,7 +67,7 @@ function Home() {
             かんたん予約
           </Text>
           <Text textStyle="sm" color="fg.muted">
-            相談員の空き枠から希望の日時を選んで、すぐに予約できます
+            占い師の空き枠から希望の日時を選んで、すぐに予約できます
           </Text>
         </styled.div>
         <styled.div

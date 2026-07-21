@@ -126,7 +126,7 @@ consoleConsultantRoutes.post(
         throw new AppError(
           409,
           "CONSULTANT_ALREADY_EXISTS",
-          "このメールアドレスは既にこの組織の相談員として登録されています",
+          "このメールアドレスは既にこの組織の占い師として登録されています",
         );
       }
     } else {
@@ -143,7 +143,7 @@ consoleConsultantRoutes.post(
     const passwordResetLink = await generatePasswordResetLink(email);
     await new ResendEmailService().sendInvitation({
       email,
-      roleName: "相談員",
+      roleName: "占い師",
       isConsultant: true,
       passwordResetLink,
     });

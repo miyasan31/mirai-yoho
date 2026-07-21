@@ -58,10 +58,10 @@ export default function ConsultantPasswordResetPage() {
     >
       <styled.div display="flex" flexDir="column" alignItems="center" mb="6">
         <Text as="h1" textStyle="2xl" fontWeight="bold" mt="3">
-          相談員パスワード再設定
+          占い師パスワード再設定
         </Text>
         <Text textStyle="sm" color="fg.muted" mt="2" textAlign="center">
-          相談員アカウントの再設定メールを送信します。
+          占い師アカウントの再設定メールを送信します。
         </Text>
         <Text textStyle="sm" color="fg.muted" textAlign="center">
           登録済みメールアドレスを入力してください。
@@ -93,7 +93,7 @@ export default function ConsultantPasswordResetPage() {
             color="fg.muted"
             _hover={{ color: "fg.default" }}
           >
-            相談員ログインに戻る
+            占い師ログインに戻る
           </Text>
         </Link>
       </styled.div>

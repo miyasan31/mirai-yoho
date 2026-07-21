@@ -106,7 +106,7 @@ export default function ConsultantLayout({
 
   return (
     <SidebarLayout
-      title="相談員メニュー"
+      title="占い師メニュー"
       navItems={NAV_ITEMS.map((item) => ({
         href: buildPath(item.path),
         label: item.label,

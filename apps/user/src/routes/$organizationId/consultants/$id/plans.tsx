@@ -65,7 +65,7 @@ function PlansPage() {
   return (
     <styled.div maxW="2xl" mx="auto" p="8">
       <styled.div display="flex" alignItems="center" gap="2" mb="4">
-        <Tooltip content="相談員一覧に戻る" showArrow>
+        <Tooltip content="占い師一覧に戻る" showArrow>
           <IconButton variant="subtle" size="sm" asChild>
             <Link to="/$organizationId/consultants" params={{ organizationId }}>
               <ArrowLeft size={18} />
@@ -73,7 +73,7 @@ function PlansPage() {
           </IconButton>
         </Tooltip>
         <Text textStyle="sm" color="fg.muted">
-          相談員一覧に戻る
+          占い師一覧に戻る
         </Text>
       </styled.div>
 
@@ -90,7 +90,7 @@ function PlansPage() {
         <EmptyState
           icon={PackageSearch}
           message="現在ご利用可能な料金プランがありません"
-          hint="相談員が新しいプランを追加すると、ここに表示されます"
+          hint="占い師が新しいプランを追加すると、ここに表示されます"
         />
       ) : (
         <styled.div display="flex" flexDirection="column" gap="6">

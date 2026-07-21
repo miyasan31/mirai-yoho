@@ -176,7 +176,7 @@ function BookingPageInner() {
         <EmptyState
           icon={CalendarX}
           message="予約に必要な情報が不足しています"
-          hint="相談員・料金プラン・予約枠を選択してください"
+          hint="占い師・料金プラン・予約枠を選択してください"
         />
         <styled.div display="flex" justifyContent="center" mt="4">
           <Button asChild variant="outline">

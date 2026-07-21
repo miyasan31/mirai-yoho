@@ -60,7 +60,7 @@ export function ConsultantsPage() {
     return (
       <EmptyState
         icon={CircleX}
-        message="相談員情報の取得に失敗しました"
+        message="占い師情報の取得に失敗しました"
         hint="しばらくしてからもう一度お試しください"
       />
     );
@@ -72,18 +72,18 @@ export function ConsultantsPage() {
     <styled.div maxW="4xl" mx="auto" p="8">
       <styled.div mb="8">
         <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
-          相談員一覧
+          占い師一覧
         </Text>
         <Text textStyle="sm" color="fg.muted">
-          みらい予報の相談員を選んで予約できます
+          みらい予報の占い師を選んで予約できます
         </Text>
       </styled.div>
 
       {consultants.length === 0 ? (
         <EmptyState
           icon={Users}
-          message="現在利用可能な相談員はいません"
-          hint="新しい相談員が登録されるとここに表示されます"
+          message="現在利用可能な占い師はいません"
+          hint="新しい占い師が登録されるとここに表示されます"
         />
       ) : (
         <styled.div

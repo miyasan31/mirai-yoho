@@ -52,7 +52,7 @@ const PERMISSION_GROUPS: Array<{
     ],
   },
   {
-    label: "顧客・相談員",
+    label: "顧客・占い師",
     permissions: [
       "console.customers.read",
       "console.consultants.read",

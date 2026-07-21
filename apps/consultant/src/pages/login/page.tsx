@@ -55,10 +55,10 @@ export default function ConsultantLoginPage() {
       <styled.div display="flex" flexDir="column" alignItems="center" mb="6">
         <UserCircle size={40} color="var(--colors-color-palette-default)" />
         <Text as="h1" textStyle="2xl" fontWeight="bold" mt="3">
-          相談員ログイン
+          占い師ログイン
         </Text>
         <Text textStyle="sm" color="fg.muted" mt="2" textAlign="center">
-          相談員向けメニューにログインして予約対応やスケジュール管理を行います。
+          占い師向けメニューにログインして予約対応やスケジュール管理を行います。
         </Text>
       </styled.div>
       <styled.form

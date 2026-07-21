@@ -122,7 +122,7 @@ describe("ConsoleLoginPage", () => {
     });
 
     expect(link.getAttribute("href")).toBe("/password-reset");
-    expect(screen.queryByText("相談員ログインはこちら")).toBeNull();
+    expect(screen.queryByText("占い師ログインはこちら")).toBeNull();
   });
 
   it("redirects to admin home when the account has admin permissions", async () => {

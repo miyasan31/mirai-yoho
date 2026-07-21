@@ -14,11 +14,11 @@ function formatDatetime(datetime: Date): string {
 
 function buildAlertText(params: LateArrivalAlertParams): string {
   return [
-    "相談員の入室確認がまだ押されていません。",
+    "占い師の入室確認がまだ押されていません。",
     "",
-    `対象の相談員: ${params.consultantName}`,
-    `相談員メールアドレス: ${params.consultantEmail}`,
-    `相談員電話番号: ${params.consultantPhone}`,
+    `対象の占い師: ${params.consultantName}`,
+    `占い師メールアドレス: ${params.consultantEmail}`,
+    `占い師電話番号: ${params.consultantPhone}`,
     `相談されるユーザー名: ${params.customerName}`,
     `予約時間: ${formatDatetime(params.startsAt)}`,
     `開始からの経過分数: ${params.elapsedMinutes}分`,
@@ -37,7 +37,7 @@ export class LineWorksLateArrivalAlertService
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        title: "相談員入室遅延アラート",
+        title: "占い師入室遅延アラート",
         body: {
           text: buildAlertText(params),
         },

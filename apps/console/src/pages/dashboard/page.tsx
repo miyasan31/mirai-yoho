@@ -165,7 +165,7 @@ export default function ConsoleDashboardPage() {
             letterSpacing="wide"
             color="fg.muted"
           >
-            相談員数
+            占い師数
           </Text>
           <Text textStyle="4xl" fontWeight="bold">
             {dashboard.totalConsultants}

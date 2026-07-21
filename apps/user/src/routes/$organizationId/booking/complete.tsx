@@ -84,7 +84,7 @@ function BookingCompletePage() {
 
       <Button asChild variant="outline">
         <Link to="/$organizationId/consultants" params={{ organizationId }}>
-          相談員一覧に戻る
+          占い師一覧に戻る
         </Link>
       </Button>
     </styled.div>

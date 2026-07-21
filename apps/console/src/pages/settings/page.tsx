@@ -96,7 +96,7 @@ export default function ConsoleSettingsPage() {
             営業時間
           </Tabs.Trigger>
           <Tabs.Trigger value="consultant-statuses">
-            相談員ステータス
+            占い師ステータス
           </Tabs.Trigger>
           <Tabs.Trigger value="price" disabled={isLoading}>
             料金

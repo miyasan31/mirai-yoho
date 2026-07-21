@@ -144,6 +144,6 @@ describe("ConsolePasswordResetPage", () => {
 
     const link = screen.getByRole("link", { name: "管理者ログインに戻る" });
     expect(link.getAttribute("href")).toBe("/login");
-    expect(screen.queryByText("相談員ログインに戻る")).toBeNull();
+    expect(screen.queryByText("占い師ログインに戻る")).toBeNull();
   });
 });
