@@ -33,27 +33,36 @@ export class SendConsultationReminderUseCase {
         windowEnd,
       );
 
-    let sentCount = 0;
-    let skippedCount = 0;
-    const errors: Array<{ bookingId: string; error: string }> = [];
+    const customerIds = targetBookings.map((booking) =>
+      booking.getCustomerId(),
+    );
+    const consultantIds = targetBookings.map((booking) =>
+      booking.getConsultantId(),
+    );
+    const [customers, consultants] = await Promise.all([
+      this.customerRepository.findByIds(organizationId, customerIds),
+      this.consultantRepository.findByIds(organizationId, consultantIds),
+    ]);
+    const customerById = new Map(
+      customers.map(
+        (customer) => [customer.getCustomerId(), customer] as const,
+      ),
+    );
+    const consultantById = new Map(
+      consultants.map(
+        (consultant) => [consultant.getConsultantId(), consultant] as const,
+      ),
+    );
 
-    for (const booking of targetBookings) {
-      try {
+    const results = await Promise.allSettled(
+      targetBookings.map(async (booking) => {
         const joinUrl = booking.getJoinUrl()?.getValue();
         if (!joinUrl) {
           throw new Error("Zoom URL not found");
         }
 
-        const [customer, consultant] = await Promise.all([
-          this.customerRepository.findById(
-            organizationId,
-            booking.getCustomerId(),
-          ),
-          this.consultantRepository.findById(
-            organizationId,
-            booking.getConsultantId(),
-          ),
-        ]);
+        const customer = customerById.get(booking.getCustomerId());
+        const consultant = consultantById.get(booking.getConsultantId());
 
         if (!customer) {
           throw new Error("Customer not found");
@@ -73,15 +82,27 @@ export class SendConsultationReminderUseCase {
 
         booking.markConsultationReminderEmailSent(new Date());
         await this.bookingRepository.save(booking);
+      }),
+    );
+
+    let sentCount = 0;
+    let skippedCount = 0;
+    const errors: Array<{ bookingId: string; error: string }> = [];
+    results.forEach((result, index) => {
+      const booking = targetBookings[index];
+      if (result.status === "fulfilled") {
         sentCount++;
-      } catch (error) {
+      } else {
         skippedCount++;
         errors.push({
           bookingId: booking.getBookingId(),
-          error: error instanceof Error ? error.message : "Unknown error",
+          error:
+            result.reason instanceof Error
+              ? result.reason.message
+              : "Unknown error",
         });
       }
-    }
+    });
 
     return { sentCount, skippedCount, errors };
   }

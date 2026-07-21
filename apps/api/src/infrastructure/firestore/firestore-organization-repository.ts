@@ -48,15 +48,15 @@ export class FirestoreOrganizationRepository
   }
 
   async findByIds(organizationIds: string[]): Promise<Organization[]> {
-    if (organizationIds.length === 0) return [];
-    const docs = await Promise.all(
-      organizationIds.map((organizationId) =>
-        db.collection(COLLECTION).doc(organizationId).get(),
-      ),
+    const uniqueIds = [...new Set(organizationIds)];
+    if (uniqueIds.length === 0) return [];
+    const refs = uniqueIds.map((organizationId) =>
+      db.collection(COLLECTION).doc(organizationId),
     );
-    return docs
-      .filter((doc) => doc.exists)
-      .map((doc) => toDomain(doc.data() as OrganizationDoc));
+    const snapshots = await db.getAll(...refs);
+    return snapshots
+      .filter((snapshot) => snapshot.exists)
+      .map((snapshot) => toDomain(snapshot.data() as OrganizationDoc));
   }
 
   async save(organization: Organization): Promise<void> {

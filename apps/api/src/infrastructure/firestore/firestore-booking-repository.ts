@@ -171,6 +171,24 @@ export class FirestoreBookingRepository implements IBookingRepository {
     return snapshot.docs.map((doc) => toDomain(doc.data() as BookingDoc));
   }
 
+  async findAllByCustomerIds(customerIds: string[]): Promise<Booking[]> {
+    const uniqueIds = [...new Set(customerIds)];
+    if (uniqueIds.length === 0) return [];
+    const CHUNK_SIZE = 30;
+    const chunks: string[][] = [];
+    for (let i = 0; i < uniqueIds.length; i += CHUNK_SIZE) {
+      chunks.push(uniqueIds.slice(i, i + CHUNK_SIZE));
+    }
+    const snapshots = await Promise.all(
+      chunks.map((chunk) =>
+        db.collection(COLLECTION).where("customerId", "in", chunk).get(),
+      ),
+    );
+    return snapshots.flatMap((snapshot) =>
+      snapshot.docs.map((doc) => toDomain(doc.data() as BookingDoc)),
+    );
+  }
+
   async findByStatus(
     organizationId: string,
     status: string,

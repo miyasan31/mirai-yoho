@@ -51,24 +51,22 @@ async function buildAccountViews(
   const organizationIds = [
     ...new Set(activeAccounts.map((account) => account.getOrganizationId())),
   ];
-  const organizations = await organizationRepository.findByIds(organizationIds);
+  const roleRepository = new FirestoreRoleRepository();
+  const [organizations, rolesByOrganization] = await Promise.all([
+    organizationRepository.findByIds(organizationIds),
+    roleRepository.findByOrganizationIds(organizationIds),
+  ]);
+
   const nameById = new Map<string, string>();
   for (const organization of organizations) {
     nameById.set(organization.getOrganizationId(), organization.getName());
   }
 
-  const roleRepository = new FirestoreRoleRepository();
   const roleByOrganizationAndRole = new Map<
     string,
     { name: string; permissions: AuthorizationPermission[] }
   >();
-  const rolesByOrganization = await Promise.all(
-    organizationIds.map(async (organizationId) => ({
-      organizationId,
-      roles: await roleRepository.findByOrganizationId(organizationId),
-    })),
-  );
-  for (const { organizationId, roles } of rolesByOrganization) {
+  for (const [organizationId, roles] of rolesByOrganization) {
     for (const role of roles) {
       roleByOrganizationAndRole.set(`${organizationId}_${role.getRoleId()}`, {
         name: role.getName(),

@@ -11,13 +11,19 @@ interface BatchChargeResult {
   errors: Array<{ bookingId: string; error: string }>;
 }
 
+type ProcessOutcome =
+  | { kind: "charged" }
+  | { kind: "completed" }
+  | { kind: "skipped" }
+  | { kind: "error"; error: string };
+
 export class BatchChargeUseCase {
   private readonly chargeUseCase: ChargePaymentUseCase;
 
   constructor(
     private readonly bookingRepository: IBookingRepository,
     private readonly paymentRepository: IPaymentRepository,
-    customerRepository: ICustomerRepository,
+    private readonly customerRepository: ICustomerRepository,
     stripeService: IStripeService,
     emailService: IEmailService,
   ) {
@@ -41,46 +47,79 @@ export class BatchChargeUseCase {
       (booking) => booking.getStartsAt() < now,
     );
 
-    let chargedCount = 0;
-    let completedCount = 0;
-    const errors: Array<{ bookingId: string; error: string }> = [];
+    if (eligibleBookings.length === 0) {
+      return { chargedCount: 0, completedCount: 0, errors: [] };
+    }
 
-    for (const booking of eligibleBookings) {
-      try {
-        const payment = await this.paymentRepository.findByBookingId(
-          organizationId,
-          booking.getBookingId(),
-        );
+    const customerIds = eligibleBookings.map((booking) =>
+      booking.getCustomerId(),
+    );
+    const [allPayments, customers] = await Promise.all([
+      this.paymentRepository.findAll(organizationId),
+      this.customerRepository.findByIds(organizationId, customerIds),
+    ]);
+    const paymentByBookingId = new Map(
+      allPayments.map((payment) => [payment.getBookingId(), payment] as const),
+    );
+    const customerById = new Map(
+      customers.map(
+        (customer) => [customer.getCustomerId(), customer] as const,
+      ),
+    );
+
+    const outcomes = await Promise.all(
+      eligibleBookings.map(async (booking): Promise<ProcessOutcome> => {
+        const payment = paymentByBookingId.get(booking.getBookingId()) ?? null;
         if (!payment) {
-          errors.push({
-            bookingId: booking.getBookingId(),
-            error: "Payment not found",
-          });
-          continue;
+          return { kind: "error", error: "Payment not found" };
         }
 
         const strategy = payment.getPaymentStrategy();
         const status = payment.getStatus().getValue();
 
-        if (strategy.isDeferred() && status === "setup_complete") {
-          await this.chargeUseCase.execute({
-            organizationId,
-            bookingId: booking.getBookingId(),
-            method: "batch",
-          });
-          chargedCount++;
-        } else if (strategy.isImmediate() && status === "charged") {
-          booking.complete();
-          await this.bookingRepository.save(booking);
-          completedCount++;
+        try {
+          if (strategy.isDeferred() && status === "setup_complete") {
+            const customer = customerById.get(booking.getCustomerId());
+            if (!customer) {
+              return { kind: "error", error: "Customer not found" };
+            }
+            await this.chargeUseCase.execute({
+              organizationId,
+              bookingId: booking.getBookingId(),
+              method: "batch",
+              preloaded: { booking, payment, customer },
+            });
+            return { kind: "charged" };
+          }
+          if (strategy.isImmediate() && status === "charged") {
+            booking.complete();
+            await this.bookingRepository.save(booking);
+            return { kind: "completed" };
+          }
+          return { kind: "skipped" };
+        } catch (error) {
+          return {
+            kind: "error",
+            error: error instanceof Error ? error.message : "Unknown error",
+          };
         }
-      } catch (error) {
+      }),
+    );
+
+    let chargedCount = 0;
+    let completedCount = 0;
+    const errors: Array<{ bookingId: string; error: string }> = [];
+    outcomes.forEach((outcome, index) => {
+      const booking = eligibleBookings[index];
+      if (outcome.kind === "charged") chargedCount++;
+      else if (outcome.kind === "completed") completedCount++;
+      else if (outcome.kind === "error") {
         errors.push({
           bookingId: booking.getBookingId(),
-          error: error instanceof Error ? error.message : "Unknown error",
+          error: outcome.error,
         });
       }
-    }
+    });
 
     return { chargedCount, completedCount, errors };
   }

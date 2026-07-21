@@ -40,10 +40,12 @@ export class LinkExistingCustomersToUserUseCase {
       return linked === undefined && !customer.isWithdrawn();
     });
 
-    for (const customer of targets) {
-      customer.linkUser(userId);
-      await this.customerRepository.save(customer);
-    }
+    await Promise.all(
+      targets.map((customer) => {
+        customer.linkUser(userId);
+        return this.customerRepository.save(customer);
+      }),
+    );
 
     return { linkedCount: targets.length };
   }

@@ -110,6 +110,11 @@ class InMemoryBookingRepository implements IBookingRepository {
     );
   }
 
+  async findAllByCustomerIds(customerIds: string[]): Promise<Booking[]> {
+    const ids = new Set(customerIds);
+    return this.bookings.filter((booking) => ids.has(booking.getCustomerId()));
+  }
+
   async findByStatus(_organizationId: string, status: string) {
     return this.bookings.filter(
       (booking) => booking.getStatus().getValue() === status,
@@ -137,6 +142,10 @@ class InMemoryConsultantRepository implements IConsultantRepository {
 
   async findById(): Promise<Consultant | null> {
     return this.consultant;
+  }
+
+  async findByIds(): Promise<Consultant[]> {
+    return this.consultant ? [this.consultant] : [];
   }
 
   async findAllActive(): Promise<Consultant[]> {
