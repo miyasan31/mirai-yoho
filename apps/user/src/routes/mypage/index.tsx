@@ -1,5 +1,3 @@
-import { useGetMyBookings } from "@mirai-yoho/api-client/api/customer/customer";
-import type { MyBooking } from "@mirai-yoho/api-client/schemas";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Skeleton } from "@mirai-yoho/ui/components/ui/skeleton";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
@@ -7,45 +5,20 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ChevronRight, Store } from "lucide-react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
+import {
+  useVisitedOrganizations,
+  type VisitedOrganization,
+} from "@/hooks/use-visited-organizations";
 
 export const Route = createFileRoute("/mypage/")({
   component: MypageDashboardPage,
 });
 
-interface VisitedOrganization {
-  organizationId: string;
-  organizationName: string | null;
-  lastBookedAt: string;
-}
-
-function collectVisitedOrganizations(
-  bookings: MyBooking[],
-): VisitedOrganization[] {
-  const byId = new Map<string, VisitedOrganization>();
-  for (const booking of bookings) {
-    const existing = byId.get(booking.organizationId);
-    if (!existing || existing.lastBookedAt < booking.startsAt) {
-      byId.set(booking.organizationId, {
-        organizationId: booking.organizationId,
-        organizationName: booking.organizationName ?? null,
-        lastBookedAt: booking.startsAt,
-      });
-    }
-  }
-  return Array.from(byId.values()).sort((a, b) =>
-    a.lastBookedAt < b.lastBookedAt ? 1 : -1,
-  );
-}
-
 function MypageDashboardPage() {
   const { profile, isSignedUp, isAnonymous, hasActiveZoomConnection } =
     useCustomerAuth();
-  const { data: bookingsData, isLoading: isBookingsLoading } = useGetMyBookings(
-    { query: { enabled: isSignedUp } },
-  );
-  const visitedOrganizations = collectVisitedOrganizations(
-    bookingsData?.data?.bookings ?? [],
-  );
+  const { organizations: visitedOrganizations, isLoading: isBookingsLoading } =
+    useVisitedOrganizations();
 
   if (!isSignedUp) {
     return (
