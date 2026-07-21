@@ -132,11 +132,13 @@ export class CancelBookingUseCase {
       });
     }
 
-    // 適用中のクーポンを未使用状態に戻す（キャンセル時のクーポン戻し）
+    // 適用中のクーポンを未使用状態に戻す（無料キャンセル時のみ）
+    // 当日キャンセル / no-show ではクーポンは消費済み扱いとして戻さない
     const appliedUserCouponId = booking.getAppliedUserCouponId();
-    const restoredCoupon = appliedUserCouponId
-      ? await this.userCouponRepository.findById(appliedUserCouponId)
-      : null;
+    const restoredCoupon =
+      appliedUserCouponId && fee.isNone()
+        ? await this.userCouponRepository.findById(appliedUserCouponId)
+        : null;
     if (restoredCoupon?.getRedeemedBookingId() === booking.getBookingId()) {
       restoredCoupon.restore();
     }

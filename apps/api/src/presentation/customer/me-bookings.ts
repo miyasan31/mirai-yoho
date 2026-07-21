@@ -1,4 +1,5 @@
 import { DomainError } from "@mirai-yoho/shared/domain-error";
+import { MarkCustomerJoinedUseCase } from "@/application/booking/mark-customer-joined-use-case";
 import { AppError } from "@/application/shared/app-error";
 import { AuthError } from "@/infrastructure/auth/verify-auth";
 import { verifyCustomerAuth } from "@/infrastructure/auth/verify-customer-auth";
@@ -7,6 +8,8 @@ import {
   createListCustomerBookingsUseCase,
   createUserRepository,
 } from "@/infrastructure/container";
+import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
+import { FirestoreCustomerRepository } from "@/infrastructure/firestore/firestore-customer-repository";
 import { withNoStore } from "../cache-control";
 
 function jsonError(statusCode: number, code: string, message: string) {
@@ -70,8 +73,36 @@ export async function GET(request: Request) {
         pricePlanTotalJPY: booking.getPricePlanTotalJPY() ?? null,
         couponDiscountJPY: booking.getCouponDiscountJPY() ?? null,
         discountedTotalJPY: booking.getDiscountedTotalJPY() ?? null,
+        customerJoinedAt: booking.getCustomerJoinedAt()?.toISOString() ?? null,
       }));
     return withNoStore(Response.json({ bookings }));
+  } catch (error) {
+    return handleError(error);
+  }
+}
+
+export async function JOIN(request: Request, bookingId: string) {
+  try {
+    const userId = await resolveUserId(request);
+    const results = await createListCustomerBookingsUseCase().execute({
+      userId,
+    });
+    const owned = results.find(
+      ({ booking }) => booking.getBookingId() === bookingId,
+    );
+    if (!owned) {
+      return jsonError(404, "BOOKING_NOT_FOUND", "Booking not found");
+    }
+    await new MarkCustomerJoinedUseCase(
+      new FirestoreBookingRepository(),
+      new FirestoreCustomerRepository(),
+    ).execute({
+      organizationId: owned.booking.getOrganizationId(),
+      bookingId,
+      userId,
+      joinedAt: new Date(),
+    });
+    return withNoStore(new Response(null, { status: 204 }));
   } catch (error) {
     return handleError(error);
   }

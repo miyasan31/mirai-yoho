@@ -2,6 +2,7 @@ import {
   getGetMyBookingsQueryKey,
   useCancelMyBooking,
   useGetMyBookings,
+  useMarkMyBookingJoined,
 } from "@mirai-yoho/api-client/api/customer/customer";
 import type { MyBooking } from "@mirai-yoho/api-client/schemas";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
@@ -152,6 +153,12 @@ function BookingCard({ booking }: { booking: MyBooking }) {
     cancelDeadlineMs > now;
   const showJoinButton = booking.status === "confirmed" && !!booking.joinUrl;
   const canJoinNow = startsAtMs - now < 30 * 60 * 1000;
+  const { mutate: markJoined } = useMarkMyBookingJoined();
+  const handleJoinClick = () => {
+    if (!booking.customerJoinedAt) {
+      markJoined({ bookingId: booking.bookingId });
+    }
+  };
 
   return (
     <styled.li
@@ -213,6 +220,7 @@ function BookingCard({ booking }: { booking: MyBooking }) {
                 href={booking.joinUrl}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={handleJoinClick}
               >
                 <Video size={16} />
                 Zoom に参加

@@ -44,6 +44,9 @@ export function createApp(): Hono {
   app.post("/api/customer/me/bookings/:bookingId/cancel", (c) =>
     customerMeBookings.CANCEL(c.req.raw, c.req.param("bookingId")),
   );
+  app.post("/api/customer/me/bookings/:bookingId/join", (c) =>
+    customerMeBookings.JOIN(c.req.raw, c.req.param("bookingId")),
+  );
 
   app.post("/api/webhooks/stripe", (c) => stripeWebhook.POST(c.req.raw));
 

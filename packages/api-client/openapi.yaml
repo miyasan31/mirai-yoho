@@ -164,6 +164,25 @@ paths:
       responses:
         "204":
           description: No Content
+  /customer/me/bookings/{bookingId}/join:
+    post:
+      operationId: markMyBookingJoined
+      summary: ログイン顧客の予約入室記録
+      description: |
+        顧客が Zoom に入室したことを記録する。no-show 判定の除外に使う。
+        既に記録済みの場合も 204 を返す（冪等）。
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: bookingId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: No Content
   /organizations/{organizationId}/customers/me/bookings:
     get:
       operationId: getCustomerBookings
@@ -1802,6 +1821,10 @@ components:
           nullable: true
         discountedTotalJPY:
           type: integer
+          nullable: true
+        customerJoinedAt:
+          type: string
+          format: date-time
           nullable: true
     ConsoleAccount:
       type: object

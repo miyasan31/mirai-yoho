@@ -53,6 +53,7 @@ interface BookingProps
   cancelDeadlineAt: CancelDeadline;
   joinUrl?: ZoomUrl;
   consultantJoinedAt?: Date;
+  customerJoinedAt?: Date;
   consultationReminderEmailSentAt?: Date;
   pricePlanId?: string;
   pricePlanName?: string;
@@ -82,6 +83,7 @@ export class Booking extends AggregateRoot {
     private readonly cancelDeadlineAt: CancelDeadline,
     private joinUrl: ZoomUrl | undefined,
     private consultantJoinedAt: Date | undefined,
+    private customerJoinedAt: Date | undefined,
     private consultationReminderEmailSentAt: Date | undefined,
     private lateArrivalAlertSentAt: Date | undefined,
     private consultantMemo: ConsultantMemo,
@@ -132,6 +134,7 @@ export class Booking extends AggregateRoot {
       undefined,
       undefined,
       undefined,
+      undefined,
       props.consultantMemo,
       props.consultationContent,
       props.pricePlanId,
@@ -165,6 +168,7 @@ export class Booking extends AggregateRoot {
       props.cancelDeadlineAt,
       props.joinUrl,
       props.consultantJoinedAt,
+      props.customerJoinedAt,
       props.consultationReminderEmailSentAt,
       props.lateArrivalAlertSentAt,
       props.consultantMemo,
@@ -295,6 +299,34 @@ export class Booking extends AggregateRoot {
     this.updatedAt = now;
   }
 
+  markCustomerJoined(now: Date): void {
+    const currentStatus = this.status.getValue();
+    if (currentStatus !== "pending" && currentStatus !== "confirmed") {
+      throw new DomainError(
+        "INVALID_STATUS_TRANSITION",
+        "Only pending or confirmed bookings can be marked as joined",
+      );
+    }
+
+    if (this.customerJoinedAt) {
+      throw new DomainError(
+        "CUSTOMER_ALREADY_JOINED",
+        "Customer join has already been recorded",
+      );
+    }
+
+    const joinAvailableAt = new Date(this.startsAt.getTime() - 15 * 60 * 1000);
+    if (now.getTime() < joinAvailableAt.getTime()) {
+      throw new DomainError(
+        "CUSTOMER_JOIN_TOO_EARLY",
+        "Customer join can only be recorded from 15 minutes before the booking start time",
+      );
+    }
+
+    this.customerJoinedAt = now;
+    this.updatedAt = now;
+  }
+
   markConsultationReminderEmailSent(now: Date): void {
     if (this.consultationReminderEmailSentAt) {
       throw new DomainError(
@@ -378,6 +410,10 @@ export class Booking extends AggregateRoot {
 
   getConsultantJoinedAt(): Date | undefined {
     return this.consultantJoinedAt;
+  }
+
+  getCustomerJoinedAt(): Date | undefined {
+    return this.customerJoinedAt;
   }
 
   getConsultationReminderEmailSentAt(): Date | undefined {

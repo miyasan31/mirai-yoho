@@ -307,6 +307,40 @@ describe("Booking", () => {
     });
   });
 
+  describe("markCustomerJoined", () => {
+    it("開始15分前ちょうどから記録できる", () => {
+      const booking = createPendingBooking();
+      const joinedAt = new Date("2026-05-01T09:45:00Z");
+
+      booking.markCustomerJoined(joinedAt);
+
+      expect(booking.getCustomerJoinedAt()).toEqual(joinedAt);
+    });
+
+    it("15分より前は記録できない", () => {
+      const booking = createPendingBooking();
+      expect(() =>
+        booking.markCustomerJoined(new Date("2026-05-01T09:44:59Z")),
+      ).toThrow(DomainError);
+    });
+
+    it("cancelled は記録できない", () => {
+      const booking = createConfirmedBooking();
+      booking.cancel({ cancelledBy: "admin" });
+      expect(() =>
+        booking.markCustomerJoined(new Date("2026-05-01T10:05:00Z")),
+      ).toThrow(DomainError);
+    });
+
+    it("二重に記録できない", () => {
+      const booking = createPendingBooking();
+      booking.markCustomerJoined(new Date("2026-05-01T09:45:00Z"));
+      expect(() =>
+        booking.markCustomerJoined(new Date("2026-05-01T09:46:00Z")),
+      ).toThrow(DomainError);
+    });
+  });
+
   describe("markConsultationReminderEmailSent", () => {
     it("送信済み時刻を記録できる", () => {
       const booking = createConfirmedBooking();

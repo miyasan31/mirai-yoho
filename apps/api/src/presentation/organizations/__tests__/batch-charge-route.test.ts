@@ -117,6 +117,7 @@ describe("batch charge / consultation reminder routes", () => {
     mocks.executeCharge.mockResolvedValue({
       chargedCount: 2,
       completedCount: 1,
+      noShowCount: 0,
       errors: [],
     });
     mocks.createBatchChargeUseCase.mockReturnValue({
@@ -151,6 +152,7 @@ describe("batch charge / consultation reminder routes", () => {
     await expect(response.json()).resolves.toEqual({
       chargedCount: 2,
       completedCount: 1,
+      noShowCount: 0,
     });
     expect(mocks.executeCharge).toHaveBeenCalledWith("org-charge-scheduler");
     expect(mocks.verifyAuth).not.toHaveBeenCalled();
