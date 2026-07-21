@@ -6,10 +6,14 @@ import * as Field from "@mirai-yoho/ui/components/ui/field";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
+import {
+  clearPendingOrganizationId,
+  readPendingOrganizationId,
+} from "@/lib/pending-organization";
 import {
   type ProfileFormValues,
   profileFormSchema,
@@ -37,10 +41,27 @@ function ProfilePage() {
     linkGoogleAccount,
     refreshProfile,
   } = useCustomerAuth();
+  const router = useRouter();
+  const { returnTo } = Route.useSearch();
 
   const googleProviderData = user?.providerData.find(
     (p) => p.providerId === "google.com",
   );
+
+  const redirectAfterSignup = () => {
+    if (returnTo) {
+      router.history.push(returnTo);
+      return;
+    }
+    const pendingOrgId = readPendingOrganizationId();
+    if (pendingOrgId) {
+      clearPendingOrganizationId();
+      router.navigate({
+        to: "/$organizationId/consultants",
+        params: { organizationId: pendingOrgId },
+      });
+    }
+  };
 
   const {
     register,
@@ -58,7 +79,8 @@ function ProfilePage() {
 
   const onSubmit = async (values: ProfileFormValues) => {
     try {
-      if (!isSignedUp) {
+      const wasSignup = !isSignedUp;
+      if (wasSignup) {
         await signupOrLink({
           displayName: values.displayName,
           birthDate: values.birthDate,
@@ -75,6 +97,9 @@ function ProfilePage() {
         await refreshProfile();
       }
       toaster.create({ type: "success", title: "プロフィールを保存しました" });
+      if (wasSignup) {
+        redirectAfterSignup();
+      }
     } catch (error) {
       // API エラーは custom-fetch の toaster で表示される
       if (!(error instanceof ApiResponseError)) {

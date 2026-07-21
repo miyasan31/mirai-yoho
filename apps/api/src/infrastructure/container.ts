@@ -153,6 +153,7 @@ export function createListCustomerBookingsUseCase() {
     new FirestoreBookingRepository(),
     new FirestoreCustomerRepository(),
     new FirestoreConsultantRepository(),
+    new FirestoreOrganizationRepository(),
   );
 }
 

@@ -1,6 +1,10 @@
+import { useGetMyBookings } from "@mirai-yoho/api-client/api/customer/customer";
+import type { MyBooking } from "@mirai-yoho/api-client/schemas";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
+import { Skeleton } from "@mirai-yoho/ui/components/ui/skeleton";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { ChevronRight, Store } from "lucide-react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 
@@ -8,9 +12,40 @@ export const Route = createFileRoute("/mypage/")({
   component: MypageDashboardPage,
 });
 
+interface VisitedOrganization {
+  organizationId: string;
+  organizationName: string | null;
+  lastBookedAt: string;
+}
+
+function collectVisitedOrganizations(
+  bookings: MyBooking[],
+): VisitedOrganization[] {
+  const byId = new Map<string, VisitedOrganization>();
+  for (const booking of bookings) {
+    const existing = byId.get(booking.organizationId);
+    if (!existing || existing.lastBookedAt < booking.startsAt) {
+      byId.set(booking.organizationId, {
+        organizationId: booking.organizationId,
+        organizationName: booking.organizationName ?? null,
+        lastBookedAt: booking.startsAt,
+      });
+    }
+  }
+  return Array.from(byId.values()).sort((a, b) =>
+    a.lastBookedAt < b.lastBookedAt ? 1 : -1,
+  );
+}
+
 function MypageDashboardPage() {
   const { profile, isSignedUp, isAnonymous, hasActiveZoomConnection } =
     useCustomerAuth();
+  const { data: bookingsData, isLoading: isBookingsLoading } = useGetMyBookings(
+    { query: { enabled: isSignedUp } },
+  );
+  const visitedOrganizations = collectVisitedOrganizations(
+    bookingsData?.data?.bookings ?? [],
+  );
 
   if (!isSignedUp) {
     return (
@@ -89,6 +124,78 @@ function MypageDashboardPage() {
           </Link>
         </styled.section>
       )}
+
+      <VisitedOrganizationsSection
+        isLoading={isBookingsLoading}
+        organizations={visitedOrganizations}
+      />
     </styled.div>
+  );
+}
+
+function VisitedOrganizationsSection({
+  isLoading,
+  organizations,
+}: {
+  isLoading: boolean;
+  organizations: VisitedOrganization[];
+}) {
+  if (!isLoading && organizations.length === 0) {
+    return null;
+  }
+
+  return (
+    <styled.section display="flex" flexDir="column" gap="3">
+      <styled.div display="flex" alignItems="baseline" gap="2">
+        <Text as="h2" textStyle="lg" fontWeight="semibold">
+          予約した店舗
+        </Text>
+        <Text textStyle="sm" color="fg.muted">
+          続けて予約できます
+        </Text>
+      </styled.div>
+      {isLoading ? (
+        <styled.div display="flex" flexDir="column" gap="2">
+          <Skeleton height="14" />
+          <Skeleton height="14" />
+        </styled.div>
+      ) : (
+        <styled.ul display="flex" flexDir="column" gap="2" listStyle="none">
+          {organizations.map((org) => (
+            <styled.li key={org.organizationId}>
+              <Link
+                to="/$organizationId/consultants"
+                params={{ organizationId: org.organizationId }}
+              >
+                <styled.div
+                  display="flex"
+                  alignItems="center"
+                  gap="3"
+                  border="1px solid"
+                  borderColor="border"
+                  rounded="l2"
+                  p="4"
+                  shadow="sm"
+                  transition="all"
+                  transitionDuration="normal"
+                  _hover={{ bg: "bg.muted", shadow: "md" }}
+                >
+                  <Store size={20} color="var(--colors-fg-muted)" />
+                  <styled.div flex="1" minW="0">
+                    <Text fontWeight="medium" truncate>
+                      {org.organizationName ?? org.organizationId}
+                    </Text>
+                    <Text textStyle="xs" color="fg.muted">
+                      相談員を選んで予約する
+                    </Text>
+                  </styled.div>
+                  <ChevronRight size={18} color="var(--colors-fg-muted)" />
+                </styled.div>
+              </Link>
+            </styled.li>
+          ))}
+        </styled.ul>
+      )}
+    </styled.section>
   );
 }

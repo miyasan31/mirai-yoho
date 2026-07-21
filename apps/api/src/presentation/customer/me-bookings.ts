@@ -51,9 +51,10 @@ export async function GET(request: Request) {
         (a, b) =>
           b.booking.getStartsAt().getTime() - a.booking.getStartsAt().getTime(),
       )
-      .map(({ booking, consultantName }) => ({
+      .map(({ booking, consultantName, organizationName }) => ({
         bookingId: booking.getBookingId(),
         organizationId: booking.getOrganizationId(),
+        organizationName,
         status: booking.getStatus().getValue(),
         startsAt: booking.getStartsAt().toISOString(),
         endsAt: booking.getEndsAt().toISOString(),
