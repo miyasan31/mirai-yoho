@@ -4,12 +4,18 @@ import type {
   CustomerCoupon,
 } from "@mirai-yoho/api-client/schemas";
 import { Badge } from "@mirai-yoho/ui/components/ui/badge";
+import { Skeleton } from "@mirai-yoho/ui/components/ui/skeleton";
 import { Spinner } from "@mirai-yoho/ui/components/ui/spinner";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { ChevronRight, Ticket } from "lucide-react";
 import { useMemo } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
+import {
+  useVisitedOrganizations,
+  type VisitedOrganization,
+} from "@/hooks/use-visited-organizations";
 
 export const Route = createFileRoute("/mypage/coupons")({
   component: CouponsPage,
@@ -93,6 +99,8 @@ function CouponsPage() {
     () => (coupons ? groupCoupons(coupons) : null),
     [coupons],
   );
+  const { organizations: visitedOrganizations, isLoading: isBookingsLoading } =
+    useVisitedOrganizations();
 
   return (
     <styled.div display="flex" flexDir="column" gap="4">
@@ -102,6 +110,11 @@ function CouponsPage() {
       <Text textStyle="sm" color="fg.muted">
         取得済みのクーポン一覧です。新しいクーポンは各事業所のクーポン画面から取得できます。
       </Text>
+
+      <ReceivableCouponsSection
+        isLoading={isBookingsLoading}
+        organizations={visitedOrganizations}
+      />
 
       {couponsQuery.isError ? (
         <Text color="fg.error">クーポンの取得に失敗しました</Text>
@@ -153,5 +166,72 @@ function CouponsPage() {
         </styled.ul>
       )}
     </styled.div>
+  );
+}
+
+function ReceivableCouponsSection({
+  isLoading,
+  organizations,
+}: {
+  isLoading: boolean;
+  organizations: VisitedOrganization[];
+}) {
+  if (!isLoading && organizations.length === 0) {
+    return null;
+  }
+
+  return (
+    <styled.section display="flex" flexDir="column" gap="3">
+      <styled.div display="flex" alignItems="baseline" gap="2">
+        <Text as="h2" textStyle="lg" fontWeight="semibold">
+          クーポンを取得する
+        </Text>
+        <Text textStyle="sm" color="fg.muted">
+          予約実績のある店舗
+        </Text>
+      </styled.div>
+      {isLoading ? (
+        <styled.div display="flex" flexDir="column" gap="2">
+          <Skeleton height="14" />
+          <Skeleton height="14" />
+        </styled.div>
+      ) : (
+        <styled.ul display="flex" flexDir="column" gap="2" listStyle="none">
+          {organizations.map((org) => (
+            <styled.li key={org.organizationId}>
+              <Link
+                to="/$organizationId/coupons"
+                params={{ organizationId: org.organizationId }}
+              >
+                <styled.div
+                  display="flex"
+                  alignItems="center"
+                  gap="3"
+                  border="1px solid"
+                  borderColor="border"
+                  rounded="l2"
+                  p="4"
+                  shadow="sm"
+                  transition="all"
+                  transitionDuration="normal"
+                  _hover={{ bg: "bg.muted", shadow: "md" }}
+                >
+                  <Ticket size={20} color="var(--colors-fg-muted)" />
+                  <styled.div flex="1" minW="0">
+                    <Text fontWeight="medium" truncate>
+                      {org.organizationName ?? org.organizationId}
+                    </Text>
+                    <Text textStyle="xs" color="fg.muted">
+                      取得可能なクーポンを確認する
+                    </Text>
+                  </styled.div>
+                  <ChevronRight size={18} color="var(--colors-fg-muted)" />
+                </styled.div>
+              </Link>
+            </styled.li>
+          ))}
+        </styled.ul>
+      )}
+    </styled.section>
   );
 }

@@ -397,7 +397,17 @@ function BookingPageInner() {
               gap="2"
             >
               <Field.Label>クーポン（任意 / 1枚まで）</Field.Label>
-              <Link to="/$organizationId/coupons" params={{ organizationId }}>
+              <Link
+                to="/$organizationId/coupons"
+                params={{ organizationId }}
+                search={{
+                  returnTo: "booking",
+                  consultantId,
+                  startsAt,
+                  selectionId,
+                  durationMinutes,
+                }}
+              >
                 <styled.span
                   color="colorPalette.default"
                   textDecoration="underline"
