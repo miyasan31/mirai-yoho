@@ -13,15 +13,17 @@ import {
 import {
   CalendarCheck,
   CalendarDays,
+  CalendarPlus,
   LogIn,
   LogOut,
   Ticket,
   User,
   Video,
 } from "lucide-react";
-import { useTransition } from "react";
+import { useMemo, useTransition } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
+import { readPendingOrganizationId } from "@/lib/pending-organization";
 
 export const Route = createFileRoute("/mypage")({
   component: MypageLayout,
@@ -47,6 +49,7 @@ function MypageLayout() {
     select: (state) => state.location.pathname,
   });
   const [isPending, startTransition] = useTransition();
+  const pendingOrganizationId = useMemo(() => readPendingOrganizationId(), []);
 
   if (isLoading) {
     return (
@@ -111,6 +114,19 @@ function MypageLayout() {
     onSelect: () => navigate({ to: item.to }),
   }));
 
+  const bookingReturnItem = pendingOrganizationId
+    ? {
+        key: "booking-return",
+        label: "予約に戻る",
+        icon: CalendarPlus,
+        onSelect: () =>
+          navigate({
+            to: "/$organizationId/consultants",
+            params: { organizationId: pendingOrganizationId },
+          }),
+      }
+    : null;
+
   return (
     <styled.div
       maxW="1024px"
@@ -149,6 +165,40 @@ function MypageLayout() {
             );
           })}
         </styled.nav>
+        {pendingOrganizationId && (
+          <styled.div
+            mt="4"
+            pt="4"
+            borderTopWidth="1"
+            borderColor="border"
+            display="flex"
+            flexDir="column"
+            gap="2"
+          >
+            <Text textStyle="xs" color="fg.muted" px="3">
+              直近訪問した店舗
+            </Text>
+            <Link
+              to="/$organizationId/consultants"
+              params={{ organizationId: pendingOrganizationId }}
+            >
+              <styled.div
+                display="flex"
+                alignItems="center"
+                gap="2"
+                px="3"
+                py="2"
+                rounded="l2"
+                color="fg.muted"
+                _hover={{ bg: "bg.muted" }}
+                whiteSpace="nowrap"
+              >
+                <CalendarPlus size={18} />
+                <Text textStyle="sm">予約に戻る</Text>
+              </styled.div>
+            </Link>
+          </styled.div>
+        )}
         <styled.div mt="4">
           <Button variant="plain" size="sm" onClick={handleSignOut}>
             <LogOut size={16} />
@@ -161,6 +211,7 @@ function MypageLayout() {
           title="マイページ"
           items={navMenuItems}
           footerItems={[
+            ...(bookingReturnItem ? [bookingReturnItem] : []),
             {
               key: "signout",
               label: "ログアウト",
