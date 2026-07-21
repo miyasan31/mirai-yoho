@@ -88,12 +88,16 @@ export class ResendEmailService implements IEmailService {
     customerName: string;
     consultantName: string;
     bookingId: string;
-    cancelledBy: "customer" | "admin";
+    cancelledBy: "customer" | "admin" | "consultant";
     cancellationFeeJPY: number;
     noShow: boolean;
   }): Promise<void> {
     const cancelledByText =
-      params.cancelledBy === "customer" ? "お客様" : "管理者";
+      params.cancelledBy === "customer"
+        ? "お客様"
+        : params.cancelledBy === "consultant"
+          ? "占い師"
+          : "管理者";
     const feeText =
       params.cancellationFeeJPY > 0
         ? `キャンセル料として ¥${params.cancellationFeeJPY.toLocaleString()} を申し受けます。`

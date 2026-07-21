@@ -5,6 +5,7 @@ import { BatchChargeUseCase } from "@/application/booking/batch-charge-use-case"
 import { CancelBookingUseCase } from "@/application/booking/cancel-booking-use-case";
 import { ChargePaymentUseCase } from "@/application/booking/charge-payment-use-case";
 import { CompleteSetupUseCase } from "@/application/booking/complete-setup-use-case";
+import { ConsultantCancelBookingUseCase } from "@/application/booking/consultant-cancel-booking-use-case";
 import { CreateBookingUseCase } from "@/application/booking/create-booking-use-case";
 import { ListBookingsWithChargeEligibilityUseCase } from "@/application/booking/list-bookings-with-charge-eligibility-use-case";
 import { ListCustomerBookingsUseCase } from "@/application/booking/list-customer-bookings-use-case";
@@ -250,6 +251,13 @@ export function createUpdatePricePlanUseCase() {
 
 export function createArchivePricePlanUseCase() {
   return new ArchivePricePlanUseCase(new FirestorePricePlanRepository());
+}
+
+export function createConsultantCancelBookingUseCase() {
+  return new ConsultantCancelBookingUseCase(
+    new FirestoreBookingRepository(),
+    createCancelBookingUseCase(),
+  );
 }
 
 export function createCancelBookingUseCase() {

@@ -31,7 +31,7 @@ export class BookingCancelledEvent implements DomainEvent {
     bookingId: string;
     customerId: string;
     consultantId: string;
-    cancelledBy: "customer" | "admin";
+    cancelledBy: "customer" | "admin" | "consultant";
     cancellationFeeJPY: number;
     noShow: boolean;
   };

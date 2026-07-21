@@ -370,7 +370,7 @@ paths:
               properties:
                 cancelledBy:
                   type: string
-                  enum: [customer, admin]
+                  enum: [customer, admin, consultant]
                 token:
                   type: string
                   description: "顧客キャンセル時に必須。形式: bookingId.expiresAt.signature"
@@ -610,6 +610,23 @@ paths:
     post:
       operationId: joinConsultantBooking
       summary: 相談員入室確認
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: OK
+
+  /organizations/{organizationId}/consultant/bookings/{id}/cancel:
+    post:
+      operationId: cancelConsultantBooking
+      summary: 相談員都合の予約キャンセル
+      description: |
+        キャンセルポリシー 5条 準拠。相談員本人がキャンセルすると
+        顧客の支払いはすべて全額返金され、キャンセル料は発生しない。
       tags: [consultant]
       security:
         - bearerAuth: []

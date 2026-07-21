@@ -193,6 +193,31 @@ describe("Booking", () => {
       expect(fee.getAmountJPY()).toBe(5500);
     });
 
+    it("consultant はキャンセル料無料（当日でも）", () => {
+      const booking = Booking.create({
+        organizationId: ORGANIZATION_ID,
+        bookingId: "booking-1",
+        customerId: "customer-1",
+        consultantId: "consultant-1",
+        usageSlotIds: ["slot-1"],
+        bufferSlotIds: [],
+        startsAt: new Date("2026-05-02T01:00:00Z"),
+        endsAt: new Date("2026-05-02T01:30:00Z"),
+        durationMinutes: 30,
+        consultantMemo: ConsultantMemo.empty(),
+        pricePlanId: "plan-1",
+        pricePlanName: "通常鑑定",
+        pricePlanTotalJPY: 5500,
+      });
+      const fee = booking.cancel({
+        cancelledBy: "consultant",
+        // 当日 8:00 JST（デッドライン超過）でも consultant なら無料
+        now: new Date("2026-05-01T23:00:00Z"),
+      });
+      expect(fee.isNone()).toBe(true);
+      expect(fee.getAmountJPY()).toBe(0);
+    });
+
     it("noShow は全額課金", () => {
       const booking = createConfirmedBooking();
       const fee = booking.cancel({

@@ -14,7 +14,7 @@ import type { IZoomSessionRepository } from "@/domain/zoom-session/zoom-session-
 interface CancelBookingInput {
   organizationId: string;
   bookingId: string;
-  cancelledBy: "customer" | "admin";
+  cancelledBy: "customer" | "admin" | "consultant";
   noShow?: boolean;
   now?: Date;
 }

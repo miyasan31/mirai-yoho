@@ -17,6 +17,7 @@ import { CalendarX, ExternalLink, Pencil } from "lucide-react";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
 import { useConsultantBookings } from "@/hooks/use-consultant-bookings";
+import { ConsultantCancelControl } from "./consultant-cancel-control";
 import { ConsultantJoinControl } from "./consultant-join-control";
 
 function formatDateTimeRange(startsAtIso: string, endsAtIso: string): string {
@@ -226,13 +227,21 @@ export default function ConsultantBookingsPage() {
                       />
                     </Table.Cell>
                     <Table.Cell>
-                      <Tooltip content="鑑定メモ編集" showArrow>
-                        <IconButton variant="subtle" size="sm" asChild>
-                          <Link to={buildPath(`/bookings/${b.bookingId}/memo`)}>
-                            <Pencil size={16} />
-                          </Link>
-                        </IconButton>
-                      </Tooltip>
+                      <styled.div display="flex" gap="1" alignItems="center">
+                        <Tooltip content="鑑定メモ編集" showArrow>
+                          <IconButton variant="subtle" size="sm" asChild>
+                            <Link
+                              to={buildPath(`/bookings/${b.bookingId}/memo`)}
+                            >
+                              <Pencil size={16} />
+                            </Link>
+                          </IconButton>
+                        </Tooltip>
+                        <ConsultantCancelControl
+                          bookingId={b.bookingId}
+                          status={b.status}
+                        />
+                      </styled.div>
                     </Table.Cell>
                   </Table.Row>
                 );

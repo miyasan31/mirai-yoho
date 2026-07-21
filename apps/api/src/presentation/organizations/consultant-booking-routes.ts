@@ -3,7 +3,10 @@ import { MarkConsultantJoinedUseCase } from "@/application/consultant/mark-consu
 import { UpdateMemoUseCase } from "@/application/consultant/update-memo-use-case";
 import { requireConsultant } from "@/infrastructure/auth/require-role";
 import { verifyConsultantAuth } from "@/infrastructure/auth/verify-auth";
-import { createListBookingsWithChargeEligibilityUseCase } from "@/infrastructure/container";
+import {
+  createConsultantCancelBookingUseCase,
+  createListBookingsWithChargeEligibilityUseCase,
+} from "@/infrastructure/container";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
 import {
   INVALID_LIST_QUERY_MESSAGE,
@@ -96,6 +99,22 @@ consultantBookingRoutes.post(
       bookingId: param("bookingId"),
       consultantId: authUser.authUid,
       joinedAt: new Date(),
+    });
+
+    return Response.json({ success: true });
+  }),
+);
+
+consultantBookingRoutes.post(
+  "/consultant/bookings/:bookingId/cancel",
+  postRoute(async ({ organizationId, request, param }) => {
+    const authUser = await verifyConsultantAuth(request);
+    requireConsultant(authUser, organizationId);
+
+    await createConsultantCancelBookingUseCase().execute({
+      organizationId,
+      bookingId: param("bookingId"),
+      consultantId: authUser.authUid,
     });
 
     return Response.json({ success: true });

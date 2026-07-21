@@ -11,7 +11,7 @@ import type { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import type { ZoomUrl } from "@/domain/booking/zoom-url";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 
-export type CancelledBy = "customer" | "admin";
+export type CancelledBy = "customer" | "admin" | "consultant";
 
 export interface CancelParams {
   cancelledBy: CancelledBy;
@@ -251,7 +251,8 @@ export class Booking extends AggregateRoot {
     if (noShow) {
       return CancellationFee.full(total);
     }
-    if (cancelledBy === "admin") {
+    // 相談員都合キャンセルは常に全額返金（キャンセル料 0）
+    if (cancelledBy === "admin" || cancelledBy === "consultant") {
       return CancellationFee.none();
     }
     if (this.cancelDeadlineAt.isExpired(now)) {
