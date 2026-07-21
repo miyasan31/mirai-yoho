@@ -534,6 +534,20 @@ function BookingPageInner() {
                         利用規約
                       </styled.span>
                     </Link>
+                    および
+                    <Link
+                      to="/cancellation-policy"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <styled.span
+                        color="colorPalette.default"
+                        textDecoration="underline"
+                      >
+                        キャンセルポリシー
+                      </styled.span>
+                    </Link>
                     に同意する
                   </Checkbox.Label>
                 </Checkbox.Root>
