@@ -44,7 +44,7 @@ function createBooking(params: {
       ZoomUrl.create(`https://zoom.example.com/${params.bookingId}`),
     );
     if (params.status === "cancelled") {
-      booking.cancel("admin");
+      booking.cancel({ cancelledBy: "admin" });
     }
     if (params.status === "completed") {
       booking.complete();

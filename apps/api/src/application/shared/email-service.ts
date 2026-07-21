@@ -14,6 +14,8 @@ export interface IEmailService {
     consultantName: string;
     bookingId: string;
     cancelledBy: "customer" | "admin";
+    cancellationFeeJPY: number;
+    noShow: boolean;
   }): Promise<void>;
 
   sendPaymentReceipt(params: {

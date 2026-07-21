@@ -5,7 +5,7 @@ import { PaymentStatus } from "@/domain/payment/payment-status";
 import { PaymentStrategy } from "@/domain/payment/payment-strategy";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 
-export type ChargeMethod = "batch" | "manual";
+export type ChargeMethod = "batch" | "manual" | "cancellation";
 
 interface PaymentDeferredCreateProps {
   organizationId: string;

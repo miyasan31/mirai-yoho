@@ -89,18 +89,29 @@ export class ResendEmailService implements IEmailService {
     consultantName: string;
     bookingId: string;
     cancelledBy: "customer" | "admin";
+    cancellationFeeJPY: number;
+    noShow: boolean;
   }): Promise<void> {
     const cancelledByText =
       params.cancelledBy === "customer" ? "お客様" : "管理者";
+    const feeText =
+      params.cancellationFeeJPY > 0
+        ? `キャンセル料として ¥${params.cancellationFeeJPY.toLocaleString()} を申し受けます。`
+        : "キャンセル料は発生しません。";
+    const noShowLine = params.noShow
+      ? "<p>ご予約時間内にご入室が確認できなかったため、無断欠席として処理しました。</p>"
+      : "";
     const subject = "【みらい予報】ご予約キャンセルのお知らせ";
     const html = `
 				<h2>ご予約がキャンセルされました</h2>
 				<p>${params.customerName} 様</p>
 				<p>${cancelledByText}によりご予約がキャンセルされました。</p>
+				${noShowLine}
 				<ul>
 					<li><strong>占い師:</strong> ${params.consultantName}</li>
 					<li><strong>予約ID:</strong> ${params.bookingId}</li>
 				</ul>
+				<p>${feeText}</p>
 			`;
 
     await deliverEmail("booking-cancellation", {

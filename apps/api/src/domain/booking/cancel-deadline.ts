@@ -1,13 +1,13 @@
-const CANCEL_DEADLINE_HOURS = 24;
+const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export class CancelDeadline {
   private constructor(private readonly deadline: Date) {}
 
   static create(startsAt: Date): CancelDeadline {
-    const deadline = new Date(
-      startsAt.getTime() - CANCEL_DEADLINE_HOURS * 60 * 60 * 1000,
-    );
-    return new CancelDeadline(deadline);
+    const jstStartsAtMs = startsAt.getTime() + JST_OFFSET_MS;
+    const jstMidnightMs = Math.floor(jstStartsAtMs / DAY_MS) * DAY_MS;
+    return new CancelDeadline(new Date(jstMidnightMs - JST_OFFSET_MS));
   }
 
   static reconstruct(deadline: Date): CancelDeadline {

@@ -1,3 +1,4 @@
+import type { ChargeMethod } from "@/domain/payment/payment";
 import type { DomainEvent } from "@/domain/shared/domain-event";
 
 export class PaymentChargedEvent implements DomainEvent {
@@ -7,7 +8,7 @@ export class PaymentChargedEvent implements DomainEvent {
     paymentId: string;
     bookingId: string;
     customerId: string;
-    chargeMethod: "batch" | "manual";
+    chargeMethod: ChargeMethod;
     amountJPY: number;
   };
 

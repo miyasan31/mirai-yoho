@@ -6,9 +6,18 @@ import {
 } from "@/domain/booking/booking-events";
 import { BookingStatus } from "@/domain/booking/booking-status";
 import { CancelDeadline } from "@/domain/booking/cancel-deadline";
+import { CancellationFee } from "@/domain/booking/cancellation-fee";
 import type { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import type { ZoomUrl } from "@/domain/booking/zoom-url";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
+
+export type CancelledBy = "customer" | "admin";
+
+export interface CancelParams {
+  cancelledBy: CancelledBy;
+  now?: Date;
+  noShow?: boolean;
+}
 
 interface AppliedCoupon {
   userCouponId: string;
@@ -52,6 +61,10 @@ interface BookingProps
   couponDiscountJPY?: number;
   discountedTotalJPY?: number;
   lateArrivalAlertSentAt?: Date;
+  cancelledAt?: Date;
+  cancelledBy?: CancelledBy;
+  cancellationFee?: CancellationFee;
+  noShow?: boolean;
 }
 
 export class Booking extends AggregateRoot {
@@ -79,6 +92,10 @@ export class Booking extends AggregateRoot {
     private readonly appliedUserCouponId: string | undefined,
     private readonly couponDiscountJPY: number | undefined,
     private readonly discountedTotalJPY: number | undefined,
+    private cancelledAt: Date | undefined,
+    private cancelledBy: CancelledBy | undefined,
+    private cancellationFee: CancellationFee | undefined,
+    private noShow: boolean,
     private readonly createdAt: Date,
     private updatedAt: Date,
   ) {
@@ -123,6 +140,10 @@ export class Booking extends AggregateRoot {
       appliedUserCouponId,
       couponDiscountJPY,
       discountedTotalJPY,
+      undefined,
+      undefined,
+      undefined,
+      false,
       props.createdAt ?? now,
       props.updatedAt ?? now,
     );
@@ -154,6 +175,10 @@ export class Booking extends AggregateRoot {
       props.appliedUserCouponId,
       props.couponDiscountJPY,
       props.discountedTotalJPY,
+      props.cancelledAt,
+      props.cancelledBy,
+      props.cancellationFee,
+      props.noShow ?? false,
       createdAt,
       props.updatedAt ?? createdAt,
     );
@@ -181,16 +206,7 @@ export class Booking extends AggregateRoot {
     );
   }
 
-  cancel(cancelledBy: "customer" | "admin"): void {
-    if (
-      cancelledBy === "customer" &&
-      this.cancelDeadlineAt.isExpired(new Date())
-    ) {
-      throw new DomainError(
-        "CANCEL_DEADLINE_EXPIRED",
-        "Cancel deadline has passed",
-      );
-    }
+  cancel(params: CancelParams): CancellationFee {
     const currentStatus = this.status.getValue();
     if (currentStatus !== "pending" && currentStatus !== "confirmed") {
       throw new DomainError(
@@ -198,16 +214,46 @@ export class Booking extends AggregateRoot {
         "Only pending or confirmed bookings can be cancelled",
       );
     }
+
+    const now = params.now ?? new Date();
+    const noShow = params.noShow ?? false;
+    const fee = this.determineCancellationFee(params.cancelledBy, now, noShow);
+
     this.status = BookingStatus.reconstruct("cancelled");
-    this.updatedAt = new Date();
+    this.cancelledAt = now;
+    this.cancelledBy = params.cancelledBy;
+    this.cancellationFee = fee;
+    this.noShow = noShow;
+    this.updatedAt = now;
     this.addDomainEvent(
       BookingCancelledEvent.create({
         bookingId: this.bookingId,
         customerId: this.customerId,
         consultantId: this.consultantId,
-        cancelledBy,
+        cancelledBy: params.cancelledBy,
+        cancellationFeeJPY: fee.getAmountJPY(),
+        noShow,
       }),
     );
+    return fee;
+  }
+
+  private determineCancellationFee(
+    cancelledBy: CancelledBy,
+    now: Date,
+    noShow: boolean,
+  ): CancellationFee {
+    const total = this.getEffectiveTotalJPY() ?? 0;
+    if (noShow) {
+      return CancellationFee.full(total);
+    }
+    if (cancelledBy === "admin") {
+      return CancellationFee.none();
+    }
+    if (this.cancelDeadlineAt.isExpired(now)) {
+      return CancellationFee.full(total);
+    }
+    return CancellationFee.none();
   }
 
   complete(): void {
@@ -376,6 +422,22 @@ export class Booking extends AggregateRoot {
 
   getEffectiveTotalJPY(): number | undefined {
     return this.discountedTotalJPY ?? this.pricePlanTotalJPY;
+  }
+
+  getCancelledAt(): Date | undefined {
+    return this.cancelledAt;
+  }
+
+  getCancelledBy(): CancelledBy | undefined {
+    return this.cancelledBy;
+  }
+
+  getCancellationFee(): CancellationFee | undefined {
+    return this.cancellationFee;
+  }
+
+  isNoShow(): boolean {
+    return this.noShow;
   }
 
   getCreatedAt(): Date {

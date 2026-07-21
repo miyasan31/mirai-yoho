@@ -3,11 +3,12 @@ import {
   type SupportedDurationMinutes,
 } from "@mirai-yoho/shared/slot-availability";
 import type { Timestamp } from "firebase-admin/firestore";
-import type { Booking } from "@/domain/booking/booking";
+import type { Booking, CancelledBy } from "@/domain/booking/booking";
 import { Booking as BookingEntity } from "@/domain/booking/booking";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import { BookingStatus } from "@/domain/booking/booking-status";
 import { CancelDeadline } from "@/domain/booking/cancel-deadline";
+import { CancellationFee } from "@/domain/booking/cancellation-fee";
 import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
 import type { TransactionScope } from "@/domain/shared/transaction-scope";
@@ -44,6 +45,11 @@ interface BookingDoc {
   appliedUserCouponId?: string;
   couponDiscountJPY?: number;
   discountedTotalJPY?: number;
+  cancelledAt?: Timestamp;
+  cancelledBy?: string;
+  cancellationFeeType?: string;
+  cancellationFeeJPY?: number;
+  noShow?: boolean;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
@@ -89,6 +95,16 @@ function toDomain(doc: BookingDoc): Booking {
     appliedUserCouponId: doc.appliedUserCouponId,
     couponDiscountJPY: doc.couponDiscountJPY,
     discountedTotalJPY: doc.discountedTotalJPY,
+    cancelledAt: doc.cancelledAt?.toDate(),
+    cancelledBy: doc.cancelledBy as CancelledBy | undefined,
+    cancellationFee:
+      doc.cancellationFeeType !== undefined
+        ? CancellationFee.reconstruct(
+            doc.cancellationFeeType,
+            doc.cancellationFeeJPY ?? 0,
+          )
+        : undefined,
+    noShow: doc.noShow ?? false,
     createdAt,
     updatedAt: doc.updatedAt?.toDate() ?? createdAt,
   });
@@ -123,6 +139,11 @@ function toFirestore(booking: Booking): Record<string, unknown> {
     appliedUserCouponId: booking.getAppliedUserCouponId() ?? null,
     couponDiscountJPY: booking.getCouponDiscountJPY() ?? null,
     discountedTotalJPY: booking.getDiscountedTotalJPY() ?? null,
+    cancelledAt: booking.getCancelledAt() ?? null,
+    cancelledBy: booking.getCancelledBy() ?? null,
+    cancellationFeeType: booking.getCancellationFee()?.getType() ?? null,
+    cancellationFeeJPY: booking.getCancellationFee()?.getAmountJPY() ?? null,
+    noShow: booking.isNoShow(),
     createdAt: booking.getCreatedAt(),
     updatedAt: booking.getUpdatedAt(),
   };

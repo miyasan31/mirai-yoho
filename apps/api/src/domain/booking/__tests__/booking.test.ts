@@ -114,72 +114,110 @@ describe("Booking", () => {
   describe("cancel", () => {
     it("confirmed から cancelled に遷移する", () => {
       const booking = createConfirmedBooking();
-      booking.cancel("admin");
+      booking.cancel({ cancelledBy: "admin" });
       expect(booking.getStatus().getValue()).toBe("cancelled");
     });
 
     it("pending から cancelled に遷移する", () => {
       const booking = createPendingBooking();
-      booking.cancel("admin");
+      booking.cancel({ cancelledBy: "admin" });
       expect(booking.getStatus().getValue()).toBe("cancelled");
     });
 
     it("BookingCancelledEvent が発行される", () => {
       const booking = createConfirmedBooking();
-      booking.cancel("admin");
+      booking.cancel({ cancelledBy: "admin" });
       const events = booking.pullDomainEvents();
       expect(events).toHaveLength(1);
       expect(events[0].eventName).toBe("BookingCancelled");
     });
 
-    it("admin はデッドライン後でもキャンセルできる", () => {
-      const pastDate = new Date("2020-01-01T10:00:00Z");
-      const booking = Booking.reconstruct({
-        organizationId: ORGANIZATION_ID,
-        bookingId: "booking-1",
-        customerId: "customer-1",
-        consultantId: "consultant-1",
-        usageSlotIds: ["slot-1", "slot-2"],
-        bufferSlotIds: ["slot-3"],
-        startsAt: pastDate,
-        endsAt: new Date(pastDate.getTime() + 30 * 60 * 1000),
-        durationMinutes: 30,
-        status: BookingStatus.reconstruct("confirmed"),
-        cancelDeadlineAt: CancelDeadline.create(pastDate),
-        consultantMemo: ConsultantMemo.empty(),
+    it("admin はキャンセル料無料", () => {
+      const booking = createConfirmedBooking();
+      const fee = booking.cancel({
+        cancelledBy: "admin",
+        now: new Date("2026-05-01T09:00:00Z"),
       });
-      expect(() => booking.cancel("admin")).not.toThrow();
+      expect(fee.isNone()).toBe(true);
+      expect(fee.getAmountJPY()).toBe(0);
     });
 
-    it("customer はデッドライン後にキャンセルすると DomainError", () => {
-      const pastDate = new Date("2020-01-01T10:00:00Z");
-      const booking = Booking.reconstruct({
+    it("customer が前日までにキャンセルするとキャンセル料無料", () => {
+      // 予約開始: 2026-05-02 10:00 JST (= 2026-05-02 01:00 UTC)
+      // 前日: 2026-05-01 JST 中はデッドライン前
+      const booking = Booking.create({
         organizationId: ORGANIZATION_ID,
         bookingId: "booking-1",
         customerId: "customer-1",
         consultantId: "consultant-1",
-        usageSlotIds: ["slot-1", "slot-2"],
-        bufferSlotIds: ["slot-3"],
-        startsAt: pastDate,
-        endsAt: new Date(pastDate.getTime() + 30 * 60 * 1000),
+        usageSlotIds: ["slot-1"],
+        bufferSlotIds: [],
+        startsAt: new Date("2026-05-02T01:00:00Z"),
+        endsAt: new Date("2026-05-02T01:30:00Z"),
         durationMinutes: 30,
-        status: BookingStatus.reconstruct("confirmed"),
-        cancelDeadlineAt: CancelDeadline.create(pastDate),
         consultantMemo: ConsultantMemo.empty(),
+        pricePlanId: "plan-1",
+        pricePlanName: "通常鑑定",
+        pricePlanTotalJPY: 5500,
       });
-      expect(() => booking.cancel("customer")).toThrow(DomainError);
+      const fee = booking.cancel({
+        cancelledBy: "customer",
+        // 前日 23:00 JST = 2026-05-01T14:00:00Z
+        now: new Date("2026-05-01T14:00:00Z"),
+      });
+      expect(fee.isNone()).toBe(true);
+    });
+
+    it("customer が当日にキャンセルすると全額課金", () => {
+      const booking = Booking.create({
+        organizationId: ORGANIZATION_ID,
+        bookingId: "booking-1",
+        customerId: "customer-1",
+        consultantId: "consultant-1",
+        usageSlotIds: ["slot-1"],
+        bufferSlotIds: [],
+        startsAt: new Date("2026-05-02T01:00:00Z"),
+        endsAt: new Date("2026-05-02T01:30:00Z"),
+        durationMinutes: 30,
+        consultantMemo: ConsultantMemo.empty(),
+        pricePlanId: "plan-1",
+        pricePlanName: "通常鑑定",
+        pricePlanTotalJPY: 5500,
+      });
+      const fee = booking.cancel({
+        cancelledBy: "customer",
+        // 当日 0:01 JST = 2026-05-01T15:01:00Z
+        now: new Date("2026-05-01T15:01:00Z"),
+      });
+      expect(fee.isFull()).toBe(true);
+      expect(fee.getAmountJPY()).toBe(5500);
+    });
+
+    it("noShow は全額課金", () => {
+      const booking = createConfirmedBooking();
+      const fee = booking.cancel({
+        cancelledBy: "admin",
+        noShow: true,
+      });
+      // admin cancel でも noShow なら全額
+      expect(fee.isFull()).toBe(true);
+      expect(fee.getAmountJPY()).toBe(5500);
     });
 
     it("completed からキャンセルすると DomainError", () => {
       const booking = createConfirmedBooking();
       booking.complete();
-      expect(() => booking.cancel("admin")).toThrow(DomainError);
+      expect(() => booking.cancel({ cancelledBy: "admin" })).toThrow(
+        DomainError,
+      );
     });
 
     it("cancelled からキャンセルすると DomainError", () => {
       const booking = createConfirmedBooking();
-      booking.cancel("admin");
-      expect(() => booking.cancel("admin")).toThrow(DomainError);
+      booking.cancel({ cancelledBy: "admin" });
+      expect(() => booking.cancel({ cancelledBy: "admin" })).toThrow(
+        DomainError,
+      );
     });
   });
 
@@ -252,7 +290,7 @@ describe("Booking", () => {
 
     it("cancelled は記録できない", () => {
       const booking = createConfirmedBooking();
-      booking.cancel("admin");
+      booking.cancel({ cancelledBy: "admin" });
 
       expect(() =>
         booking.markConsultantJoined(new Date("2026-05-01T10:05:00Z")),

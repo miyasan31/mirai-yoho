@@ -15,6 +15,8 @@ interface CancelBookingInput {
   organizationId: string;
   bookingId: string;
   cancelledBy: "customer" | "admin";
+  noShow?: boolean;
+  now?: Date;
 }
 
 export class CancelBookingUseCase {
@@ -40,7 +42,12 @@ export class CancelBookingUseCase {
       throw new Error("Booking not found");
     }
 
-    booking.cancel(input.cancelledBy);
+    const now = input.now ?? new Date();
+    const fee = booking.cancel({
+      cancelledBy: input.cancelledBy,
+      now,
+      noShow: input.noShow,
+    });
 
     const payment = await this.paymentRepository.findByBookingId(
       input.organizationId,
@@ -51,16 +58,34 @@ export class CancelBookingUseCase {
       const status = payment.getStatus().getValue();
 
       if (strategy.isImmediate() && status === "charged") {
-        const paymentIntentId = payment.getStripePaymentIntentId();
-        if (paymentIntentId) {
-          await this.stripeService.refundPaymentIntent(paymentIntentId);
+        if (fee.isFull()) {
+          // 当日キャンセル or no-show は返金しない（そのまま課金を維持）
+        } else {
+          const paymentIntentId = payment.getStripePaymentIntentId();
+          if (paymentIntentId) {
+            await this.stripeService.refundPaymentIntent(paymentIntentId);
+          }
+          payment.refund();
         }
-        payment.refund();
-      } else if (
-        strategy.isDeferred() &&
-        (status === "setup_pending" || status === "setup_complete")
-      ) {
-        payment.cancel();
+      } else if (strategy.isDeferred()) {
+        if (status === "setup_complete" && fee.isFull()) {
+          const paymentMethodId = payment.getStripePaymentMethodId();
+          if (paymentMethodId) {
+            const { paymentIntentId } =
+              await this.stripeService.createOffSessionPaymentIntent({
+                amountJPY: fee.getAmountJPY(),
+                paymentMethodId,
+                metadata: {
+                  bookingId: booking.getBookingId(),
+                  organizationId: booking.getOrganizationId(),
+                  chargeType: "cancellation-fee",
+                },
+              });
+            payment.charge(paymentIntentId, "cancellation");
+          }
+        } else if (status === "setup_pending" || status === "setup_complete") {
+          payment.cancel();
+        }
       }
     }
 
@@ -140,6 +165,8 @@ export class CancelBookingUseCase {
           consultantName: consultant?.getProfile().getDisplayName() ?? "",
           bookingId: e.payload.bookingId,
           cancelledBy: e.payload.cancelledBy,
+          cancellationFeeJPY: e.payload.cancellationFeeJPY,
+          noShow: e.payload.noShow,
         });
       }
     }
