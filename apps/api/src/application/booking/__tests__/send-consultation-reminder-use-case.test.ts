@@ -4,6 +4,7 @@ import { Booking } from "@/domain/booking/booking";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import { BookingStatus } from "@/domain/booking/booking-status";
 import { CancelDeadline } from "@/domain/booking/cancel-deadline";
+import { CancellationCategory } from "@/domain/booking/cancellation-category";
 import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
 import { Consultant } from "@/domain/consultant/consultant";
@@ -44,7 +45,11 @@ function createBooking(params: {
       ZoomUrl.create(`https://zoom.example.com/${params.bookingId}`),
     );
     if (params.status === "cancelled") {
-      booking.cancel("admin");
+      booking.cancel({
+        cancelledBy: "admin",
+        category: CancellationCategory.reconstruct("before_previous_day"),
+        at: new Date(),
+      });
     }
     if (params.status === "completed") {
       booking.complete();

@@ -16,5 +16,8 @@ export interface IStripeService {
 
   cancelPaymentIntent(paymentIntentId: string): Promise<void>;
 
-  refundPaymentIntent(paymentIntentId: string): Promise<void>;
+  refundPaymentIntent(
+    paymentIntentId: string,
+    amountJPY?: number,
+  ): Promise<void>;
 }

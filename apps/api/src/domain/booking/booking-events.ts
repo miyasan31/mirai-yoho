@@ -32,6 +32,10 @@ export class BookingCancelledEvent implements DomainEvent {
     customerId: string;
     consultantId: string;
     cancelledBy: "customer" | "admin";
+    cancellationCategory: "before_previous_day" | "on_the_day" | "no_show";
+    cancellationFeeJPY: number;
+    refundJPY: number;
+    startsAt: Date;
   };
 
   private constructor(payload: BookingCancelledEvent["payload"]) {

@@ -283,10 +283,13 @@ function createUseCase(overrides?: {
 
 describe("CancelBookingUseCase", () => {
   afterEach(() => {
+    vi.useRealTimers();
     vi.restoreAllMocks();
   });
 
   it("sends the cancellation email with the real customer and consultant identity", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-12-01T00:00:00.000Z"));
     const { useCase, emailService } = createUseCase();
 
     await useCase.execute({
@@ -296,13 +299,56 @@ describe("CancelBookingUseCase", () => {
     });
 
     expect(emailService.sendBookingCancellation).toHaveBeenCalledTimes(1);
-    expect(emailService.sendBookingCancellation).toHaveBeenCalledWith({
-      customerEmail: "taro@example.com",
-      customerName: "山田 太郎",
-      consultantName: "藤原 花子",
+    expect(emailService.sendBookingCancellation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        customerEmail: "taro@example.com",
+        customerName: "山田 太郎",
+        consultantName: "藤原 花子",
+        bookingId: BOOKING_ID,
+        cancelledBy: "customer",
+      }),
+    );
+  });
+
+  it("classifies a cancel before the booking day as before_previous_day with no fee", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-12-01T00:00:00.000Z"));
+    const { useCase, emailService } = createUseCase();
+
+    await useCase.execute({
+      organizationId: ORGANIZATION_ID,
       bookingId: BOOKING_ID,
       cancelledBy: "customer",
     });
+
+    expect(emailService.sendBookingCancellation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cancellationCategory: "before_previous_day",
+        cancellationFeeJPY: 0,
+        refundJPY: 5500,
+      }),
+    );
+  });
+
+  it("classifies a same-day cancel as on_the_day charging the full fee", async () => {
+    vi.useFakeTimers();
+    // JST 2027-01-01 05:00 (booking is JST 2027-01-01 19:00).
+    vi.setSystemTime(new Date("2026-12-31T20:00:00.000Z"));
+    const { useCase, emailService } = createUseCase();
+
+    await useCase.execute({
+      organizationId: ORGANIZATION_ID,
+      bookingId: BOOKING_ID,
+      cancelledBy: "customer",
+    });
+
+    expect(emailService.sendBookingCancellation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        cancellationCategory: "on_the_day",
+        cancellationFeeJPY: 5500,
+        refundJPY: 0,
+      }),
+    );
   });
 
   it("skips the cancellation email when the customer cannot be resolved", async () => {

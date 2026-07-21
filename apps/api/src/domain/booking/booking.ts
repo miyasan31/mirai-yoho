@@ -6,6 +6,7 @@ import {
 } from "@/domain/booking/booking-events";
 import { BookingStatus } from "@/domain/booking/booking-status";
 import { CancelDeadline } from "@/domain/booking/cancel-deadline";
+import type { CancellationCategory } from "@/domain/booking/cancellation-category";
 import type { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import type { ZoomUrl } from "@/domain/booking/zoom-url";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
@@ -52,6 +53,9 @@ interface BookingProps
   couponDiscountJPY?: number;
   discountedTotalJPY?: number;
   lateArrivalAlertSentAt?: Date;
+  cancelledAt?: Date;
+  cancellationCategory?: CancellationCategory;
+  cancellationFeeJPY?: number;
 }
 
 export class Booking extends AggregateRoot {
@@ -79,6 +83,9 @@ export class Booking extends AggregateRoot {
     private readonly appliedUserCouponId: string | undefined,
     private readonly couponDiscountJPY: number | undefined,
     private readonly discountedTotalJPY: number | undefined,
+    private cancelledAt: Date | undefined,
+    private cancellationCategory: CancellationCategory | undefined,
+    private cancellationFeeJPY: number | undefined,
     private readonly createdAt: Date,
     private updatedAt: Date,
   ) {
@@ -123,6 +130,9 @@ export class Booking extends AggregateRoot {
       appliedUserCouponId,
       couponDiscountJPY,
       discountedTotalJPY,
+      undefined,
+      undefined,
+      undefined,
       props.createdAt ?? now,
       props.updatedAt ?? now,
     );
@@ -154,6 +164,9 @@ export class Booking extends AggregateRoot {
       props.appliedUserCouponId,
       props.couponDiscountJPY,
       props.discountedTotalJPY,
+      props.cancelledAt,
+      props.cancellationCategory,
+      props.cancellationFeeJPY,
       createdAt,
       props.updatedAt ?? createdAt,
     );
@@ -181,16 +194,11 @@ export class Booking extends AggregateRoot {
     );
   }
 
-  cancel(cancelledBy: "customer" | "admin"): void {
-    if (
-      cancelledBy === "customer" &&
-      this.cancelDeadlineAt.isExpired(new Date())
-    ) {
-      throw new DomainError(
-        "CANCEL_DEADLINE_EXPIRED",
-        "Cancel deadline has passed",
-      );
-    }
+  cancel(input: {
+    cancelledBy: "customer" | "admin";
+    category: CancellationCategory;
+    at: Date;
+  }): void {
     const currentStatus = this.status.getValue();
     if (currentStatus !== "pending" && currentStatus !== "confirmed") {
       throw new DomainError(
@@ -198,14 +206,24 @@ export class Booking extends AggregateRoot {
         "Only pending or confirmed bookings can be cancelled",
       );
     }
+    const bookingTotalJPY = this.getEffectiveTotalJPY() ?? 0;
+    const cancellationFeeJPY = input.category.computeFeeJPY(bookingTotalJPY);
+    const refundJPY = Math.max(0, bookingTotalJPY - cancellationFeeJPY);
     this.status = BookingStatus.reconstruct("cancelled");
-    this.updatedAt = new Date();
+    this.cancelledAt = input.at;
+    this.cancellationCategory = input.category;
+    this.cancellationFeeJPY = cancellationFeeJPY;
+    this.updatedAt = input.at;
     this.addDomainEvent(
       BookingCancelledEvent.create({
         bookingId: this.bookingId,
         customerId: this.customerId,
         consultantId: this.consultantId,
-        cancelledBy,
+        cancelledBy: input.cancelledBy,
+        cancellationCategory: input.category.getValue(),
+        cancellationFeeJPY,
+        refundJPY,
+        startsAt: this.startsAt,
       }),
     );
   }
@@ -376,6 +394,18 @@ export class Booking extends AggregateRoot {
 
   getEffectiveTotalJPY(): number | undefined {
     return this.discountedTotalJPY ?? this.pricePlanTotalJPY;
+  }
+
+  getCancelledAt(): Date | undefined {
+    return this.cancelledAt;
+  }
+
+  getCancellationCategory(): CancellationCategory | undefined {
+    return this.cancellationCategory;
+  }
+
+  getCancellationFeeJPY(): number | undefined {
+    return this.cancellationFeeJPY;
   }
 
   getCreatedAt(): Date {

@@ -8,6 +8,7 @@ import { Booking as BookingEntity } from "@/domain/booking/booking";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import { BookingStatus } from "@/domain/booking/booking-status";
 import { CancelDeadline } from "@/domain/booking/cancel-deadline";
+import { CancellationCategory } from "@/domain/booking/cancellation-category";
 import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
 import type { TransactionScope } from "@/domain/shared/transaction-scope";
@@ -44,6 +45,9 @@ interface BookingDoc {
   appliedUserCouponId?: string;
   couponDiscountJPY?: number;
   discountedTotalJPY?: number;
+  cancelledAt?: Timestamp;
+  cancellationCategory?: string;
+  cancellationFeeJPY?: number;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
 }
@@ -89,6 +93,11 @@ function toDomain(doc: BookingDoc): Booking {
     appliedUserCouponId: doc.appliedUserCouponId,
     couponDiscountJPY: doc.couponDiscountJPY,
     discountedTotalJPY: doc.discountedTotalJPY,
+    cancelledAt: doc.cancelledAt?.toDate(),
+    cancellationCategory: doc.cancellationCategory
+      ? CancellationCategory.reconstruct(doc.cancellationCategory)
+      : undefined,
+    cancellationFeeJPY: doc.cancellationFeeJPY,
     createdAt,
     updatedAt: doc.updatedAt?.toDate() ?? createdAt,
   });
@@ -123,6 +132,9 @@ function toFirestore(booking: Booking): Record<string, unknown> {
     appliedUserCouponId: booking.getAppliedUserCouponId() ?? null,
     couponDiscountJPY: booking.getCouponDiscountJPY() ?? null,
     discountedTotalJPY: booking.getDiscountedTotalJPY() ?? null,
+    cancelledAt: booking.getCancelledAt() ?? null,
+    cancellationCategory: booking.getCancellationCategory()?.getValue() ?? null,
+    cancellationFeeJPY: booking.getCancellationFeeJPY() ?? null,
     createdAt: booking.getCreatedAt(),
     updatedAt: booking.getUpdatedAt(),
   };

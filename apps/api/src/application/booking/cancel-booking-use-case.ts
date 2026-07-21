@@ -3,8 +3,10 @@ import type { IStripeService } from "@/application/shared/stripe-service";
 import type { IZoomService } from "@/application/shared/zoom-service";
 import type { BookingCancelledEvent } from "@/domain/booking/booking-events";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
+import { CancellationCategory } from "@/domain/booking/cancellation-category";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
 import type { ICustomerRepository } from "@/domain/customer/customer-repository";
+import type { Payment } from "@/domain/payment/payment";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import type { IUserCouponRepository } from "@/domain/user-coupon/user-coupon-repository";
@@ -51,28 +53,30 @@ export class CancelBookingUseCase {
       ),
     ]);
 
-    booking.cancel(input.cancelledBy);
+    const now = new Date();
+    const category = CancellationCategory.forTime(booking.getStartsAt(), now);
+    const bookingTotalJPY = booking.getEffectiveTotalJPY() ?? 0;
+    const cancellationFeeJPY = category.computeFeeJPY(bookingTotalJPY);
+    const refundJPY = Math.max(0, bookingTotalJPY - cancellationFeeJPY);
+
+    booking.cancel({
+      cancelledBy: input.cancelledBy,
+      category,
+      at: now,
+    });
 
     const payment = await this.paymentRepository.findByBookingId(
       input.organizationId,
       input.bookingId,
     );
     if (payment) {
-      const strategy = payment.getPaymentStrategy();
-      const status = payment.getStatus().getValue();
-
-      if (strategy.isImmediate() && status === "charged") {
-        const paymentIntentId = payment.getStripePaymentIntentId();
-        if (paymentIntentId) {
-          await this.stripeService.refundPaymentIntent(paymentIntentId);
-        }
-        payment.refund();
-      } else if (
-        strategy.isDeferred() &&
-        (status === "setup_pending" || status === "setup_complete")
-      ) {
-        payment.cancel();
-      }
+      await this.applyPaymentPolicy({
+        payment,
+        refundJPY,
+        cancellationFeeJPY,
+        organizationId: input.organizationId,
+        bookingId: input.bookingId,
+      });
     }
 
     const occupiedSlotIds = booking.getAllOccupiedSlotIds();
@@ -139,8 +143,68 @@ export class CancelBookingUseCase {
           consultantName: consultant?.getProfile().getDisplayName() ?? "",
           bookingId: e.payload.bookingId,
           cancelledBy: e.payload.cancelledBy,
+          startsAt: e.payload.startsAt,
+          cancellationCategory: e.payload.cancellationCategory,
+          cancellationFeeJPY: e.payload.cancellationFeeJPY,
+          refundJPY: e.payload.refundJPY,
         });
       }
+    }
+  }
+
+  private async applyPaymentPolicy(params: {
+    payment: Payment;
+    refundJPY: number;
+    cancellationFeeJPY: number;
+    organizationId: string;
+    bookingId: string;
+  }): Promise<void> {
+    const { payment, refundJPY, cancellationFeeJPY } = params;
+    const strategy = payment.getPaymentStrategy();
+    const status = payment.getStatus().getValue();
+
+    if (strategy.isImmediate() && status === "charged") {
+      if (refundJPY <= 0) {
+        return;
+      }
+      const paymentIntentId = payment.getStripePaymentIntentId();
+      const totalJPY = payment.getMoney().getTotalJPY();
+      if (paymentIntentId) {
+        const isFullRefund = refundJPY >= totalJPY;
+        await this.stripeService.refundPaymentIntent(
+          paymentIntentId,
+          isFullRefund ? undefined : refundJPY,
+        );
+      }
+      payment.refund();
+      return;
+    }
+
+    if (
+      strategy.isDeferred() &&
+      (status === "setup_pending" || status === "setup_complete")
+    ) {
+      if (cancellationFeeJPY <= 0) {
+        payment.cancel();
+        return;
+      }
+      const paymentMethodId = payment.getStripePaymentMethodId();
+      if (status !== "setup_complete" || !paymentMethodId) {
+        // カード情報未確定のためキャンセル料を回収できない。setup を破棄する。
+        payment.cancel();
+        return;
+      }
+      const { paymentIntentId } =
+        await this.stripeService.createOffSessionPaymentIntent({
+          amountJPY: cancellationFeeJPY,
+          paymentMethodId,
+          metadata: {
+            organizationId: params.organizationId,
+            bookingId: params.bookingId,
+            purpose: "cancellation_fee",
+          },
+        });
+      payment.charge(paymentIntentId, "batch");
     }
   }
 }

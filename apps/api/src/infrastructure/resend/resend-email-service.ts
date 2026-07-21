@@ -89,9 +89,23 @@ export class ResendEmailService implements IEmailService {
     consultantName: string;
     bookingId: string;
     cancelledBy: "customer" | "admin";
+    startsAt: Date;
+    cancellationCategory: "before_previous_day" | "on_the_day" | "no_show";
+    cancellationFeeJPY: number;
+    refundJPY: number;
   }): Promise<void> {
     const cancelledByText =
       params.cancelledBy === "customer" ? "お客様" : "管理者";
+    const categoryText =
+      params.cancellationCategory === "before_previous_day"
+        ? "前日までのキャンセル（キャンセル料なし）"
+        : params.cancellationCategory === "on_the_day"
+          ? "当日キャンセル（全額をキャンセル料として申し受けます）"
+          : "無断キャンセル（全額をキャンセル料として申し受けます）";
+    const refundText =
+      params.refundJPY > 0
+        ? `<li><strong>返金額:</strong> ¥${params.refundJPY.toLocaleString()}（Stripe 経由で 5〜10 営業日以内に反映）</li>`
+        : "<li><strong>返金額:</strong> なし</li>";
     const subject = "【みらい予報】ご予約キャンセルのお知らせ";
     const html = `
 				<h2>ご予約がキャンセルされました</h2>
@@ -99,8 +113,13 @@ export class ResendEmailService implements IEmailService {
 				<p>${cancelledByText}によりご予約がキャンセルされました。</p>
 				<ul>
 					<li><strong>占い師:</strong> ${params.consultantName}</li>
+					<li><strong>日時:</strong> ${formatDatetime(params.startsAt)}</li>
 					<li><strong>予約ID:</strong> ${params.bookingId}</li>
+					<li><strong>キャンセル区分:</strong> ${categoryText}</li>
+					<li><strong>キャンセル料:</strong> ¥${params.cancellationFeeJPY.toLocaleString()}</li>
+					${refundText}
 				</ul>
+				<p>詳細は当社キャンセルポリシーをご確認ください。</p>
 			`;
 
     await deliverEmail("booking-cancellation", {

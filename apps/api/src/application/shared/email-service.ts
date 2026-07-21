@@ -14,6 +14,10 @@ export interface IEmailService {
     consultantName: string;
     bookingId: string;
     cancelledBy: "customer" | "admin";
+    startsAt: Date;
+    cancellationCategory: "before_previous_day" | "on_the_day" | "no_show";
+    cancellationFeeJPY: number;
+    refundJPY: number;
   }): Promise<void>;
 
   sendPaymentReceipt(params: {

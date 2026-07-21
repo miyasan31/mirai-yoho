@@ -64,9 +64,13 @@ export class StripeService implements IStripeService {
     await getStripeCustomer().paymentIntents.cancel(paymentIntentId);
   }
 
-  async refundPaymentIntent(paymentIntentId: string): Promise<void> {
+  async refundPaymentIntent(
+    paymentIntentId: string,
+    amountJPY?: number,
+  ): Promise<void> {
     await getStripeCustomer().refunds.create({
       payment_intent: paymentIntentId,
+      ...(amountJPY !== undefined ? { amount: amountJPY } : {}),
     });
   }
 }
