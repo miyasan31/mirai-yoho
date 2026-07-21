@@ -7,6 +7,10 @@ import { UserPlus } from "lucide-react";
 import { useEffect, useTransition } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
+import {
+  clearPendingOrganizationId,
+  readPendingOrganizationId,
+} from "@/lib/pending-organization";
 
 export const Route = createFileRoute("/register")({
   component: RegisterPage,
@@ -22,6 +26,15 @@ function RegisterPage() {
   useEffect(() => {
     if (isLoading || !user) return;
     if (isSignedUp) {
+      const pendingOrgId = readPendingOrganizationId();
+      if (pendingOrgId) {
+        clearPendingOrganizationId();
+        navigate({
+          to: "/$organizationId/consultants",
+          params: { organizationId: pendingOrgId },
+        });
+        return;
+      }
       navigate({ to: "/mypage" });
     } else {
       navigate({ to: "/mypage/profile", search: {} });

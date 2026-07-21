@@ -1766,6 +1766,9 @@ components:
           type: string
         organizationId:
           type: string
+        organizationName:
+          type: string
+          nullable: true
         status:
           type: string
           enum: [pending, confirmed, completed, cancelled]

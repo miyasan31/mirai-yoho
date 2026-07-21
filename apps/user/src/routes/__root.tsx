@@ -5,6 +5,7 @@ import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
 import { SearchX } from "lucide-react";
 import { BackNavigationButton } from "@/components/back-navigation-button";
 import { MobileBackButton } from "@/components/mobile-back-button";
+import { useCapturePendingOrganizationId } from "@/hooks/use-capture-pending-organization";
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -12,6 +13,7 @@ export const Route = createRootRoute({
 });
 
 function RootLayout() {
+  useCapturePendingOrganizationId();
   return (
     <>
       <Outlet />

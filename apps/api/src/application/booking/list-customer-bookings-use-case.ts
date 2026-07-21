@@ -2,6 +2,7 @@ import type { Booking } from "@/domain/booking/booking";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
 import type { ICustomerRepository } from "@/domain/customer/customer-repository";
+import type { IOrganizationRepository } from "@/domain/organization/organization-repository";
 
 interface ListCustomerBookingsInput {
   userId: string;
@@ -11,6 +12,7 @@ interface ListCustomerBookingsInput {
 export interface CustomerBookingResult {
   booking: Booking;
   consultantName: string | null;
+  organizationName: string | null;
 }
 
 export class ListCustomerBookingsUseCase {
@@ -18,6 +20,7 @@ export class ListCustomerBookingsUseCase {
     private readonly bookingRepository: IBookingRepository,
     private readonly customerRepository: ICustomerRepository,
     private readonly consultantRepository: IConsultantRepository,
+    private readonly organizationRepository: IOrganizationRepository,
   ) {}
 
   async execute(
@@ -72,12 +75,24 @@ export class ListCustomerBookingsUseCase {
     );
     const consultantNameByKey = new Map(consultantEntries);
 
+    const uniqueOrganizationIds = Array.from(
+      new Set(bookings.map((booking) => booking.getOrganizationId())),
+    );
+    const organizations = await this.organizationRepository.findByIds(
+      uniqueOrganizationIds,
+    );
+    const organizationNameById = new Map(
+      organizations.map((org) => [org.getOrganizationId(), org.getName()]),
+    );
+
     return bookings.map((booking) => ({
       booking,
       consultantName:
         consultantNameByKey.get(
           `${booking.getOrganizationId()}::${booking.getConsultantId()}`,
         ) ?? null,
+      organizationName:
+        organizationNameById.get(booking.getOrganizationId()) ?? null,
     }));
   }
 }
