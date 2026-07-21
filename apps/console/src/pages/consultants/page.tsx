@@ -105,10 +105,10 @@ export default function ConsoleConsultantsPage() {
         >
           <styled.div>
             <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
-              相談員管理
+              占い師管理
             </Text>
             <Text textStyle="sm" color="fg.muted">
-              相談員の招待・稼働状況の確認・プロフィール編集導線を管理する画面です。
+              占い師の招待・稼働状況の確認・プロフィール編集導線を管理する画面です。
             </Text>
           </styled.div>
         </styled.div>
@@ -127,10 +127,10 @@ export default function ConsoleConsultantsPage() {
       >
         <styled.div>
           <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
-            相談員管理
+            占い師管理
           </Text>
           <Text textStyle="sm" color="fg.muted">
-            相談員の招待・稼働状況の確認・プロフィール編集導線を管理する画面です。
+            占い師の招待・稼働状況の確認・プロフィール編集導線を管理する画面です。
           </Text>
         </styled.div>
         {isAdmin && (
@@ -154,9 +154,9 @@ export default function ConsoleConsultantsPage() {
               <Dialog.Content asChild>
                 <styled.form onSubmit={handleSubmit(onInviteConsultant)}>
                   <Dialog.Header>
-                    <Dialog.Title>相談員招待</Dialog.Title>
+                    <Dialog.Title>占い師招待</Dialog.Title>
                     <Dialog.Description>
-                      相談員として招待するメールアドレスと表示名を入力してください
+                      占い師として招待するメールアドレスと表示名を入力してください
                     </Dialog.Description>
                   </Dialog.Header>
                   <Dialog.Body display="flex" flexDir="column" gap="4">
@@ -198,11 +198,11 @@ export default function ConsoleConsultantsPage() {
       {consultants.length === 0 ? (
         <EmptyState
           icon={Users}
-          message="相談員はいません"
+          message="占い師はいません"
           hint={
             isAdmin
-              ? "新規追加ボタンから相談員を登録できます"
-              : "管理者に相談員追加を依頼してください"
+              ? "新規追加ボタンから占い師を登録できます"
+              : "管理者に占い師追加を依頼してください"
           }
         />
       ) : (

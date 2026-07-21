@@ -31,9 +31,9 @@ export default function ConsoleConsultantEditModalPage() {
       <Dialog.Positioner>
         <Dialog.Content>
           <Dialog.Header>
-            <Dialog.Title>相談員編集</Dialog.Title>
+            <Dialog.Title>占い師編集</Dialog.Title>
             <Dialog.Description>
-              相談員の表示名・自己紹介・専門分野を更新し、必要に応じて無効化を行います。
+              占い師の表示名・自己紹介・専門分野を更新し、必要に応じて無効化を行います。
             </Dialog.Description>
           </Dialog.Header>
           <Dialog.Body>

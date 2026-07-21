@@ -243,11 +243,11 @@ export function ConsultantEditForm({
           <Dialog.Positioner>
             <Dialog.Content>
               <Dialog.Header>
-                <Dialog.Title>相談員の無効化</Dialog.Title>
+                <Dialog.Title>占い師の無効化</Dialog.Title>
               </Dialog.Header>
               <Dialog.Body>
                 <Dialog.Description>
-                  この相談員を無効にしますか？この操作は取り消せます。
+                  この占い師を無効にしますか？この操作は取り消せます。
                 </Dialog.Description>
               </Dialog.Body>
               <Dialog.Footer>

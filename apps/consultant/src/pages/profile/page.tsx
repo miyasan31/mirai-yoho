@@ -214,7 +214,7 @@ export default function ConsultantProfilePage() {
             プロフィール編集
           </Text>
           <Text textStyle="sm" color="fg.muted">
-            利用者に表示される相談員プロフィールを編集・保存する画面です。
+            利用者に表示される占い師プロフィールを編集・保存する画面です。
           </Text>
         </styled.div>
         <styled.div
@@ -244,7 +244,7 @@ export default function ConsultantProfilePage() {
           プロフィール編集
         </Text>
         <Text textStyle="sm" color="fg.muted">
-          利用者に表示される相談員プロフィールを編集・保存する画面です。
+          利用者に表示される占い師プロフィールを編集・保存する画面です。
         </Text>
       </styled.div>
       <styled.div shadow="xs" rounded="l2" p="6">

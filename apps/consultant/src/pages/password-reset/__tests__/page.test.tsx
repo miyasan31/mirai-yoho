@@ -142,7 +142,7 @@ describe("ConsultantPasswordResetPage", () => {
   it("shows only consultant login back link", () => {
     render(<ConsultantPasswordResetPage />);
 
-    const link = screen.getByRole("link", { name: "相談員ログインに戻る" });
+    const link = screen.getByRole("link", { name: "占い師ログインに戻る" });
     expect(link.getAttribute("href")).toBe("/login");
     expect(screen.queryByText("管理者ログインに戻る")).toBeNull();
   });

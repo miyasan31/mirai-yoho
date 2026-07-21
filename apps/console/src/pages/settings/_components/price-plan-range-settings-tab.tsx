@@ -53,7 +53,7 @@ export function PricePlanRangeSettingsTab({
           料金設定
         </Text>
         <Text color="fg.muted" textStyle="sm">
-          相談員が作成でき、利用者が選択できる料金プランの税込金額範囲を設定します。
+          占い師が作成でき、利用者が選択できる料金プランの税込金額範囲を設定します。
         </Text>
       </styled.div>
       <styled.div display="grid" gridTemplateColumns="1fr 1fr" gap="3">

@@ -50,7 +50,7 @@ export const NAV_ITEMS: Array<
   },
   {
     path: "/consultants",
-    label: "相談員管理",
+    label: "占い師管理",
     icon: UserRoundSearch,
     permissions: ["console.consultants.read"],
   },

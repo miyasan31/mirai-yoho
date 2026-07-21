@@ -287,7 +287,7 @@ export default function ConsoleBookingsPage() {
                 <Table.Header>日時</Table.Header>
                 <Table.Header>ステータス</Table.Header>
                 <Table.Header>顧客</Table.Header>
-                <Table.Header>相談員</Table.Header>
+                <Table.Header>占い師</Table.Header>
                 <Table.Header>入室確認</Table.Header>
                 <Table.Header>操作</Table.Header>
               </Table.Row>

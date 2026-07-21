@@ -209,7 +209,7 @@ describe("consultant invite route", () => {
     expect(response.status).toBe(409);
     await expect(response.json()).resolves.toEqual({
       code: "CONSULTANT_ALREADY_EXISTS",
-      message: "このメールアドレスは既にこの組織の相談員として登録されています",
+      message: "このメールアドレスは既にこの組織の占い師として登録されています",
     });
     expect(mocks.createConsultantUseCaseExecute).not.toHaveBeenCalled();
     expect(mocks.sendInvitation).not.toHaveBeenCalled();
