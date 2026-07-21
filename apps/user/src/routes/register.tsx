@@ -140,6 +140,13 @@ function RegisterPage() {
           >
             利用規約
           </Link>
+          および
+          <Link
+            to="/cancellation-policy"
+            style={{ textDecoration: "underline", marginLeft: "0.25rem" }}
+          >
+            キャンセルポリシー
+          </Link>
           に同意したものとみなされます。
         </Text>
       </styled.div>
