@@ -96,6 +96,8 @@
 | `[x]` | ダッシュボード機能（`GetDashboardUseCase`） | PR #87〜#98 |
 | `[x]` | `apps/admin` → `apps/console` リブランディング（`admin.*` → `console.*` ドメイン、API パス `/admin/*` → `/console/*`） | PR #100, #102, #104 |
 | `[x]` | 15分単位の連続予約・バッファ機能（`PricePlan.durationMinutes`（30/60/90/120分）、予約後 15分バッファを空き枠から自動除外、`@mirai-yoho/shared/slot-availability`） | PR #120 |
+| `[x]` | 相談員指名予約フラグを廃止し「相談員 → プラン → 枠 → 情報」フローに一本化（`consultantSelectionEnabled` 設定・相談員横断探索ロジックを削除） | PR #131 |
+| `[x]` | Zoom 連携のローカル stub モード追加（`ZOOM_INTEGRATION_MODE=stub` で OAuth・会議作成をフェイク化） | PR #123 |
 
 ---
 
