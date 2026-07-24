@@ -51,6 +51,29 @@ load_env_file() {
   set +a
 }
 
+# .env ファイルから指定プレフィックスのキーだけを抜き出して export する。
+# .env.dev には FIREBASE_PRIVATE_KEY のような複数行 / クォート事故が起きやすい値が
+# 混ざっているため、hosting のように一部の変数（VITE_*）しか必要ないケースでは
+# ファイル全体を source すると失敗する。必要な行だけフィルタして安全に読み込む。
+# Usage: load_env_prefix_from_file <file> <PREFIX>
+load_env_prefix_from_file() {
+  local file="$1"
+  local prefix="$2"
+  if [ ! -f "$file" ]; then
+    echo "Error: $file not found" >&2
+    exit 1
+  fi
+  local tmp
+  tmp="$(mktemp)"
+  # `export FOO=...` 形式にも `FOO=...` 形式にも対応する
+  grep -E "^(export[[:space:]]+)?${prefix}[A-Z0-9_]+=" "$file" > "$tmp" || true
+  set -a
+  # shellcheck disable=SC1090
+  . "$tmp"
+  set +a
+  rm -f "$tmp"
+}
+
 verify_secrets_have_values() {
   local project="$1"
   shift

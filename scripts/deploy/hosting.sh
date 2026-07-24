@@ -16,8 +16,8 @@ require_cmd gcloud
 PROJECT_ID="mirai-yoho-$ENV"
 ENV_FILE=".env.$ENV"
 
-echo "==> Loading $ENV_FILE"
-load_env_file "$ENV_FILE"
+echo "==> Loading VITE_* from $ENV_FILE"
+load_env_prefix_from_file "$ENV_FILE" "VITE_"
 
 REQUIRED_VITE_VARS=(
   VITE_API_URL
