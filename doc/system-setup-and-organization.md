@@ -78,6 +78,8 @@ cp .env.example .env.local
 
 ローカルでメール送信を避けたい場合は、`EMAIL_DELIVERY_MODE=log` を設定します。設定しない場合の既定値は `resend` です。
 
+ローカルで Zoom アプリの登録を避けたい場合は、`ZOOM_INTEGRATION_MODE=stub` を設定します。Zoom OAuth と会議作成をフェイクで済ませられるため、本番相当の検証をしない限り上記表の Zoom アプリ登録は不要になります。設定しない場合の既定値は `live` です。本番では必ず `live` にしてください。
+
 ローカルで Firebase Admin を使う場合は、サービスアカウント key を `.env.local` に置く代わりに Application Default Credentials とサービスアカウント impersonation を使います。この場合、`FIREBASE_PROJECT_ID` と `FIREBASE_STORAGE_BUCKET` を設定し、`FIREBASE_CLIENT_EMAIL` と `FIREBASE_PRIVATE_KEY` は空のままで構いません。
 
 実行環境や一時的な検証で private key を使う場合、`FIREBASE_PRIVATE_KEY` は key 内の改行を `\n` として 1 行で設定できます。サーバー側で実際の改行に復元されます。
@@ -264,7 +266,7 @@ make create-organization:dev \
 2. `ADMIN_EMAIL` の Firebase Auth ユーザーを取得する。存在しない場合はランダムな一時パスワードで作成する。
 3. `accounts/{organizationId}_{accountId}` に `roleId: "admin"` を保存する。未ログインのユーザーは `status: invited`、ログイン済みのユーザーは `status: active` になる。
 4. `roles/{organizationId}_{roleId}` にシステムロール（`admin` / `operator`）を保存する。
-5. `settings/{organizationId}` に初期設定を作成する。相談員選択は有効、初期ステータスは `standard`（表示名: `標準`）である。
+5. `settings/{organizationId}` に初期設定を作成する。初期ステータスは `standard`（表示名: `標準`）である（予約フローは「相談員 → プラン → 枠 → 情報」に固定されており、相談員選択の有効/無効を切り替える設定項目は存在しない）。
 6. Firebase Auth のパスワード再設定リンクを出力する。新規ユーザーの場合は一時パスワードも標準出力に出る。
 
 出力されるパスワード再設定リンクと一時パスワードは認証情報です。運用記録に残さず、安全な経路で初期管理者に渡してください。初期管理者はリンクからパスワードを設定します。
