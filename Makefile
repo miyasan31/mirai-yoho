@@ -2,6 +2,11 @@
 .PHONY: auth-adc-organization-operator setup-secrets setup-secret
 .PHONY: setup-secrets-from-env setup-secrets-from-env-fish
 .PHONY: describe-secret access-secret check-secret-value
+.PHONY: deploy-hosting deploy-api deploy-batch-worker deploy-all
+.PHONY: deploy-hosting\:dev deploy-hosting\:prod
+.PHONY: deploy-api\:dev deploy-api\:prod
+.PHONY: deploy-batch-worker\:dev deploy-batch-worker\:prod
+.PHONY: deploy-all\:dev deploy-all\:prod
 .PHONY: auth-adc-organization-operator\:dev auth-adc-organization-operator\:prod
 .PHONY: create-organization\:dev create-organization\:prod
 .PHONY: create-default-roles\:dev create-default-roles\:prod
@@ -269,3 +274,62 @@ check-secret-value\:dev:
 
 check-secret-value\:prod:
 	$(MAKE) check-secret-value PROJECT=$(PROJECT_PROD) KEY=$(KEY)
+
+# ============================================================
+# ローカルからのデプロイ（.github/workflows/deploy-*.yml のローカル代替）
+# ============================================================
+# GitHub Actions のクレジット枯渇時に使用する。
+# - hosting: pnpm でローカルビルド → firebase-tools でデプロイ（ローカル build 必須）
+# - api / batch-worker: gcloud builds submit で Cloud Build 上でビルド（ローカルは gcloud のみ）
+#
+# 事前準備:
+#   - gcloud auth login && gcloud auth application-default login（初回のみ）
+#   - hosting は firebase-tools のログインが必要（初回のみ `pnpm dlx firebase-tools login`）
+#   - .env.dev / .env.prod（hosting は VITE_* 一式、api / batch-worker は不要）
+
+# Usage: make deploy-hosting ENV=<dev|prod>
+# Usage: make deploy-hosting:dev / make deploy-hosting:prod
+deploy-hosting:
+	@test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be dev or prod" && exit 1)
+	bash scripts/deploy/hosting.sh $(ENV)
+
+deploy-hosting\:dev:
+	$(MAKE) deploy-hosting ENV=dev
+
+deploy-hosting\:prod:
+	$(MAKE) deploy-hosting ENV=prod
+
+# Usage: make deploy-api ENV=<dev|prod>
+# Usage: make deploy-api:dev / make deploy-api:prod
+deploy-api:
+	@test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be dev or prod" && exit 1)
+	bash scripts/deploy/api.sh $(ENV)
+
+deploy-api\:dev:
+	$(MAKE) deploy-api ENV=dev
+
+deploy-api\:prod:
+	$(MAKE) deploy-api ENV=prod
+
+# Usage: make deploy-batch-worker ENV=<dev|prod>
+# Usage: make deploy-batch-worker:dev / make deploy-batch-worker:prod
+deploy-batch-worker:
+	@test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be dev or prod" && exit 1)
+	bash scripts/deploy/batch-worker.sh $(ENV)
+
+deploy-batch-worker\:dev:
+	$(MAKE) deploy-batch-worker ENV=dev
+
+deploy-batch-worker\:prod:
+	$(MAKE) deploy-batch-worker ENV=prod
+
+# hosting → api → batch-worker の順で連続デプロイする
+deploy-all\:dev:
+	$(MAKE) deploy-hosting:dev
+	$(MAKE) deploy-api:dev
+	$(MAKE) deploy-batch-worker:dev
+
+deploy-all\:prod:
+	$(MAKE) deploy-hosting:prod
+	$(MAKE) deploy-api:prod
+	$(MAKE) deploy-batch-worker:prod
