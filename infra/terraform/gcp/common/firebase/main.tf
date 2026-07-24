@@ -26,6 +26,7 @@ locals {
     "ZOOM_USER_OAUTH_CLIENT_SECRET",
     "ZOOM_OAUTH_STATE_SECRET",
     "ZOOM_CREDENTIAL_ENCRYPTION_KEY",
+    "COUPON_WEBHOOK_SECRET"
   ])
 
   # runtime_secret_ids のうち operator が手動で gcloud に作成・投入するため
