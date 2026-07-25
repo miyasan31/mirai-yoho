@@ -154,7 +154,7 @@ export default function ConsultantSlotsPage() {
       const customerName = booking.customer?.name ?? null;
       bookingEvents.push({
         id: `booking-${booking.bookingId}`,
-        title: customerName ? `予約: ${customerName}` : "予約",
+        title: customerName ? `予約: ${customerName}様` : "予約",
         start: startsAt,
         end: endsAt,
         type: "booking",
@@ -166,7 +166,7 @@ export default function ConsultantSlotsPage() {
         );
         bookingEvents.push({
           id: `buffer-${booking.bookingId}`,
-          title: `バッファ (${bufferMinutes}分)`,
+          title: `バッファ`,
           start: endsAt,
           end: bufferEnd,
           type: "buffer",
