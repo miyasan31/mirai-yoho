@@ -1,9 +1,15 @@
 /* biome-ignore-all lint: requested temporary file-level suppression */
 import { FileUpload } from "@ark-ui/react/file-upload";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { getGetConsultantProfileQueryKey } from "@mirai-yoho/api-client/api/consultant/consultant";
 import { ApiResponseError } from "@mirai-yoho/api-client/custom-fetch";
+import type { ConsultantProfile } from "@mirai-yoho/api-client/schemas";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
+import {
+  applyOptimistic,
+  rollbackOptimistic,
+} from "@mirai-yoho/console-core/query/optimistic-updates";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Field from "@mirai-yoho/ui/components/ui/field";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
@@ -169,26 +175,43 @@ export default function ConsultantProfilePage() {
   };
 
   const onSubmit = async (values: ProfileFormValues) => {
+    if (!organizationId) return;
+    const queryKey = getGetConsultantProfileQueryKey(organizationId);
+    const nextSpecialties = (values.specialties ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const snapshot = await applyOptimistic<{
+      data: ConsultantProfile;
+      status: number;
+      headers: unknown;
+    }>(queryClient, queryKey, (prev) => ({
+      ...prev,
+      data: {
+        ...prev.data,
+        name: values.name,
+        bio: values.bio?.trim() ?? "",
+        phone: values.phone?.trim() ?? "",
+        imageUrl: values.imageUrl,
+        specialties: nextSpecialties,
+      },
+    }));
     try {
       await updateProfile.mutateAsync({
-        organizationId: organizationId ?? "",
+        organizationId,
         data: {
           name: values.name,
           bio: values.bio?.trim() ?? "",
           phone: values.phone?.trim() ?? "",
           imageUrl: values.imageUrl,
-          specialties: (values.specialties ?? "")
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean),
+          specialties: nextSpecialties,
         },
       });
-      if (organizationId) {
-        await invalidateAfter.consultantMutation(queryClient, organizationId);
-      }
       toaster.create({ type: "success", title: "プロフィールを保存しました" });
     } catch {
-      // custom-fetch.ts がエラー Toast を自動表示
+      rollbackOptimistic(queryClient, queryKey, snapshot);
+    } finally {
+      await invalidateAfter.consultantMutation(queryClient, organizationId);
     }
   };
 

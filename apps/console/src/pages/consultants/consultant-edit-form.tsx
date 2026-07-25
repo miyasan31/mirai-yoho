@@ -1,7 +1,13 @@
 import { createListCollection } from "@ark-ui/react/select";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { getGetConsoleConsultantsQueryKey } from "@mirai-yoho/api-client/api/console/console";
+import type { ConsultantDetail } from "@mirai-yoho/api-client/schemas";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
+import {
+  applyOptimistic,
+  rollbackOptimistic,
+} from "@mirai-yoho/console-core/query/optimistic-updates";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Dialog from "@mirai-yoho/ui/components/ui/dialog";
 import * as Field from "@mirai-yoho/ui/components/ui/field";
@@ -104,25 +110,59 @@ export function ConsultantEditForm({
   };
 
   const onSubmit = async (values: ConsultantFormValues) => {
+    if (!organizationId) return;
+    const queryKey = getGetConsoleConsultantsQueryKey(organizationId, {
+      page: 1,
+      pageSize: 100,
+      sortBy: "createdAt",
+      sortOrder: "desc",
+    });
+    const nextSpecialties = (values.specialties ?? "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const nextStatus =
+      statuses.find((status) => status.statusId === values.statusId) ??
+      consultant?.status;
+    const snapshot = await applyOptimistic<{
+      data: { consultants: ConsultantDetail[]; pagination: unknown };
+      status: number;
+      headers: unknown;
+    }>(queryClient, queryKey, (prev) => ({
+      ...prev,
+      data: {
+        ...prev.data,
+        consultants: prev.data.consultants.map((item) =>
+          item.consultantId === consultantId
+            ? {
+                ...item,
+                name: values.name,
+                bio: values.bio?.trim() ?? "",
+                phone: values.phone?.trim() ?? "",
+                specialties: nextSpecialties,
+                status: nextStatus ?? item.status,
+              }
+            : item,
+        ),
+      },
+    }));
     try {
       await updateConsultant.mutateAsync({
-        organizationId: organizationId ?? "",
+        organizationId,
         id: consultantId,
         data: {
           name: values.name,
           bio: values.bio?.trim() ?? "",
           phone: values.phone?.trim() ?? "",
-          specialties: (values.specialties ?? "")
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean),
+          specialties: nextSpecialties,
           statusId: values.statusId,
         },
       });
-      await invalidateConsultants();
       onCompleted();
     } catch {
-      // エラーは custom-fetch の toaster で表示される
+      rollbackOptimistic(queryClient, queryKey, snapshot);
+    } finally {
+      await invalidateConsultants();
     }
   };
 
