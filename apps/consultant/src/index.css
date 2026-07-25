@@ -1,5 +1,9 @@
 @layer reset, base, tokens, recipes, utilities;
 
+.rbc-timeslot-group {
+  min-height: 80px;
+}
+
 .rbc-day-unavailable {
   background-image: repeating-linear-gradient(
     -45deg,

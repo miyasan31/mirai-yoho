@@ -328,6 +328,7 @@ export default function ConsultantSlotsPage() {
           backgroundColor: "#2563eb",
           borderColor: "#1d4ed8",
           color: "#fff",
+          padding: "0px 2px",
         },
       };
     }
@@ -338,6 +339,7 @@ export default function ConsultantSlotsPage() {
           borderColor: "#718096",
           color: "#fff",
           opacity: 0.7,
+          padding: "0px 2px",
         },
       };
     }
@@ -346,6 +348,7 @@ export default function ConsultantSlotsPage() {
         backgroundColor: "transparent",
         border: "1.5px solid #2563eb",
         color: "#2563eb",
+        padding: "0px 2px",
       },
     };
   }, []);
