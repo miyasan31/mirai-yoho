@@ -9,6 +9,8 @@ interface CustomerCreateProps {
   phone: string;
   birthDate: string;
   userId?: string;
+  guardianName?: string;
+  guardianConsentedAt?: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -32,6 +34,8 @@ export class Customer extends AggregateRoot {
     private birthDate: string | undefined,
     private note: string | undefined,
     private userId: string | undefined,
+    private guardianName: string | undefined,
+    private guardianConsentedAt: Date | undefined,
     private withdrawnAt: Date | undefined,
     private readonly createdAt: Date,
     private updatedAt: Date,
@@ -50,6 +54,8 @@ export class Customer extends AggregateRoot {
       props.birthDate,
       undefined,
       props.userId,
+      props.guardianName,
+      props.guardianConsentedAt,
       undefined,
       props.createdAt ?? now,
       props.updatedAt ?? now,
@@ -67,6 +73,8 @@ export class Customer extends AggregateRoot {
       props.birthDate,
       props.note,
       props.userId,
+      props.guardianName,
+      props.guardianConsentedAt,
       props.withdrawnAt,
       createdAt,
       props.updatedAt ?? createdAt,
@@ -78,11 +86,19 @@ export class Customer extends AggregateRoot {
     email: string;
     phone: string;
     birthDate: string;
+    guardianName?: string;
+    guardianConsentedAt?: Date;
   }): void {
     this.name = props.name;
     this.email = props.email;
     this.phone = props.phone;
     this.birthDate = props.birthDate;
+    if (props.guardianName !== undefined) {
+      this.guardianName = props.guardianName;
+    }
+    if (props.guardianConsentedAt !== undefined) {
+      this.guardianConsentedAt = props.guardianConsentedAt;
+    }
     this.updatedAt = new Date();
   }
 
@@ -108,6 +124,8 @@ export class Customer extends AggregateRoot {
     this.phone = "";
     this.birthDate = undefined;
     this.note = undefined;
+    this.guardianName = undefined;
+    this.guardianConsentedAt = undefined;
     this.withdrawnAt = now;
     this.updatedAt = now;
   }
@@ -146,6 +164,14 @@ export class Customer extends AggregateRoot {
 
   getNote(): string | undefined {
     return this.note;
+  }
+
+  getGuardianName(): string | undefined {
+    return this.guardianName;
+  }
+
+  getGuardianConsentedAt(): Date | undefined {
+    return this.guardianConsentedAt;
   }
 
   getWithdrawnAt(): Date | undefined {

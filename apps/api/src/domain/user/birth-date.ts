@@ -1,6 +1,6 @@
 import { DomainError } from "@mirai-yoho/shared/domain-error";
 
-const MIN_AGE_YEARS = 18;
+const ADULT_AGE_YEARS = 18;
 const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 
 export class BirthDate {
@@ -26,13 +26,17 @@ export class BirthDate {
         "Birth date cannot be in the future",
       );
     }
-    if (BirthDate.calculateAge(value, referenceDate) < MIN_AGE_YEARS) {
-      throw new DomainError(
-        "UNDERAGE",
-        `User must be at least ${MIN_AGE_YEARS} years old`,
-      );
-    }
     return new BirthDate(value);
+  }
+
+  static isMinor(birthDateIso: string, referenceDate: Date): boolean {
+    return (
+      BirthDate.calculateAge(birthDateIso, referenceDate) < ADULT_AGE_YEARS
+    );
+  }
+
+  isMinor(referenceDate: Date): boolean {
+    return BirthDate.isMinor(this.value, referenceDate);
   }
 
   static reconstruct(value: string): BirthDate {

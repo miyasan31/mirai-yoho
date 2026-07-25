@@ -2433,6 +2433,13 @@ components:
           type: string
           format: date-time
           description: 利用規約への同意日時 (ISO 8601)
+        guardianName:
+          type: string
+          description: '未成年 (18歳未満) 顧客の親権者氏名。未成年のときは必須'
+        guardianConsentedAt:
+          type: string
+          format: date-time
+          description: '親権者が本サービス利用に同意した日時 (ISO 8601)。未成年のときは必須'
 
     PricePlanOption:
       type: object

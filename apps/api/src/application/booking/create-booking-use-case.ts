@@ -27,6 +27,7 @@ import { Settings } from "@/domain/settings/settings";
 import type { ISettingsRepository } from "@/domain/settings/settings-repository";
 import type { Slot } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
+import { BirthDate } from "@/domain/user/birth-date";
 import type { IUserRepository } from "@/domain/user/user-repository";
 import type { UserCoupon } from "@/domain/user-coupon/user-coupon";
 import type { IUserCouponRepository } from "@/domain/user-coupon/user-coupon-repository";
@@ -48,6 +49,8 @@ interface CreateBookingInput {
   selectedUserCouponId?: string;
   agreedTermsVersion: string;
   agreedAt: Date;
+  guardianName?: string;
+  guardianConsentedAt?: Date;
 }
 
 interface CreateBookingOutput {
@@ -105,6 +108,16 @@ export class CreateBookingUseCase {
       );
     }
 
+    if (BirthDate.isMinor(input.customerBirthDate, new Date())) {
+      if (!input.guardianName || !input.guardianConsentedAt) {
+        throw new AppError(
+          400,
+          "GUARDIAN_CONSENT_REQUIRED",
+          "guardianName and guardianConsentedAt are required for customers under 18",
+        );
+      }
+    }
+
     const user = await this.userRepository.findById(input.userId);
     if (!user || !user.isActive()) {
       throw new AppError(404, "USER_NOT_FOUND", "User not found or withdrawn");
@@ -152,6 +165,8 @@ export class CreateBookingUseCase {
         email: input.customerEmail,
         phone: input.customerPhone,
         birthDate: input.customerBirthDate,
+        guardianName: input.guardianName,
+        guardianConsentedAt: input.guardianConsentedAt,
       });
 
     if (existingCustomer) {
@@ -160,6 +175,8 @@ export class CreateBookingUseCase {
         email: input.customerEmail,
         phone: input.customerPhone,
         birthDate: input.customerBirthDate,
+        guardianName: input.guardianName,
+        guardianConsentedAt: input.guardianConsentedAt,
       });
     }
 

@@ -63,6 +63,8 @@ bookingRoutes.post(
       selectedUserCouponId,
       agreedTermsVersion,
       agreedAt,
+      guardianName,
+      guardianConsentedAt,
     } = body;
 
     if (
@@ -123,6 +125,38 @@ bookingRoutes.post(
       );
     }
 
+    let parsedGuardianConsentedAt: Date | undefined;
+    if (guardianConsentedAt !== undefined) {
+      if (
+        typeof guardianConsentedAt !== "string" ||
+        guardianConsentedAt.length === 0
+      ) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "guardianConsentedAt must be an ISO 8601 datetime string",
+        );
+      }
+      parsedGuardianConsentedAt = new Date(guardianConsentedAt);
+      if (Number.isNaN(parsedGuardianConsentedAt.getTime())) {
+        return jsonError(
+          400,
+          "VALIDATION_ERROR",
+          "guardianConsentedAt must be a valid ISO 8601 datetime",
+        );
+      }
+    }
+    if (
+      guardianName !== undefined &&
+      (typeof guardianName !== "string" || guardianName.trim().length === 0)
+    ) {
+      return jsonError(
+        400,
+        "VALIDATION_ERROR",
+        "guardianName must be a non-empty string when provided",
+      );
+    }
+
     const useCase = createCreateBookingUseCase();
     const result = await useCase.execute({
       organizationId,
@@ -142,6 +176,9 @@ bookingRoutes.post(
           : undefined,
       agreedTermsVersion,
       agreedAt: parsedAgreedAt,
+      guardianName:
+        typeof guardianName === "string" ? guardianName.trim() : undefined,
+      guardianConsentedAt: parsedGuardianConsentedAt,
     });
 
     const bookingActionToken =
