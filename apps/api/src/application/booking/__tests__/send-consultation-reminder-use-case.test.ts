@@ -37,6 +37,8 @@ function createBooking(params: {
     pricePlanId: "plan-1",
     pricePlanName: "通常鑑定",
     pricePlanTotalJPY: 5500,
+    agreedTermsVersion: "2026-08-01",
+    agreedAt: new Date("2026-04-01T00:00:00.000Z"),
   });
 
   if (params.status && params.status !== "pending") {

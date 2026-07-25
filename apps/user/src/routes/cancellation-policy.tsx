@@ -384,7 +384,7 @@ function CancellationPolicyPage() {
             制定日：2026年8月1日
           </Text>
           <Text textStyle="sm" color="fg.muted">
-            一般社団法人ＪＫＫ
+            一般社団法人JKK
           </Text>
         </styled.section>
       </styled.div>

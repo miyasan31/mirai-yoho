@@ -43,6 +43,14 @@ function formatDateTime(iso: string): string {
   return format(parseISO(iso), "yyyy/MM/dd (E) HH:mm", { locale: ja });
 }
 
+function formatTime(iso: string): string {
+  return format(parseISO(iso), "HH:mm", { locale: ja });
+}
+
+function formatDateTimeRange(startIso: string, endIso: string): string {
+  return `${formatDateTime(startIso)}〜${formatTime(endIso)}`;
+}
+
 function formatYen(value: number): string {
   return `¥${value.toLocaleString("ja-JP")}`;
 }
@@ -147,12 +155,17 @@ function BookingSection({
 function BookingCard({ booking }: { booking: MyBooking }) {
   const now = Date.now();
   const startsAtMs = new Date(booking.startsAt).getTime();
+  const endsAtMs = new Date(booking.endsAt).getTime();
   const cancelDeadlineMs = new Date(booking.cancelDeadlineAt).getTime();
   const isCancellable =
     (booking.status === "pending" || booking.status === "confirmed") &&
     cancelDeadlineMs > now;
   const showJoinButton = booking.status === "confirmed" && !!booking.joinUrl;
-  const canJoinNow = startsAtMs - now < 30 * 60 * 1000;
+  const isEnded = endsAtMs <= now;
+  const canJoinNow = !isEnded && startsAtMs - now < 30 * 60 * 1000;
+  const joinDisabledReason = isEnded
+    ? "終了しました"
+    : "開始30分前から参加できます";
 
   return (
     <styled.li
@@ -167,7 +180,7 @@ function BookingCard({ booking }: { booking: MyBooking }) {
     >
       <styled.div display="flex" alignItems="center" gap="3" flexWrap="wrap">
         <Text fontWeight="semibold" textStyle="md">
-          {formatDateTime(booking.startsAt)}
+          {formatDateTimeRange(booking.startsAt, booking.endsAt)}
         </Text>
         <Badge colorPalette={STATUS_COLOR[booking.status]}>
           {STATUS_LABEL[booking.status]}
@@ -221,7 +234,7 @@ function BookingCard({ booking }: { booking: MyBooking }) {
             </Button>
           ) : (
             <Tooltip
-              content="開始30分前から参加できます"
+              content={joinDisabledReason}
               positioning={{ placement: "top-start" }}
               showArrow
             >

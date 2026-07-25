@@ -75,7 +75,7 @@ export function ConsultantsPage() {
           占い師一覧
         </Text>
         <Text textStyle="sm" color="fg.muted">
-          みらい予報の占い師を選んで予約できます
+          あなたのみらい予報の占い師を選んで予約できます
         </Text>
       </styled.div>
 
