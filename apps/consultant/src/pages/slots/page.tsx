@@ -68,11 +68,17 @@ function isAllDaySelection(start: Date, end: Date): boolean {
   return (end.getTime() - start.getTime()) % DAY_MS === 0;
 }
 
+function noonOf(date: Date): Date {
+  const noon = new Date(date);
+  noon.setHours(12, 0, 0, 0);
+  return noon;
+}
+
 function hasBusinessHoursOnDate(
   date: Date,
   businessHours: BusinessHours,
 ): boolean {
-  return businessHours.getEffectiveTimeRanges(date).length > 0;
+  return businessHours.getEffectiveTimeRanges(noonOf(date)).length > 0;
 }
 
 function buildBusinessHourRangesFromAllDaySelection(
@@ -84,7 +90,7 @@ function buildBusinessHourRangesFromAllDaySelection(
   const currentDay = new Date(start);
 
   while (currentDay < end) {
-    const timeRanges = businessHours.getEffectiveTimeRanges(currentDay);
+    const timeRanges = businessHours.getEffectiveTimeRanges(noonOf(currentDay));
     for (const timeRange of timeRanges) {
       ranges.push(...splitIntoSlotRanges(timeRange.startsAt, timeRange.endsAt));
     }
@@ -133,7 +139,7 @@ export default function ConsultantSlotsPage() {
     const slots = data?.data?.slots ?? [];
     const availableEvents: CalendarEvent[] = slots.map((slot) => ({
       id: slot.slotId,
-      title: "予約可能",
+      title: "",
       start: new Date(slot.startsAt),
       end: new Date(slot.endsAt),
       type: "available",
@@ -148,7 +154,7 @@ export default function ConsultantSlotsPage() {
       const customerName = booking.customer?.name ?? null;
       bookingEvents.push({
         id: `booking-${booking.bookingId}`,
-        title: customerName ? `予約: ${customerName}` : "予約",
+        title: customerName ? `予約: ${customerName}様` : "予約",
         start: startsAt,
         end: endsAt,
         type: "booking",
@@ -160,7 +166,7 @@ export default function ConsultantSlotsPage() {
         );
         bookingEvents.push({
           id: `buffer-${booking.bookingId}`,
-          title: `バッファ (${bufferMinutes}分)`,
+          title: `バッファ`,
           start: endsAt,
           end: bufferEnd,
           type: "buffer",
@@ -319,29 +325,32 @@ export default function ConsultantSlotsPage() {
     if (event.type === "booking") {
       return {
         style: {
-          backgroundColor: "#2f855a",
-          borderColor: "#276749",
+          backgroundColor: "#2563eb",
+          borderColor: "#1d4ed8",
           color: "#fff",
-          opacity: 0.9,
+          padding: "0px 2px",
+          fontSize: "12px",
         },
       };
     }
     if (event.type === "buffer") {
       return {
         style: {
-          backgroundColor: "#a0aec0",
-          borderColor: "#718096",
+          backgroundColor: "#758191",
+          borderColor: "#758191",
           color: "#fff",
-          opacity: 0.7,
+          padding: "0px 2px",
+          fontSize: "12px",
         },
       };
     }
     return {
       style: {
-        backgroundColor: "#2661cf",
-        borderColor: "#2550a8",
-        color: "#fff",
-        opacity: 0.8,
+        backgroundColor: "transparent",
+        border: "1.5px dashed #2563eb",
+        color: "#2563eb",
+        padding: "0px 2px",
+        fontSize: "12px",
       },
     };
   }, []);
@@ -402,7 +411,7 @@ export default function ConsultantSlotsPage() {
         </Text>
       </styled.div>
 
-      <styled.div h="calc(100vh - 200px)" shadow="xs" rounded="l2" p="4">
+      <styled.div h="calc(100vh - 128px)" shadow="xs" rounded="l2" p="4">
         <Calendar<CalendarEvent>
           localizer={localizer}
           culture="ja-JP"
@@ -419,22 +428,15 @@ export default function ConsultantSlotsPage() {
           slotPropGetter={slotPropGetter}
           step={SLOT_UNIT_MINUTES}
           timeslots={60 / SLOT_UNIT_MINUTES}
-          min={
+          min={new Date(1970, 0, 1, 0, 0)}
+          max={new Date(1970, 0, 1, 23, 59)}
+          scrollToTime={
             new Date(
               1970,
               0,
               1,
               calendarBounds.minHour,
               calendarBounds.minMinute,
-            )
-          }
-          max={
-            new Date(
-              1970,
-              0,
-              1,
-              calendarBounds.maxHour,
-              calendarBounds.maxMinute,
             )
           }
           messages={{

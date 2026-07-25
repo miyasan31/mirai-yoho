@@ -2,6 +2,8 @@ import { DomainError } from "./domain-error";
 
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 const MINUTES_PER_DAY = 24 * 60;
+const BUSINESS_DAY_START_HOUR = 5;
+const BUSINESS_DAY_START_MINUTES = BUSINESS_DAY_START_HOUR * 60;
 
 export interface BusinessTimeWindow {
   startTime: string;
@@ -25,11 +27,6 @@ export interface BusinessHoursProps {
   weekly: WeeklyBusinessHours[];
   includePublicHolidays: boolean;
   exceptions: BusinessHoursException[];
-}
-
-interface MinuteWindow {
-  startMinutes: number;
-  endMinutes: number;
 }
 
 function cloneTimeWindow(window: BusinessTimeWindow): BusinessTimeWindow {
@@ -64,6 +61,29 @@ function parseTimeToMinutes(value: string): number {
   return Number(matched[1]) * 60 + Number(matched[2]);
 }
 
+function toBusinessDayMinutes(clockMinutes: number): number {
+  return (
+    (clockMinutes - BUSINESS_DAY_START_MINUTES + MINUTES_PER_DAY) %
+    MINUTES_PER_DAY
+  );
+}
+
+function is24HourWindow(startMinutes: number, endMinutes: number): boolean {
+  return startMinutes === endMinutes;
+}
+
+interface BdmMinuteWindow {
+  startMinutes: number;
+  endMinutes: number;
+  startBdm: number;
+  endBdm: number;
+  is24h: boolean;
+}
+
+function formatMinutesAsHHMM(minutes: number): string {
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
+}
+
 function validateAndNormalizeTimeWindows(
   windows: BusinessTimeWindow[],
 ): BusinessTimeWindow[] {
@@ -74,24 +94,32 @@ function validateAndNormalizeTimeWindows(
     );
   }
 
-  const minuteWindows: MinuteWindow[] = windows.map((window) => {
+  const bdmWindows: BdmMinuteWindow[] = windows.map((window) => {
     const startMinutes = parseTimeToMinutes(window.startTime);
     const endMinutes = parseTimeToMinutes(window.endTime);
-    if (startMinutes >= endMinutes) {
+    const is24h = is24HourWindow(startMinutes, endMinutes);
+    const startBdm = toBusinessDayMinutes(startMinutes);
+    const endBdm = is24h ? MINUTES_PER_DAY : toBusinessDayMinutes(endMinutes);
+    if (!is24h && startBdm >= endBdm) {
       throw new DomainError(
         "INVALID_BUSINESS_HOURS",
-        "Business time window startTime must be before endTime",
+        "Business time window must be within a single business day (5:00 start)",
       );
     }
-    return { startMinutes, endMinutes };
+    return { startMinutes, endMinutes, startBdm, endBdm, is24h };
   });
 
-  minuteWindows.sort((a, b) => a.startMinutes - b.startMinutes);
+  if (bdmWindows.some((window) => window.is24h) && bdmWindows.length > 1) {
+    throw new DomainError(
+      "INVALID_BUSINESS_HOURS",
+      "24-hour window cannot coexist with other windows",
+    );
+  }
 
-  for (let index = 1; index < minuteWindows.length; index += 1) {
-    if (
-      minuteWindows[index - 1].endMinutes > minuteWindows[index].startMinutes
-    ) {
+  bdmWindows.sort((a, b) => a.startBdm - b.startBdm);
+
+  for (let index = 1; index < bdmWindows.length; index += 1) {
+    if (bdmWindows[index - 1].endBdm > bdmWindows[index].startBdm) {
       throw new DomainError(
         "INVALID_BUSINESS_HOURS",
         "Business time windows must not overlap",
@@ -99,9 +127,9 @@ function validateAndNormalizeTimeWindows(
     }
   }
 
-  return minuteWindows.map((window) => ({
-    startTime: `${String(Math.floor(window.startMinutes / 60)).padStart(2, "0")}:${String(window.startMinutes % 60).padStart(2, "0")}`,
-    endTime: `${String(Math.floor(window.endMinutes / 60)).padStart(2, "0")}:${String(window.endMinutes % 60).padStart(2, "0")}`,
+  return bdmWindows.map((window) => ({
+    startTime: formatMinutesAsHHMM(window.startMinutes),
+    endTime: formatMinutesAsHHMM(window.endMinutes),
   }));
 }
 
@@ -242,13 +270,15 @@ function buildJapanesePublicHolidaySet(year: number): Set<string> {
   return holidays;
 }
 
-function getJstDateParts(date: Date): {
+function getJstBusinessDayParts(date: Date): {
   year: number;
   month: number;
   day: number;
   dayOfWeek: number;
 } {
-  const shifted = new Date(date.getTime() + JST_OFFSET_MS);
+  const shifted = new Date(
+    date.getTime() + JST_OFFSET_MS - BUSINESS_DAY_START_MINUTES * 60 * 1000,
+  );
   return {
     year: shifted.getUTCFullYear(),
     month: shifted.getUTCMonth() + 1,
@@ -439,8 +469,8 @@ export class BusinessHours {
   }
 
   getEffectiveTimeWindows(date: Date): BusinessTimeWindow[] {
-    const jst = getJstDateParts(date);
-    const ymd = formatYmd(jst.year, jst.month, jst.day);
+    const businessDay = getJstBusinessDayParts(date);
+    const ymd = formatYmd(businessDay.year, businessDay.month, businessDay.day);
 
     const matchedException = this.props.exceptions.find(
       (businessHoursException) =>
@@ -452,13 +482,13 @@ export class BusinessHours {
         : matchedException.timeWindows.map(cloneTimeWindow);
     }
 
-    const holidaySet = buildJapanesePublicHolidaySet(jst.year);
+    const holidaySet = buildJapanesePublicHolidaySet(businessDay.year);
     if (!this.props.includePublicHolidays && holidaySet.has(ymd)) {
       return [];
     }
 
     const weekly = this.props.weekly.find(
-      (item) => item.dayOfWeek === jst.dayOfWeek,
+      (item) => item.dayOfWeek === businessDay.dayOfWeek,
     );
     if (!weekly || weekly.isClosed) {
       return [];
@@ -467,22 +497,35 @@ export class BusinessHours {
   }
 
   getEffectiveTimeRanges(date: Date): Array<{ startsAt: Date; endsAt: Date }> {
-    const jst = getJstDateParts(date);
+    const businessDay = getJstBusinessDayParts(date);
     const windows = this.getEffectiveTimeWindows(date);
     return windows.map((window) => {
       const startMinutes = parseTimeToMinutes(window.startTime);
       const endMinutes = parseTimeToMinutes(window.endTime);
+      const is24h = is24HourWindow(startMinutes, endMinutes);
+      const startBdm = toBusinessDayMinutes(startMinutes);
+      const endBdm = is24h ? MINUTES_PER_DAY : toBusinessDayMinutes(endMinutes);
       return {
-        startsAt: buildDateFromJst(jst.year, jst.month, jst.day, startMinutes),
-        endsAt: buildDateFromJst(jst.year, jst.month, jst.day, endMinutes),
+        startsAt: buildDateFromJst(
+          businessDay.year,
+          businessDay.month,
+          businessDay.day,
+          BUSINESS_DAY_START_MINUTES + startBdm,
+        ),
+        endsAt: buildDateFromJst(
+          businessDay.year,
+          businessDay.month,
+          businessDay.day,
+          BUSINESS_DAY_START_MINUTES + endBdm,
+        ),
       };
     });
   }
 
   containsRange(startsAt: Date, endsAt: Date): boolean {
     if (endsAt <= startsAt) return false;
-    const startParts = getJstDateParts(startsAt);
-    const endParts = getJstDateParts(new Date(endsAt.getTime() - 1));
+    const startParts = getJstBusinessDayParts(startsAt);
+    const endParts = getJstBusinessDayParts(new Date(endsAt.getTime() - 1));
     if (
       startParts.year !== endParts.year ||
       startParts.month !== endParts.month ||
@@ -503,33 +546,36 @@ export class BusinessHours {
     maxHour: number;
     maxMinute: number;
   } {
-    const minuteWindows: MinuteWindow[] = [];
+    const bdmWindows: Array<{ startBdm: number; endBdm: number }> = [];
     for (const weekly of this.props.weekly) {
       if (weekly.isClosed) continue;
       for (const window of weekly.timeWindows) {
-        minuteWindows.push({
-          startMinutes: parseTimeToMinutes(window.startTime),
-          endMinutes: parseTimeToMinutes(window.endTime),
+        const startMinutes = parseTimeToMinutes(window.startTime);
+        const endMinutes = parseTimeToMinutes(window.endTime);
+        const is24h = is24HourWindow(startMinutes, endMinutes);
+        bdmWindows.push({
+          startBdm: toBusinessDayMinutes(startMinutes),
+          endBdm: is24h ? MINUTES_PER_DAY : toBusinessDayMinutes(endMinutes),
         });
       }
     }
 
-    if (minuteWindows.length === 0) {
+    if (bdmWindows.length === 0) {
       return { minHour: 10, minMinute: 0, maxHour: 17, maxMinute: 0 };
     }
 
-    const minStart = Math.min(
-      ...minuteWindows.map((window) => window.startMinutes),
-    );
-    const maxEnd = Math.max(
-      ...minuteWindows.map((window) => window.endMinutes),
-    );
+    const minStart =
+      BUSINESS_DAY_START_MINUTES +
+      Math.min(...bdmWindows.map((window) => window.startBdm));
+    const maxEnd =
+      BUSINESS_DAY_START_MINUTES +
+      Math.max(...bdmWindows.map((window) => window.endBdm));
 
     return {
       minHour: Math.floor(minStart / 60),
       minMinute: minStart % 60,
-      maxHour: Math.floor(Math.min(maxEnd, MINUTES_PER_DAY) / 60),
-      maxMinute: Math.min(maxEnd, MINUTES_PER_DAY) % 60,
+      maxHour: Math.floor(maxEnd / 60),
+      maxMinute: maxEnd % 60,
     };
   }
 }

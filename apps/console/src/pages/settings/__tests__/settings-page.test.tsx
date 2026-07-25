@@ -288,7 +288,7 @@ describe("ConsoleSettingsPage", () => {
     expect(mockMutateAsync).not.toHaveBeenCalled();
     expect(mockToasterCreate).toHaveBeenCalledWith({
       type: "error",
-      title: "例外日の入力内容が不正です",
+      title: "営業時間の入力内容が不正です",
     });
   });
 
