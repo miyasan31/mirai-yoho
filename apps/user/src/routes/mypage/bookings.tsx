@@ -20,8 +20,10 @@ import { CalendarX, CircleX, Video } from "lucide-react";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
+import { pageHead } from "@/lib/head";
 
 export const Route = createFileRoute("/mypage/bookings")({
+  head: () => pageHead("予約履歴"),
   component: MypageBookingsPage,
 });
 

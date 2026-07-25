@@ -20,6 +20,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
+import { pageHead } from "@/lib/head";
 
 interface OrganizationCouponsSearch {
   returnTo?: "booking";
@@ -30,6 +31,7 @@ interface OrganizationCouponsSearch {
 }
 
 export const Route = createFileRoute("/$organizationId/coupons")({
+  head: () => pageHead("クーポン一覧"),
   validateSearch: (
     search: Record<string, unknown>,
   ): OrganizationCouponsSearch => {

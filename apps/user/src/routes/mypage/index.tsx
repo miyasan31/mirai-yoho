@@ -9,8 +9,10 @@ import {
   useVisitedOrganizations,
   type VisitedOrganization,
 } from "@/hooks/use-visited-organizations";
+import { pageHead } from "@/lib/head";
 
 export const Route = createFileRoute("/mypage/")({
+  head: () => pageHead("マイページ"),
   component: MypageDashboardPage,
 });
 

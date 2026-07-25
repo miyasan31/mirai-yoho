@@ -9,8 +9,10 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useState, useTransition } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
+import { pageHead } from "@/lib/head";
 
 export const Route = createFileRoute("/mypage/withdraw")({
+  head: () => pageHead("退会"),
   component: WithdrawPage,
 });
 

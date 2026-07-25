@@ -10,6 +10,7 @@ import { createFileRoute, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
+import { pageHead } from "@/lib/head";
 import {
   clearPendingOrganizationId,
   readPendingOrganizationId,
@@ -24,6 +25,7 @@ interface ProfileSearch {
 }
 
 export const Route = createFileRoute("/mypage/profile")({
+  head: () => pageHead("プロフィール"),
   validateSearch: (search: Record<string, unknown>): ProfileSearch => ({
     returnTo: typeof search.returnTo === "string" ? search.returnTo : undefined,
   }),

@@ -4,6 +4,7 @@ import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CheckCircle } from "lucide-react";
 import { styled } from "styled-system/jsx";
+import { pageHead } from "@/lib/head";
 
 interface CompleteSearch {
   bookingId?: string;
@@ -12,6 +13,7 @@ interface CompleteSearch {
 }
 
 export const Route = createFileRoute("/$organizationId/booking/complete")({
+  head: () => pageHead("予約完了"),
   validateSearch: (search: Record<string, unknown>): CompleteSearch => ({
     bookingId:
       typeof search.bookingId === "string" ? search.bookingId : undefined,

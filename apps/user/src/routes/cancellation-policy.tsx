@@ -1,8 +1,10 @@
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { createFileRoute } from "@tanstack/react-router";
 import { styled } from "styled-system/jsx";
+import { pageHead } from "@/lib/head";
 
 export const Route = createFileRoute("/cancellation-policy")({
+  head: () => pageHead("キャンセルポリシー"),
   component: CancellationPolicyPage,
 });
 
