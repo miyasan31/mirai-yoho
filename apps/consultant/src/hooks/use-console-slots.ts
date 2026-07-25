@@ -4,8 +4,8 @@ import {
   useGetConsoleSlots as useGeneratedGetConsoleSlots,
 } from "@mirai-yoho/api-client/api/console/console";
 import type { GetConsoleSlotsParams } from "@mirai-yoho/api-client/schemas";
-import { QUERY_STALE_TIME } from "@mirai-yoho/console-core/hooks/query-cache-policy";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
+import { cachePolicy } from "@mirai-yoho/console-core/query/cache-policy";
 import { useAuth } from "@/hooks/use-auth";
 
 export function useGetConsoleSlots(
@@ -20,10 +20,8 @@ export function useGetConsoleSlots(
   >(organizationId ?? "", params, {
     ...options,
     query: {
+      ...cachePolicy.short,
       ...((options?.query as Record<string, unknown> | undefined) ?? {}),
-      staleTime:
-        (options?.query as { staleTime?: number } | undefined)?.staleTime ??
-        QUERY_STALE_TIME.short,
       enabled:
         ((options?.query as { enabled?: boolean } | undefined)?.enabled ??
           true) &&

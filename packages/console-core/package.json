@@ -6,7 +6,8 @@
   "exports": {
     "./hooks/*": "./src/hooks/*.ts",
     "./lib/*": "./src/lib/*.ts",
-    "./config/*": "./src/config/*.ts"
+    "./config/*": "./src/config/*.ts",
+    "./query/*": "./src/query/*.ts"
   },
   "scripts": {
     "tsc": "tsc --noEmit",

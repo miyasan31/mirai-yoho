@@ -1,4 +1,6 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { createQueryClient } from "@mirai-yoho/console-core/query/create-query-client";
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
@@ -9,26 +11,7 @@ import "./index.css";
 
 setupApiClient();
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 5 * 60 * 1000,
-      gcTime: 30 * 60 * 1000,
-      refetchOnWindowFocus: false,
-      refetchOnReconnect: false,
-      retry: (failureCount, error) => {
-        const status =
-          typeof error === "object" &&
-          error !== null &&
-          "status" in error &&
-          typeof error.status === "number"
-            ? error.status
-            : 0;
-        return failureCount < 1 && status >= 500;
-      },
-    },
-  },
-});
+const queryClient = createQueryClient();
 
 const router = createRouter({ routeTree });
 
@@ -49,6 +32,7 @@ createRoot(rootElement).render(
       <CustomerAuthProvider>
         <RouterProvider router={router} />
       </CustomerAuthProvider>
+      {import.meta.env.DEV && <ReactQueryDevtools initialIsOpen={false} />}
     </QueryClientProvider>
   </StrictMode>,
 );

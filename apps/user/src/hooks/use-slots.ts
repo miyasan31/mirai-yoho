@@ -4,7 +4,7 @@ import {
   useGetSlots as useGeneratedGetSlots,
 } from "@mirai-yoho/api-client/api/slot/slot";
 import type { GetSlotsParams } from "@mirai-yoho/api-client/schemas";
-import { QUERY_STALE_TIME } from "@/hooks/query-cache-policy";
+import { cachePolicy } from "@mirai-yoho/console-core/query/cache-policy";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
 export function useGetSlots(
@@ -18,10 +18,8 @@ export function useGetSlots(
     {
       ...options,
       query: {
+        ...cachePolicy.short,
         ...((options?.query as Record<string, unknown> | undefined) ?? {}),
-        staleTime:
-          (options?.query as { staleTime?: number } | undefined)?.staleTime ??
-          QUERY_STALE_TIME.short,
         enabled:
           ((options?.query as { enabled?: boolean } | undefined)?.enabled ??
             true) &&
