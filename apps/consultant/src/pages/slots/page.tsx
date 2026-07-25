@@ -329,26 +329,28 @@ export default function ConsultantSlotsPage() {
           borderColor: "#1d4ed8",
           color: "#fff",
           padding: "0px 2px",
+          fontSize: "11px",
         },
       };
     }
     if (event.type === "buffer") {
       return {
         style: {
-          backgroundColor: "#a0aec0",
-          borderColor: "#718096",
+          backgroundColor: "#758191",
+          borderColor: "#758191",
           color: "#fff",
-          opacity: 0.7,
           padding: "0px 2px",
+          fontSize: "11px",
         },
       };
     }
     return {
       style: {
         backgroundColor: "transparent",
-        border: "1.5px solid #2563eb",
+        border: "1.5px dashed #2563eb",
         color: "#2563eb",
         padding: "0px 2px",
+        fontSize: "11px",
       },
     };
   }, []);

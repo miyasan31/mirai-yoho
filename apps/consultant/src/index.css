@@ -1,8 +1,13 @@
 @layer reset, base, tokens, recipes, utilities;
 
 .rbc-timeslot-group {
-  /* biome-ignore lint/complexity/noImportantStyles: react-big-calendar の仕様上、カレンダーの縦幅を調整するには !important が必要になる */
+  /* biome-ignore lint/complexity/noImportantStyles: react-big-calendar の仕様上、カスタムスタイルを適用するには !important が必要になる */
   min-height: 140px !important;
+}
+
+.rbc-event-content {
+  /* biome-ignore lint/complexity/noImportantStyles: react-big-calendar の仕様上、カスタムスタイルを適用するには !important が必要になる */
+  font-size: 12px !important;
 }
 
 .rbc-day-unavailable {
