@@ -4,8 +4,11 @@ import { Link } from "@tanstack/react-router";
 import { SearchX } from "lucide-react";
 import { BackNavigationButton } from "@/components/back-navigation-button";
 import { useAuth } from "@/hooks/use-auth";
+import { useDocumentTitle } from "@/hooks/use-document-title";
+import { pageHead } from "@/lib/head";
 
 export default function NotFound() {
+  useDocumentTitle(pageHead("ページが見つかりません").meta[0].title);
   const { currentOrganizationId } = useAuth();
 
   return (

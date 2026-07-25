@@ -3,8 +3,10 @@ import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Calendar, MessageCircle, Shield } from "lucide-react";
 import { styled } from "styled-system/jsx";
+import { pageHead } from "@/lib/head";
 
 export const Route = createFileRoute("/")({
+  head: () => pageHead("トップ"),
   component: Home,
 });
 

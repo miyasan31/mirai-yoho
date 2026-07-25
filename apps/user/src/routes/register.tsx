@@ -7,12 +7,14 @@ import { UserPlus } from "lucide-react";
 import { useEffect, useTransition } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
+import { pageHead } from "@/lib/head";
 import {
   clearPendingOrganizationId,
   readPendingOrganizationId,
 } from "@/lib/pending-organization";
 
 export const Route = createFileRoute("/register")({
+  head: () => pageHead("会員登録"),
   component: RegisterPage,
 });
 

@@ -7,12 +7,14 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CheckCircle, ShieldX } from "lucide-react";
 import { styled } from "styled-system/jsx";
 import { useCancelBooking } from "@/hooks/use-booking";
+import { pageHead } from "@/lib/head";
 
 interface CancelSearch {
   token?: string;
 }
 
 export const Route = createFileRoute("/$organizationId/booking/cancel")({
+  head: () => pageHead("予約キャンセル"),
   validateSearch: (search: Record<string, unknown>): CancelSearch => ({
     token: typeof search.token === "string" ? search.token : undefined,
   }),

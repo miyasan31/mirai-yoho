@@ -10,8 +10,10 @@ import { ArrowLeft, CircleX, PackageSearch } from "lucide-react";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
 import { usePricePlanOptions } from "@/hooks/use-price-plans";
+import { pageHead } from "@/lib/head";
 
 export const Route = createFileRoute("/$organizationId/consultants/$id/plans")({
+  head: () => pageHead("料金プランを選択"),
   component: PlansPage,
 });
 

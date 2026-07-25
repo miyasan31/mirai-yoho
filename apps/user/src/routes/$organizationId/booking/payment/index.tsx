@@ -18,6 +18,7 @@ import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { envClient } from "@/config/env.client";
 import { useSetupPayment } from "@/hooks/use-booking";
+import { pageHead } from "@/lib/head";
 import {
   type CheckoutFormValues,
   checkoutFormSchema,
@@ -34,6 +35,7 @@ interface PaymentSearch {
 }
 
 export const Route = createFileRoute("/$organizationId/booking/payment/")({
+  head: () => pageHead("お支払い"),
   validateSearch: (search: Record<string, unknown>): PaymentSearch => ({
     bookingId:
       typeof search.bookingId === "string" ? search.bookingId : undefined,

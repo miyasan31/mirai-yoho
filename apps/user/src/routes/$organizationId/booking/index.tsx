@@ -25,6 +25,7 @@ import { styled } from "styled-system/jsx";
 import { useCreateBooking } from "@/hooks/use-booking";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 import { usePricePlanOptions } from "@/hooks/use-price-plans";
+import { pageHead } from "@/lib/head";
 import { BookingAuthGate } from "./-booking-auth-gate";
 import {
   type BookingFormValues,
@@ -39,6 +40,7 @@ interface BookingSearch {
 }
 
 export const Route = createFileRoute("/$organizationId/booking/")({
+  head: () => pageHead("予約情報入力"),
   validateSearch: (search: Record<string, unknown>): BookingSearch => {
     const durationRaw = search.durationMinutes;
     const duration =

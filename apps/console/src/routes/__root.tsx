@@ -1,5 +1,5 @@
 import { Toaster } from "@mirai-yoho/ui/components/ui/toast";
-import { createRootRoute, Outlet } from "@tanstack/react-router";
+import { createRootRoute, HeadContent, Outlet } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import NotFound from "@/components/not-found";
 import { AuthContext, useAuthState } from "@/hooks/use-auth";
@@ -15,6 +15,7 @@ function AuthProvider({ children }: { children: ReactNode }) {
 function RootComponent() {
   return (
     <AuthProvider>
+      <HeadContent />
       <Outlet />
       <Toaster />
     </AuthProvider>

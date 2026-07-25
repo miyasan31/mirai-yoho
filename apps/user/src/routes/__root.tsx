@@ -1,11 +1,18 @@
 import { ErrorStatusPage } from "@mirai-yoho/ui/components/error-status-page";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Toaster } from "@mirai-yoho/ui/components/ui/toast";
-import { createRootRoute, Link, Outlet } from "@tanstack/react-router";
+import {
+  createRootRoute,
+  HeadContent,
+  Link,
+  Outlet,
+} from "@tanstack/react-router";
 import { SearchX } from "lucide-react";
 import { BackNavigationButton } from "@/components/back-navigation-button";
 import { MobileBackButton } from "@/components/mobile-back-button";
 import { useCapturePendingOrganizationId } from "@/hooks/use-capture-pending-organization";
+import { useDocumentTitle } from "@/hooks/use-document-title";
+import { pageHead } from "@/lib/head";
 
 export const Route = createRootRoute({
   component: RootLayout,
@@ -16,6 +23,7 @@ function RootLayout() {
   useCapturePendingOrganizationId();
   return (
     <>
+      <HeadContent />
       <Outlet />
       <MobileBackButton />
       <Toaster />
@@ -24,6 +32,7 @@ function RootLayout() {
 }
 
 function NotFound() {
+  useDocumentTitle(pageHead("ページが見つかりません").meta[0].title);
   return (
     <ErrorStatusPage
       icon={SearchX}

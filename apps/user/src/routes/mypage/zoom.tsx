@@ -9,6 +9,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useTransition } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
+import { pageHead } from "@/lib/head";
 
 interface ZoomSearch {
   status?: string;
@@ -17,6 +18,7 @@ interface ZoomSearch {
 }
 
 export const Route = createFileRoute("/mypage/zoom")({
+  head: () => pageHead("Zoom 連携"),
   validateSearch: (search: Record<string, unknown>): ZoomSearch => ({
     status: typeof search.status === "string" ? search.status : undefined,
     reason: typeof search.reason === "string" ? search.reason : undefined,

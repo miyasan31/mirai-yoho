@@ -16,8 +16,10 @@ import {
   useVisitedOrganizations,
   type VisitedOrganization,
 } from "@/hooks/use-visited-organizations";
+import { pageHead } from "@/lib/head";
 
 export const Route = createFileRoute("/mypage/coupons")({
+  head: () => pageHead("マイクーポン"),
   component: CouponsPage,
 });
 

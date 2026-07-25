@@ -13,6 +13,7 @@ import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 import { usePricePlanOptions } from "@/hooks/use-price-plans";
 import { useGetSlots } from "@/hooks/use-slots";
 import { collectBookableStartTimesForDuration } from "@/lib/continuous-slots";
+import { pageHead } from "@/lib/head";
 
 interface SlotsSearch {
   selectionId: string;
@@ -20,6 +21,7 @@ interface SlotsSearch {
 }
 
 export const Route = createFileRoute("/$organizationId/consultants/$id/slots")({
+  head: () => pageHead("開始時刻を選択"),
   validateSearch: (search: Record<string, unknown>): SlotsSearch => {
     const durationRaw = search.durationMinutes;
     const duration =
