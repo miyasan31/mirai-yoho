@@ -10,7 +10,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, CircleX, PackageSearch } from "lucide-react";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
-import { usePricePlanOptions } from "@/hooks/use-price-plans";
+import { useSuspensePricePlanOptions } from "@/hooks/use-price-plans";
 import { pageHead } from "@/lib/head";
 
 export const Route = createFileRoute("/$organizationId/consultants/$id/plans")({
@@ -22,14 +22,43 @@ export const Route = createFileRoute("/$organizationId/consultants/$id/plans")({
     queryClient.ensureQueryData(
       getGetPricePlansQueryOptions(organizationId, { consultantId }),
     ),
+  pendingComponent: PlansPagePending,
+  errorComponent: PlansPageError,
   component: PlansPage,
 });
+
+function PlansPagePending() {
+  return (
+    <styled.div maxW="2xl" mx="auto" p="8">
+      <Skeleton height="4" width="30%" mb="4" />
+      <Skeleton height="8" width="50%" mb="2" />
+      <Skeleton height="4" width="60%" mb="8" />
+      <styled.div display="flex" flexDirection="column" gap="3">
+        {[0, 1, 2].map((idx) => (
+          <Skeleton key={idx} height="20" width="full" rounded="l2" />
+        ))}
+      </styled.div>
+    </styled.div>
+  );
+}
+
+function PlansPageError() {
+  return (
+    <EmptyState
+      icon={CircleX}
+      message="料金プラン情報の取得に失敗しました"
+      hint="しばらくしてからもう一度お試しください"
+    />
+  );
+}
 
 function PlansPage() {
   const { organizationId, id: consultantId } = Route.useParams();
   const navigate = useNavigate();
-  const { data, isLoading, error } = usePricePlanOptions({ consultantId });
-  const pricePlans = data?.data?.pricePlans ?? [];
+  const { data } = useSuspensePricePlanOptions(organizationId, {
+    consultantId,
+  });
+  const pricePlans = data.data.pricePlans;
   const [selectionId, setSelectionId] = useState("");
 
   const selectedPlan =
@@ -46,31 +75,6 @@ function PlansPage() {
       },
     });
   };
-
-  if (isLoading) {
-    return (
-      <styled.div maxW="2xl" mx="auto" p="8">
-        <Skeleton height="4" width="30%" mb="4" />
-        <Skeleton height="8" width="50%" mb="2" />
-        <Skeleton height="4" width="60%" mb="8" />
-        <styled.div display="flex" flexDirection="column" gap="3">
-          {[0, 1, 2].map((idx) => (
-            <Skeleton key={idx} height="20" width="full" rounded="l2" />
-          ))}
-        </styled.div>
-      </styled.div>
-    );
-  }
-
-  if (error) {
-    return (
-      <EmptyState
-        icon={CircleX}
-        message="料金プラン情報の取得に失敗しました"
-        hint="しばらくしてからもう一度お試しください"
-      />
-    );
-  }
 
   return (
     <styled.div maxW="2xl" mx="auto" p="8">

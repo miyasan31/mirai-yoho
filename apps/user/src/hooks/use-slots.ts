@@ -2,6 +2,7 @@ import {
   type GetSlotsQueryError,
   type GetSlotsQueryResult,
   useGetSlots as useGeneratedGetSlots,
+  useGetSlotsSuspense,
 } from "@mirai-yoho/api-client/api/slot/slot";
 import type { GetSlotsParams } from "@mirai-yoho/api-client/schemas";
 import { cachePolicy } from "@mirai-yoho/console-core/query/cache-policy";
@@ -28,4 +29,13 @@ export function useGetSlots(
       },
     },
   );
+}
+
+export function useSuspenseSlots(
+  organizationId: string,
+  params: GetSlotsParams,
+) {
+  return useGetSlotsSuspense(organizationId, params, {
+    query: cachePolicy.short,
+  });
 }

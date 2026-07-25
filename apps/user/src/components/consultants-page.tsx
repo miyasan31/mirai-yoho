@@ -9,8 +9,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { CircleX, Users } from "lucide-react";
 import { styled } from "styled-system/jsx";
-import { useGetConsultants } from "@/hooks/use-consultants";
-import { useOrganizationRouting } from "@/hooks/use-organization-routing";
+import { useSuspenseConsultants } from "@/hooks/use-consultants";
 
 function ConsultantCardSkeleton() {
   return (
@@ -36,41 +35,43 @@ function ConsultantCardSkeleton() {
   );
 }
 
-export function ConsultantsPage() {
-  const { organizationId } = useOrganizationRouting();
-  const queryClient = useQueryClient();
-  const { data, isLoading, error } = useGetConsultants();
-
-  if (isLoading) {
-    return (
-      <styled.div maxW="4xl" mx="auto" p="8">
-        <Skeleton height="8" width="40%" mb="2" />
-        <Skeleton height="4" width="60%" mb="8" />
-        <styled.div
-          display="grid"
-          gridTemplateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }}
-          gap="6"
-        >
-          <ConsultantCardSkeleton />
-          <ConsultantCardSkeleton />
-          <ConsultantCardSkeleton />
-          <ConsultantCardSkeleton />
-        </styled.div>
+export function ConsultantsPagePending() {
+  return (
+    <styled.div maxW="4xl" mx="auto" p="8">
+      <Skeleton height="8" width="40%" mb="2" />
+      <Skeleton height="4" width="60%" mb="8" />
+      <styled.div
+        display="grid"
+        gridTemplateColumns={{ base: "1fr", md: "repeat(2, 1fr)" }}
+        gap="6"
+      >
+        <ConsultantCardSkeleton />
+        <ConsultantCardSkeleton />
+        <ConsultantCardSkeleton />
+        <ConsultantCardSkeleton />
       </styled.div>
-    );
-  }
+    </styled.div>
+  );
+}
 
-  if (error) {
-    return (
-      <EmptyState
-        icon={CircleX}
-        message="占い師情報の取得に失敗しました"
-        hint="しばらくしてからもう一度お試しください"
-      />
-    );
-  }
+export function ConsultantsPageError() {
+  return (
+    <EmptyState
+      icon={CircleX}
+      message="占い師情報の取得に失敗しました"
+      hint="しばらくしてからもう一度お試しください"
+    />
+  );
+}
 
-  const consultants = data?.data?.consultants ?? [];
+export function ConsultantsPage({
+  organizationId,
+}: {
+  organizationId: string;
+}) {
+  const queryClient = useQueryClient();
+  const { data } = useSuspenseConsultants(organizationId);
+  const consultants = data.data.consultants;
 
   return (
     <styled.div maxW="4xl" mx="auto" p="8">
@@ -172,19 +173,15 @@ export function ConsultantsPage() {
                 <Link
                   to="/$organizationId/consultants/$id/plans"
                   params={{
-                    organizationId: organizationId ?? "",
+                    organizationId,
                     id: consultant.consultantId,
                   }}
-                  onMouseEnter={
-                    organizationId
-                      ? prefetchOnHover(
-                          queryClient,
-                          getGetPricePlansQueryOptions(organizationId, {
-                            consultantId: consultant.consultantId,
-                          }),
-                        )
-                      : undefined
-                  }
+                  onMouseEnter={prefetchOnHover(
+                    queryClient,
+                    getGetPricePlansQueryOptions(organizationId, {
+                      consultantId: consultant.consultantId,
+                    }),
+                  )}
                 >
                   プランを選択
                 </Link>
