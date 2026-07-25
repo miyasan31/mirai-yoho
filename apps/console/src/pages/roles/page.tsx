@@ -1,4 +1,5 @@
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import {
   AUTHORIZATION_PERMISSION_LABELS,
   AUTHORIZATION_PERMISSIONS,
@@ -28,7 +29,6 @@ import { styled } from "styled-system/jsx";
 import { useAuth } from "@/hooks/use-auth";
 import {
   useConsoleRoles,
-  useConsoleRolesQueryKey,
   useCreateConsoleRole,
   useDeleteConsoleRole,
   useUpdateConsoleRole,
@@ -114,7 +114,6 @@ export default function ConsoleRolesPage() {
   const updateRole = useUpdateConsoleRole();
   const deleteRole = useDeleteConsoleRole();
   const queryClient = useQueryClient();
-  const rolesQueryKey = useConsoleRolesQueryKey();
 
   const [createOpen, setCreateOpen] = useState(false);
   const [editRoleId, setEditRoleId] = useState<string | null>(null);
@@ -131,7 +130,7 @@ export default function ConsoleRolesPage() {
   }
 
   const invalidate = () =>
-    queryClient.invalidateQueries({ queryKey: rolesQueryKey });
+    invalidateAfter.roleMutation(queryClient, resolvedOrganizationId);
 
   const resetForm = () => setForm(EMPTY_FORM);
 

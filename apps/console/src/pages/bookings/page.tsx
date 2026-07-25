@@ -1,5 +1,6 @@
 import { useListQueryParams } from "@mirai-yoho/console-core/hooks/use-list-query-params";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import { ListControls } from "@mirai-yoho/ui/components/list-controls";
 import { BookingStatusBadge } from "@mirai-yoho/ui/components/status-badge";
@@ -10,6 +11,7 @@ import { HoverCard } from "@mirai-yoho/ui/components/ui/hover-card";
 import * as Table from "@mirai-yoho/ui/components/ui/table";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
+import { useQueryClient } from "@tanstack/react-query";
 import { AlertTriangle, CalendarDays } from "lucide-react";
 import { useMemo, useState } from "react";
 import { styled } from "styled-system/jsx";
@@ -165,6 +167,7 @@ export default function ConsoleBookingsPage() {
     { enabled: true },
   );
   const chargePayment = useChargePayment();
+  const queryClient = useQueryClient();
 
   const bookings = bookingsQuery.data?.data?.bookings ?? [];
   const pagination = bookingsQuery.data?.data?.pagination ?? {
@@ -205,6 +208,7 @@ export default function ConsoleBookingsPage() {
         bookingId,
         data: { method: "manual" },
       });
+      await invalidateAfter.paymentChargeMutation(queryClient, organizationId);
     } catch {
       // custom-fetch.ts がエラー Toast を自動表示するため、ここでは何もしない
     }

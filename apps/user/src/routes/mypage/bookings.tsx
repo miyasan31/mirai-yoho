@@ -1,9 +1,9 @@
 import {
-  getGetMyBookingsQueryKey,
   useCancelMyBooking,
   useGetMyBookings,
 } from "@mirai-yoho/api-client/api/customer/customer";
 import type { MyBooking } from "@mirai-yoho/api-client/schemas";
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import { Badge } from "@mirai-yoho/ui/components/ui/badge";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
@@ -248,23 +248,34 @@ function BookingCard({ booking }: { booking: MyBooking }) {
               </styled.span>
             </Tooltip>
           ))}
-        {isCancellable && <CancelButton bookingId={booking.bookingId} />}
+        {isCancellable && (
+          <CancelButton
+            bookingId={booking.bookingId}
+            organizationId={booking.organizationId}
+          />
+        )}
       </styled.div>
     </styled.li>
   );
 }
 
-function CancelButton({ bookingId }: { bookingId: string }) {
+function CancelButton({
+  bookingId,
+  organizationId,
+}: {
+  bookingId: string;
+  organizationId: string;
+}) {
   const queryClient = useQueryClient();
   const [open, setOpen] = useState(false);
   const cancelMutation = useCancelMyBooking({
     mutation: {
-      onSuccess: () => {
+      onSuccess: async () => {
         toaster.create({
           type: "success",
           title: "予約をキャンセルしました",
         });
-        queryClient.invalidateQueries({ queryKey: getGetMyBookingsQueryKey() });
+        await invalidateAfter.bookingCancel(queryClient, organizationId);
         setOpen(false);
       },
       onError: (error) => {

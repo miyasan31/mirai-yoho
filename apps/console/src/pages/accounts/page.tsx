@@ -2,6 +2,7 @@ import { createListCollection } from "@ark-ui/react/select";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useListQueryParams } from "@mirai-yoho/console-core/hooks/use-list-query-params";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import { ListControls } from "@mirai-yoho/ui/components/list-controls";
 import { AccountStatusBadge } from "@mirai-yoho/ui/components/status-badge";
@@ -33,7 +34,6 @@ import { styled } from "styled-system/jsx";
 import { useAuth } from "@/hooks/use-auth";
 import {
   useConsoleAccounts,
-  useConsoleAccountsQueryKey,
   useDeleteConsoleAccount,
   useInviteAccount,
   useResendAccountInvite,
@@ -41,10 +41,7 @@ import {
   useUpdateAccountDisplayName,
   useUpdateAccountRole,
 } from "@/hooks/use-console-accounts";
-import {
-  useConsoleRoles,
-  useConsoleRolesQueryKey,
-} from "@/hooks/use-console-roles";
+import { useConsoleRoles } from "@/hooks/use-console-roles";
 import {
   type AccountEditDisplayNameFormValues,
   accountEditDisplayNameFormSchema,
@@ -77,9 +74,7 @@ export default function ConsoleAccountsPage() {
     sortOrder: "desc",
   });
   const { data: roleData } = useConsoleRoles();
-  const queryKey = useConsoleAccountsQueryKey();
-  const rolesQueryKey = useConsoleRolesQueryKey();
-  const queryCustomer = useQueryClient();
+  const queryClient = useQueryClient();
   const roles = roleData?.data?.roles ?? [];
   const roleCollection = createListCollection({
     items: roles.map((item) => ({
@@ -163,12 +158,8 @@ export default function ConsoleAccountsPage() {
     return <Text>権限がありません</Text>;
   }
 
-  const invalidate = async () => {
-    await Promise.all([
-      queryCustomer.invalidateQueries({ queryKey }),
-      queryCustomer.invalidateQueries({ queryKey: rolesQueryKey }),
-    ]);
-  };
+  const invalidate = () =>
+    invalidateAfter.accountMutation(queryClient, resolvedOrganizationId);
 
   const onInvite = async (values: AccountInviteFormValues) => {
     try {

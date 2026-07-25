@@ -1,3 +1,4 @@
+import { getGetPricePlansQueryOptions } from "@mirai-yoho/api-client/api/booking/booking";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { IconButton } from "@mirai-yoho/ui/components/ui/icon-button";
@@ -14,6 +15,13 @@ import { pageHead } from "@/lib/head";
 
 export const Route = createFileRoute("/$organizationId/consultants/$id/plans")({
   head: () => pageHead("料金プランを選択"),
+  loader: ({
+    context: { queryClient },
+    params: { organizationId, id: consultantId },
+  }) =>
+    queryClient.ensureQueryData(
+      getGetPricePlansQueryOptions(organizationId, { consultantId }),
+    ),
   component: PlansPage,
 });
 

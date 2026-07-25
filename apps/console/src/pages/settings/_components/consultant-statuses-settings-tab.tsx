@@ -1,8 +1,10 @@
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import type { FormEventHandler } from "react";
 import { useEffect, useState } from "react";
@@ -188,6 +190,7 @@ export function ConsultantStatusesSettingsTab({
 }: ConsultantStatusesSettingsTabContainerProps) {
   const { data, isLoading } = useConsoleConsultantStatuses();
   const updateConsultantStatuses = useUpdateConsoleConsultantStatuses();
+  const queryClient = useQueryClient();
   const form = useForm<ConsultantStatusFormValues>({
     defaultValues: {
       consultantStatuses: [{ statusId: "standard", name: "標準" }],
@@ -241,6 +244,10 @@ export function ConsultantStatusesSettingsTab({
         defaultConsultantStatusId: values.defaultConsultantStatusId,
       },
     });
+    await invalidateAfter.consultantStatusesMutation(
+      queryClient,
+      organizationId,
+    );
   };
   const remove = (index: number) => {
     const removing = statuses[index];

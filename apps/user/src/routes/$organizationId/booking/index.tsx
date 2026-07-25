@@ -1,5 +1,6 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useGetCustomerCoupons } from "@mirai-yoho/api-client/api/customer/customer";
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import {
   getBookingCutoffMinutes,
   isBeforeBookingDeadline,
@@ -17,6 +18,7 @@ import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { Textarea } from "@mirai-yoho/ui/components/ui/textarea";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
+import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, CalendarX } from "lucide-react";
 import { useState } from "react";
@@ -81,6 +83,7 @@ function BookingPageInner() {
     Route.useSearch();
   const { organizationId } = Route.useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const selectedStartAt =
     typeof startsAt === "string" ? new Date(startsAt) : null;
   const hasValidSelectedStartAt =
@@ -270,6 +273,7 @@ function BookingPageInner() {
       });
 
       const responseData = result.data;
+      await invalidateAfter.bookingCreate(queryClient, organizationId);
       if ("bookingId" in responseData && "bookingActionToken" in responseData) {
         navigate({
           to: "/$organizationId/booking/payment",

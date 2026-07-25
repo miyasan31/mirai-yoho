@@ -1,6 +1,8 @@
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { useQueryClient } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { useUpdateConsoleBookingSettings } from "@/hooks/use-console-booking-settings";
@@ -24,6 +26,7 @@ export function PricePlanRangeSettingsTab({
   onPricePlanRangeSaved,
 }: PricePlanRangeSettingsTabProps) {
   const updateBookingSettings = useUpdateConsoleBookingSettings();
+  const queryClient = useQueryClient();
   const form = useForm<PricePlanRange>({
     defaultValues: initialPricePlanRange,
   });
@@ -38,6 +41,7 @@ export function PricePlanRangeSettingsTab({
       organizationId,
       data: { businessHours, pricePlanRange },
     });
+    await invalidateAfter.bookingSettingsMutation(queryClient, organizationId);
     onPricePlanRangeSaved(pricePlanRange);
   };
   return (

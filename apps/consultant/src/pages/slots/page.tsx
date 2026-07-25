@@ -5,6 +5,7 @@ import { Calendar, dateFnsLocalizer, type SlotInfo } from "react-big-calendar";
 import "react-big-calendar/lib/css/react-big-calendar.css";
 import { usePublicBookingSettings } from "@mirai-yoho/console-core/hooks/use-booking-settings";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import { BusinessHours } from "@mirai-yoho/shared/business-hours";
 import {
   getSlotUnitMinutes,
@@ -17,6 +18,7 @@ import * as Dialog from "@mirai-yoho/ui/components/ui/dialog";
 import { Skeleton } from "@mirai-yoho/ui/components/ui/skeleton";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { styled } from "styled-system/jsx";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetConsoleSlots } from "@/hooks/use-console-slots";
@@ -103,11 +105,12 @@ function buildBusinessHourRangesFromAllDaySelection(
 export default function ConsultantSlotsPage() {
   const { user } = useAuth();
   const { organizationId } = useOrganizationRouting();
+  const queryClient = useQueryClient();
   const { view, date, setView, setDate, setViewAndDate } =
     useConsultantCalendarQueryParams();
   const [deleteTarget, setDeleteTarget] = useState<CalendarEvent | null>(null);
 
-  const { data, isLoading, refetch } = useGetConsoleSlots(
+  const { data, isLoading } = useGetConsoleSlots(
     { consultantId: user?.uid ?? "" },
     {
       query: { enabled: !!user?.uid },
@@ -277,7 +280,9 @@ export default function ConsultantSlotsPage() {
             }),
           ),
         );
-        refetch();
+        if (organizationId) {
+          await invalidateAfter.slotMutation(queryClient, organizationId);
+        }
         toaster.create({
           type: "success",
           title: "予約可能枠を追加しました",
@@ -291,7 +296,7 @@ export default function ConsultantSlotsPage() {
       createSlot,
       events,
       organizationId,
-      refetch,
+      queryClient,
       setViewAndDate,
       user,
       view,
@@ -310,7 +315,9 @@ export default function ConsultantSlotsPage() {
         organizationId: organizationId ?? "",
         slotId: deleteTarget.id,
       });
-      refetch();
+      if (organizationId) {
+        await invalidateAfter.slotMutation(queryClient, organizationId);
+      }
       setDeleteTarget(null);
       toaster.create({
         type: "success",
@@ -319,7 +326,7 @@ export default function ConsultantSlotsPage() {
     } catch {
       // エラーは custom-fetch の toaster で表示される
     }
-  }, [deleteSlot, deleteTarget, organizationId, refetch]);
+  }, [deleteSlot, deleteTarget, organizationId, queryClient]);
 
   const eventStyleGetter = useCallback((event: CalendarEvent) => {
     if (event.type === "booking") {

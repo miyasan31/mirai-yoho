@@ -1,8 +1,9 @@
 import { ErrorStatusPage } from "@mirai-yoho/ui/components/error-status-page";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Toaster } from "@mirai-yoho/ui/components/ui/toast";
+import type { QueryClient } from "@tanstack/react-query";
 import {
-  createRootRoute,
+  createRootRouteWithContext,
   HeadContent,
   Link,
   Outlet,
@@ -13,7 +14,11 @@ import { MobileBackButton } from "@/components/mobile-back-button";
 import { useCapturePendingOrganizationId } from "@/hooks/use-capture-pending-organization";
 import { pageHead } from "@/lib/head";
 
-export const Route = createRootRoute({
+export interface RouterContext {
+  queryClient: QueryClient;
+}
+
+export const Route = createRootRouteWithContext<RouterContext>()({
   component: RootLayout,
   notFoundComponent: NotFound,
 });

@@ -1,5 +1,6 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Field from "@mirai-yoho/ui/components/ui/field";
 import { IconButton } from "@mirai-yoho/ui/components/ui/icon-button";
@@ -9,6 +10,7 @@ import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { Textarea } from "@mirai-yoho/ui/components/ui/textarea";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate, useParams } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { useEffect } from "react";
@@ -32,6 +34,7 @@ export default function ConsultantMemoEditPage() {
     sortOrder: "desc",
   });
   const updateMemo = useUpdateConsultantMemo();
+  const queryClient = useQueryClient();
   const { register, handleSubmit, reset } = useForm<MemoFormValues>({
     resolver: valibotResolver(memoFormSchema),
     defaultValues: {
@@ -73,6 +76,12 @@ export default function ConsultantMemoEditPage() {
           freeMemo: values.freeMemo?.trim() ?? "",
         },
       });
+      if (organizationId) {
+        await invalidateAfter.consultantBookingMutation(
+          queryClient,
+          organizationId,
+        );
+      }
       toaster.create({ type: "success", title: "鑑定メモを保存しました" });
       void navigate({ to: buildPath("/bookings") });
     } catch {

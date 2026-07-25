@@ -8,6 +8,12 @@ const mockUseConsoleConsultants = vi.fn();
 const mockMutateAsync = vi.fn();
 const mockUseChargePayment = vi.fn();
 
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({
+    invalidateQueries: vi.fn().mockResolvedValue(undefined),
+  }),
+}));
+
 vi.mock("@mirai-yoho/console-core/hooks/use-list-query-params", () => ({
   useListQueryParams: () => ({
     page: 1,

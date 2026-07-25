@@ -1,5 +1,4 @@
 import {
-  getGetAvailableCouponsQueryKey,
   useGetAvailableCoupons,
   useReceiveBirthdayCoupon,
   useReceiveWelcomeCoupon,
@@ -8,6 +7,7 @@ import type {
   AvailableCoupon,
   CouponType,
 } from "@mirai-yoho/api-client/schemas";
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import { Badge } from "@mirai-yoho/ui/components/ui/badge";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { IconButton } from "@mirai-yoho/ui/components/ui/icon-button";
@@ -94,9 +94,7 @@ function OrganizationCouponsPage() {
   const receiveBirthday = useReceiveBirthdayCoupon();
 
   const invalidate = () =>
-    queryClient.invalidateQueries({
-      queryKey: getGetAvailableCouponsQueryKey(organizationId),
-    });
+    invalidateAfter.couponReceive(queryClient, organizationId);
 
   const onReceive = async (coupon: AvailableCoupon) => {
     try {
