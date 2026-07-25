@@ -10,6 +10,15 @@
   font-size: 12px !important;
 }
 
+/* rbc は隣接イベント (end === start) を同時発生と誤検知して 2 番目以降を
+   狭く表示する。当アプリのスロットは時間的に重ならないため full width に強制 */
+.rbc-day-slot .rbc-event {
+  /* biome-ignore lint/complexity/noImportantStyles: rbc がインラインスタイルで width/left を注入するため !important が必要 */
+  width: 100% !important;
+  /* biome-ignore lint/complexity/noImportantStyles: 同上 */
+  left: 0 !important;
+}
+
 .rbc-day-unavailable {
   background-image: repeating-linear-gradient(
     -45deg,
