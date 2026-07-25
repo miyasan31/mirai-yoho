@@ -18,6 +18,8 @@ interface CustomerDoc {
   birthDate?: string;
   note?: string;
   userId?: string;
+  guardianName?: string;
+  guardianConsentedAt?: Timestamp | Date;
   withdrawnAt?: Timestamp | Date;
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;
@@ -40,6 +42,8 @@ function toDomain(doc: CustomerDoc): Customer {
     birthDate: doc.birthDate,
     note: doc.note,
     userId: doc.userId,
+    guardianName: doc.guardianName,
+    guardianConsentedAt: toDate(doc.guardianConsentedAt) ?? undefined,
     withdrawnAt: toDate(doc.withdrawnAt) ?? undefined,
     createdAt,
     updatedAt: toDate(doc.updatedAt) ?? createdAt,
@@ -49,6 +53,8 @@ function toDomain(doc: CustomerDoc): Customer {
 function toFirestore(customer: Customer): CustomerDoc {
   const note = customer.getNote();
   const userId = customer.getUserId();
+  const guardianName = customer.getGuardianName();
+  const guardianConsentedAt = customer.getGuardianConsentedAt();
   const withdrawnAt = customer.getWithdrawnAt();
   return {
     organizationId: customer.getOrganizationId(),
@@ -59,6 +65,8 @@ function toFirestore(customer: Customer): CustomerDoc {
     ...(customer.getBirthDate() ? { birthDate: customer.getBirthDate() } : {}),
     ...(note !== undefined ? { note } : {}),
     ...(userId !== undefined ? { userId } : {}),
+    ...(guardianName !== undefined ? { guardianName } : {}),
+    ...(guardianConsentedAt !== undefined ? { guardianConsentedAt } : {}),
     ...(withdrawnAt ? { withdrawnAt } : {}),
     createdAt: customer.getCreatedAt(),
     updatedAt: customer.getUpdatedAt(),

@@ -156,6 +156,7 @@ function BookingPageInner() {
     register,
     control,
     handleSubmit,
+    watch,
     formState: { errors },
   } = useForm<BookingFormValues>({
     resolver: valibotResolver(bookingFormSchema),
@@ -165,9 +166,26 @@ function BookingPageInner() {
       customerPhone: "",
       customerBirthDate: profile?.birthDate ?? "",
       consultantContent: "",
+      guardianName: "",
+      guardianConsent: false,
       agreedToTerms: false,
     },
   });
+
+  const watchedBirthDate = watch("customerBirthDate");
+  const isMinorCustomer = (() => {
+    if (!watchedBirthDate || !/^\d{4}-\d{2}-\d{2}$/.test(watchedBirthDate)) {
+      return false;
+    }
+    const [year, month, day] = watchedBirthDate.split("-").map(Number);
+    const ref = new Date();
+    let age = ref.getUTCFullYear() - year;
+    const monthDiff = ref.getUTCMonth() + 1 - month;
+    if (monthDiff < 0 || (monthDiff === 0 && ref.getUTCDate() < day)) {
+      age -= 1;
+    }
+    return age < 18;
+  })();
 
   const createBooking = useCreateBooking();
 
@@ -240,6 +258,12 @@ function BookingPageInner() {
           selectedUserCouponId: selectedUserCouponId || undefined,
           agreedTermsVersion: CURRENT_TERMS_VERSION,
           agreedAt: new Date().toISOString(),
+          ...(isMinorCustomer && values.guardianName
+            ? {
+                guardianName: values.guardianName,
+                guardianConsentedAt: new Date().toISOString(),
+              }
+            : {}),
         },
       });
 
@@ -379,6 +403,64 @@ function BookingPageInner() {
               </Field.ErrorText>
             )}
           </Field.Root>
+
+          {isMinorCustomer && (
+            <styled.div
+              display="flex"
+              flexDir="column"
+              gap="3"
+              p="4"
+              borderWidth="1"
+              borderColor="border"
+              borderRadius="md"
+              bg="bg.subtle"
+            >
+              <Text textStyle="sm" fontWeight="medium">
+                親権者同意（利用規約 第8条）
+              </Text>
+              <Text textStyle="xs" color="fg.muted">
+                18歳未満の方が本サービスを利用する場合、親権者その他法定代理人の同意が必要です。
+              </Text>
+              <Field.Root invalid={!!errors.guardianName}>
+                <Field.Label>
+                  親権者氏名
+                  <Field.RequiredIndicator />
+                </Field.Label>
+                <Input {...register("guardianName")} placeholder="山田 花子" />
+                {errors.guardianName && (
+                  <Field.ErrorText>
+                    {errors.guardianName.message}
+                  </Field.ErrorText>
+                )}
+              </Field.Root>
+              <Field.Root invalid={!!errors.guardianConsent}>
+                <Controller
+                  control={control}
+                  name="guardianConsent"
+                  render={({ field }) => (
+                    <Checkbox.Root
+                      checked={field.value === true}
+                      onCheckedChange={(details) =>
+                        field.onChange(details.checked === true)
+                      }
+                    >
+                      <Checkbox.Control>
+                        <Checkbox.Indicator />
+                      </Checkbox.Control>
+                      <Checkbox.Label>
+                        親権者として本サービスの利用に同意します
+                      </Checkbox.Label>
+                    </Checkbox.Root>
+                  )}
+                />
+                {errors.guardianConsent && (
+                  <Field.ErrorText>
+                    {errors.guardianConsent.message}
+                  </Field.ErrorText>
+                )}
+              </Field.Root>
+            </styled.div>
+          )}
 
           <Field.Root>
             <Field.Label>ご相談内容（任意）</Field.Label>

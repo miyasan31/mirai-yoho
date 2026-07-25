@@ -15,16 +15,10 @@ describe("BirthDate", () => {
       expect(birthDate.getAge(REFERENCE_DATE)).toBe(36);
     });
 
-    it("18 歳の誕生日前日は UNDERAGE", () => {
-      expect(() => BirthDate.create("2008-07-02", REFERENCE_DATE)).toThrow(
-        DomainError,
-      );
-    });
-
-    it("17 歳は UNDERAGE", () => {
-      expect(() => BirthDate.create("2009-01-01", REFERENCE_DATE)).toThrow(
-        DomainError,
-      );
+    it("18 歳未満でも作成できる (親権者同意フローで扱う)", () => {
+      const birthDate = BirthDate.create("2009-01-01", REFERENCE_DATE);
+      expect(birthDate.getValue()).toBe("2009-01-01");
+      expect(birthDate.isMinor(REFERENCE_DATE)).toBe(true);
     });
 
     it("未来日は INVALID_BIRTH_DATE", () => {
@@ -47,6 +41,20 @@ describe("BirthDate", () => {
     it("バリデーションをスキップして復元できる", () => {
       const birthDate = BirthDate.reconstruct("2009-01-01");
       expect(birthDate.getValue()).toBe("2009-01-01");
+    });
+  });
+
+  describe("isMinor", () => {
+    it("18 歳未満は true", () => {
+      expect(BirthDate.isMinor("2009-01-01", REFERENCE_DATE)).toBe(true);
+    });
+
+    it("18 歳ちょうどは false", () => {
+      expect(BirthDate.isMinor("2008-07-01", REFERENCE_DATE)).toBe(false);
+    });
+
+    it("成人年齢を大きく超えても false", () => {
+      expect(BirthDate.isMinor("1990-01-01", REFERENCE_DATE)).toBe(false);
     });
   });
 
