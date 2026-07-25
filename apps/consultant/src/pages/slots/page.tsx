@@ -139,7 +139,7 @@ export default function ConsultantSlotsPage() {
     const slots = data?.data?.slots ?? [];
     const availableEvents: CalendarEvent[] = slots.map((slot) => ({
       id: slot.slotId,
-      title: "予約可能",
+      title: "",
       start: new Date(slot.startsAt),
       end: new Date(slot.endsAt),
       type: "available",
@@ -325,10 +325,9 @@ export default function ConsultantSlotsPage() {
     if (event.type === "booking") {
       return {
         style: {
-          backgroundColor: "#2f855a",
-          borderColor: "#276749",
+          backgroundColor: "#2563eb",
+          borderColor: "#1d4ed8",
           color: "#fff",
-          opacity: 0.9,
         },
       };
     }
@@ -344,10 +343,9 @@ export default function ConsultantSlotsPage() {
     }
     return {
       style: {
-        backgroundColor: "#2661cf",
-        borderColor: "#2550a8",
-        color: "#fff",
-        opacity: 0.8,
+        backgroundColor: "transparent",
+        border: "1.5px solid #2563eb",
+        color: "#2563eb",
       },
     };
   }, []);
@@ -408,7 +406,7 @@ export default function ConsultantSlotsPage() {
         </Text>
       </styled.div>
 
-      <styled.div h="calc(100vh - 200px)" shadow="xs" rounded="l2" p="4">
+      <styled.div h="calc(100vh - 140px)" shadow="xs" rounded="l2" p="4">
         <Calendar<CalendarEvent>
           localizer={localizer}
           culture="ja-JP"
