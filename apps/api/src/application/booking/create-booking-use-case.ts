@@ -6,6 +6,7 @@ import {
   isSupportedDuration,
   type SupportedDurationMinutes,
 } from "@mirai-yoho/shared/slot-availability";
+import { isSupportedTermsVersion } from "@mirai-yoho/shared/terms-version";
 import { AppError } from "@/application/shared/app-error";
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IUnitOfWork } from "@/application/shared/unit-of-work";
@@ -45,6 +46,8 @@ interface CreateBookingInput {
   consultationContent?: string;
   selectionId: string;
   selectedUserCouponId?: string;
+  agreedTermsVersion: string;
+  agreedAt: Date;
 }
 
 interface CreateBookingOutput {
@@ -93,6 +96,14 @@ export class CreateBookingUseCase {
       );
     }
     const durationMinutes: SupportedDurationMinutes = input.durationMinutes;
+
+    if (!isSupportedTermsVersion(input.agreedTermsVersion)) {
+      throw new AppError(
+        400,
+        "TERMS_VERSION_UNSUPPORTED",
+        "agreedTermsVersion does not match the currently published terms version",
+      );
+    }
 
     const user = await this.userRepository.findById(input.userId);
     if (!user || !user.isActive()) {
@@ -178,6 +189,8 @@ export class CreateBookingUseCase {
             discountJPY: appliedCoupon.getAmountJPY(),
           }
         : undefined,
+      agreedTermsVersion: input.agreedTermsVersion,
+      agreedAt: input.agreedAt,
     });
 
     const consultant = await this.consultantRepository.findById(

@@ -31,6 +31,8 @@ interface BookingCreateProps {
   pricePlanName: string;
   pricePlanTotalJPY: number;
   appliedCoupon?: AppliedCoupon;
+  agreedTermsVersion: string;
+  agreedAt: Date;
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -38,7 +40,12 @@ interface BookingCreateProps {
 interface BookingProps
   extends Omit<
     BookingCreateProps,
-    "pricePlanId" | "pricePlanName" | "pricePlanTotalJPY" | "appliedCoupon"
+    | "pricePlanId"
+    | "pricePlanName"
+    | "pricePlanTotalJPY"
+    | "appliedCoupon"
+    | "agreedTermsVersion"
+    | "agreedAt"
   > {
   status: BookingStatus;
   cancelDeadlineAt: CancelDeadline;
@@ -52,6 +59,8 @@ interface BookingProps
   couponDiscountJPY?: number;
   discountedTotalJPY?: number;
   lateArrivalAlertSentAt?: Date;
+  agreedTermsVersion?: string;
+  agreedAt?: Date;
 }
 
 export class Booking extends AggregateRoot {
@@ -79,6 +88,8 @@ export class Booking extends AggregateRoot {
     private readonly appliedUserCouponId: string | undefined,
     private readonly couponDiscountJPY: number | undefined,
     private readonly discountedTotalJPY: number | undefined,
+    private readonly agreedTermsVersion: string | undefined,
+    private readonly agreedAt: Date | undefined,
     private readonly createdAt: Date,
     private updatedAt: Date,
   ) {
@@ -123,6 +134,8 @@ export class Booking extends AggregateRoot {
       appliedUserCouponId,
       couponDiscountJPY,
       discountedTotalJPY,
+      props.agreedTermsVersion,
+      props.agreedAt,
       props.createdAt ?? now,
       props.updatedAt ?? now,
     );
@@ -154,6 +167,8 @@ export class Booking extends AggregateRoot {
       props.appliedUserCouponId,
       props.couponDiscountJPY,
       props.discountedTotalJPY,
+      props.agreedTermsVersion,
+      props.agreedAt,
       createdAt,
       props.updatedAt ?? createdAt,
     );
@@ -376,6 +391,14 @@ export class Booking extends AggregateRoot {
 
   getEffectiveTotalJPY(): number | undefined {
     return this.discountedTotalJPY ?? this.pricePlanTotalJPY;
+  }
+
+  getAgreedTermsVersion(): string | undefined {
+    return this.agreedTermsVersion;
+  }
+
+  getAgreedAt(): Date | undefined {
+    return this.agreedAt;
   }
 
   getCreatedAt(): Date {

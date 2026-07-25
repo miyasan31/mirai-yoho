@@ -61,6 +61,8 @@ bookingRoutes.post(
       consultantContent,
       selectionId,
       selectedUserCouponId,
+      agreedTermsVersion,
+      agreedAt,
     } = body;
 
     if (
@@ -90,6 +92,27 @@ bookingRoutes.post(
         "durationMinutes must be a number",
       );
     }
+    if (
+      typeof agreedTermsVersion !== "string" ||
+      agreedTermsVersion.length === 0
+    ) {
+      return jsonError(
+        400,
+        "VALIDATION_ERROR",
+        "agreedTermsVersion is required",
+      );
+    }
+    if (typeof agreedAt !== "string" || agreedAt.length === 0) {
+      return jsonError(400, "VALIDATION_ERROR", "agreedAt is required");
+    }
+    const parsedAgreedAt = new Date(agreedAt);
+    if (Number.isNaN(parsedAgreedAt.getTime())) {
+      return jsonError(
+        400,
+        "VALIDATION_ERROR",
+        "agreedAt must be a valid ISO 8601 datetime",
+      );
+    }
 
     const birthDateValidation = validateCustomerBirthdate(customerBirthDate);
     if (!birthDateValidation.valid) {
@@ -117,6 +140,8 @@ bookingRoutes.post(
         typeof selectedUserCouponId === "string" && selectedUserCouponId
           ? selectedUserCouponId
           : undefined,
+      agreedTermsVersion,
+      agreedAt: parsedAgreedAt,
     });
 
     const bookingActionToken =

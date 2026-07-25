@@ -23,6 +23,8 @@ function createBooking(startsAt = "2026-05-01T10:00:00.000Z") {
     pricePlanId: "plan-1",
     pricePlanName: "通常鑑定",
     pricePlanTotalJPY: 5500,
+    agreedTermsVersion: "2026-08-01",
+    agreedAt: new Date("2026-04-01T00:00:00.000Z"),
     createdAt: new Date("2026-04-01T00:00:00.000Z"),
     updatedAt: new Date("2026-04-01T00:00:00.000Z"),
   });

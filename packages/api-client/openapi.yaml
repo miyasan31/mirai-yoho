@@ -2396,6 +2396,8 @@ components:
           selectionId,
           startsAt,
           durationMinutes,
+          agreedTermsVersion,
+          agreedAt,
         ]
       properties:
         consultantId:
@@ -2423,6 +2425,14 @@ components:
         selectedUserCouponId:
           type: string
           description: 適用する UserCoupon の ID（1枚のみ、任意）
+        agreedTermsVersion:
+          type: string
+          description: '顧客が同意した利用規約のバージョン (例 2026-08-01)'
+          example: "2026-08-01"
+        agreedAt:
+          type: string
+          format: date-time
+          description: 利用規約への同意日時 (ISO 8601)
 
     PricePlanOption:
       type: object
