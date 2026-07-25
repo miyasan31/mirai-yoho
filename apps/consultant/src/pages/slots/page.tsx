@@ -425,7 +425,9 @@ export default function ConsultantSlotsPage() {
           slotPropGetter={slotPropGetter}
           step={SLOT_UNIT_MINUTES}
           timeslots={60 / SLOT_UNIT_MINUTES}
-          min={
+          min={new Date(1970, 0, 1, 0, 0)}
+          max={new Date(1970, 0, 1, 23, 59)}
+          scrollToTime={
             new Date(
               1970,
               0,
@@ -434,12 +436,6 @@ export default function ConsultantSlotsPage() {
               calendarBounds.minMinute,
             )
           }
-          max={(() => {
-            const totalMinutes =
-              calendarBounds.maxHour * 60 + calendarBounds.maxMinute;
-            const clamped = Math.min(totalMinutes, 24 * 60 - 1);
-            return new Date(1970, 0, 1, Math.floor(clamped / 60), clamped % 60);
-          })()}
           messages={{
             today: "今日",
             previous: "前",
