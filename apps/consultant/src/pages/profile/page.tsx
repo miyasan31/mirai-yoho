@@ -3,6 +3,7 @@ import { FileUpload } from "@ark-ui/react/file-upload";
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { ApiResponseError } from "@mirai-yoho/api-client/custom-fetch";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Field from "@mirai-yoho/ui/components/ui/field";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
@@ -28,14 +29,6 @@ import {
 const AVATAR_MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
-function getConsultantProfileQueryKey(organizationId: string) {
-  return [`/organizations/${organizationId}/consultant/profile`] as const;
-}
-
-function getConsultantsQueryKey(organizationId: string) {
-  return [`/organizations/${organizationId}/consultants`] as const;
-}
-
 async function isSquareImage(file: File): Promise<boolean> {
   return new Promise((resolve) => {
     const image = new Image();
@@ -54,7 +47,7 @@ async function isSquareImage(file: File): Promise<boolean> {
 
 export default function ConsultantProfilePage() {
   const { organizationId } = useOrganizationRouting();
-  const queryCustomer = useQueryClient();
+  const queryClient = useQueryClient();
   const { data, isLoading } = useConsultantProfile();
   const updateProfile = useUpdateConsultantProfile();
   const createAvatarUploadUrl = useCreateConsultantAvatarUploadUrl();
@@ -191,14 +184,7 @@ export default function ConsultantProfilePage() {
         },
       });
       if (organizationId) {
-        await Promise.all([
-          queryCustomer.invalidateQueries({
-            queryKey: getConsultantProfileQueryKey(organizationId),
-          }),
-          queryCustomer.invalidateQueries({
-            queryKey: getConsultantsQueryKey(organizationId),
-          }),
-        ]);
+        await invalidateAfter.consultantMutation(queryClient, organizationId);
       }
       toaster.create({ type: "success", title: "プロフィールを保存しました" });
     } catch {

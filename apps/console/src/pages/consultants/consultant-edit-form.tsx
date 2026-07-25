@@ -1,7 +1,7 @@
 import { createListCollection } from "@ark-ui/react/select";
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { getGetConsoleConsultantsQueryKey } from "@mirai-yoho/api-client/api/console/console";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Dialog from "@mirai-yoho/ui/components/ui/dialog";
 import * as Field from "@mirai-yoho/ui/components/ui/field";
@@ -36,7 +36,7 @@ export function ConsultantEditForm({
   onNotFound,
 }: ConsultantEditFormProps) {
   const { organizationId } = useOrganizationRouting();
-  const queryCustomer = useQueryClient();
+  const queryClient = useQueryClient();
   const {
     register,
     handleSubmit,
@@ -100,9 +100,7 @@ export function ConsultantEditForm({
     if (!organizationId) {
       return;
     }
-    await queryCustomer.invalidateQueries({
-      queryKey: getGetConsoleConsultantsQueryKey(organizationId),
-    });
+    await invalidateAfter.consultantMutation(queryClient, organizationId);
   };
 
   const onSubmit = async (values: ConsultantFormValues) => {

@@ -1,7 +1,7 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { getGetConsoleConsultantsQueryKey } from "@mirai-yoho/api-client/api/console/console";
 import { useListQueryParams } from "@mirai-yoho/console-core/hooks/use-list-query-params";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import { ListControls } from "@mirai-yoho/ui/components/list-controls";
 import { ActiveStatusBadge } from "@mirai-yoho/ui/components/status-badge";
@@ -36,7 +36,7 @@ export default function ConsoleConsultantsPage() {
   const { roleId } = useAuth();
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
     useListQueryParams();
-  const queryCustomer = useQueryClient();
+  const queryClient = useQueryClient();
   const { data, isLoading } = useConsoleConsultants({
     page,
     pageSize,
@@ -86,9 +86,7 @@ export default function ConsoleConsultantsPage() {
       });
       reset();
       setInviteOpen(false);
-      await queryCustomer.invalidateQueries({
-        queryKey: getGetConsoleConsultantsQueryKey(organizationId),
-      });
+      await invalidateAfter.consultantMutation(queryClient, organizationId);
     } catch {
       // custom-fetch.ts がエラー Toast を自動表示
     }

@@ -1,4 +1,5 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import { BusinessHours } from "@mirai-yoho/shared/business-hours";
 import { DomainError } from "@mirai-yoho/shared/domain-error";
 import { Checkbox } from "@mirai-yoho/ui/components/ui";
@@ -7,6 +8,7 @@ import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
+import { useQueryClient } from "@tanstack/react-query";
 import type { FormEventHandler } from "react";
 import type {
   Control,
@@ -336,6 +338,7 @@ export function BusinessHoursSettingsTab({
   onBusinessHoursSaved,
 }: BusinessHoursSettingsTabContainerProps) {
   const updateBookingSettings = useUpdateConsoleBookingSettings();
+  const queryClient = useQueryClient();
   const form = useForm<BusinessHoursFormValues>({
     resolver: valibotResolver(businessHoursFormSchema),
     defaultValues: {
@@ -399,6 +402,10 @@ export function BusinessHoursSettingsTab({
         organizationId,
         data: { businessHours, pricePlanRange },
       });
+      await invalidateAfter.bookingSettingsMutation(
+        queryClient,
+        organizationId,
+      );
       onBusinessHoursSaved(businessHours);
     } catch {
       toaster.create({

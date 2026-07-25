@@ -1,7 +1,7 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
-import { getGetConsoleCouponsQueryKey } from "@mirai-yoho/api-client/api/console/console";
 import type { Coupon, CouponType } from "@mirai-yoho/api-client/schemas";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import { TableSkeleton } from "@mirai-yoho/ui/components/table-skeleton";
 import { Badge } from "@mirai-yoho/ui/components/ui/badge";
@@ -61,9 +61,7 @@ export default function ConsoleCouponsPage() {
 
   const invalidate = async () => {
     if (!organizationId) return;
-    await queryClient.invalidateQueries({
-      queryKey: getGetConsoleCouponsQueryKey(organizationId),
-    });
+    await invalidateAfter.couponMutation(queryClient, organizationId);
   };
 
   const createForm = useForm<CouponCreateFormValues>({

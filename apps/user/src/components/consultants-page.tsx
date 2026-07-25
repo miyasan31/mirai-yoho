@@ -1,8 +1,11 @@
+import { getGetPricePlansQueryOptions } from "@mirai-yoho/api-client/api/booking/booking";
+import { prefetchOnHover } from "@mirai-yoho/console-core/query/prefetch";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import { Badge } from "@mirai-yoho/ui/components/ui/badge";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Skeleton, SkeletonText } from "@mirai-yoho/ui/components/ui/skeleton";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
+import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { CircleX, Users } from "lucide-react";
 import { styled } from "styled-system/jsx";
@@ -35,6 +38,7 @@ function ConsultantCardSkeleton() {
 
 export function ConsultantsPage() {
   const { organizationId } = useOrganizationRouting();
+  const queryClient = useQueryClient();
   const { data, isLoading, error } = useGetConsultants();
 
   if (isLoading) {
@@ -171,6 +175,16 @@ export function ConsultantsPage() {
                     organizationId: organizationId ?? "",
                     id: consultant.consultantId,
                   }}
+                  onMouseEnter={
+                    organizationId
+                      ? prefetchOnHover(
+                          queryClient,
+                          getGetPricePlansQueryOptions(organizationId, {
+                            consultantId: consultant.consultantId,
+                          }),
+                        )
+                      : undefined
+                  }
                 >
                   プランを選択
                 </Link>

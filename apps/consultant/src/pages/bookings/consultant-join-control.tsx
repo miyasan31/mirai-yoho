@@ -1,7 +1,9 @@
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
+import { useQueryClient } from "@tanstack/react-query";
 import { useJoinConsultantBooking } from "@/hooks/use-consultant-bookings";
 
 interface ConsultantJoinControlProps {
@@ -50,6 +52,7 @@ export function ConsultantJoinControl({
   onJoined,
 }: ConsultantJoinControlProps) {
   const { organizationId } = useOrganizationRouting();
+  const queryClient = useQueryClient();
   const joinConsultantBooking = useJoinConsultantBooking();
 
   const handleJoin = async () => {
@@ -60,6 +63,10 @@ export function ConsultantJoinControl({
         organizationId,
         id: bookingId,
       });
+      await invalidateAfter.consultantBookingMutation(
+        queryClient,
+        organizationId,
+      );
       toaster.create({ type: "success", title: "入室を確認しました" });
       onJoined?.();
     } catch {

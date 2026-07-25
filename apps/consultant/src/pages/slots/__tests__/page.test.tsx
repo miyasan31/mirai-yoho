@@ -9,6 +9,12 @@ import {
 import { addDays } from "date-fns";
 import type { ReactNode } from "react";
 
+vi.mock("@tanstack/react-query", () => ({
+  useQueryClient: () => ({
+    invalidateQueries: vi.fn().mockResolvedValue(undefined),
+  }),
+}));
+
 const mockCreateSlotMutateAsync = vi.fn();
 const mockDeleteSlotMutateAsync = vi.fn();
 const mockRefetch = vi.fn();

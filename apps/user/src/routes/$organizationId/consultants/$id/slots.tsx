@@ -1,3 +1,5 @@
+import { getGetPricePlansQueryOptions } from "@mirai-yoho/api-client/api/booking/booking";
+import { getGetSlotsQueryOptions } from "@mirai-yoho/api-client/api/slot/slot";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import { IconButton } from "@mirai-yoho/ui/components/ui/icon-button";
 import { Skeleton } from "@mirai-yoho/ui/components/ui/skeleton";
@@ -36,6 +38,18 @@ export const Route = createFileRoute("/$organizationId/consultants/$id/slots")({
       durationMinutes: Number.isFinite(duration) ? duration : Number.NaN,
     };
   },
+  loader: ({
+    context: { queryClient },
+    params: { organizationId, id: consultantId },
+  }) =>
+    Promise.all([
+      queryClient.ensureQueryData(
+        getGetSlotsQueryOptions(organizationId, { consultantId }),
+      ),
+      queryClient.ensureQueryData(
+        getGetPricePlansQueryOptions(organizationId, { consultantId }),
+      ),
+    ]),
   component: SlotsPage,
 });
 

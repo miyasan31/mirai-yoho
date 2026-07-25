@@ -1,6 +1,6 @@
-import { getListPricePlansQueryKey } from "@mirai-yoho/api-client/api/consultant/consultant";
 import type { CreatePricePlanRequestDurationMinutes } from "@mirai-yoho/api-client/schemas";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
+import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import { SUPPORTED_DURATION_MINUTES } from "@mirai-yoho/shared/slot-availability";
 import { Badge } from "@mirai-yoho/ui/components/ui/badge";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
@@ -42,9 +42,7 @@ export default function PricePlansPage() {
 
   const invalidatePricePlans = async () => {
     if (!organizationId) return;
-    await queryClient.invalidateQueries({
-      queryKey: getListPricePlansQueryKey(organizationId),
-    });
+    await invalidateAfter.pricePlanMutation(queryClient, organizationId);
   };
 
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
