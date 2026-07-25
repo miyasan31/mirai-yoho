@@ -2,6 +2,7 @@ import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
+import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
 import { ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import type { FormEventHandler } from "react";
 import { useEffect, useState } from "react";
@@ -129,20 +130,26 @@ function ConsultantStatusesSettingsTabView({
                   <ArrowDown size={16} />
                   下へ
                 </Button>
-                <Button
-                  type="button"
-                  variant="plain"
-                  size="sm"
-                  colorPalette="red"
-                  disabled={isStandard || fields.length <= 1 || isDisabled}
-                  onClick={() => onRemove(index)}
-                  title={
-                    isStandard ? "標準ステータスは削除できません" : undefined
-                  }
+                <Tooltip
+                  content="標準ステータスは削除できません"
+                  disabled={!isStandard}
+                  positioning={{ placement: "top-end" }}
+                  showArrow
                 >
-                  <Trash2 size={16} />
-                  削除
-                </Button>
+                  <styled.span display="inline-flex">
+                    <Button
+                      type="button"
+                      variant="plain"
+                      size="sm"
+                      colorPalette="red"
+                      disabled={isStandard || fields.length <= 1 || isDisabled}
+                      onClick={() => onRemove(index)}
+                    >
+                      <Trash2 size={16} />
+                      削除
+                    </Button>
+                  </styled.span>
+                </Tooltip>
               </styled.div>
             </styled.div>
           );
