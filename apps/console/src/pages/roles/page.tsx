@@ -1,5 +1,11 @@
+import { getGetConsoleRolesQueryKey } from "@mirai-yoho/api-client/api/console/console";
+import type { Role } from "@mirai-yoho/api-client/schemas";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
+import {
+  applyOptimistic,
+  rollbackOptimistic,
+} from "@mirai-yoho/console-core/query/optimistic-updates";
 import {
   AUTHORIZATION_PERMISSION_LABELS,
   AUTHORIZATION_PERMISSIONS,
@@ -182,23 +188,49 @@ export default function ConsoleRolesPage() {
 
   const handleUpdate = async () => {
     if (!editRoleId) return;
+    const queryKey = getGetConsoleRolesQueryKey(resolvedOrganizationId);
+    const targetRoleId = editRoleId;
+    const nextName = form.name;
+    const nextDescription = form.description;
+    const nextPermissions = form.permissions;
+    const snapshot = await applyOptimistic<{
+      data: { roles: Role[] };
+      status: number;
+      headers: unknown;
+    }>(queryClient, queryKey, (prev) => ({
+      ...prev,
+      data: {
+        ...prev.data,
+        roles: prev.data.roles.map((role) =>
+          role.roleId === targetRoleId
+            ? {
+                ...role,
+                name: nextName,
+                description: nextDescription,
+                permissions: nextPermissions,
+              }
+            : role,
+        ),
+      },
+    }));
     try {
       await updateRole.mutateAsync({
         organizationId: resolvedOrganizationId,
-        roleId: editRoleId,
+        roleId: targetRoleId,
         data: {
-          name: form.name,
-          description: form.description,
-          permissions: form.permissions,
+          name: nextName,
+          description: nextDescription,
+          permissions: nextPermissions,
         },
       });
       toaster.success({ title: "成功", description: "ロールを更新しました" });
       setEditRoleId(null);
       resetForm();
-      await invalidate();
       await refreshAuthContext();
     } catch {
-      // custom-fetch.ts がエラー Toast を自動表示
+      rollbackOptimistic(queryClient, queryKey, snapshot);
+    } finally {
+      await invalidate();
     }
   };
 

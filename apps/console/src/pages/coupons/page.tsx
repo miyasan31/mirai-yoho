@@ -1,7 +1,12 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { getGetConsoleCouponsQueryKey } from "@mirai-yoho/api-client/api/console/console";
 import type { Coupon, CouponType } from "@mirai-yoho/api-client/schemas";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
+import {
+  applyOptimistic,
+  rollbackOptimistic,
+} from "@mirai-yoho/console-core/query/optimistic-updates";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import { TableSkeleton } from "@mirai-yoho/ui/components/table-skeleton";
 import { Badge } from "@mirai-yoho/ui/components/ui/badge";
@@ -41,6 +46,12 @@ const COUPON_TYPE_LABEL: Record<CouponType, string> = {
 const COUPON_TYPE_COLOR: Record<CouponType, "green" | "purple"> = {
   welcome: "green",
   birthday: "purple",
+};
+
+type CouponsListCache = {
+  data: { coupons: Coupon[] };
+  status: number;
+  headers: unknown;
 };
 
 export default function ConsoleCouponsPage() {
@@ -134,16 +145,39 @@ export default function ConsoleCouponsPage() {
 
   const onArchive = async () => {
     if (!organizationId || !archiveTarget) return;
+    const queryKey = getGetConsoleCouponsQueryKey(organizationId);
+    const targetCouponId = archiveTarget.couponId;
+    const snapshot = await applyOptimistic<CouponsListCache>(
+      queryClient,
+      queryKey,
+      (prev) => ({
+        ...prev,
+        data: {
+          ...prev.data,
+          coupons: prev.data.coupons.map((coupon) =>
+            coupon.couponId === targetCouponId
+              ? {
+                  ...coupon,
+                  isArchived: true,
+                  isActive: false,
+                  archivedAt: new Date().toISOString(),
+                }
+              : coupon,
+          ),
+        },
+      }),
+    );
     try {
       await archiveMutation.mutateAsync({
         organizationId,
-        couponId: archiveTarget.couponId,
+        couponId: targetCouponId,
       });
       toaster.success({ title: "クーポンを無効化しました" });
       setArchiveTarget(null);
-      await invalidate();
     } catch {
-      // handled globally
+      rollbackOptimistic(queryClient, queryKey, snapshot);
+    } finally {
+      await invalidate();
     }
   };
 

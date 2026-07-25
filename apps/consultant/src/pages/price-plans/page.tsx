@@ -1,6 +1,14 @@
-import type { CreatePricePlanRequestDurationMinutes } from "@mirai-yoho/api-client/schemas";
+import { getListPricePlansQueryKey } from "@mirai-yoho/api-client/api/consultant/consultant";
+import type {
+  CreatePricePlanRequestDurationMinutes,
+  PricePlan,
+} from "@mirai-yoho/api-client/schemas";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
+import {
+  applyOptimistic,
+  rollbackOptimistic,
+} from "@mirai-yoho/console-core/query/optimistic-updates";
 import { SUPPORTED_DURATION_MINUTES } from "@mirai-yoho/shared/slot-availability";
 import { Badge } from "@mirai-yoho/ui/components/ui/badge";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
@@ -24,6 +32,28 @@ import {
   useUpdatePricePlan,
 } from "@/hooks/use-price-plans";
 
+type PricePlansListCache = {
+  data: { pricePlans: PricePlan[]; pricePlanRange: unknown };
+  status: number;
+  headers: unknown;
+};
+
+function patchPricePlan(
+  cache: PricePlansListCache,
+  pricePlanId: string,
+  patch: Partial<PricePlan>,
+): PricePlansListCache {
+  return {
+    ...cache,
+    data: {
+      ...cache.data,
+      pricePlans: cache.data.pricePlans.map((plan) =>
+        plan.pricePlanId === pricePlanId ? { ...plan, ...patch } : plan,
+      ),
+    },
+  };
+}
+
 export default function PricePlansPage() {
   const queryClient = useQueryClient();
   const { organizationId } = useOrganizationRouting();
@@ -40,11 +70,6 @@ export default function PricePlansPage() {
   const pricePlans = data?.data?.pricePlans ?? [];
   const pricePlanRange = data?.data?.pricePlanRange;
 
-  const invalidatePricePlans = async () => {
-    if (!organizationId) return;
-    await invalidateAfter.pricePlanMutation(queryClient, organizationId);
-  };
-
   const handleCreate = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!organizationId) return;
@@ -60,56 +85,84 @@ export default function PricePlansPage() {
       setName("");
       setTotalJPY("");
       setDurationMinutes(30);
-      await invalidatePricePlans();
       toaster.create({ type: "success", title: "料金プランを作成しました" });
     } catch {
       // customFetch displays the server-side validation error.
+    } finally {
+      if (organizationId) {
+        await invalidateAfter.pricePlanMutation(queryClient, organizationId);
+      }
     }
   };
 
   const handleRename = async (pricePlanId: string) => {
     if (!organizationId) return;
+    const queryKey = getListPricePlansQueryKey(organizationId);
+    const nextName = editingName;
+    const snapshot = await applyOptimistic<PricePlansListCache>(
+      queryClient,
+      queryKey,
+      (prev) => patchPricePlan(prev, pricePlanId, { name: nextName }),
+    );
     try {
       await updatePricePlan.mutateAsync({
         organizationId,
         pricePlanId,
-        data: { name: editingName },
+        data: { name: nextName },
       });
       setEditingPlanId(null);
       setEditingName("");
-      await invalidatePricePlans();
       toaster.create({ type: "success", title: "料金プラン名を更新しました" });
     } catch {
-      // customFetch displays the server-side validation error.
+      rollbackOptimistic(queryClient, queryKey, snapshot);
+    } finally {
+      await invalidateAfter.pricePlanMutation(queryClient, organizationId);
     }
   };
 
   const handleUnarchive = async (pricePlanId: string) => {
     if (!organizationId) return;
+    const queryKey = getListPricePlansQueryKey(organizationId);
+    const snapshot = await applyOptimistic<PricePlansListCache>(
+      queryClient,
+      queryKey,
+      (prev) => patchPricePlan(prev, pricePlanId, { archivedAt: null }),
+    );
     try {
       await updatePricePlan.mutateAsync({
         organizationId,
         pricePlanId,
         data: { unarchive: true },
       });
-      await invalidatePricePlans();
       toaster.create({ type: "success", title: "料金プランを復元しました" });
     } catch {
-      // customFetch displays the server-side validation error.
+      rollbackOptimistic(queryClient, queryKey, snapshot);
+    } finally {
+      await invalidateAfter.pricePlanMutation(queryClient, organizationId);
     }
   };
 
   const handleArchive = async (pricePlanId: string) => {
     if (!organizationId) return;
+    const queryKey = getListPricePlansQueryKey(organizationId);
+    const snapshot = await applyOptimistic<PricePlansListCache>(
+      queryClient,
+      queryKey,
+      (prev) =>
+        patchPricePlan(prev, pricePlanId, {
+          archivedAt: new Date().toISOString(),
+        }),
+    );
     try {
       await archivePricePlan.mutateAsync({ organizationId, pricePlanId });
-      await invalidatePricePlans();
       toaster.create({
         type: "success",
         title: "料金プランをアーカイブしました",
       });
     } catch {
-      // customFetch displays the server-side validation error.
+      rollbackOptimistic(queryClient, queryKey, snapshot);
+    } finally {
+      await invalidateAfter.pricePlanMutation(queryClient, organizationId);
     }
   };
 

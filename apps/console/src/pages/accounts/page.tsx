@@ -1,8 +1,14 @@
 import { createListCollection } from "@ark-ui/react/select";
 import { valibotResolver } from "@hookform/resolvers/valibot";
+import { getGetConsoleAccountsQueryKey } from "@mirai-yoho/api-client/api/console/console";
+import type { ConsoleAccount } from "@mirai-yoho/api-client/schemas";
 import { useListQueryParams } from "@mirai-yoho/console-core/hooks/use-list-query-params";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
+import {
+  applyOptimistic,
+  rollbackOptimistic,
+} from "@mirai-yoho/console-core/query/optimistic-updates";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import { ListControls } from "@mirai-yoho/ui/components/list-controls";
 import { AccountStatusBadge } from "@mirai-yoho/ui/components/status-badge";
@@ -205,20 +211,44 @@ export default function ConsoleAccountsPage() {
   const onEditDisplayName = async (
     values: AccountEditDisplayNameFormValues,
   ) => {
+    const queryKey = getGetConsoleAccountsQueryKey(resolvedOrganizationId, {
+      page,
+      pageSize,
+      sortBy,
+      sortOrder: "desc",
+    });
+    const targetAccountId = editDisplayNameAccountId;
+    const nextName = values.name;
+    const snapshot = await applyOptimistic<{
+      data: { accounts: ConsoleAccount[]; pagination: unknown };
+      status: number;
+      headers: unknown;
+    }>(queryClient, queryKey, (prev) => ({
+      ...prev,
+      data: {
+        ...prev.data,
+        accounts: prev.data.accounts.map((account) =>
+          account.accountId === targetAccountId
+            ? { ...account, name: nextName }
+            : account,
+        ),
+      },
+    }));
     try {
       await updateAccountDisplayName.mutateAsync({
         organizationId: resolvedOrganizationId,
-        accountId: editDisplayNameAccountId,
-        data: { name: values.name },
+        accountId: targetAccountId,
+        data: { name: nextName },
       });
       toaster.success({
         title: "成功",
         description: "表示名を更新しました",
       });
       setEditDisplayNameOpen(false);
-      await invalidate();
     } catch {
-      // custom-fetch.ts がエラー Toast を自動表示
+      rollbackOptimistic(queryClient, queryKey, snapshot);
+    } finally {
+      await invalidate();
     }
   };
 
