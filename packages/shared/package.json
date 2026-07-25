@@ -8,7 +8,8 @@
     "./domain-error": "./src/domain-error.ts",
     "./business-hours": "./src/business-hours.ts",
     "./slot-availability": "./src/slot-availability.ts",
-    "./authorization-permission": "./src/authorization-permission.ts"
+    "./authorization-permission": "./src/authorization-permission.ts",
+    "./terms-version": "./src/terms-version.ts"
   },
   "scripts": {
     "tsc": "tsc --noEmit"

@@ -5,6 +5,7 @@ import {
   isBeforeBookingDeadline,
   isSupportedDuration,
 } from "@mirai-yoho/shared/slot-availability";
+import { CURRENT_TERMS_VERSION } from "@mirai-yoho/shared/terms-version";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Checkbox from "@mirai-yoho/ui/components/ui/checkbox";
@@ -237,6 +238,8 @@ function BookingPageInner() {
           consultantContent: values.consultantContent?.trim() || undefined,
           selectionId,
           selectedUserCouponId: selectedUserCouponId || undefined,
+          agreedTermsVersion: CURRENT_TERMS_VERSION,
+          agreedAt: new Date().toISOString(),
         },
       });
 
