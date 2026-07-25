@@ -329,7 +329,7 @@ export default function ConsultantSlotsPage() {
           borderColor: "#1d4ed8",
           color: "#fff",
           padding: "0px 2px",
-          fontSize: "11px",
+          fontSize: "12px",
         },
       };
     }
@@ -340,7 +340,7 @@ export default function ConsultantSlotsPage() {
           borderColor: "#758191",
           color: "#fff",
           padding: "0px 2px",
-          fontSize: "11px",
+          fontSize: "12px",
         },
       };
     }
@@ -350,7 +350,7 @@ export default function ConsultantSlotsPage() {
         border: "1.5px dashed #2563eb",
         color: "#2563eb",
         padding: "0px 2px",
-        fontSize: "11px",
+        fontSize: "12px",
       },
     };
   }, []);
@@ -411,7 +411,7 @@ export default function ConsultantSlotsPage() {
         </Text>
       </styled.div>
 
-      <styled.div h="calc(100vh - 140px)" shadow="xs" rounded="l2" p="4">
+      <styled.div h="calc(100vh - 128px)" shadow="xs" rounded="l2" p="4">
         <Calendar<CalendarEvent>
           localizer={localizer}
           culture="ja-JP"
