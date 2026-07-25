@@ -1,6 +1,8 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { BusinessHours } from "@mirai-yoho/shared/business-hours";
+import { DomainError } from "@mirai-yoho/shared/domain-error";
 import { Checkbox } from "@mirai-yoho/ui/components/ui";
+import { Badge } from "@mirai-yoho/ui/components/ui/badge";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
@@ -22,6 +24,22 @@ import {
 import type { PricePlanRange } from "./settings-types";
 
 const dayLabels = ["日", "月", "火", "水", "木", "金", "土"] as const;
+
+type WindowKind = "24h" | "overnight" | null;
+
+function getWindowKind(startTime: string, endTime: string): WindowKind {
+  if (!/^([01]\d|2[0-3]):([03]0)$/.test(startTime)) return null;
+  if (!/^([01]\d|2[0-3]):([03]0)$/.test(endTime)) return null;
+  if (startTime === endTime) return "24h";
+  if (endTime < startTime) return "overnight";
+  return null;
+}
+
+function WindowKindBadge({ kind }: { kind: WindowKind }) {
+  if (kind === "24h") return <Badge variant="solid">24時間営業</Badge>;
+  if (kind === "overnight") return <Badge variant="subtle">翌日</Badge>;
+  return null;
+}
 
 type BusinessHoursSettingsTabProps = {
   control: Control<BusinessHoursFormValues>;
@@ -137,12 +155,19 @@ function BusinessHoursSettingsTabView({
               {...register(`weekly.${index}.startTime`)}
               disabled={row.isClosed || isDisabled}
             />
-            <Input
-              type="time"
-              step={1800}
-              {...register(`weekly.${index}.endTime`)}
-              disabled={row.isClosed || isDisabled}
-            />
+            <styled.div display="flex" alignItems="center" gap="2">
+              <Input
+                type="time"
+                step={1800}
+                {...register(`weekly.${index}.endTime`)}
+                disabled={row.isClosed || isDisabled}
+              />
+              {!row.isClosed && (
+                <WindowKindBadge
+                  kind={getWindowKind(row.startTime, row.endTime)}
+                />
+              )}
+            </styled.div>
           </styled.div>
         ))}
       </styled.div>
@@ -213,12 +238,19 @@ function BusinessHoursSettingsTabView({
                 {...register(`exceptions.${index}.startTime`)}
                 disabled={isExceptionClosed || isDisabled}
               />
-              <Input
-                type="time"
-                step={1800}
-                {...register(`exceptions.${index}.endTime`)}
-                disabled={isExceptionClosed || isDisabled}
-              />
+              <styled.div display="flex" alignItems="center" gap="2">
+                <Input
+                  type="time"
+                  step={1800}
+                  {...register(`exceptions.${index}.endTime`)}
+                  disabled={isExceptionClosed || isDisabled}
+                />
+                {!isExceptionClosed && exception && (
+                  <WindowKindBadge
+                    kind={getWindowKind(exception.startTime, exception.endTime)}
+                  />
+                )}
+              </styled.div>
               <Button
                 type="button"
                 variant="plain"
@@ -317,32 +349,17 @@ export function BusinessHoursSettingsTab({
   const exceptions = form.watch("exceptions");
   const save = async (values: BusinessHoursFormValues) => {
     if (!organizationId || isReadOnly) return;
-    const invalidWeekly = values.weekly.find(
-      (row) =>
-        !row.isClosed &&
-        (!/^([01]\d|2[0-3]):([03]0)$/.test(row.startTime) ||
-          row.startTime >= row.endTime),
-    );
-    if (invalidWeekly) {
+    const missingExceptionDate = values.exceptions.find((item) => !item.date);
+    if (missingExceptionDate) {
       toaster.create({
         type: "error",
-        title: `${dayLabels[invalidWeekly.dayOfWeek]}曜日の営業時間が不正です`,
+        title: "例外日の日付を入力してください",
       });
       return;
     }
-    const invalidException = values.exceptions.find(
-      (item) =>
-        !item.date ||
-        (!item.isClosed &&
-          (!/^([01]\d|2[0-3]):([03]0)$/.test(item.startTime) ||
-            item.startTime >= item.endTime)),
-    );
-    if (invalidException) {
-      toaster.create({ type: "error", title: "例外日の入力内容が不正です" });
-      return;
-    }
+    let businessHours: ReturnType<BusinessHours["toJSON"]>;
     try {
-      const businessHours = BusinessHours.create({
+      businessHours = BusinessHours.create({
         weekly: values.weekly.map((row) => ({
           dayOfWeek: row.dayOfWeek,
           isClosed: row.isClosed,
@@ -360,6 +377,24 @@ export function BusinessHoursSettingsTab({
             : [{ startTime: item.startTime, endTime: item.endTime }],
         })),
       }).toJSON();
+    } catch (error) {
+      if (
+        error instanceof DomainError &&
+        error.code === "INVALID_BUSINESS_HOURS"
+      ) {
+        toaster.create({
+          type: "error",
+          title: "営業時間の入力内容が不正です",
+        });
+        return;
+      }
+      toaster.create({
+        type: "error",
+        title: "営業時間設定の保存に失敗しました",
+      });
+      return;
+    }
+    try {
       await updateBookingSettings.mutateAsync({
         organizationId,
         data: { businessHours, pricePlanRange },

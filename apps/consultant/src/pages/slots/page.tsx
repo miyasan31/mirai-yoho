@@ -68,11 +68,17 @@ function isAllDaySelection(start: Date, end: Date): boolean {
   return (end.getTime() - start.getTime()) % DAY_MS === 0;
 }
 
+function noonOf(date: Date): Date {
+  const noon = new Date(date);
+  noon.setHours(12, 0, 0, 0);
+  return noon;
+}
+
 function hasBusinessHoursOnDate(
   date: Date,
   businessHours: BusinessHours,
 ): boolean {
-  return businessHours.getEffectiveTimeRanges(date).length > 0;
+  return businessHours.getEffectiveTimeRanges(noonOf(date)).length > 0;
 }
 
 function buildBusinessHourRangesFromAllDaySelection(
@@ -84,7 +90,7 @@ function buildBusinessHourRangesFromAllDaySelection(
   const currentDay = new Date(start);
 
   while (currentDay < end) {
-    const timeRanges = businessHours.getEffectiveTimeRanges(currentDay);
+    const timeRanges = businessHours.getEffectiveTimeRanges(noonOf(currentDay));
     for (const timeRange of timeRanges) {
       ranges.push(...splitIntoSlotRanges(timeRange.startsAt, timeRange.endsAt));
     }
@@ -428,15 +434,12 @@ export default function ConsultantSlotsPage() {
               calendarBounds.minMinute,
             )
           }
-          max={
-            new Date(
-              1970,
-              0,
-              1,
-              calendarBounds.maxHour,
-              calendarBounds.maxMinute,
-            )
-          }
+          max={(() => {
+            const totalMinutes =
+              calendarBounds.maxHour * 60 + calendarBounds.maxMinute;
+            const clamped = Math.min(totalMinutes, 24 * 60 - 1);
+            return new Date(1970, 0, 1, Math.floor(clamped / 60), clamped % 60);
+          })()}
           messages={{
             today: "今日",
             previous: "前",

@@ -2336,6 +2336,9 @@ components:
 
     WeeklyBusinessHours:
       type: object
+      description: |
+        曜日ごとの営業時間。dayOfWeek は営業日 (5:00 JST 起点) の曜日で判定される。
+        例: 月曜 22:00〜火曜 3:00 の窓は dayOfWeek=1 (月) に定義する。
       required: [dayOfWeek, isClosed, timeWindows]
       properties:
         dayOfWeek:
@@ -2368,6 +2371,10 @@ components:
 
     BusinessTimeWindow:
       type: object
+      description: |
+        営業日 (5:00 JST 起点、翌 5:00 まで) 内の 1 つの時間帯。
+        `endTime <= startTime` の場合、その日跨ぎ (翌暦日終了) の窓を表す。
+        `startTime === endTime` は 24 時間営業を意味し、他の window と共存不可。
       required: [startTime, endTime]
       properties:
         startTime:
