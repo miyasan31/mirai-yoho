@@ -24,6 +24,15 @@ import { UpdateCouponUseCase } from "@/application/coupon/update-coupon-use-case
 import { GetDashboardUseCase } from "@/application/dashboard/get-dashboard-use-case";
 import { CancelPaymentUseCase } from "@/application/payment/cancel-payment-use-case";
 import { FailPaymentUseCase } from "@/application/payment/fail-payment-use-case";
+import { CreatePolicyRevisionDraftUseCase } from "@/application/policy/create-policy-revision-draft-use-case";
+import { GetLatestPublishedPolicyUseCase } from "@/application/policy/get-latest-published-policy-use-case";
+import { GetPolicyAgreementStatusUseCase } from "@/application/policy/get-policy-agreement-status-use-case";
+import { GetPolicyDiffUseCase } from "@/application/policy/get-policy-diff-use-case";
+import { GetPolicyRevisionUseCase } from "@/application/policy/get-policy-revision-use-case";
+import { ListPolicyRevisionsUseCase } from "@/application/policy/list-policy-revisions-use-case";
+import { PublishPolicyRevisionUseCase } from "@/application/policy/publish-policy-revision-use-case";
+import { RecordPolicyAgreementUseCase } from "@/application/policy/record-policy-agreement-use-case";
+import { UpdatePolicyRevisionDraftUseCase } from "@/application/policy/update-policy-revision-draft-use-case";
 import { ArchivePricePlanUseCase } from "@/application/price-plan/archive-price-plan-use-case";
 import { CreatePricePlanUseCase } from "@/application/price-plan/create-price-plan-use-case";
 import { UpdatePricePlanUseCase } from "@/application/price-plan/update-price-plan-use-case";
@@ -56,6 +65,8 @@ import { FirestoreCouponRepository } from "@/infrastructure/firestore/firestore-
 import { FirestoreCustomerRepository } from "@/infrastructure/firestore/firestore-customer-repository";
 import { FirestoreOrganizationRepository } from "@/infrastructure/firestore/firestore-organization-repository";
 import { FirestorePaymentRepository } from "@/infrastructure/firestore/firestore-payment-repository";
+import { FirestorePolicyAgreementRepository } from "@/infrastructure/firestore/firestore-policy-agreement-repository";
+import { FirestorePolicyRevisionRepository } from "@/infrastructure/firestore/firestore-policy-revision-repository";
 import { FirestorePricePlanRepository } from "@/infrastructure/firestore/firestore-price-plan-repository";
 import { FirestoreRoleRepository } from "@/infrastructure/firestore/firestore-role-repository";
 import { FirestoreSettingsRepository } from "@/infrastructure/firestore/firestore-settings-repository";
@@ -440,5 +451,65 @@ export function createListAvailableCouponsForOrgUseCase() {
     new FirestoreCouponRepository(),
     new FirestoreUserCouponRepository(),
     new FirestoreUserRepository(),
+  );
+}
+
+export function createPolicyRevisionRepository() {
+  return new FirestorePolicyRevisionRepository();
+}
+
+export function createPolicyAgreementRepository() {
+  return new FirestorePolicyAgreementRepository();
+}
+
+export function createCreatePolicyRevisionDraftUseCase() {
+  return new CreatePolicyRevisionDraftUseCase(
+    new FirestorePolicyRevisionRepository(),
+  );
+}
+
+export function createUpdatePolicyRevisionDraftUseCase() {
+  return new UpdatePolicyRevisionDraftUseCase(
+    new FirestorePolicyRevisionRepository(),
+  );
+}
+
+export function createPublishPolicyRevisionUseCase() {
+  return new PublishPolicyRevisionUseCase(
+    new FirestorePolicyRevisionRepository(),
+  );
+}
+
+export function createListPolicyRevisionsUseCase() {
+  return new ListPolicyRevisionsUseCase(
+    new FirestorePolicyRevisionRepository(),
+  );
+}
+
+export function createGetPolicyRevisionUseCase() {
+  return new GetPolicyRevisionUseCase(new FirestorePolicyRevisionRepository());
+}
+
+export function createGetPolicyDiffUseCase() {
+  return new GetPolicyDiffUseCase(new FirestorePolicyRevisionRepository());
+}
+
+export function createGetLatestPublishedPolicyUseCase() {
+  return new GetLatestPublishedPolicyUseCase(
+    new FirestorePolicyRevisionRepository(),
+  );
+}
+
+export function createGetPolicyAgreementStatusUseCase() {
+  return new GetPolicyAgreementStatusUseCase(
+    new FirestorePolicyRevisionRepository(),
+    new FirestorePolicyAgreementRepository(),
+  );
+}
+
+export function createRecordPolicyAgreementUseCase() {
+  return new RecordPolicyAgreementUseCase(
+    new FirestorePolicyRevisionRepository(),
+    new FirestorePolicyAgreementRepository(),
   );
 }
