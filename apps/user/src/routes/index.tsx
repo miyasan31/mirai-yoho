@@ -20,10 +20,10 @@ function Home() {
     >
       <styled.div textAlign="center" maxW="2xl" mb="8">
         <Text as="h1" textStyle="5xl" fontWeight="bold" mb="4">
-          みらい予報
+          あなたのみらい予報
         </Text>
         <Text textStyle="lg" color="fg.muted" maxW="md" mx="auto">
-          あなたの未来を一緒に考える、オンライン相談サービス
+          一般社団法人JKKが運営する、オンライン鑑定サービス
         </Text>
       </styled.div>
 

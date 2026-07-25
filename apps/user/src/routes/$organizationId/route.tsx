@@ -27,7 +27,7 @@ function OrganizationLayout() {
       >
         <Link to="/">
           <Text as="span" textStyle="md" fontWeight="bold">
-            みらい予報
+            あなたのみらい予報
           </Text>
         </Link>
         <Button asChild variant="outline" size="sm">
