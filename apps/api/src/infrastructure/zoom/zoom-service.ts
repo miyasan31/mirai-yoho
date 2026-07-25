@@ -67,7 +67,7 @@ export class ZoomService implements IZoomService {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          topic: `みらい予報 セッション ${params.sessionDate}`,
+          topic: `あなたのみらい予報 セッション ${params.sessionDate}`,
           type: 2,
           start_time: startTime,
           duration: 480,
