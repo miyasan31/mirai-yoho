@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { etag } from "hono/etag";
 import { Settings } from "@/domain/settings/settings";
 import {
   createConsultantRepository,
@@ -50,6 +51,7 @@ publicRoutes.get(
 
 publicRoutes.get(
   "/slots",
+  etag(),
   getRoute(async ({ organizationId, requestUrl, errorContext }) => {
     const consultantId = requestUrl.searchParams.get("consultantId");
     errorContext.endpoint = "GET /organizations/:organizationId/slots";
@@ -70,6 +72,7 @@ publicRoutes.get(
 
 publicRoutes.get(
   "/settings/public",
+  etag(),
   getRoute(async ({ organizationId }) => {
     const repository = createSettingsRepository();
     const settings =
@@ -85,6 +88,7 @@ publicRoutes.get(
 
 publicRoutes.get(
   "/price-plans",
+  etag(),
   getRoute(async ({ organizationId, requestUrl }) => {
     const consultantId = requestUrl.searchParams.get("consultantId");
     if (!consultantId) {
