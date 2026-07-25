@@ -1,5 +1,6 @@
 import { signupCustomer } from "@mirai-yoho/api-client/api/customer/customer";
 import type { CustomerProfile } from "@mirai-yoho/api-client/schemas";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   type User as FirebaseUser,
   signInAnonymously as firebaseSignInAnonymously,
@@ -64,6 +65,7 @@ async function fetchProfile(token: string): Promise<CustomerProfile | null> {
 }
 
 export function useCustomerAuthState(): CustomerAuthState {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<FirebaseUser | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [profile, setProfile] = useState<CustomerProfile | null>(null);
@@ -151,7 +153,8 @@ export function useCustomerAuthState(): CustomerAuthState {
 
   const signOut = useCallback(async () => {
     await firebaseSignOut(auth);
-  }, []);
+    queryClient.clear();
+  }, [queryClient]);
 
   const isAnonymous = user?.isAnonymous ?? false;
   const hasGoogleProvider =

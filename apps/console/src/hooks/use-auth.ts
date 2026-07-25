@@ -1,6 +1,7 @@
 import { envClient } from "@mirai-yoho/console-core/config/env.client";
 import { auth } from "@mirai-yoho/console-core/lib/firebase";
 import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-permission";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   sendPasswordResetEmail as firebaseSendPasswordResetEmail,
   signOut as firebaseSignOut,
@@ -62,6 +63,7 @@ interface AuthMePayload {
 }
 
 export function useAuthState(): AuthState {
+  const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -196,7 +198,8 @@ export function useAuthState(): AuthState {
 
   const signOut = useCallback(async () => {
     await firebaseSignOut(auth);
-  }, []);
+    queryClient.clear();
+  }, [queryClient]);
 
   const sendPasswordResetEmail = useCallback(async (email: string) => {
     try {

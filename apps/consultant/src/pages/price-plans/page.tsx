@@ -1,3 +1,4 @@
+import { getListPricePlansQueryKey } from "@mirai-yoho/api-client/api/consultant/consultant";
 import type { CreatePricePlanRequestDurationMinutes } from "@mirai-yoho/api-client/schemas";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { SUPPORTED_DURATION_MINUTES } from "@mirai-yoho/shared/slot-availability";
@@ -23,12 +24,8 @@ import {
   useUpdatePricePlan,
 } from "@/hooks/use-price-plans";
 
-function getPricePlansQueryKey(organizationId: string) {
-  return [`/organizations/${organizationId}/consultant/price-plans`] as const;
-}
-
 export default function PricePlansPage() {
-  const queryCustomer = useQueryClient();
+  const queryClient = useQueryClient();
   const { organizationId } = useOrganizationRouting();
   const { data, isLoading } = usePricePlans();
   const createPricePlan = useCreatePricePlan();
@@ -45,8 +42,8 @@ export default function PricePlansPage() {
 
   const invalidatePricePlans = async () => {
     if (!organizationId) return;
-    await queryCustomer.invalidateQueries({
-      queryKey: getPricePlansQueryKey(organizationId),
+    await queryClient.invalidateQueries({
+      queryKey: getListPricePlansQueryKey(organizationId),
     });
   };
 
