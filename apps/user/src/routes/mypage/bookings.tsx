@@ -11,6 +11,7 @@ import * as Dialog from "@mirai-yoho/ui/components/ui/dialog";
 import { Skeleton, SkeletonText } from "@mirai-yoho/ui/components/ui/skeleton";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
+import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 import { format, parseISO } from "date-fns";
@@ -219,16 +220,18 @@ function BookingCard({ booking }: { booking: MyBooking }) {
               </a>
             </Button>
           ) : (
-            <Button
-              variant="solid"
-              colorPalette="blue"
-              size="sm"
-              disabled
-              title="開始30分前から参加できます"
+            <Tooltip
+              content="開始30分前から参加できます"
+              positioning={{ placement: "top-start" }}
+              showArrow
             >
-              <Video size={16} />
-              Zoom に参加
-            </Button>
+              <styled.span display="inline-flex">
+                <Button variant="solid" colorPalette="blue" size="sm" disabled>
+                  <Video size={16} />
+                  Zoom に参加
+                </Button>
+              </styled.span>
+            </Tooltip>
           ))}
         {isCancellable && <CancelButton bookingId={booking.bookingId} />}
       </styled.div>
