@@ -8,8 +8,11 @@ import {
   getGetConsoleCouponsQueryKey,
   getGetConsoleDashboardQueryKey,
   getGetConsolePaymentsQueryKey,
+  getGetConsolePolicyRevisionQueryKey,
+  getGetConsolePolicyRevisionsQueryKey,
   getGetConsoleRolesQueryKey,
   getGetConsoleSlotsQueryKey,
+  getGetPolicyRevisionDiffQueryKey,
 } from "@mirai-yoho/api-client/api/console/console";
 import {
   getGetConsultantBookingsQueryKey,
@@ -20,10 +23,13 @@ import {
 import {
   getGetAvailableCouponsQueryKey,
   getGetCustomerCouponsQueryKey,
+  getGetCustomerPolicyAgreementStatusQueryKey,
   getGetMyBookingsQueryKey,
 } from "@mirai-yoho/api-client/api/customer/customer";
+import { getGetLatestPublishedPolicyQueryKey } from "@mirai-yoho/api-client/api/public/public";
 import { getGetPublicSettingsQueryKey } from "@mirai-yoho/api-client/api/settings/settings";
 import { getGetSlotsQueryKey } from "@mirai-yoho/api-client/api/slot/slot";
+import type { PolicyType } from "@mirai-yoho/api-client/schemas";
 import type { QueryClient } from "@tanstack/react-query";
 
 /**
@@ -157,4 +163,34 @@ export const invalidateAfter = {
     qc.invalidateQueries({
       queryKey: getGetConsultantBookingsQueryKey(organizationId),
     }),
+
+  policyRevisionMutation: (
+    qc: QueryClient,
+    organizationId: string,
+    type: PolicyType,
+  ) =>
+    Promise.all([
+      qc.invalidateQueries({
+        queryKey: getGetConsolePolicyRevisionsQueryKey(organizationId, type),
+      }),
+      // 差分クエリと詳細クエリは params/revisionId をキー末尾に持つため prefix で一括
+      qc.invalidateQueries({
+        queryKey: getGetConsolePolicyRevisionQueryKey(
+          organizationId,
+          type,
+          "",
+        ).slice(0, -1),
+      }),
+      qc.invalidateQueries({
+        queryKey: getGetPolicyRevisionDiffQueryKey(organizationId, type, {
+          to: "",
+        }).slice(0, -1),
+      }),
+      qc.invalidateQueries({
+        queryKey: getGetLatestPublishedPolicyQueryKey(organizationId, type),
+      }),
+      qc.invalidateQueries({
+        queryKey: getGetCustomerPolicyAgreementStatusQueryKey(organizationId),
+      }),
+    ]),
 } as const;

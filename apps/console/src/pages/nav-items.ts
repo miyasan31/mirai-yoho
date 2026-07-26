@@ -2,6 +2,7 @@ import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-p
 import {
   CalendarDays,
   CreditCard,
+  FileText,
   House,
   LayoutDashboard,
   Settings,
@@ -65,6 +66,12 @@ export const NAV_ITEMS: Array<
     label: "クーポン管理",
     icon: TicketPercent,
     permissions: ["console.coupons.read"],
+  },
+  {
+    path: "/policies",
+    label: "利用規約・キャンセルポリシー",
+    icon: FileText,
+    permissions: ["console.policies.read"],
   },
   {
     path: "/settings",
