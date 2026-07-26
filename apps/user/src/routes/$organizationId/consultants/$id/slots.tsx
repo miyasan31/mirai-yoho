@@ -12,8 +12,8 @@ import { ArrowLeft, CalendarX, CircleX } from "lucide-react";
 import { useMemo } from "react";
 import { styled } from "styled-system/jsx";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
-import { usePricePlanOptions } from "@/hooks/use-price-plans";
-import { useGetSlots } from "@/hooks/use-slots";
+import { useSuspensePricePlanOptions } from "@/hooks/use-price-plans";
+import { useSuspenseSlots } from "@/hooks/use-slots";
 import { collectBookableStartTimesForDuration } from "@/lib/continuous-slots";
 import { pageHead } from "@/lib/head";
 
@@ -50,6 +50,8 @@ export const Route = createFileRoute("/$organizationId/consultants/$id/slots")({
         getGetPricePlansQueryOptions(organizationId, { consultantId }),
       ),
     ]),
+  pendingComponent: SlotsPagePending,
+  errorComponent: SlotsPageError,
   component: SlotsPage,
 });
 
@@ -61,20 +63,35 @@ function formatTime(isoString: string): string {
   return format(parseISO(isoString), "HH:mm");
 }
 
-function SlotsSkeleton() {
+function SlotsPagePending() {
   return (
-    <styled.div display="flex" flexDirection="column" gap="6">
-      {[0, 1, 2].map((groupIdx) => (
-        <div key={groupIdx}>
-          <Skeleton height="6" width="40%" mb="3" />
-          <styled.div display="flex" flexDirection="column" gap="2">
-            {[0, 1, 2].map((slotIdx) => (
-              <Skeleton key={slotIdx} height="14" width="full" rounded="l2" />
-            ))}
-          </styled.div>
-        </div>
-      ))}
+    <styled.div maxW="2xl" mx="auto" p="8">
+      <Skeleton height="4" width="30%" mb="4" />
+      <Skeleton height="8" width="50%" mb="2" />
+      <Skeleton height="4" width="60%" mb="8" />
+      <styled.div display="flex" flexDirection="column" gap="6">
+        {[0, 1, 2].map((groupIdx) => (
+          <div key={groupIdx}>
+            <Skeleton height="6" width="40%" mb="3" />
+            <styled.div display="flex" flexDirection="column" gap="2">
+              {[0, 1, 2].map((slotIdx) => (
+                <Skeleton key={slotIdx} height="14" width="full" rounded="l2" />
+              ))}
+            </styled.div>
+          </div>
+        ))}
+      </styled.div>
     </styled.div>
+  );
+}
+
+function SlotsPageError() {
+  return (
+    <EmptyState
+      icon={CircleX}
+      message="空き枠情報の取得に失敗しました"
+      hint="しばらくしてからもう一度お試しください"
+    />
   );
 }
 
@@ -82,14 +99,16 @@ function SlotsPage() {
   const { organizationId, id: consultantId } = Route.useParams();
   const { selectionId, durationMinutes } = Route.useSearch();
   const { buildPath } = useOrganizationRouting();
-  const { data, isLoading, error } = useGetSlots({ consultantId });
-  const pricePlansQuery = usePricePlanOptions({ consultantId });
+  const { data } = useSuspenseSlots(organizationId, { consultantId });
+  const pricePlansQuery = useSuspensePricePlanOptions(organizationId, {
+    consultantId,
+  });
   const selectedPlan =
-    pricePlansQuery.data?.data?.pricePlans.find(
+    pricePlansQuery.data.data.pricePlans.find(
       (plan) => plan.selectionId === selectionId,
     ) ?? null;
 
-  const slots = data?.data?.slots ?? [];
+  const slots = data.data.slots;
 
   const bookableStarts = useMemo(
     () =>
@@ -133,27 +152,6 @@ function SlotsPage() {
           </Link>
         </styled.div>
       </styled.div>
-    );
-  }
-
-  if (isLoading || pricePlansQuery.isLoading) {
-    return (
-      <styled.div maxW="2xl" mx="auto" p="8">
-        <Skeleton height="4" width="30%" mb="4" />
-        <Skeleton height="8" width="50%" mb="2" />
-        <Skeleton height="4" width="60%" mb="8" />
-        <SlotsSkeleton />
-      </styled.div>
-    );
-  }
-
-  if (error) {
-    return (
-      <EmptyState
-        icon={CircleX}
-        message="空き枠情報の取得に失敗しました"
-        hint="しばらくしてからもう一度お試しください"
-      />
     );
   }
 

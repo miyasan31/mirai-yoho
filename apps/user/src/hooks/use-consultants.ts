@@ -1,4 +1,7 @@
-import { useGetConsultants as useGeneratedGetConsultants } from "@mirai-yoho/api-client/api/consultant/consultant";
+import {
+  useGetConsultants as useGeneratedGetConsultants,
+  useGetConsultantsSuspense,
+} from "@mirai-yoho/api-client/api/consultant/consultant";
 import { cachePolicy } from "@mirai-yoho/console-core/query/cache-policy";
 import { useOrganizationRouting } from "@/hooks/use-organization-routing";
 
@@ -7,6 +10,15 @@ export function useGetConsultants(enabled = true) {
   return useGeneratedGetConsultants(organizationId ?? "", {
     query: {
       enabled: enabled && !!organizationId,
+      staleTime: cachePolicy.normal.staleTime,
+      gcTime: cachePolicy.normal.gcTime,
+    },
+  });
+}
+
+export function useSuspenseConsultants(organizationId: string) {
+  return useGetConsultantsSuspense(organizationId, {
+    query: {
       staleTime: cachePolicy.normal.staleTime,
       gcTime: cachePolicy.normal.gcTime,
     },
