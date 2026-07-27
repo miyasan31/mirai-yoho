@@ -107,8 +107,9 @@ function BookingPageInner() {
     "cancellation_policy",
     { query: { enabled: Boolean(organizationId) } },
   );
-  const termsRevision = termsQuery.data?.data ?? null;
-  const cancellationPolicyRevision = cancellationPolicyQuery.data?.data ?? null;
+  const termsRevision = termsQuery.data?.data?.revision ?? null;
+  const cancellationPolicyRevision =
+    cancellationPolicyQuery.data?.data?.revision ?? null;
 
   const couponsQuery = useGetCustomerCoupons({
     query: { enabled: Boolean(profile) },

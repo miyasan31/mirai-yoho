@@ -19,12 +19,12 @@ export function PolicyPage({
   type,
   headingLabel,
 }: PolicyPageProps) {
-  const { data, isLoading, isError, error } = useGetLatestPublishedPolicy(
+  const { data, isLoading, isError } = useGetLatestPublishedPolicy(
     organizationId,
     type,
   );
 
-  const revision = data?.data;
+  const revision = data?.data?.revision ?? null;
 
   return (
     <styled.article maxW="3xl" mx="auto" px="6" py="10">
@@ -44,10 +44,9 @@ export function PolicyPage({
           読み込み中...
         </Text>
       )}
-      {isError && (
-        <Text textStyle="sm" color="fg.error">
-          読み込みに失敗しました。しばらくしてから再度お試しください。
-          {error instanceof Error ? `（${error.message}）` : null}
+      {isError && !revision && (
+        <Text textStyle="sm" color="fg.muted">
+          この組織ではまだ公開版がありません。管理者による公開をお待ちください。
         </Text>
       )}
       {revision && <MarkdownView body={revision.body} />}
