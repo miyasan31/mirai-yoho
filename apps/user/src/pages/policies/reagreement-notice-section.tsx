@@ -35,7 +35,7 @@ export function ReagreementNoticeSection({
   return (
     <styled.section display="flex" flexDir="column" gap="3">
       {organizations.map((org) => (
-        <ReagreementRow
+        <SingleOrgReagreementCard
           key={org.organizationId}
           organizationId={org.organizationId}
           organizationName={org.organizationName ?? org.organizationId}
@@ -45,7 +45,7 @@ export function ReagreementNoticeSection({
   );
 }
 
-interface ReagreementRowProps {
+export interface SingleOrgReagreementCardProps {
   organizationId: string;
   organizationName: string;
 }
@@ -56,10 +56,10 @@ const TYPE_LABEL: Record<PolicyType, string> = {
   privacy_policy: "プライバシーポリシー",
 };
 
-function ReagreementRow({
+export function SingleOrgReagreementCard({
   organizationId,
   organizationName,
-}: ReagreementRowProps) {
+}: SingleOrgReagreementCardProps) {
   const { data } = useGetCustomerPolicyAgreementStatus(organizationId);
   const status = data?.data;
   const [openTarget, setOpenTarget] = useState<PolicyType | null>(null);
