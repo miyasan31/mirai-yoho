@@ -237,13 +237,13 @@ function DiffPanel({ chunks }: { chunks: PolicyDiffChunk[] }) {
 function DiffRow({ line }: { line: DiffLine }) {
   const isAdd = line.kind === "add";
   const isRemove = line.kind === "remove";
-  // 追加行（新版）は blue、削除行（以前）は slate（gray）で表示
-  const rowBg = isAdd ? "blue.a4" : isRemove ? "slate.a4" : "transparent";
-  const gutterBg = isAdd ? "blue.a6" : isRemove ? "slate.a6" : "bg.subtle";
-  const gutterColor = isAdd ? "blue.11" : isRemove ? "slate.11" : "fg.muted";
+  // 追加行（新版）は明るめの青、削除行（変更前）は濃いめの青で表示
+  const rowBg = isAdd ? "blue.a4" : isRemove ? "blue.a7" : "transparent";
+  const gutterBg = isAdd ? "blue.a6" : isRemove ? "blue.a9" : "bg.subtle";
+  const gutterColor = isAdd ? "blue.11" : isRemove ? "blue.12" : "fg.muted";
   const sign = isAdd ? "+" : isRemove ? "-" : " ";
-  const signColor = isAdd ? "blue.11" : isRemove ? "slate.11" : "fg.muted";
-  const contentColor = isAdd ? "blue.12" : isRemove ? "slate.11" : "fg.default";
+  const signColor = isAdd ? "blue.11" : isRemove ? "blue.12" : "fg.muted";
+  const contentColor = isAdd ? "blue.12" : isRemove ? "blue.12" : "fg.default";
 
   return (
     <styled.tr bg={rowBg}>
