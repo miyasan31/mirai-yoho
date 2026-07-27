@@ -1,6 +1,7 @@
 import { useGetMyBookings } from "@mirai-yoho/api-client/api/customer/customer";
 import type { MyBooking } from "@mirai-yoho/api-client/schemas";
 import { useCustomerAuth } from "./use-customer-auth";
+import { useSuspenseMyBookings } from "./use-my-bookings";
 
 export interface VisitedOrganization {
   organizationId: string;
@@ -37,4 +38,12 @@ export function useVisitedOrganizations(): {
   });
   const organizations = collectVisitedOrganizations(data?.data?.bookings ?? []);
   return { organizations, isLoading };
+}
+
+export function useSuspenseVisitedOrganizations(): {
+  organizations: VisitedOrganization[];
+} {
+  const { data } = useSuspenseMyBookings();
+  const organizations = collectVisitedOrganizations(data.data.bookings);
+  return { organizations };
 }

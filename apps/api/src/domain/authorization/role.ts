@@ -86,6 +86,7 @@ export class Role {
         "console.slots.read",
         "console.slots.manage",
         "console.settings.read",
+        "console.policies.read",
         "console.accounts.read",
         "console.accounts.display-name.manage",
         "console.accounts.invite.resend",

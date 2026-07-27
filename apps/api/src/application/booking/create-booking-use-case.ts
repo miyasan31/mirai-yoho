@@ -6,7 +6,6 @@ import {
   isSupportedDuration,
   type SupportedDurationMinutes,
 } from "@mirai-yoho/shared/slot-availability";
-import { isSupportedTermsVersion } from "@mirai-yoho/shared/terms-version";
 import { AppError } from "@/application/shared/app-error";
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IUnitOfWork } from "@/application/shared/unit-of-work";
@@ -18,6 +17,11 @@ import { ZoomUrl } from "@/domain/booking/zoom-url";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
 import { Customer } from "@/domain/customer/customer";
 import type { ICustomerRepository } from "@/domain/customer/customer-repository";
+import { PolicyAgreement } from "@/domain/policy/policy-agreement";
+import type { IPolicyAgreementRepository } from "@/domain/policy/policy-agreement-repository";
+import type { PolicyRevision } from "@/domain/policy/policy-revision";
+import type { IPolicyRevisionRepository } from "@/domain/policy/policy-revision-repository";
+import type { PolicyType } from "@/domain/policy/policy-type";
 import {
   type PricePlan,
   parsePricePlanSelectionId,
@@ -47,7 +51,8 @@ interface CreateBookingInput {
   consultationContent?: string;
   selectionId: string;
   selectedUserCouponId?: string;
-  agreedTermsVersion: string;
+  agreedTermsRevisionId: string;
+  agreedCancellationPolicyRevisionId: string;
   agreedAt: Date;
   guardianName?: string;
   guardianConsentedAt?: Date;
@@ -88,6 +93,8 @@ export class CreateBookingUseCase {
     private readonly settingsRepository: ISettingsRepository,
     private readonly userRepository: IUserRepository,
     private readonly userCouponRepository: IUserCouponRepository,
+    private readonly policyRevisionRepository: IPolicyRevisionRepository,
+    private readonly policyAgreementRepository: IPolicyAgreementRepository,
   ) {}
 
   async execute(input: CreateBookingInput): Promise<CreateBookingOutput> {
@@ -100,13 +107,16 @@ export class CreateBookingUseCase {
     }
     const durationMinutes: SupportedDurationMinutes = input.durationMinutes;
 
-    if (!isSupportedTermsVersion(input.agreedTermsVersion)) {
-      throw new AppError(
-        400,
-        "TERMS_VERSION_UNSUPPORTED",
-        "agreedTermsVersion does not match the currently published terms version",
-      );
-    }
+    const termsRevision = await this.resolvePublishedRevision(
+      input.organizationId,
+      "terms",
+      input.agreedTermsRevisionId,
+    );
+    const cancellationRevision = await this.resolvePublishedRevision(
+      input.organizationId,
+      "cancellation_policy",
+      input.agreedCancellationPolicyRevisionId,
+    );
 
     if (BirthDate.isMinor(input.customerBirthDate, new Date())) {
       if (!input.guardianName || !input.guardianConsentedAt) {
@@ -206,7 +216,8 @@ export class CreateBookingUseCase {
             discountJPY: appliedCoupon.getAmountJPY(),
           }
         : undefined,
-      agreedTermsVersion: input.agreedTermsVersion,
+      agreedTermsVersion: termsRevision.getVersion(),
+      agreedCancellationPolicyVersion: cancellationRevision.getVersion(),
       agreedAt: input.agreedAt,
     });
 
@@ -302,7 +313,66 @@ export class CreateBookingUseCase {
       }
     });
 
+    await this.recordAgreements({
+      organizationId: input.organizationId,
+      userId: input.userId,
+      bookingId,
+      agreedAt: input.agreedAt,
+      revisions: [termsRevision, cancellationRevision],
+    });
+
     return { bookingId, joinUrl: session.getJoinUrl() };
+  }
+
+  private async resolvePublishedRevision(
+    organizationId: string,
+    type: PolicyType,
+    revisionId: string,
+  ): Promise<PolicyRevision> {
+    const revision = await this.policyRevisionRepository.findById(revisionId);
+    if (
+      !revision ||
+      revision.getOrganizationId() !== organizationId ||
+      revision.getType() !== type
+    ) {
+      throw new AppError(
+        404,
+        "POLICY_REVISION_NOT_FOUND",
+        `Policy revision ${revisionId} not found for type ${type}`,
+      );
+    }
+    if (!revision.isPublished()) {
+      throw new AppError(
+        400,
+        "POLICY_REVISION_NOT_PUBLISHED",
+        `Policy revision ${revisionId} is not published`,
+      );
+    }
+    return revision;
+  }
+
+  private async recordAgreements(params: {
+    organizationId: string;
+    userId: string;
+    bookingId: string;
+    agreedAt: Date;
+    revisions: PolicyRevision[];
+  }): Promise<void> {
+    for (const revision of params.revisions) {
+      const agreement = PolicyAgreement.create({
+        agreementId: crypto.randomUUID(),
+        organizationId: params.organizationId,
+        type: revision.getType(),
+        subjectType: "user",
+        subjectId: params.userId,
+        revisionId: revision.getRevisionId(),
+        version: revision.getVersion(),
+        agreedVia: "booking",
+        bookingId: params.bookingId,
+        agreedAt: params.agreedAt,
+      });
+      await this.policyAgreementRepository.save(agreement);
+    }
   }
 
   private async resolveAppliedCoupon(

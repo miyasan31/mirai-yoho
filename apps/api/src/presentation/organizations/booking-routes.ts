@@ -61,7 +61,8 @@ bookingRoutes.post(
       consultantContent,
       selectionId,
       selectedUserCouponId,
-      agreedTermsVersion,
+      agreedTermsRevisionId,
+      agreedCancellationPolicyRevisionId,
       agreedAt,
       guardianName,
       guardianConsentedAt,
@@ -95,13 +96,23 @@ bookingRoutes.post(
       );
     }
     if (
-      typeof agreedTermsVersion !== "string" ||
-      agreedTermsVersion.length === 0
+      typeof agreedTermsRevisionId !== "string" ||
+      agreedTermsRevisionId.length === 0
     ) {
       return jsonError(
         400,
         "VALIDATION_ERROR",
-        "agreedTermsVersion is required",
+        "agreedTermsRevisionId is required",
+      );
+    }
+    if (
+      typeof agreedCancellationPolicyRevisionId !== "string" ||
+      agreedCancellationPolicyRevisionId.length === 0
+    ) {
+      return jsonError(
+        400,
+        "VALIDATION_ERROR",
+        "agreedCancellationPolicyRevisionId is required",
       );
     }
     if (typeof agreedAt !== "string" || agreedAt.length === 0) {
@@ -174,7 +185,8 @@ bookingRoutes.post(
         typeof selectedUserCouponId === "string" && selectedUserCouponId
           ? selectedUserCouponId
           : undefined,
-      agreedTermsVersion,
+      agreedTermsRevisionId,
+      agreedCancellationPolicyRevisionId,
       agreedAt: parsedAgreedAt,
       guardianName:
         typeof guardianName === "string" ? guardianName.trim() : undefined,

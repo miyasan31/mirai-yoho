@@ -32,6 +32,7 @@ interface BookingCreateProps {
   pricePlanTotalJPY: number;
   appliedCoupon?: AppliedCoupon;
   agreedTermsVersion: string;
+  agreedCancellationPolicyVersion: string;
   agreedAt: Date;
   createdAt?: Date;
   updatedAt?: Date;
@@ -45,6 +46,7 @@ interface BookingProps
     | "pricePlanTotalJPY"
     | "appliedCoupon"
     | "agreedTermsVersion"
+    | "agreedCancellationPolicyVersion"
     | "agreedAt"
   > {
   status: BookingStatus;
@@ -60,6 +62,7 @@ interface BookingProps
   discountedTotalJPY?: number;
   lateArrivalAlertSentAt?: Date;
   agreedTermsVersion?: string;
+  agreedCancellationPolicyVersion?: string;
   agreedAt?: Date;
 }
 
@@ -89,6 +92,7 @@ export class Booking extends AggregateRoot {
     private readonly couponDiscountJPY: number | undefined,
     private readonly discountedTotalJPY: number | undefined,
     private readonly agreedTermsVersion: string | undefined,
+    private readonly agreedCancellationPolicyVersion: string | undefined,
     private readonly agreedAt: Date | undefined,
     private readonly createdAt: Date,
     private updatedAt: Date,
@@ -135,6 +139,7 @@ export class Booking extends AggregateRoot {
       couponDiscountJPY,
       discountedTotalJPY,
       props.agreedTermsVersion,
+      props.agreedCancellationPolicyVersion,
       props.agreedAt,
       props.createdAt ?? now,
       props.updatedAt ?? now,
@@ -168,6 +173,7 @@ export class Booking extends AggregateRoot {
       props.couponDiscountJPY,
       props.discountedTotalJPY,
       props.agreedTermsVersion,
+      props.agreedCancellationPolicyVersion,
       props.agreedAt,
       createdAt,
       props.updatedAt ?? createdAt,
@@ -395,6 +401,10 @@ export class Booking extends AggregateRoot {
 
   getAgreedTermsVersion(): string | undefined {
     return this.agreedTermsVersion;
+  }
+
+  getAgreedCancellationPolicyVersion(): string | undefined {
+    return this.agreedCancellationPolicyVersion;
   }
 
   getAgreedAt(): Date | undefined {

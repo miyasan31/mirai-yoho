@@ -1,12 +1,12 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import { useGetCustomerCoupons } from "@mirai-yoho/api-client/api/customer/customer";
+import { useGetLatestPublishedPolicy } from "@mirai-yoho/api-client/api/public/public";
 import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import {
   getBookingCutoffMinutes,
   isBeforeBookingDeadline,
   isSupportedDuration,
 } from "@mirai-yoho/shared/slot-availability";
-import { CURRENT_TERMS_VERSION } from "@mirai-yoho/shared/terms-version";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Checkbox from "@mirai-yoho/ui/components/ui/checkbox";
@@ -98,6 +98,18 @@ function BookingPageInner() {
     typeof consultantId === "string" && consultantId.length > 0;
 
   const [selectedUserCouponId, setSelectedUserCouponId] = useState<string>("");
+
+  const termsQuery = useGetLatestPublishedPolicy(organizationId, "terms", {
+    query: { enabled: Boolean(organizationId) },
+  });
+  const cancellationPolicyQuery = useGetLatestPublishedPolicy(
+    organizationId,
+    "cancellation_policy",
+    { query: { enabled: Boolean(organizationId) } },
+  );
+  const termsRevision = termsQuery.data?.data ?? null;
+  const cancellationPolicyRevision = cancellationPolicyQuery.data?.data ?? null;
+
   const couponsQuery = useGetCustomerCoupons({
     query: { enabled: Boolean(profile) },
   });
@@ -247,6 +259,15 @@ function BookingPageInner() {
       });
       return;
     }
+    if (!termsRevision || !cancellationPolicyRevision) {
+      toaster.create({
+        type: "error",
+        title: "利用規約またはキャンセルポリシーが未公開です",
+        description:
+          "この組織ではまだポリシーが公開されていないため予約できません。運営者にお問い合わせください。",
+      });
+      return;
+    }
     try {
       const result = await createBooking.mutateAsync({
         organizationId,
@@ -261,7 +282,9 @@ function BookingPageInner() {
           consultantContent: values.consultantContent?.trim() || undefined,
           selectionId,
           selectedUserCouponId: selectedUserCouponId || undefined,
-          agreedTermsVersion: CURRENT_TERMS_VERSION,
+          agreedTermsRevisionId: termsRevision.revisionId,
+          agreedCancellationPolicyRevisionId:
+            cancellationPolicyRevision.revisionId,
           agreedAt: new Date().toISOString(),
           ...(isMinorCustomer && values.guardianName
             ? {
@@ -623,7 +646,8 @@ function BookingPageInner() {
                   </Checkbox.Control>
                   <Checkbox.Label>
                     <Link
-                      to="/terms"
+                      to="/$organizationId/terms"
+                      params={{ organizationId }}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(event) => event.stopPropagation()}
@@ -637,7 +661,8 @@ function BookingPageInner() {
                     </Link>
                     および
                     <Link
-                      to="/cancellation-policy"
+                      to="/$organizationId/cancellation-policy"
+                      params={{ organizationId }}
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(event) => event.stopPropagation()}

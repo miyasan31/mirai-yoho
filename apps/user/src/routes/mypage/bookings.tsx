@@ -1,7 +1,4 @@
-import {
-  useCancelMyBooking,
-  useGetMyBookings,
-} from "@mirai-yoho/api-client/api/customer/customer";
+import { useCancelMyBooking } from "@mirai-yoho/api-client/api/customer/customer";
 import type { MyBooking } from "@mirai-yoho/api-client/schemas";
 import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
 import { EmptyState } from "@mirai-yoho/ui/components/empty-state";
@@ -17,13 +14,15 @@ import { createFileRoute } from "@tanstack/react-router";
 import { format, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
 import { CalendarX, CircleX, Video } from "lucide-react";
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
+import { useSuspenseMyBookings } from "@/hooks/use-my-bookings";
 import { pageHead } from "@/lib/head";
 
 export const Route = createFileRoute("/mypage/bookings")({
   head: () => pageHead("予約履歴"),
+  errorComponent: MyBookingsError,
   component: MypageBookingsPage,
 });
 
@@ -75,12 +74,60 @@ function BookingCardSkeleton() {
   );
 }
 
+function MyBookingsPending() {
+  return (
+    <styled.div display="flex" flexDir="column" gap="3">
+      <BookingCardSkeleton />
+      <BookingCardSkeleton />
+    </styled.div>
+  );
+}
+
+function MyBookingsError() {
+  return (
+    <EmptyState
+      icon={CircleX}
+      message="予約一覧の取得に失敗しました"
+      hint="時間をおいて再度お試しください"
+    />
+  );
+}
+
 function MypageBookingsPage() {
   const { isSignedUp } = useCustomerAuth();
-  const { data, isLoading, isError } = useGetMyBookings({
-    query: { enabled: isSignedUp },
-  });
-  const bookings = data?.data?.bookings ?? [];
+  return (
+    <styled.div display="flex" flexDir="column" gap="6">
+      <Text as="h1" textStyle="2xl" fontWeight="bold">
+        予約一覧
+      </Text>
+      {isSignedUp ? (
+        <Suspense fallback={<MyBookingsPending />}>
+          <MyBookingsList />
+        </Suspense>
+      ) : (
+        <EmptyState
+          icon={CalendarX}
+          message="予約はありません"
+          hint="サービスを予約してみましょう"
+        />
+      )}
+    </styled.div>
+  );
+}
+
+function MyBookingsList() {
+  const { data } = useSuspenseMyBookings();
+  const bookings = data.data.bookings;
+
+  if (bookings.length === 0) {
+    return (
+      <EmptyState
+        icon={CalendarX}
+        message="予約はありません"
+        hint="サービスを予約してみましょう"
+      />
+    );
+  }
 
   const now = Date.now();
   const upcoming = bookings.filter(
@@ -96,34 +143,10 @@ function MypageBookingsPage() {
   );
 
   return (
-    <styled.div display="flex" flexDir="column" gap="6">
-      <Text as="h1" textStyle="2xl" fontWeight="bold">
-        予約一覧
-      </Text>
-      {isError ? (
-        <EmptyState
-          icon={CircleX}
-          message="予約一覧の取得に失敗しました"
-          hint="時間をおいて再度お試しください"
-        />
-      ) : isLoading ? (
-        <styled.div display="flex" flexDir="column" gap="3">
-          <BookingCardSkeleton />
-          <BookingCardSkeleton />
-        </styled.div>
-      ) : bookings.length === 0 ? (
-        <EmptyState
-          icon={CalendarX}
-          message="予約はありません"
-          hint="サービスを予約してみましょう"
-        />
-      ) : (
-        <>
-          <BookingSection title="今後の予約" items={upcoming} />
-          <BookingSection title="過去の予約" items={past} />
-        </>
-      )}
-    </styled.div>
+    <>
+      <BookingSection title="今後の予約" items={upcoming} />
+      <BookingSection title="過去の予約" items={past} />
+    </>
   );
 }
 

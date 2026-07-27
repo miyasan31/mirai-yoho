@@ -17,6 +17,7 @@ import { styled } from "styled-system/jsx";
 import { useConsultantBookings } from "@/hooks/use-consultant-bookings";
 import { ConsultantJoinControl } from "../bookings/consultant-join-control";
 import { buildConsultantHomeViewModel } from "./home-view-model";
+import { PoliciesNotice } from "./policies-notice";
 
 function formatDatetime(value: string): string {
   return new Date(value).toLocaleString("ja-JP", {
@@ -29,7 +30,7 @@ function formatDatetime(value: string): string {
 }
 
 export default function ConsultantHomePage() {
-  const { buildPath } = useOrganizationRouting();
+  const { buildPath, organizationId } = useOrganizationRouting();
   const { data, isLoading, refetch } = useConsultantBookings({
     page: 1,
     pageSize: 100,
@@ -86,6 +87,8 @@ export default function ConsultantHomePage() {
           今日の優先タスクと担当状況を確認できます。
         </Text>
       </styled.div>
+
+      {organizationId && <PoliciesNotice organizationId={organizationId} />}
 
       <styled.div
         display="grid"

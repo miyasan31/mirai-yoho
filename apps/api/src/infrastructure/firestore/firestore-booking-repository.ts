@@ -45,6 +45,7 @@ interface BookingDoc {
   couponDiscountJPY?: number;
   discountedTotalJPY?: number;
   agreedTermsVersion?: string;
+  agreedCancellationPolicyVersion?: string;
   agreedAt?: Timestamp;
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
@@ -92,6 +93,7 @@ function toDomain(doc: BookingDoc): Booking {
     couponDiscountJPY: doc.couponDiscountJPY,
     discountedTotalJPY: doc.discountedTotalJPY,
     agreedTermsVersion: doc.agreedTermsVersion,
+    agreedCancellationPolicyVersion: doc.agreedCancellationPolicyVersion,
     agreedAt: doc.agreedAt?.toDate(),
     createdAt,
     updatedAt: doc.updatedAt?.toDate() ?? createdAt,
@@ -128,6 +130,8 @@ function toFirestore(booking: Booking): Record<string, unknown> {
     couponDiscountJPY: booking.getCouponDiscountJPY() ?? null,
     discountedTotalJPY: booking.getDiscountedTotalJPY() ?? null,
     agreedTermsVersion: booking.getAgreedTermsVersion() ?? null,
+    agreedCancellationPolicyVersion:
+      booking.getAgreedCancellationPolicyVersion() ?? null,
     agreedAt: booking.getAgreedAt() ?? null,
     createdAt: booking.getCreatedAt(),
     updatedAt: booking.getUpdatedAt(),

@@ -149,6 +149,27 @@ resource "google_firestore_index" "composite" {
         ["totalJPY", "ASCENDING"],
       ]
     }
+    # findLatestPublished: 組織 × 種別 × published × effectiveFrom<=now を効力発生日 desc で並べる
+    policy-revisions-latest-published = {
+      collection = "policy-revisions"
+      fields = [
+        ["organizationId", "ASCENDING"],
+        ["type", "ASCENDING"],
+        ["status", "ASCENDING"],
+        ["effectiveFrom", "DESCENDING"],
+      ]
+    }
+    # findLatestBySubject: 組織 × subjectType × subjectId × type を同意日時 desc で並べる
+    policy-agreements-latest-by-subject = {
+      collection = "policy-agreements"
+      fields = [
+        ["organizationId", "ASCENDING"],
+        ["subjectType", "ASCENDING"],
+        ["subjectId", "ASCENDING"],
+        ["type", "ASCENDING"],
+        ["agreedAt", "DESCENDING"],
+      ]
+    }
   }
 
   project     = var.project_id
