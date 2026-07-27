@@ -1,12 +1,23 @@
 import type { AppConfig } from "../src/types.js";
 
-const BASE_URL = process.env.CONSULTANT_BASE_URL ?? "http://localhost:3030";
-
 const config: AppConfig = {
   appId: "consultant",
   appName: "みらい予報 占い師コンソール",
   audience: "占い師",
-  baseUrl: BASE_URL,
+  defaultEnv: "local",
+  environments: {
+    local: {
+      baseUrl: process.env.CONSULTANT_BASE_URL ?? "http://localhost:3030",
+    },
+    dev: {
+      baseUrl: "https://dev.consultant.miraiyohou.com",
+      defaultOrgId: process.env.CONSULTANT_DEV_ORG_ID,
+    },
+    prod: {
+      baseUrl: "https://consultant.miraiyohou.com",
+      defaultOrgId: process.env.CONSULTANT_PROD_ORG_ID,
+    },
+  },
   loginPath: "/login",
   postLoginUrlPattern: /\/[^/]+\/home(\?.*)?$/,
   extractOrganizationId: (url: string) => {

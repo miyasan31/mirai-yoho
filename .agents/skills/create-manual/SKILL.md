@@ -1,32 +1,64 @@
 ---
 name: create-manual
-description: Playwright で SPA を巡回してスクショ + 注釈 + 説明つきの PDF 操作マニュアルを生成する。consultant / console / user など任意の SPA に対応
+description: Playwright で SPA を巡回してスクショ + 注釈 + 説明つきの PDF 操作マニュアルを生成する。consultant / console / user、local / dev / prod など任意の環境に対応
 user_invocable: true
-args: "<app_id>"
+args: "<app_id> [env]"
 ---
 
 # 操作マニュアル PDF の生成
 
-`scripts/manual/` のツールを使って、対象 SPA（consultant / console / user）を Playwright で巡回し、スクリーンショット + 番号付き注釈 + 説明文を組み込んだ PDF マニュアルを `doc/manual/<app_id>-manual.pdf` に生成します。
+`scripts/manual/` のツールを使って、対象 SPA（consultant / console / user）を Playwright で巡回し、スクリーンショット + 番号付き注釈 + 説明文を組み込んだ PDF マニュアルを生成します。出力先は環境に応じて:
+
+- local: `doc/manual/<app_id>-manual.pdf`
+- 他: `doc/manual/<app_id>-manual-<env>.pdf`
 
 ## 引数
 
 - `app_id`: 対象アプリ ID（`consultant` / `console` / `user`）。`scripts/manual/apps/<app_id>.ts` が存在するか、これから作成する
+- `env`（省略可）: 環境名（`local` / `dev` / `prod`）。省略時は config の `defaultEnv`
 
 ## いつ使うか
 
 - 「占い師管理画面のマニュアル作って」「consultant のマニュアルを更新して」など、SPA の操作マニュアルを PDF で欲しいと言われたとき
 - 既存アプリ config の注釈・文言を更新したいとき
 - 新しいアプリのマニュアルを追加したいとき
+- 「dev 環境で撮って欲しい」など環境を指定されたとき
 
 ## 全体フロー
 
-1. 対象 SPA を dev で起動（例: `pnpm dev:consultant`）
+1. local なら対象 SPA を dev で起動（例: `pnpm dev:consultant`）。dev / prod なら不要
 2. `apps/<app_id>.ts` が存在するか確認 → なければ新規作成（下記「新アプリ追加」参照）
-3. `pnpm --filter manual login <app_id>` で手動ログイン（初回のみ）
-4. `pnpm --filter manual build <app_id>` でキャプチャ → PDF 生成
+3. `pnpm --filter manual login <app_id> [env]` で手動ログイン（env ごとに初回のみ）
+4. `pnpm --filter manual build <app_id> [env]` でキャプチャ → PDF 生成
 5. 生成された PDF を確認し、注釈のズレや誤字を修正 → 再生成
 6. 必要に応じて `apps/<app_id>.ts` をコミット（PDF 本体はコミットしない場合が多い）
+
+## 環境と組織 ID の指定
+
+各 app config の `environments` に `local` / `dev` / `prod` を定義しておく:
+
+```ts
+environments: {
+  local: { baseUrl: "http://localhost:3030" },
+  dev: {
+    baseUrl: "https://dev.consultant.miraiyohou.com",
+    defaultOrgId: process.env.CONSULTANT_DEV_ORG_ID,
+  },
+  prod: {
+    baseUrl: "https://consultant.miraiyohou.com",
+    defaultOrgId: process.env.CONSULTANT_PROD_ORG_ID,
+  },
+},
+defaultEnv: "local",
+```
+
+組織 ID の優先順位:
+
+1. `MANUAL_ORG_ID` 環境変数（最優先）
+2. `state.json`（ログイン時に URL から自動抽出）
+3. `environments[env].defaultOrgId`
+
+つまり、恒常的な dev 組織を狙うなら `.env.dev` 相当の shell 変数で `CONSULTANT_DEV_ORG_ID` を持たせ、一回きりの切替なら `MANUAL_ORG_ID=... build ...` で上書きできる。
 
 ## 一貫性ルール（必ず遵守）
 
@@ -87,7 +119,8 @@ args: "<app_id>"
 
 - `appId`: `<app_id>` と一致
 - `appName` / `audience`: 上記命名規則に従う
-- `baseUrl`: 環境変数で上書き可能に（例: `process.env.CONSOLE_BASE_URL ?? "http://localhost:3010"`）
+- `environments`: `local` / `dev` / `prod` を定義。各 `{ baseUrl, defaultOrgId? }`。local の baseUrl は環境変数で上書き可能に（例: `process.env.CONSOLE_BASE_URL ?? "http://localhost:3010"`）
+- `defaultEnv`: 省略時に使う環境名（通常 `local`）
 - `loginPath`: ログイン画面のパス
 - `postLoginUrlPattern`: ログイン成功後に遷移する URL を検知する正規表現
 - `extractOrganizationId`: URL から orgId を取り出す関数（不要なら省略可）
@@ -105,24 +138,27 @@ args: "<app_id>"
 ## 実行例
 
 ```bash
-# 1. 対象 SPA を起動
+# local
 pnpm dev:consultant
-
-# 2. 手動ログイン（初回のみ）
 pnpm --filter manual login consultant
-
-# 3. 生成
 pnpm --filter manual build consultant
 # → doc/manual/consultant-manual.pdf
+
+# dev
+pnpm --filter manual login consultant dev
+pnpm --filter manual build consultant dev
+# → doc/manual/consultant-manual-dev.pdf
+
+# orgId を一時的に上書き
+MANUAL_ORG_ID=abc123 pnpm --filter manual build consultant dev
 ```
 
 ## トラブルシューティング
 
-- **`state.json が見つかりません`**: 先に `login` サブコマンドを実行
 - **注釈の番号が UI とズレる**: `apps/<app_id>.ts` のセレクタが変更後の DOM と一致していない。ソースを再読して選び直す
 - **画面が空 / ローディングのまま撮影される**: `waitForSelector` を確実に描画される要素に変える
-- **予約 ID など動的 param が取れない**: 対象 SPA にサンプルデータ（予約 1 件以上）が入っているか確認
-- **ログインセッションが切れた**: `.work/<app_id>/profile/` を削除し `login` からやり直す
+- **予約 ID など動的 param が取れない**: 対象 SPA にサンプルデータ（予約 1 件以上）が入っているか確認、または `MANUAL_ORG_ID` / config の `defaultOrgId` を設定
+- **ログインセッションが切れた**: `.work/<app_id>/<env>/profile/` を削除し `login` からやり直す
 
 ## やってはいけないこと
 

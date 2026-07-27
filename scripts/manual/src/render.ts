@@ -2,15 +2,16 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 import { chromium } from "playwright";
-import { loadAppConfig, resolveAppId } from "./load-app.js";
+import { loadAppConfig, parseCliArgs, resolveApp } from "./load-app.js";
 import { appPaths } from "./paths.js";
 import { renderHtml } from "./template.js";
 import type { CaptureResult } from "./types.js";
 
 async function main() {
-  const appId = resolveAppId();
-  await loadAppConfig(appId); // 存在確認
-  const paths = appPaths(appId);
+  const { appId, env: envArg } = parseCliArgs();
+  const config = await loadAppConfig(appId);
+  const app = resolveApp(config, envArg);
+  const paths = appPaths(appId, app.env);
 
   const raw = readFileSync(paths.captureJson, "utf-8");
   const result = JSON.parse(raw) as CaptureResult;

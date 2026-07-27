@@ -1,19 +1,23 @@
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { APPS_DIR } from "./paths.js";
-import type { AppConfig } from "./types.js";
+import type { AppConfig, ResolvedApp } from "./types.js";
 
-export function resolveAppId(): string {
-  const fromEnv = process.env.MANUAL_APP;
-  const fromArg = process.argv[2];
-  const appId = fromArg ?? fromEnv;
+export type CliArgs = {
+  appId: string;
+  env: string | undefined;
+};
+
+export function parseCliArgs(): CliArgs {
+  const appId = process.argv[2] ?? process.env.MANUAL_APP;
+  const env = process.argv[3] ?? process.env.MANUAL_ENV;
   if (!appId) {
     console.error(
-      "アプリ ID を指定してください（例: pnpm --filter manual login consultant）",
+      "アプリ ID を指定してください（例: pnpm --filter manual login consultant [env]）",
     );
     process.exit(1);
   }
-  return appId;
+  return { appId, env };
 }
 
 export async function loadAppConfig(appId: string): Promise<AppConfig> {
@@ -28,4 +32,17 @@ export async function loadAppConfig(appId: string): Promise<AppConfig> {
     );
   }
   return mod.default;
+}
+
+export function resolveApp(config: AppConfig, envArg?: string): ResolvedApp {
+  const env = envArg ?? config.defaultEnv;
+  const envConfig = config.environments[env];
+  if (!envConfig) {
+    const available = Object.keys(config.environments).join(", ");
+    throw new Error(
+      `環境 "${env}" は ${config.appId} で未定義です。定義済み: ${available}`,
+    );
+  }
+  const defaultOrgId = process.env.MANUAL_ORG_ID ?? envConfig.defaultOrgId;
+  return { config, env, baseUrl: envConfig.baseUrl, defaultOrgId };
 }

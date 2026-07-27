@@ -8,8 +8,10 @@ export const REPO_ROOT = resolve(ROOT_DIR, "..", "..");
 export const APPS_DIR = resolve(ROOT_DIR, "apps");
 export const MANUAL_DOC_DIR = resolve(REPO_ROOT, "doc", "manual");
 
-export function appPaths(appId: string) {
-  const workDir = resolve(ROOT_DIR, ".work", appId);
+export function appPaths(appId: string, env: string) {
+  const workDir = resolve(ROOT_DIR, ".work", appId, env);
+  const pdfName =
+    env === "local" ? `${appId}-manual.pdf` : `${appId}-manual-${env}.pdf`;
   return {
     profileDir: resolve(workDir, "profile"),
     stateFile: resolve(workDir, "state.json"),
@@ -17,7 +19,7 @@ export function appPaths(appId: string) {
     imagesDir: resolve(workDir, "output", "images"),
     captureJson: resolve(workDir, "output", "capture.json"),
     htmlFile: resolve(workDir, "output", "manual.html"),
-    finalPdf: resolve(MANUAL_DOC_DIR, `${appId}-manual.pdf`),
+    finalPdf: resolve(MANUAL_DOC_DIR, pdfName),
   };
 }
 

@@ -2,17 +2,17 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { chromium, type Page } from "playwright";
 import type { CaptureContext } from "./context.js";
-import { loadAppConfig, resolveAppId } from "./load-app.js";
+import { loadAppConfig, parseCliArgs, resolveApp } from "./load-app.js";
 import { appPaths, VIEWPORT } from "./paths.js";
 import { loadState, saveState } from "./state.js";
 import type {
   Annotation,
-  AppConfig,
   CapturedAnnotation,
   CapturedPage,
   CapturedSection,
   CaptureResult,
   PageDef,
+  ResolvedApp,
 } from "./types.js";
 
 function buildUrl(
@@ -61,7 +61,7 @@ async function captureAnnotationBox(
 async function capturePage(
   page: Page,
   def: PageDef,
-  config: AppConfig,
+  app: ResolvedApp,
   params: Record<string, string | undefined>,
   imagesDir: string,
 ): Promise<CapturedPage | null> {
@@ -69,7 +69,7 @@ async function capturePage(
     console.warn(`- スキップ: ${def.id}（必要な params が不足）`);
     return null;
   }
-  const url = buildUrl(config.baseUrl, def.route, params);
+  const url = buildUrl(app.baseUrl, def.route, params);
   if (!url) {
     console.warn(`- スキップ: ${def.id}（URL 構築失敗）`);
     return null;
@@ -119,18 +119,24 @@ async function capturePage(
 }
 
 async function main() {
-  const appId = resolveAppId();
+  const { appId, env: envArg } = parseCliArgs();
   const config = await loadAppConfig(appId);
-  const paths = appPaths(appId);
+  const app = resolveApp(config, envArg);
+  const paths = appPaths(appId, app.env);
 
   mkdirSync(paths.outputDir, { recursive: true });
   mkdirSync(paths.imagesDir, { recursive: true });
 
+  console.log(`env: ${app.env} (${app.baseUrl})`);
+
   const state = loadState(paths.stateFile);
+  const orgId =
+    process.env.MANUAL_ORG_ID ?? state.organizationId ?? app.defaultOrgId;
   const params: Record<string, string | undefined> = {
     ...state.params,
-    orgId: state.organizationId,
+    orgId,
   };
+  if (orgId) console.log(`orgId: ${orgId}`);
 
   const context = await chromium.launchPersistentContext(paths.profileDir, {
     headless: true,
@@ -142,7 +148,7 @@ async function main() {
   const page = context.pages()[0] ?? (await context.newPage());
 
   if (config.resolveDynamicParams) {
-    const ctx: CaptureContext = { page, baseUrl: config.baseUrl, params };
+    const ctx: CaptureContext = { page, baseUrl: app.baseUrl, params };
     const resolved = await config.resolveDynamicParams(ctx);
     Object.assign(params, resolved);
     state.params = { ...state.params, ...resolved };
@@ -156,7 +162,7 @@ async function main() {
       const captured = await capturePage(
         page,
         pageDef,
-        config,
+        app,
         params,
         paths.imagesDir,
       );
@@ -171,6 +177,8 @@ async function main() {
     appId: config.appId,
     appName: config.appName,
     audience: config.audience,
+    env: app.env,
+    baseUrl: app.baseUrl,
     capturedAt: new Date().toISOString(),
     sections,
   };

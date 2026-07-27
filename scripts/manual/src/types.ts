@@ -22,11 +22,17 @@ export type SectionDef = {
   pages: PageDef[];
 };
 
+export type EnvConfig = {
+  baseUrl: string;
+  defaultOrgId?: string;
+};
+
 export type AppConfig = {
   appId: string;
   appName: string;
   audience: string;
-  baseUrl: string;
+  environments: Record<string, EnvConfig>;
+  defaultEnv: string;
   loginPath: string;
   postLoginUrlPattern: RegExp;
   extractOrganizationId?: (url: string) => string | null;
@@ -34,6 +40,13 @@ export type AppConfig = {
     context: import("./context.js").CaptureContext,
   ) => Promise<Record<string, string | undefined>>;
   sections: SectionDef[];
+};
+
+export type ResolvedApp = {
+  config: AppConfig;
+  env: string;
+  baseUrl: string;
+  defaultOrgId: string | undefined;
 };
 
 export type CapturedAnnotation = Annotation & {
@@ -61,6 +74,8 @@ export type CaptureResult = {
   appId: string;
   appName: string;
   audience: string;
+  env: string;
+  baseUrl: string;
   capturedAt: string;
   sections: CapturedSection[];
 };

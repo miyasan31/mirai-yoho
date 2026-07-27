@@ -326,6 +326,7 @@ function renderCover(result: CaptureResult): string {
       <p class="cover__subtitle">${escapeHtml(result.audience)}向け</p>
       <dl class="cover__meta">
         <dt>アプリ</dt><dd>${escapeHtml(result.appId)}</dd>
+        <dt>環境</dt><dd>${escapeHtml(result.env)} (${escapeHtml(result.baseUrl)})</dd>
         <dt>作成日</dt><dd>${escapeHtml(date)}</dd>
         <dt>画面数</dt><dd>${result.sections.reduce((s, sec) => s + sec.pages.length, 0)} 画面</dd>
       </dl>
