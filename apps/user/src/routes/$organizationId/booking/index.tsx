@@ -110,6 +110,14 @@ function BookingPageInner() {
   const termsRevision = termsQuery.data?.data?.revision ?? null;
   const cancellationPolicyRevision =
     cancellationPolicyQuery.data?.data?.revision ?? null;
+  const policyQueriesPending =
+    termsQuery.isPending || cancellationPolicyQuery.isPending;
+  const policyQueriesError =
+    termsQuery.isError || cancellationPolicyQuery.isError;
+  const policiesUnpublished =
+    !policyQueriesPending &&
+    !policyQueriesError &&
+    (!termsRevision || !cancellationPolicyRevision);
 
   const couponsQuery = useGetCustomerCoupons({
     query: { enabled: Boolean(profile) },
@@ -257,6 +265,23 @@ function BookingPageInner() {
       toaster.create({
         type: "error",
         title: "料金プランが選択されていません",
+      });
+      return;
+    }
+    if (policyQueriesPending) {
+      toaster.create({
+        type: "info",
+        title: "利用規約を読み込み中です",
+        description: "少し待ってからもう一度お試しください。",
+      });
+      return;
+    }
+    if (policyQueriesError) {
+      toaster.create({
+        type: "error",
+        title: "利用規約の取得に失敗しました",
+        description:
+          "通信状況を確認して再度お試しください。改善しない場合は運営者にお問い合わせください。",
       });
       return;
     }
@@ -683,11 +708,26 @@ function BookingPageInner() {
             {errors.agreedToTerms && (
               <Field.ErrorText>{errors.agreedToTerms.message}</Field.ErrorText>
             )}
+            {policiesUnpublished && (
+              <Field.ErrorText>
+                この組織ではまだポリシーが公開されていません。運営者にお問い合わせください。
+              </Field.ErrorText>
+            )}
+            {policyQueriesError && (
+              <Field.ErrorText>
+                利用規約の取得に失敗しました。時間をおいて再度お試しください。
+              </Field.ErrorText>
+            )}
           </Field.Root>
 
           <Button
             type="submit"
-            disabled={pricePlansQuery.isLoading || !selectedPlan}
+            disabled={
+              pricePlansQuery.isLoading ||
+              !selectedPlan ||
+              policyQueriesPending ||
+              policiesUnpublished
+            }
             loading={createBooking.isPending}
             loadingText="予約を作成中..."
           >
