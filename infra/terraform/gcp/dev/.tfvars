@@ -6,9 +6,10 @@ organization_ids = ["mirai-yoho-dev"]
 # for local organization setup commands. Example: ["user:admin@example.com"]
 organization_operator_impersonators = ["user:miyasan.dev@gmail.com"]
 
-firestore_location           = "asia-northeast1"
-firebase_storage_bucket_name = "mirai-yoho-dev.firebasestorage.app"
-firebase_storage_location    = "US-EAST1"
+firestore_location             = "asia-northeast1"
+firebase_storage_bucket_name   = "mirai-yoho-dev.firebasestorage.app"
+manage_firebase_storage_bucket = true
+firebase_storage_location      = "US-CENTRAL1"
 firebase_storage_cors_origins = [
   "http://localhost:3000",
   "https://dev.user.miraiyohou.com",
