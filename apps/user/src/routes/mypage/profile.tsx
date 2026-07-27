@@ -75,6 +75,7 @@ function ProfilePage() {
       displayName:
         profile?.displayName ?? googleProviderData?.displayName ?? "",
       primaryEmail: profile?.primaryEmail ?? googleProviderData?.email ?? "",
+      phoneNumber: profile?.phoneNumber ?? "",
       birthDate: profile?.birthDate ?? "",
     },
   });
@@ -88,12 +89,14 @@ function ProfilePage() {
           birthDate: values.birthDate,
           primaryEmail:
             values.primaryEmail || googleProviderData?.email || undefined,
+          phoneNumber: values.phoneNumber || undefined,
           providerUid: googleProviderData?.uid ?? undefined,
         });
       } else {
         await updateCustomerProfile({
           displayName: values.displayName,
           primaryEmail: values.primaryEmail || undefined,
+          phoneNumber: values.phoneNumber || undefined,
           birthDate: values.birthDate,
         });
         await refreshProfile();
@@ -180,6 +183,22 @@ function ProfilePage() {
           )}
           {errors.primaryEmail && (
             <Field.ErrorText>{errors.primaryEmail.message}</Field.ErrorText>
+          )}
+        </Field.Root>
+
+        <Field.Root invalid={!!errors.phoneNumber}>
+          <Field.Label>電話番号（任意）</Field.Label>
+          <Input
+            id="phoneNumber"
+            type="tel"
+            placeholder="090-1234-5678"
+            {...register("phoneNumber")}
+          />
+          <Field.HelperText>
+            設定すると予約時に自動で入力されます。（ハイフンあり・なし可）
+          </Field.HelperText>
+          {errors.phoneNumber && (
+            <Field.ErrorText>{errors.phoneNumber.message}</Field.ErrorText>
           )}
         </Field.Root>
 

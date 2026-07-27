@@ -42,6 +42,8 @@ paths:
                   type: string
                 primaryEmail:
                   type: string
+                phoneNumber:
+                  type: string
                 birthDate:
                   type: string
       responses:
@@ -92,6 +94,8 @@ paths:
                 birthDate:
                   type: string
                 primaryEmail:
+                  type: string
+                phoneNumber:
                   type: string
                 providerUid:
                   type: string
@@ -1851,6 +1855,7 @@ components:
           authUid,
           displayName,
           primaryEmail,
+          phoneNumber,
           birthDate,
           status,
           authProviders,
@@ -1867,6 +1872,9 @@ components:
         displayName:
           type: string
         primaryEmail:
+          type: string
+          nullable: true
+        phoneNumber:
           type: string
           nullable: true
         birthDate:

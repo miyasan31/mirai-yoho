@@ -181,7 +181,7 @@ function BookingPageInner() {
     defaultValues: {
       customerName: profile?.displayName ?? "",
       customerEmail: profile?.primaryEmail ?? "",
-      customerPhone: "",
+      customerPhone: profile?.phoneNumber ?? "",
       customerBirthDate: profile?.birthDate ?? "",
       consultantContent: "",
       guardianName: "",

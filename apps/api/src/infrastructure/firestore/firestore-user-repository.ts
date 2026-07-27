@@ -22,6 +22,7 @@ interface UserDoc {
   authProviders: AuthProviderDoc[];
   displayName: string;
   primaryEmail?: string;
+  phoneNumber?: string;
   birthDate: string;
   status: UserStatus;
   withdrawnAt?: Timestamp | Date;
@@ -115,6 +116,7 @@ async function toDomain(doc: UserDoc): Promise<User> {
     authProviders: doc.authProviders.map(toAuthProvider),
     displayName: doc.displayName,
     primaryEmail: doc.primaryEmail,
+    phoneNumber: doc.phoneNumber,
     birthDate: BirthDate.reconstruct(doc.birthDate),
     zoomConnection,
     status: doc.status,
@@ -126,6 +128,7 @@ async function toDomain(doc: UserDoc): Promise<User> {
 
 function toFirestore(user: User): UserDoc {
   const primaryEmail = user.getPrimaryEmail();
+  const phoneNumber = user.getPhoneNumber();
   const withdrawnAt = user.getWithdrawnAt();
   return {
     userId: user.getUserId(),
@@ -133,6 +136,7 @@ function toFirestore(user: User): UserDoc {
     authProviders: user.getAuthProviders().map(fromAuthProvider),
     displayName: user.getDisplayName(),
     ...(primaryEmail !== undefined ? { primaryEmail } : {}),
+    ...(phoneNumber !== undefined ? { phoneNumber } : {}),
     birthDate: user.getBirthDate().getValue(),
     status: user.getStatus(),
     ...(withdrawnAt ? { withdrawnAt } : {}),
