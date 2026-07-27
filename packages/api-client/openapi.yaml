@@ -1683,7 +1683,7 @@ paths:
   /organizations/{organizationId}/console/policies/{type}/{revisionId}/publish:
     post:
       operationId: publishPolicyRevision
-      summary: ドラフトを公開する（既存 published は archived になる）
+      summary: 下書きを公開する（既存 published は archived になる）
       tags: [console]
       security:
         - bearerAuth: []

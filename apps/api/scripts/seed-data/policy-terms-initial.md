@@ -6,4 +6,4 @@
 
 ---
 
-**注意**: この初版 seed は Phase 1 導入時のプレースホルダです。実運用に投入する前に、`apps/user/src/routes/terms.tsx` の内容を markdown へ移植し、この seed ファイルを差し替えてください。console の利用規約管理画面から新規ドラフトを作成し、正式な本文で公開する運用も可能です。
+**注意**: この初版 seed は Phase 1 導入時のプレースホルダです。実運用に投入する前に、`apps/user/src/routes/terms.tsx` の内容を markdown へ移植し、この seed ファイルを差し替えてください。console の利用規約管理画面から新規下書きを作成し、正式な本文で公開する運用も可能です。
