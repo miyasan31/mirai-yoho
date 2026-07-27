@@ -82,7 +82,7 @@ function PolicyTabContent({
     organizationId,
     type,
   );
-  const revision = data?.data;
+  const revision = data?.data?.revision ?? null;
 
   if (isLoading) {
     return (

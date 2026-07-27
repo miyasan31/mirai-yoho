@@ -1,4 +1,6 @@
+import { DomainError } from "@mirai-yoho/shared/domain-error";
 import type { Context, Handler } from "hono";
+import { AppError } from "@/application/shared/app-error";
 import { AuthError } from "@/infrastructure/auth/verify-auth";
 import { withNoStore } from "../cache-control";
 import { logUnexpectedPostError, mapApiError } from "./api-error-mapper";
@@ -134,6 +136,17 @@ export function getRoute(handler: OrganizationRouteHandler): Handler {
           ),
         );
       }
+      if (error instanceof AppError || error instanceof DomainError) {
+        const mappedError = mapApiError(error);
+        return withNoStore(
+          jsonError(mappedError.status, mappedError.code, mappedError.message),
+        );
+      }
+      console.error("Unhandled GET /organizations API error", {
+        endpoint: ctx.errorContext.endpoint ?? ctx.requestUrl.pathname,
+        organizationId: ctx.errorContext.organizationId,
+        error,
+      });
       return withNoStore(
         jsonError(500, "INTERNAL_ERROR", "Internal server error"),
       );

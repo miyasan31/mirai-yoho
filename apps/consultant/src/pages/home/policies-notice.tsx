@@ -73,7 +73,7 @@ function PolicyEntryRow({ organizationId, type, label }: PolicyEntryRowProps) {
     organizationId,
     type,
   );
-  const revision = data?.data;
+  const revision = data?.data?.revision ?? null;
 
   return (
     <styled.div

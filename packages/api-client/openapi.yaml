@@ -1548,6 +1548,9 @@ paths:
     get:
       operationId: getLatestPublishedPolicy
       summary: 現在有効な最新公開版のポリシーを取得（公開エンドポイント）
+      description: |
+        未公開の場合は 200 で `{ revision: null }` を返す（404 ではない）。
+        SPA 側の 404 → /404 リダイレクト動作と分けるため。
       tags: [public]
       parameters:
         - $ref: "#/components/parameters/OrganizationIdParam"
@@ -1558,7 +1561,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/PolicyRevision"
+                $ref: "#/components/schemas/LatestPublishedPolicyResponse"
 
   /organizations/{organizationId}/console/policies/{type}:
     get:
@@ -3170,3 +3173,13 @@ components:
                 $ref: "#/components/schemas/PolicyType"
               revisionId:
                 type: string
+
+    LatestPublishedPolicyResponse:
+      type: object
+      required: [revision]
+      properties:
+        revision:
+          allOf:
+            - $ref: "#/components/schemas/PolicyRevision"
+          nullable: true
+          description: 現在有効な最新公開版。未公開の場合は null
