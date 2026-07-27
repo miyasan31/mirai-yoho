@@ -165,24 +165,24 @@ const config: AppConfig = {
           id: "bookings",
           title: "予約一覧",
           overview:
-            "担当中の予約を一覧で確認・検索・並べ替えできます。顧客情報は行のホバーで表示されます。",
+            "担当中の予約を一覧で確認できます。顧客名にカーソルを合わせると連絡先が表示されます。",
           route: "/{orgId}/bookings",
           requiresAuth: true,
           waitForSelector: "h1",
           annotations: [
             {
               n: 1,
-              selector: 'input[type="search"], input[placeholder*="検索"]',
-              title: "検索・フィルター",
-              description:
-                "顧客名や予約 ID で絞り込めます。並べ替えやページサイズも変更できます。",
-            },
-            {
-              n: 2,
               selector: "table thead tr",
               title: "テーブルヘッダ",
               description:
                 "日時・ステータス・顧客・料金プランなど、対応に必要な情報をまとめて表示します。",
+            },
+            {
+              n: 2,
+              selector: 'a[target="_blank"]',
+              title: "Zoom 参加リンク",
+              description:
+                "予約時間が近づくと Zoom への参加ボタンが有効になります。",
             },
             {
               n: 3,
@@ -193,10 +193,10 @@ const config: AppConfig = {
             },
             {
               n: 4,
-              selector: 'a[target="_blank"]',
-              title: "Zoom 参加リンク",
+              selector: '[data-scope="select"][data-part="trigger"]',
+              title: "表示件数・並び順",
               description:
-                "予約時間が近づくと Zoom への参加ボタンが有効になります。",
+                "画面下部のバーで 1 ページの表示件数と並び順を切り替えます。右側のページ送りで前後のページを表示できます。",
             },
           ],
         },
@@ -292,28 +292,31 @@ const config: AppConfig = {
           annotations: [
             {
               n: 1,
-              selector: 'form input[id*="name"]',
+              selector:
+                'form [data-scope="field"][data-part="root"]:has(> label:text-is("プラン名")) input',
               title: "プラン名",
               description:
                 "顧客に表示されるプラン名を入力します（例: 30 分鑑定）。",
             },
             {
               n: 2,
-              selector: 'form input[type="number"]',
-              title: "金額（JPY）",
-              description: "税込金額を入力します。プラン一覧に反映されます。",
+              selector:
+                'form [data-scope="field"][data-part="root"]:has(> label:text-is("税込金額")) input',
+              title: "税込金額",
+              description:
+                "税込金額を数値で入力します。画面上部の設定範囲内の金額のみ有効です。",
             },
             {
               n: 3,
               selector: 'form select, form button[role="combobox"]',
-              title: "所要時間",
+              title: "相談時間",
               description:
-                "対応可能な所要時間（30 / 60 / 90 分等）を選択します。",
+                "対応可能な相談時間（30 / 60 / 90 分等）を選択します。",
             },
             {
               n: 4,
               selector: 'form button[type="submit"]',
-              title: "追加ボタン",
+              title: "作成ボタン",
               description: "プランを作成します。作成後は一覧下に追加されます。",
             },
             {
@@ -336,10 +339,10 @@ const config: AppConfig = {
           annotations: [
             {
               n: 1,
-              selector: 'input[type="file"]',
+              selector: '[data-scope="file-upload"][data-part="dropzone"]',
               title: "アバター画像",
               description:
-                "1:1 の正方形画像（JPEG / PNG / WebP、最大 5MB）をアップロードできます。",
+                "ドラッグ&ドロップまたは「画像を選択」から、1:1 の正方形画像（JPEG / PNG / WebP、最大 5MB）をアップロードできます。",
             },
             {
               n: 2,
