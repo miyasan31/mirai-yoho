@@ -28,7 +28,6 @@ import { useCreateBooking } from "@/hooks/use-booking";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 import { usePricePlanOptions } from "@/hooks/use-price-plans";
 import { pageHead } from "@/lib/head";
-import { ReagreementGate } from "@/pages/policies/reagreement-gate";
 import { BookingAuthGate } from "./-booking-auth-gate";
 import {
   type BookingFormValues,
@@ -73,19 +72,8 @@ export const Route = createFileRoute("/$organizationId/booking/")({
 export function BookingPage() {
   return (
     <BookingAuthGate>
-      <BookingReagreementGuard>
-        <BookingPageInner />
-      </BookingReagreementGuard>
+      <BookingPageInner />
     </BookingAuthGate>
-  );
-}
-
-function BookingReagreementGuard({ children }: { children: React.ReactNode }) {
-  const { organizationId } = Route.useParams();
-  return (
-    <ReagreementGate organizationId={organizationId}>
-      {children}
-    </ReagreementGate>
   );
 }
 

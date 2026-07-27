@@ -17,7 +17,6 @@ import { styled } from "styled-system/jsx";
 import { useConsultantBookings } from "@/hooks/use-consultant-bookings";
 import { ConsultantJoinControl } from "../bookings/consultant-join-control";
 import { buildConsultantHomeViewModel } from "./home-view-model";
-import { PoliciesNotice } from "./policies-notice";
 import { ReagreementNotice } from "./reagreement-notice";
 
 function formatDatetime(value: string): string {
@@ -89,12 +88,7 @@ export default function ConsultantHomePage() {
         </Text>
       </styled.div>
 
-      {organizationId && (
-        <>
-          <ReagreementNotice organizationId={organizationId} />
-          <PoliciesNotice organizationId={organizationId} />
-        </>
-      )}
+      {organizationId && <ReagreementNotice organizationId={organizationId} />}
 
       <styled.div
         display="grid"
