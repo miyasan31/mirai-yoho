@@ -50,7 +50,7 @@ async function captureAnnotationBox(
   }
   try {
     const locator = page.locator(annotation.selector).first();
-    await locator.waitFor({ state: "visible", timeout: 1_500 });
+    await locator.waitFor({ state: "visible", timeout: 5_000 });
     const box = await locator.boundingBox();
     return { ...annotation, box };
   } catch {

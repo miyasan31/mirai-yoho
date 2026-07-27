@@ -9,7 +9,6 @@ const CSS = `
     --border: #e5e5ea;
     --surface: #ffffff;
     --surface-muted: #f7f7fa;
-    --pin-shadow: 0 2px 6px rgba(0, 0, 0, 0.28);
   }
   * { box-sizing: border-box; }
   html, body {
@@ -24,14 +23,20 @@ const CSS = `
   }
   .page {
     page-break-after: always;
-    padding: 24mm 18mm;
-  }
-  .screen .screen__image,
-  .screen .annotations {
-    page-break-inside: avoid;
+    padding: 16mm 15mm;
   }
   .page:last-child {
     page-break-after: auto;
+  }
+  .screen {
+    display: flex;
+    flex-direction: column;
+    height: 265mm;
+  }
+  .screen__image-wrap {
+    text-align: center;
+    page-break-inside: avoid;
+    margin-bottom: 5mm;
   }
   .cover {
     display: flex;
@@ -140,56 +145,60 @@ const CSS = `
     display: flex;
     align-items: baseline;
     justify-content: space-between;
-    gap: 6mm;
-    padding-bottom: 3mm;
-    margin-bottom: 6mm;
-    border-bottom: 2px solid var(--page-fg);
+    gap: 4mm;
+    padding-bottom: 2mm;
+    margin-bottom: 3mm;
+    border-bottom: 1.5px solid var(--page-fg);
   }
   .screen__eyebrow {
     color: var(--accent);
-    font-size: 9pt;
+    font-size: 8pt;
     letter-spacing: 0.14em;
     text-transform: uppercase;
-    margin: 0 0 2mm;
+    margin: 0 0 1mm;
   }
   .screen__title {
-    font-size: 20pt;
+    font-size: 16pt;
     font-weight: 700;
     margin: 0;
-    line-height: 1.3;
+    line-height: 1.25;
   }
   .screen__id {
     color: var(--page-fg-muted);
-    font-size: 9pt;
+    font-size: 8pt;
     font-family: "SF Mono", Menlo, monospace;
   }
   .screen__overview {
-    font-size: 11pt;
+    font-size: 10pt;
     color: var(--page-fg);
-    margin: 0 0 8mm;
+    margin: 0 0 4mm;
     max-width: 160mm;
+    line-height: 1.55;
   }
   .screen__image {
     position: relative;
-    display: block;
-    width: 100%;
+    display: inline-block;
+    max-width: 100%;
+    vertical-align: top;
     border: 1px solid var(--border);
-    border-radius: 4mm;
+    border-radius: 2mm;
     overflow: hidden;
     background: var(--surface-muted);
     line-height: 0;
   }
   .screen__image img {
     display: block;
-    width: 100%;
+    max-width: 100%;
+    max-height: 140mm;
+    width: auto;
     height: auto;
   }
   .pin {
     position: absolute;
-    width: 8mm;
-    height: 8mm;
-    margin-left: -4mm;
-    margin-top: -4mm;
+    width: 4mm;
+    height: 4mm;
+    margin-left: -2mm;
+    margin-top: -2mm;
     background: var(--accent);
     color: var(--accent-fg);
     border-radius: 999px;
@@ -197,29 +206,27 @@ const CSS = `
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 10pt;
-    box-shadow: var(--pin-shadow);
-    border: 1.5px solid var(--accent-fg);
+    font-size: 6pt;
+    border: 0.75px solid var(--accent-fg);
   }
   .annotations {
-    margin-top: 8mm;
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 3mm;
+    grid-template-columns: 1fr 1fr;
+    gap: 2.5mm 3mm;
   }
   .annotation {
     display: grid;
-    grid-template-columns: 8mm 1fr;
-    gap: 4mm;
-    padding: 3mm 4mm;
+    grid-template-columns: 5mm 1fr;
+    gap: 2.5mm;
+    padding: 2mm 2.5mm;
     border: 1px solid var(--border);
-    border-radius: 2mm;
+    border-radius: 1.5mm;
     background: var(--surface-muted);
     align-items: start;
   }
   .annotation__n {
-    width: 7mm;
-    height: 7mm;
+    width: 5mm;
+    height: 5mm;
     background: var(--accent);
     color: var(--accent-fg);
     border-radius: 999px;
@@ -227,17 +234,19 @@ const CSS = `
     align-items: center;
     justify-content: center;
     font-weight: 700;
-    font-size: 10pt;
+    font-size: 7pt;
   }
   .annotation__title {
     font-weight: 700;
-    font-size: 11pt;
-    margin: 0 0 1mm;
+    font-size: 9.5pt;
+    margin: 0 0 0.5mm;
+    line-height: 1.3;
   }
   .annotation__body {
-    font-size: 10.5pt;
+    font-size: 9pt;
     color: var(--page-fg);
     margin: 0;
+    line-height: 1.45;
   }
   .annotation--unresolved .annotation__n {
     background: var(--page-fg-muted);
@@ -294,9 +303,11 @@ function renderScreen(screen: CapturedPage, sectionTitle: string): string {
         <span class="screen__id">${escapeHtml(screen.id)}</span>
       </header>
       <p class="screen__overview">${escapeHtml(screen.overview)}</p>
-      <div class="screen__image">
-        <img src="${escapeHtml(screen.imagePath)}" alt="${escapeHtml(screen.title)}" />
-        ${pins}
+      <div class="screen__image-wrap">
+        <div class="screen__image">
+          <img src="${escapeHtml(screen.imagePath)}" alt="${escapeHtml(screen.title)}" />
+          ${pins}
+        </div>
       </div>
       <div class="annotations">${annotations}</div>
     </section>
