@@ -8,12 +8,13 @@ import type {
   PolicyType,
 } from "@mirai-yoho/api-client/schemas";
 import { MarkdownView } from "@mirai-yoho/ui/components/markdown-view";
+import { Alert } from "@mirai-yoho/ui/components/ui/alert";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Dialog from "@mirai-yoho/ui/components/ui/dialog";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { FileText } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
 
@@ -44,55 +45,50 @@ export function ReagreementNotice({ organizationId }: ReagreementNoticeProps) {
   );
 
   return (
-    <styled.section
-      border="1px solid"
-      borderColor="colorPalette.emphasized"
-      colorPalette="orange"
-      rounded="l3"
-      p="4"
-      mb="6"
-      bg="bg.subtle"
-      display="flex"
-      flexDir="column"
-      gap="3"
-    >
-      <styled.div display="flex" alignItems="center" gap="2">
-        <FileText size={18} color="var(--colors-fg-muted)" />
-        <Text fontWeight="medium">組織ポリシーが更新されました</Text>
-      </styled.div>
-      <Text textStyle="sm" color="fg.muted">
-        以下のポリシーの最新版を確認して同意してください。同意状況は監査ログに記録されます。
-      </Text>
-      <styled.div display="flex" flexDir="column" gap="2">
-        {needsEntries.map((entry) => (
-          <styled.div
-            key={entry.type}
-            display="flex"
-            alignItems="center"
-            justifyContent="space-between"
-            gap="3"
-            border="1px solid"
-            borderColor="border"
-            rounded="l2"
-            p="3"
-            bg="bg.canvas"
-          >
-            <styled.div>
-              <Text textStyle="sm" fontWeight="medium">
-                {TYPE_LABEL[entry.type]}
-              </Text>
-              <Text textStyle="xs" color="fg.muted">
-                最新 version: {entry.latestRevision?.version}
-                {entry.latestAgreedVersion &&
-                  ` / 前回同意版: ${entry.latestAgreedVersion}`}
-              </Text>
-            </styled.div>
-            <Button size="sm" onClick={() => setOpenTarget(entry.type)}>
-              内容を確認して同意
-            </Button>
+    <styled.div mb="6">
+      <Alert.Root colorPalette="amber" variant="surface">
+        <Alert.Icon>
+          <TriangleAlert />
+        </Alert.Icon>
+        <styled.div flex="1" display="flex" flexDir="column" gap="3">
+          <styled.div>
+            <Alert.Title>組織ポリシーが更新されました</Alert.Title>
+            <Alert.Description>
+              以下のポリシーの最新版を確認して同意してください。同意状況は監査ログに記録されます。
+            </Alert.Description>
           </styled.div>
-        ))}
-      </styled.div>
+          <styled.div display="flex" flexDir="column" gap="2">
+            {needsEntries.map((entry) => (
+              <styled.div
+                key={entry.type}
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+                gap="3"
+                border="1px solid"
+                borderColor="border"
+                rounded="l2"
+                p="3"
+                bg="bg.canvas"
+              >
+                <styled.div>
+                  <Text textStyle="sm" fontWeight="medium">
+                    {TYPE_LABEL[entry.type]}
+                  </Text>
+                  <Text textStyle="xs" color="fg.muted">
+                    最新 version: {entry.latestRevision?.version}
+                    {entry.latestAgreedVersion &&
+                      ` / 前回同意版: ${entry.latestAgreedVersion}`}
+                  </Text>
+                </styled.div>
+                <Button size="sm" onClick={() => setOpenTarget(entry.type)}>
+                  内容を確認して同意
+                </Button>
+              </styled.div>
+            ))}
+          </styled.div>
+        </styled.div>
+      </Alert.Root>
 
       {needsEntries.map((entry) =>
         entry.latestRevision ? (
@@ -107,7 +103,7 @@ export function ReagreementNotice({ organizationId }: ReagreementNoticeProps) {
           />
         ) : null,
       )}
-    </styled.section>
+    </styled.div>
   );
 }
 
