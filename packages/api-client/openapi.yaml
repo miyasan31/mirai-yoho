@@ -1760,6 +1760,52 @@ paths:
                     items:
                       $ref: "#/components/schemas/PolicyAgreement"
 
+  /organizations/{organizationId}/consultant/policies/status:
+    get:
+      operationId: getConsultantPolicyAgreementStatus
+      summary: 現在ログイン中の相談員の各ポリシー同意状況を取得
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyAgreementStatus"
+
+  /organizations/{organizationId}/consultant/policies/agree:
+    post:
+      operationId: recordConsultantPolicyAgreement
+      summary: 相談員のポリシー同意を記録
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyAgreementInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [agreements]
+                properties:
+                  agreements:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PolicyAgreement"
+
 components:
   parameters:
     OrganizationIdParam:
@@ -2359,6 +2405,19 @@ components:
         consultationContent:
           type: string
           nullable: true
+        agreedTermsVersion:
+          type: string
+          nullable: true
+          description: 予約時に顧客が同意した利用規約の version
+        agreedCancellationPolicyVersion:
+          type: string
+          nullable: true
+          description: 予約時に顧客が同意したキャンセルポリシーの version
+        agreedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: 予約時にポリシーへ同意した日時
         chargeable:
           type: boolean
         chargeDisabledReason:
@@ -2937,7 +2996,7 @@ components:
 
     PolicySubjectType:
       type: string
-      enum: [user, customer]
+      enum: [user, customer, consultant]
 
     PolicyAgreementVia:
       type: string

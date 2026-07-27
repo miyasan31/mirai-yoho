@@ -17,6 +17,7 @@ import { CalendarX, ExternalLink, Pencil } from "lucide-react";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
 import { useConsultantBookings } from "@/hooks/use-consultant-bookings";
+import { BookingOutdatedPolicyBadge } from "../home/booking-outdated-policy-badge";
 import { ConsultantJoinControl } from "./consultant-join-control";
 
 function formatDateTimeRange(startsAtIso: string, endsAtIso: string): string {
@@ -96,7 +97,7 @@ function CustomerCell({
 }
 
 export default function ConsultantBookingsPage() {
-  const { buildPath } = useOrganizationRouting();
+  const { buildPath, organizationId } = useOrganizationRouting();
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
     useListQueryParams();
   const { data, isLoading, refetch } = useConsultantBookings({
@@ -173,7 +174,25 @@ export default function ConsultantBookingsPage() {
                       {formatDateTimeRange(b.startsAt, b.endsAt)}
                     </Table.Cell>
                     <Table.Cell>
-                      <BookingStatusBadge status={b.status} />
+                      <styled.div
+                        display="inline-flex"
+                        alignItems="center"
+                        gap="2"
+                        flexWrap="wrap"
+                      >
+                        <BookingStatusBadge status={b.status} />
+                        {organizationId && (
+                          <BookingOutdatedPolicyBadge
+                            organizationId={organizationId}
+                            booking={{
+                              startsAt: b.startsAt,
+                              agreedTermsVersion: b.agreedTermsVersion ?? null,
+                              agreedCancellationPolicyVersion:
+                                b.agreedCancellationPolicyVersion ?? null,
+                            }}
+                          />
+                        )}
+                      </styled.div>
                     </Table.Cell>
                     <Table.Cell>
                       <CustomerCell

@@ -5,7 +5,7 @@ import {
 } from "@/domain/policy/policy-type";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 
-export type PolicySubjectType = "user" | "customer";
+export type PolicySubjectType = "user" | "customer" | "consultant";
 
 export type PolicyAgreementVia =
   | "booking"
@@ -15,6 +15,7 @@ export type PolicyAgreementVia =
 const SUBJECT_TYPES: readonly PolicySubjectType[] = [
   "user",
   "customer",
+  "consultant",
 ] as const;
 
 const AGREEMENT_VIA_VALUES: readonly PolicyAgreementVia[] = [

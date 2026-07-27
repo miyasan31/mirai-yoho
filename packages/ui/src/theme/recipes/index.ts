@@ -1,4 +1,5 @@
 import { absoluteCenter } from "./absolute-center";
+import { alert } from "./alert";
 import { badge } from "./badge";
 import { button } from "./button";
 import { checkbox } from "./checkbox";
@@ -43,4 +44,5 @@ export const slotRecipes = {
   select,
   tooltip,
   table,
+  alert,
 };

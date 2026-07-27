@@ -237,20 +237,19 @@ function DiffPanel({ chunks }: { chunks: PolicyDiffChunk[] }) {
 function DiffRow({ line }: { line: DiffLine }) {
   const isAdd = line.kind === "add";
   const isRemove = line.kind === "remove";
-  const rowBg = isAdd
-    ? "green.subtle"
-    : isRemove
-      ? "red.subtle"
-      : "transparent";
-  const gutterBg = isAdd ? "green.muted" : isRemove ? "red.muted" : "bg.subtle";
+  // 追加行は緑系、削除行は赤系で差を強調
+  const rowBg = isAdd ? "green.a3" : isRemove ? "red.a3" : "transparent";
+  const gutterBg = isAdd ? "green.a7" : isRemove ? "red.a7" : "bg.subtle";
+  const gutterColor = isAdd ? "green.11" : isRemove ? "red.11" : "fg.muted";
   const sign = isAdd ? "+" : isRemove ? "-" : " ";
-  const contentColor = isAdd ? "green.fg" : isRemove ? "red.fg" : "fg.default";
+  const signColor = isAdd ? "green.11" : isRemove ? "red.11" : "fg.muted";
+  const contentColor = isAdd ? "green.12" : isRemove ? "red.12" : "fg.default";
 
   return (
     <styled.tr bg={rowBg}>
       <styled.td
         bg={gutterBg}
-        color="fg.muted"
+        color={gutterColor}
         textAlign="right"
         px="2"
         minW="12"
@@ -258,12 +257,13 @@ function DiffRow({ line }: { line: DiffLine }) {
         borderRightWidth="1px"
         borderRightColor="border"
         verticalAlign="top"
+        fontWeight={isAdd || isRemove ? "semibold" : "normal"}
       >
         {line.oldLine ?? ""}
       </styled.td>
       <styled.td
         bg={gutterBg}
-        color="fg.muted"
+        color={gutterColor}
         textAlign="right"
         px="2"
         minW="12"
@@ -271,16 +271,18 @@ function DiffRow({ line }: { line: DiffLine }) {
         borderRightWidth="1px"
         borderRightColor="border"
         verticalAlign="top"
+        fontWeight={isAdd || isRemove ? "semibold" : "normal"}
       >
         {line.newLine ?? ""}
       </styled.td>
       <styled.td
-        color={contentColor}
+        color={signColor}
         textAlign="center"
         px="2"
         userSelect="none"
         verticalAlign="top"
         w="6"
+        fontWeight="bold"
       >
         {sign}
       </styled.td>

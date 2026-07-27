@@ -9,6 +9,7 @@ import { consolePolicyRoutes } from "./console-policy-routes";
 import { consoleRoleRoutes } from "./console-role-routes";
 import { consoleSettingsRoutes } from "./console-settings-routes";
 import { consultantBookingRoutes } from "./consultant-booking-routes";
+import { consultantPolicyRoutes } from "./consultant-policy-routes";
 import { consultantProfileRoutes } from "./consultant-profile-routes";
 import { customerBookingRoutes } from "./customer-bookings";
 import { customerCouponRoutes } from "./customer-coupon-routes";
@@ -41,6 +42,7 @@ export function createOrganizationRoutes(): Hono {
   routes.route("/:organizationId", publicPolicyRoutes);
   routes.route("/:organizationId", consolePolicyRoutes);
   routes.route("/:organizationId", customerPolicyRoutes);
+  routes.route("/:organizationId", consultantPolicyRoutes);
 
   return routes;
 }

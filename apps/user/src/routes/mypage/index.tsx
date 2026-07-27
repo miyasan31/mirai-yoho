@@ -10,7 +10,6 @@ import {
   type VisitedOrganization,
 } from "@/hooks/use-visited-organizations";
 import { pageHead } from "@/lib/head";
-import { ReagreementNoticeSection } from "@/pages/policies/reagreement-notice-section";
 
 export const Route = createFileRoute("/mypage/")({
   head: () => pageHead("マイページ"),
@@ -100,8 +99,6 @@ function MypageDashboardPage() {
           </Link>
         </styled.section>
       )}
-
-      <ReagreementNoticeSection organizations={visitedOrganizations} />
 
       <VisitedOrganizationsSection
         isLoading={isBookingsLoading}

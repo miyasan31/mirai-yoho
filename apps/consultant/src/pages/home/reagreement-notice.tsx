@@ -1,53 +1,25 @@
 import {
-  getGetCustomerPolicyAgreementStatusQueryKey,
-  useGetCustomerPolicyAgreementStatus,
-  useRecordCustomerPolicyAgreement,
-} from "@mirai-yoho/api-client/api/customer/customer";
+  getGetConsultantPolicyAgreementStatusQueryKey,
+  useGetConsultantPolicyAgreementStatus,
+  useRecordConsultantPolicyAgreement,
+} from "@mirai-yoho/api-client/api/consultant/consultant";
 import type {
   PolicyAgreementStatus,
   PolicyType,
 } from "@mirai-yoho/api-client/schemas";
 import { MarkdownView } from "@mirai-yoho/ui/components/markdown-view";
+import { Alert } from "@mirai-yoho/ui/components/ui/alert";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Dialog from "@mirai-yoho/ui/components/ui/dialog";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { FileText } from "lucide-react";
+import { TriangleAlert } from "lucide-react";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
 
-interface ReagreementNoticeSectionProps {
-  organizations: Array<{
-    organizationId: string;
-    organizationName?: string | null;
-  }>;
-}
-
-/**
- * 訪問済み組織それぞれに対して同意状況をチェックし、
- * 未同意版があれば再同意ダイアログへ誘導する。
- */
-export function ReagreementNoticeSection({
-  organizations,
-}: ReagreementNoticeSectionProps) {
-  if (organizations.length === 0) return null;
-  return (
-    <styled.section display="flex" flexDir="column" gap="3">
-      {organizations.map((org) => (
-        <ReagreementRow
-          key={org.organizationId}
-          organizationId={org.organizationId}
-          organizationName={org.organizationName ?? org.organizationId}
-        />
-      ))}
-    </styled.section>
-  );
-}
-
-interface ReagreementRowProps {
+interface ReagreementNoticeProps {
   organizationId: string;
-  organizationName: string;
 }
 
 const TYPE_LABEL: Record<PolicyType, string> = {
@@ -56,11 +28,13 @@ const TYPE_LABEL: Record<PolicyType, string> = {
   privacy_policy: "プライバシーポリシー",
 };
 
-function ReagreementRow({
-  organizationId,
-  organizationName,
-}: ReagreementRowProps) {
-  const { data } = useGetCustomerPolicyAgreementStatus(organizationId);
+/**
+ * 相談員のポリシー未同意状態を検出したら、home 上部にプロミネントな
+ * 同意カードを表示する。同意までは常時表示され、agreedVia=reagreement_modal
+ * で PolicyAgreement を書き込む。
+ */
+export function ReagreementNotice({ organizationId }: ReagreementNoticeProps) {
+  const { data } = useGetConsultantPolicyAgreementStatus(organizationId);
   const status = data?.data;
   const [openTarget, setOpenTarget] = useState<PolicyType | null>(null);
 
@@ -71,58 +45,54 @@ function ReagreementRow({
   );
 
   return (
-    <styled.div
-      border="1px solid"
-      borderColor="colorPalette.emphasized"
-      colorPalette="orange"
-      rounded="l3"
-      p="4"
-      bg="bg.subtle"
-      display="flex"
-      flexDir="column"
-      gap="3"
-    >
-      <styled.div display="flex" alignItems="center" gap="2">
-        <FileText size={18} color="var(--colors-fg-muted)" />
-        <Text fontWeight="medium">
-          {organizationName} のポリシーが更新されました
-        </Text>
-      </styled.div>
-      <Text textStyle="sm" color="fg.muted">
-        以下のポリシーの最新版に同意してください。
-      </Text>
-      <styled.div display="flex" flexDir="column" gap="2">
-        {needsEntries.map((entry) => (
-          <styled.div
-            key={entry.type}
-            display="flex"
-            alignItems="center"
-            justifyContent="space-between"
-            gap="3"
-            border="1px solid"
-            borderColor="border"
-            rounded="l2"
-            p="3"
-            bg="bg.canvas"
-          >
-            <styled.div>
-              <Text textStyle="sm" fontWeight="medium">
-                {TYPE_LABEL[entry.type]}
-              </Text>
-              <Text textStyle="xs" color="fg.muted">
-                最新 version: {entry.latestRevision?.version}
-              </Text>
-            </styled.div>
-            <Button size="sm" onClick={() => setOpenTarget(entry.type)}>
-              内容を確認して同意
-            </Button>
+    <styled.div mb="6">
+      <Alert.Root colorPalette="amber" variant="surface">
+        <Alert.Icon>
+          <TriangleAlert />
+        </Alert.Icon>
+        <styled.div flex="1" display="flex" flexDir="column" gap="3">
+          <styled.div>
+            <Alert.Title>組織ポリシーが更新されました</Alert.Title>
+            <Alert.Description>
+              以下のポリシーの最新版を確認して同意してください。同意状況は監査ログに記録されます。
+            </Alert.Description>
           </styled.div>
-        ))}
-      </styled.div>
+          <styled.div display="flex" flexDir="column" gap="2">
+            {needsEntries.map((entry) => (
+              <styled.div
+                key={entry.type}
+                display="flex"
+                alignItems="center"
+                justifyContent="space-between"
+                gap="3"
+                border="1px solid"
+                borderColor="border"
+                rounded="l2"
+                p="3"
+                bg="bg.canvas"
+              >
+                <styled.div>
+                  <Text textStyle="sm" fontWeight="medium">
+                    {TYPE_LABEL[entry.type]}
+                  </Text>
+                  <Text textStyle="xs" color="fg.muted">
+                    最新 version: {entry.latestRevision?.version}
+                    {entry.latestAgreedVersion &&
+                      ` / 前回同意版: ${entry.latestAgreedVersion}`}
+                  </Text>
+                </styled.div>
+                <Button size="sm" onClick={() => setOpenTarget(entry.type)}>
+                  内容を確認して同意
+                </Button>
+              </styled.div>
+            ))}
+          </styled.div>
+        </styled.div>
+      </Alert.Root>
 
       {needsEntries.map((entry) =>
         entry.latestRevision ? (
-          <ReagreementDialog
+          <ConsultantReagreementDialog
             key={entry.type}
             open={openTarget === entry.type}
             onClose={() => setOpenTarget(null)}
@@ -137,7 +107,7 @@ function ReagreementRow({
   );
 }
 
-interface ReagreementDialogProps {
+interface ConsultantReagreementDialogProps {
   open: boolean;
   onClose: () => void;
   organizationId: string;
@@ -148,16 +118,16 @@ interface ReagreementDialogProps {
   status: PolicyAgreementStatus;
 }
 
-function ReagreementDialog({
+function ConsultantReagreementDialog({
   open,
   onClose,
   organizationId,
   type,
   revision,
   status,
-}: ReagreementDialogProps) {
+}: ConsultantReagreementDialogProps) {
   const queryClient = useQueryClient();
-  const mutation = useRecordCustomerPolicyAgreement();
+  const mutation = useRecordConsultantPolicyAgreement();
 
   const handleAgree = async () => {
     try {
@@ -170,7 +140,7 @@ function ReagreementDialog({
       });
       toaster.success({ title: `${TYPE_LABEL[type]}に同意しました` });
       await queryClient.invalidateQueries({
-        queryKey: getGetCustomerPolicyAgreementStatusQueryKey(organizationId),
+        queryKey: getGetConsultantPolicyAgreementStatusQueryKey(organizationId),
       });
       onClose();
     } catch {

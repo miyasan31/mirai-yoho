@@ -5,6 +5,7 @@ import { verifyEitherAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createCreateSlotUseCase,
   createDeleteSlotUseCase,
+  createGetPolicyAgreementStatusUseCase,
 } from "@/infrastructure/container";
 import { deleteRoute, jsonError, postRoute } from "./route-handler";
 
@@ -35,6 +36,22 @@ slotRoutes.post(
         "FORBIDDEN",
         "Consultants can only create their own slots",
       );
+    }
+
+    // 相談員本人が枠を追加する場合、最新ポリシーへの同意が済んでいることを要求する
+    if (consultant) {
+      const status = await createGetPolicyAgreementStatusUseCase().execute({
+        organizationId,
+        subjectType: "consultant",
+        subjectId: authUser.authUid,
+      });
+      if (status.needsReagreement) {
+        return jsonError(
+          403,
+          "POLICY_REAGREEMENT_REQUIRED",
+          "最新の利用規約・ポリシーに同意するまで、新しい予約枠を追加できません",
+        );
+      }
     }
 
     const result = await createCreateSlotUseCase().execute({

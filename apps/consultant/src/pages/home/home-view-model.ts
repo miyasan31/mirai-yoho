@@ -9,6 +9,8 @@ export interface HomeBookingItem {
   joinUrl: string | null;
   consultantJoinedAt: string | null;
   consultantMemo: string;
+  agreedTermsVersion: string | null;
+  agreedCancellationPolicyVersion: string | null;
 }
 
 export interface HomeSummary {
@@ -34,6 +36,9 @@ function toHomeBookingItem(booking: ConsultantBookingDetail): HomeBookingItem {
     joinUrl: booking.joinUrl ?? null,
     consultantJoinedAt: booking.consultantJoinedAt ?? null,
     consultantMemo: booking.consultantMemo ?? "",
+    agreedTermsVersion: booking.agreedTermsVersion ?? null,
+    agreedCancellationPolicyVersion:
+      booking.agreedCancellationPolicyVersion ?? null,
   };
 }
 
