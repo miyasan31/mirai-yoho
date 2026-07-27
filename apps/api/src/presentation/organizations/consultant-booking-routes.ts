@@ -56,6 +56,10 @@ consultantBookingRoutes.get(
         memoBirthDate: b.getConsultantMemo().getBirthDate(),
         memoAppraisalDate: b.getConsultantMemo().getAppraisalDate(),
         consultationContent: b.getConsultationContent() ?? null,
+        agreedTermsVersion: b.getAgreedTermsVersion() ?? null,
+        agreedCancellationPolicyVersion:
+          b.getAgreedCancellationPolicyVersion() ?? null,
+        agreedAt: b.getAgreedAt()?.toISOString() ?? null,
         chargeable: eligibility.chargeable,
         chargeDisabledReason: eligibility.reason,
         pricePlanName: b.getPricePlanName() ?? null,

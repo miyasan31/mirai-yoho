@@ -2405,6 +2405,19 @@ components:
         consultationContent:
           type: string
           nullable: true
+        agreedTermsVersion:
+          type: string
+          nullable: true
+          description: 予約時に顧客が同意した利用規約の version
+        agreedCancellationPolicyVersion:
+          type: string
+          nullable: true
+          description: 予約時に顧客が同意したキャンセルポリシーの version
+        agreedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: 予約時にポリシーへ同意した日時
         chargeable:
           type: boolean
         chargeDisabledReason:

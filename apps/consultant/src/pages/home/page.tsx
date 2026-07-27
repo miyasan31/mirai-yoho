@@ -16,6 +16,7 @@ import { useMemo } from "react";
 import { styled } from "styled-system/jsx";
 import { useConsultantBookings } from "@/hooks/use-consultant-bookings";
 import { ConsultantJoinControl } from "../bookings/consultant-join-control";
+import { BookingOutdatedPolicyAlert } from "./booking-outdated-policy-alert";
 import { buildConsultantHomeViewModel } from "./home-view-model";
 import { ReagreementNotice } from "./reagreement-notice";
 
@@ -108,6 +109,12 @@ export default function ConsultantHomePage() {
                 </Text>
                 <BookingStatusBadge status={nextBooking.status} />
               </styled.div>
+              {organizationId && (
+                <BookingOutdatedPolicyAlert
+                  organizationId={organizationId}
+                  booking={nextBooking}
+                />
+              )}
               <Text textStyle="sm" mb="4">
                 顧客: {nextBooking.customerName}
               </Text>

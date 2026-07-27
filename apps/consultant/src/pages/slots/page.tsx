@@ -3,6 +3,7 @@ import { ja } from "date-fns/locale";
 import { useCallback, useMemo, useState } from "react";
 import { Calendar, dateFnsLocalizer, type SlotInfo } from "react-big-calendar";
 import "react-big-calendar/lib/css/react-big-calendar.css";
+import { useGetConsultantPolicyAgreementStatus } from "@mirai-yoho/api-client/api/consultant/consultant";
 import { usePublicBookingSettings } from "@mirai-yoho/console-core/hooks/use-booking-settings";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { invalidateAfter } from "@mirai-yoho/console-core/query/invalidation-map";
@@ -13,12 +14,14 @@ import {
   isAlignedToSlotBoundary,
   splitIntoSlotRanges,
 } from "@mirai-yoho/shared/slot-availability";
+import { Alert } from "@mirai-yoho/ui/components/ui/alert";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Dialog from "@mirai-yoho/ui/components/ui/dialog";
 import { Skeleton } from "@mirai-yoho/ui/components/ui/skeleton";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { TriangleAlert } from "lucide-react";
 import { styled } from "styled-system/jsx";
 import { useAuth } from "@/hooks/use-auth";
 import { useGetConsoleSlots } from "@/hooks/use-console-slots";
@@ -125,6 +128,12 @@ export default function ConsultantSlotsPage() {
   const { data: settingsData } = usePublicBookingSettings();
   const createSlot = useCreateSlot();
   const deleteSlot = useDeleteSlot();
+  const { data: policyStatusData } = useGetConsultantPolicyAgreementStatus(
+    organizationId ?? "",
+    { query: { enabled: Boolean(organizationId) } },
+  );
+  const needsPolicyReagreement =
+    policyStatusData?.data?.needsReagreement ?? false;
   const businessHours = useMemo(
     () =>
       BusinessHours.reconstruct(
@@ -182,6 +191,15 @@ export default function ConsultantSlotsPage() {
 
   const handleSelectSlot = useCallback(
     async (slotInfo: SlotInfo) => {
+      if (needsPolicyReagreement) {
+        toaster.create({
+          type: "error",
+          title: "利用規約・ポリシーへの同意が必要です",
+          description:
+            "ホーム画面から最新版に同意すると、予約枠を追加できるようになります。",
+        });
+        return;
+      }
       if (view === "month") {
         if (
           isPastDay(slotInfo.start, new Date()) ||
@@ -295,6 +313,7 @@ export default function ConsultantSlotsPage() {
       businessHours,
       createSlot,
       events,
+      needsPolicyReagreement,
       organizationId,
       queryClient,
       setViewAndDate,
@@ -417,6 +436,22 @@ export default function ConsultantSlotsPage() {
           カレンダー上で予約可能枠の追加・削除を行う画面です。
         </Text>
       </styled.div>
+
+      {needsPolicyReagreement && (
+        <styled.div mb="4">
+          <Alert.Root colorPalette="amber" variant="surface">
+            <Alert.Icon>
+              <TriangleAlert />
+            </Alert.Icon>
+            <styled.div flex="1">
+              <Alert.Title>新しい予約枠を追加できません</Alert.Title>
+              <Alert.Description>
+                最新の利用規約・ポリシーへの同意が必要です。ホーム画面から内容を確認して同意してください。
+              </Alert.Description>
+            </styled.div>
+          </Alert.Root>
+        </styled.div>
+      )}
 
       <styled.div h="calc(100vh - 128px)" shadow="xs" rounded="l2" p="4">
         <Calendar<CalendarEvent>
