@@ -117,6 +117,8 @@ export function PolicyDiffDialog({
               )}
               {diff && (
                 <styled.div
+                  w="full"
+                  alignSelf="stretch"
                   border="1px solid"
                   borderColor="border"
                   rounded="l2"
