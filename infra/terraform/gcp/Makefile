@@ -1,4 +1,4 @@
-.PHONY: help check-env create-state-bucket auth-adc init plan apply destroy validate fmt clean reset print-api-image print-worker-image print-firebase-storage-bucket-name
+.PHONY: help check-env create-state-bucket auth-adc init plan apply destroy import validate fmt clean reset print-api-image print-worker-image print-firebase-storage-bucket-name
 
 ENV ?= dev
 REGION ?= asia-northeast1
@@ -20,6 +20,16 @@ TF_DIR := $(ENV)
 TFVARS := .tfvars
 BACKEND := .backend.hcl
 
+# api_image / worker_image は .tfvars に書けないので HEAD の SHA から自動導出する。
+# CI 側や手元で別の値を使いたい場合は `TF_VAR_api_image=...` `TF_VAR_worker_image=...`
+# を事前に export しておけば ?= により尊重される。
+API_IMAGE    := $(REGION)-docker.pkg.dev/$(PROJECT_ID)/api/api:$(SHA)
+WORKER_IMAGE := $(REGION)-docker.pkg.dev/$(PROJECT_ID)/batch-worker/worker:$(SHA)
+TF_VAR_api_image    ?= $(API_IMAGE)
+TF_VAR_worker_image ?= $(WORKER_IMAGE)
+export TF_VAR_api_image
+export TF_VAR_worker_image
+
 .DEFAULT_GOAL := help
 
 help:
@@ -31,9 +41,12 @@ help:
 	@echo "  make init                        terraform init"
 	@echo ""
 	@echo "日常運用:"
-	@echo "  make plan                        変更内容を確認（TF_VAR_worker_image の指定が必要）"
-	@echo "  make apply                       インフラを適用"
+	@echo "  make plan                        変更内容を確認（api/worker image は HEAD SHA から自動導出）"
+	@echo "  make apply                       インフラを適用（同上）"
 	@echo "  make destroy                     インフラを削除"
+	@echo "  make import ADDR=<addr> ID=<id>  既存リソースを state に取り込む"
+	@echo "  ※ 別 SHA を使いたい場合は SHA=<git-sha> を渡すか、"
+	@echo "     TF_VAR_api_image / TF_VAR_worker_image を事前に export する"
 	@echo ""
 	@echo "その他:"
 	@echo "  make validate                    設定ファイルの検証"
@@ -47,7 +60,7 @@ help:
 	@echo "例:"
 	@echo "  make create-state-bucket ENV=dev"
 	@echo "  make init ENV=dev && make plan ENV=dev"
-	@echo "  export \$$(make print-api-image ENV=dev) && make plan ENV=dev"
+	@echo "  make apply ENV=dev SHA=<git-sha>   # 特定の SHA のイメージを指定して apply"
 
 check-env:
 	@test -d "$(TF_DIR)" || (echo "Error: $(TF_DIR) が見つかりません。ENV は dev または prod を指定してください。" && exit 1)
@@ -101,6 +114,13 @@ apply: check-env
 # Usage: make destroy ENV=dev
 destroy: check-env
 	terraform -chdir="$(TF_DIR)" destroy -var-file="$(TFVARS)"
+
+# Usage: make import ENV=dev ADDR='module.foo.google_storage_bucket.bar' ID='projects/x/buckets/y'
+# 既存の GCP リソースを Terraform state に取り込む。ADDR / ID は必須。
+import: check-env
+	@test -n "$(ADDR)" || (echo "Error: ADDR は必須です（例: ADDR='module.firebase.google_storage_bucket.firebase_default[0]'）" && exit 1)
+	@test -n "$(ID)"   || (echo "Error: ID は必須です（例: ID='projects/$(PROJECT_ID)/buckets/$(PROJECT_ID).firebasestorage.app'）" && exit 1)
+	terraform -chdir="$(TF_DIR)" import -var-file="$(TFVARS)" '$(ADDR)' '$(ID)'
 
 validate: check-env
 	terraform -chdir="$(TF_DIR)" validate
