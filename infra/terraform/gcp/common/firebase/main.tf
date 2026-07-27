@@ -227,6 +227,11 @@ resource "google_identity_platform_config" "default" {
     anonymous {
       enabled = true
     }
+
+    # API 側は phone_number ブロックを常に返してくるので、宣言しないと毎回 diff が出る。
+    phone_number {
+      enabled = false
+    }
   }
 
   lifecycle {
