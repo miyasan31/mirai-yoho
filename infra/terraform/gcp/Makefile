@@ -1,4 +1,4 @@
-.PHONY: help check-env create-state-bucket auth-adc init plan apply destroy validate fmt clean reset print-api-image print-worker-image
+.PHONY: help check-env create-state-bucket auth-adc init plan apply destroy validate fmt clean reset print-api-image print-worker-image print-firebase-storage-bucket-name
 
 ENV ?= dev
 REGION ?= asia-northeast1
@@ -42,6 +42,7 @@ help:
 	@echo "  make reset                       clean + init（やり直し）"
 	@echo "  make print-api-image             TF_VAR_api_image=<image URI> を出力（Git SHA タグ）"
 	@echo "  make print-worker-image          TF_VAR_worker_image=<image URI> を出力（Git SHA タグ）"
+	@echo "  make print-firebase-storage-bucket-name  var.firebase_storage_bucket_name を出力"
 	@echo ""
 	@echo "例:"
 	@echo "  make create-state-bucket ENV=dev"
@@ -83,6 +84,11 @@ print-api-image:
 # SHA を省略すると HEAD のコミット SHA を使う（deploy-batch-worker.yml の IMAGE_TAG=github.sha と同じ形式）。
 print-worker-image:
 	@echo $(REGION)-docker.pkg.dev/$(PROJECT_ID)/batch-worker/worker:$(SHA)
+
+# Usage: make print-firebase-storage-bucket-name ENV=dev
+# .tfvars の firebase_storage_bucket_name を出力する（{project}.firebasestorage.app 形式）。
+print-firebase-storage-bucket-name:
+	@echo $(PROJECT_ID).firebasestorage.app
 
 # Usage: make plan ENV=dev
 plan: check-env
