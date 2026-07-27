@@ -102,7 +102,7 @@ export function PolicyRevisionsPanel({
         type,
         data: values,
       });
-      toaster.success({ title: "ドラフトを作成しました" });
+      toaster.success({ title: "下書きを作成しました" });
       setCreateOpen(false);
       await onInvalidate(type);
     } catch {
@@ -121,7 +121,7 @@ export function PolicyRevisionsPanel({
         revisionId: revision.revisionId,
         data: values,
       });
-      toaster.success({ title: "ドラフトを更新しました" });
+      toaster.success({ title: "下書きを更新しました" });
       setEditing(null);
       await onInvalidate(type);
     } catch {
@@ -176,7 +176,7 @@ export function PolicyRevisionsPanel({
           message="改版がまだありません"
           hint={
             canManage
-              ? "『新しい改版を作成』からドラフトを作成し、公開してください。"
+              ? "『新しい改版を作成』から下書きを作成し、公開してください。"
               : "管理者による初期改版の投入を待ってください。"
           }
         />

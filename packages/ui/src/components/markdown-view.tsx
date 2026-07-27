@@ -13,6 +13,7 @@ interface MarkdownViewProps {
 export function MarkdownView({ body }: MarkdownViewProps) {
   return (
     <styled.div
+      w="full"
       color="fg.default"
       css={{
         "& h1": {

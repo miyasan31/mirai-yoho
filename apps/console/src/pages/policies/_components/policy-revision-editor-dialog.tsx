@@ -28,7 +28,7 @@ interface PolicyRevisionEditorDialogProps {
 
 const DIALOG_TITLE: Record<"create" | "edit", string> = {
   create: "新しい改版を作成",
-  edit: "ドラフトを編集",
+  edit: "下書きを編集",
 };
 
 export function PolicyRevisionEditorDialog({
@@ -138,6 +138,8 @@ export function PolicyRevisionEditorDialog({
 
               {previewOn ? (
                 <styled.div
+                  w="full"
+                  alignSelf="stretch"
                   minH="60vh"
                   border="1px solid"
                   borderColor="border"
@@ -170,7 +172,7 @@ export function PolicyRevisionEditorDialog({
                 loadingText="保存中..."
                 disabled={!canSubmit}
               >
-                {mode === "create" ? "ドラフトを作成" : "変更を保存"}
+                {mode === "create" ? "下書きを作成" : "変更を保存"}
               </Button>
             </Dialog.Footer>
           </styled.form>
