@@ -41,7 +41,7 @@ describe("api-error-mapper", () => {
       segments: ["bookings"],
     });
     logUnexpectedPostError(
-      new AppError(502, "EMAIL_DELIVERY_ERROR", "mail error"),
+      new AppError(409, "ZOOM_NOT_CONNECTED", "zoom not connected"),
       {
         endpoint: "POST /api/organizations/org-1/bookings",
         organizationId: "org-1",
@@ -76,6 +76,33 @@ describe("api-error-mapper", () => {
         organizationId: "org-1",
         segments: ["bookings", "id", "setup-payment"],
       }),
+    );
+    consoleErrorSpy.mockRestore();
+  });
+
+  it("logs 5xx app errors with their cause", () => {
+    const consoleErrorSpy = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+
+    const cause = new Error("Zoom meeting creation failed: 400");
+    logUnexpectedPostError(
+      new AppError(
+        502,
+        "ZOOM_INTEGRATION_ERROR",
+        "Zoom integration failed. Please try again later.",
+        { cause },
+      ),
+      {
+        endpoint: "POST /api/organizations/org-1/bookings",
+        organizationId: "org-1",
+        segments: ["bookings"],
+      },
+    );
+
+    expect(consoleErrorSpy).toHaveBeenCalledWith(
+      "Unhandled POST /organizations API error",
+      expect.objectContaining({ cause }),
     );
     consoleErrorSpy.mockRestore();
   });

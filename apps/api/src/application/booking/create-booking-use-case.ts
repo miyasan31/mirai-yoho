@@ -70,6 +70,21 @@ interface ResolvedContinuous {
   pricePlan: PricePlan;
 }
 
+// Zoom API 呼び出しの失敗のみを ZOOM_INTEGRATION_ERROR に写す。
+// 原因を cause として保持し、ログから実際の失敗理由を追えるようにする
+async function callZoom<T>(execute: () => Promise<T>): Promise<T> {
+  try {
+    return await execute();
+  } catch (error) {
+    throw new AppError(
+      502,
+      "ZOOM_INTEGRATION_ERROR",
+      "Zoom integration failed. Please try again later.",
+      { cause: error },
+    );
+  }
+}
+
 function toBreakoutRoomParams(
   session: ZoomSession,
 ): Array<{ name: string; participants: string[] }> {
@@ -244,44 +259,30 @@ export class CreateBookingUseCase {
       sessionDate,
     );
 
-    let session: ZoomSession;
+    const session =
+      existingSession ??
+      ZoomSession.create({
+        organizationId: input.organizationId,
+        sessionId: crypto.randomUUID(),
+        sessionDate,
+      });
+    session.assignParticipant(resolved.consultantId, consultantName, zoomEmail);
 
-    try {
-      if (existingSession) {
-        session = existingSession;
-        session.assignParticipant(
-          resolved.consultantId,
-          consultantName,
-          zoomEmail,
-        );
-        await this.zoomService.updateBreakoutRooms({
+    if (existingSession) {
+      await callZoom(() =>
+        this.zoomService.updateBreakoutRooms({
           meetingId: session.getZoomMeetingId(),
           breakoutRooms: toBreakoutRoomParams(session),
-        });
-      } else {
-        session = ZoomSession.create({
-          organizationId: input.organizationId,
-          sessionId: crypto.randomUUID(),
-          sessionDate,
-        });
-        session.assignParticipant(
-          resolved.consultantId,
-          consultantName,
-          zoomEmail,
-        );
-        const { meetingId, joinUrl } =
-          await this.zoomService.createDailyMeeting({
-            sessionDate,
-            breakoutRooms: toBreakoutRoomParams(session),
-          });
-        session.setMeetingDetails(meetingId, joinUrl);
-      }
-    } catch {
-      throw new AppError(
-        502,
-        "ZOOM_INTEGRATION_ERROR",
-        "Zoom integration failed. Please try again later.",
+        }),
       );
+    } else {
+      const { meetingId, joinUrl } = await callZoom(() =>
+        this.zoomService.createDailyMeeting({
+          sessionDate,
+          breakoutRooms: toBreakoutRoomParams(session),
+        }),
+      );
+      session.setMeetingDetails(meetingId, joinUrl);
     }
 
     const joinUrl = ZoomUrl.create(session.getJoinUrl());
