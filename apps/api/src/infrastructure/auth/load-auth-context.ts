@@ -29,15 +29,7 @@ export async function activateInvitedAccounts(
   await repo.saveAll(invited);
 }
 
-interface AccountViewsResult {
-  accountViews: Account[];
-  currentOrganizationId: string | null;
-  currentDisplayName: string | null;
-}
-
-async function buildAccountViews(
-  accountId: string,
-): Promise<AccountViewsResult> {
+async function buildAccountViews(accountId: string): Promise<Account[]> {
   const accountRepository = createAccountRepository();
   const organizationRepository = createOrganizationRepository();
   const accounts = await accountRepository.findByAccountId(accountId);
@@ -75,12 +67,13 @@ async function buildAccountViews(
     }
   }
 
-  const accountViews: Account[] = activeAccounts.map((account) => {
+  return activeAccounts.map((account) => {
     const organizationId = account.getOrganizationId();
     const roleKey = `${organizationId}_${account.getRoleId()}`;
     return {
       organizationId,
       name: nameById.get(organizationId) ?? organizationId,
+      displayName: account.getName(),
       roleId: account.getRoleId(),
       roleName:
         roleByOrganizationAndRole.get(roleKey)?.name ?? account.getRoleId(),
@@ -89,24 +82,11 @@ async function buildAccountViews(
       createdAt: account.getCreatedAt().toISOString(),
     };
   });
-
-  const firstAccount = activeAccounts[0];
-  return {
-    accountViews,
-    currentOrganizationId: firstAccount?.getOrganizationId() ?? null,
-    currentDisplayName: firstAccount?.getName() ?? null,
-  };
-}
-
-interface ConsultantViewsResult {
-  consultantViews: Consultant[];
-  currentOrganizationId: string | null;
-  currentDisplayName: string | null;
 }
 
 async function buildConsultantViews(
   consultantId: string,
-): Promise<ConsultantViewsResult> {
+): Promise<Consultant[]> {
   const consultantRepository = createConsultantRepository();
   const organizationRepository = createOrganizationRepository();
   const consultants =
@@ -123,76 +103,49 @@ async function buildConsultantViews(
       activeConsultants.map((consultant) => consultant.getOrganizationId()),
     ),
   ];
-  await organizationRepository.findByIds(organizationIds);
+  const organizations = await organizationRepository.findByIds(organizationIds);
+  const nameById = new Map<string, string>();
+  for (const organization of organizations) {
+    nameById.set(organization.getOrganizationId(), organization.getName());
+  }
 
-  const consultantViews: Consultant[] = activeConsultants.map((consultant) => ({
-    organizationId: consultant.getOrganizationId(),
-    name: consultant.getProfile().getDisplayName(),
-    isActive: consultant.getIsActive(),
-    createdAt: consultant.getCreatedAt().toISOString(),
-  }));
-
-  const firstConsultant = activeConsultants[0];
-  return {
-    consultantViews,
-    currentOrganizationId: firstConsultant?.getOrganizationId() ?? null,
-    currentDisplayName: firstConsultant?.getProfile().getDisplayName() ?? null,
-  };
+  return activeConsultants.map((consultant) => {
+    const organizationId = consultant.getOrganizationId();
+    return {
+      organizationId,
+      name: nameById.get(organizationId) ?? organizationId,
+      displayName: consultant.getProfile().getDisplayName(),
+      isActive: consultant.getIsActive(),
+      createdAt: consultant.getCreatedAt().toISOString(),
+    };
+  });
 }
 
 export async function loadAccountAuthUser(
   accountId: string,
 ): Promise<AccountAuthUser> {
-  const { accountViews, currentOrganizationId, currentDisplayName } =
-    await buildAccountViews(accountId);
   return {
     authUid: accountId,
-    accounts: accountViews,
-    currentOrganizationId,
-    currentDisplayName,
+    accounts: await buildAccountViews(accountId),
   };
 }
 
 export async function loadConsultantAuthUser(
   consultantId: string,
 ): Promise<ConsultantAuthUser> {
-  const { consultantViews, currentOrganizationId, currentDisplayName } =
-    await buildConsultantViews(consultantId);
   return {
     authUid: consultantId,
-    consultants: consultantViews,
-    currentOrganizationId,
-    currentDisplayName,
+    consultants: await buildConsultantViews(consultantId),
   };
 }
 
 /**
  * dual-context ルート専用: accounts と consultants の両方を引く。
- * account 側があればそちらの currentOrganizationId を優先する。
  */
 export async function loadAuthUser(authUid: string): Promise<AuthUser> {
-  const [account, consultant] = await Promise.all([
+  const [accounts, consultants] = await Promise.all([
     buildAccountViews(authUid),
     buildConsultantViews(authUid),
   ]);
-  const currentOrganizationId =
-    account.currentOrganizationId ?? consultant.currentOrganizationId ?? null;
-  const currentDisplayName =
-    account.currentOrganizationId === currentOrganizationId
-      ? account.currentDisplayName
-      : consultant.currentDisplayName;
-  return {
-    authUid,
-    accounts: account.accountViews,
-    consultants: consultant.consultantViews,
-    currentOrganizationId,
-    currentDisplayName,
-  };
-}
-
-export async function setLastOrganizationId(
-  _accountId: string,
-  _organizationId: string,
-): Promise<void> {
-  // 組織選択の保持はフロント側で行う
+  return { authUid, accounts, consultants };
 }

@@ -7,7 +7,8 @@ import { useAuth } from "@/hooks/use-auth";
 import { pageHead } from "@/lib/head";
 
 export default function NotFound() {
-  const { currentOrganizationId } = useAuth();
+  const { currentOrganizationId, defaultOrganizationId } = useAuth();
+  const homeOrganizationId = currentOrganizationId ?? defaultOrganizationId;
 
   return (
     <>
@@ -19,15 +20,15 @@ export default function NotFound() {
         description="指定されたページは存在しないか、すでに移動された可能性があります。"
         hint="URL を確認して、もう一度アクセスしてください。"
         actions={
-          currentOrganizationId ? (
+          homeOrganizationId ? (
             <>
               <BackNavigationButton
-                fallbackHref={`/${currentOrganizationId}/home`}
+                fallbackHref={`/${homeOrganizationId}/home`}
               />
               <Button asChild>
                 <Link
                   to="/$organizationId/home"
-                  params={{ organizationId: currentOrganizationId }}
+                  params={{ organizationId: homeOrganizationId }}
                 >
                   ホームへ戻る
                 </Link>

@@ -1,4 +1,5 @@
 import { envClient } from "@mirai-yoho/console-core/config/env.client";
+import { useOrganizationIdFromRoute } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { auth } from "@mirai-yoho/console-core/lib/firebase";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -16,10 +17,14 @@ import {
   useMemo,
   useState,
 } from "react";
+import { findDefaultOrganizationId } from "@/lib/organization-access";
 
 export interface Consultant {
   organizationId: string;
+  /** 所属組織の名前 */
   name: string;
+  /** その組織での相談員表示名 */
+  displayName: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -28,20 +33,16 @@ export interface AuthState {
   user: User | null;
   token: string | null;
   consultants: Consultant[];
+  /** URL の organizationId。所属していない組織のときは null */
   currentOrganizationId: string | null;
+  /** URL に組織がないときの遷移先（相談員として所属する最古の組織） */
+  defaultOrganizationId: string | null;
   currentDisplayName: string | null;
   currentIsConsultant: boolean;
   isConsultant: boolean;
   isLoading: boolean;
-  signIn: (
-    email: string,
-    password: string,
-  ) => Promise<{
-    currentOrganizationId: string | null;
-    currentIsConsultant: boolean;
-  }>;
+  signIn: (email: string, password: string) => Promise<Consultant[]>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
-  setCurrentOrganizationId: (organizationId: string) => Promise<void>;
   refreshAuthContext: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -50,8 +51,6 @@ export const AuthContext = createContext<AuthState | null>(null);
 
 interface AuthMePayload {
   consultants: Consultant[];
-  currentOrganizationId: string | null;
-  currentDisplayName: string | null;
 }
 
 export function useAuthState(): AuthState {
@@ -59,13 +58,8 @@ export function useAuthState(): AuthState {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [consultants, setConsultants] = useState<Consultant[]>([]);
-  const [currentOrganizationId, setCurrentOrganizationIdState] = useState<
-    string | null
-  >(null);
-  const [currentDisplayName, setCurrentDisplayName] = useState<string | null>(
-    null,
-  );
   const [isLoading, setIsLoading] = useState(true);
+  const routeOrganizationId = useOrganizationIdFromRoute();
 
   const syncAuthContext = useCallback(
     async (nextUser: User | null): Promise<AuthMePayload> => {
@@ -73,13 +67,7 @@ export function useAuthState(): AuthState {
         setUser(null);
         setToken(null);
         setConsultants([]);
-        setCurrentOrganizationIdState(null);
-        setCurrentDisplayName(null);
-        return {
-          consultants: [],
-          currentOrganizationId: null,
-          currentDisplayName: null,
-        };
+        return { consultants: [] };
       }
 
       const idTokenResult = await nextUser.getIdTokenResult();
@@ -116,8 +104,6 @@ export function useAuthState(): AuthState {
       const data = (await response.json()) as AuthMePayload;
 
       setConsultants(data.consultants ?? []);
-      setCurrentOrganizationIdState(data.currentOrganizationId);
-      setCurrentDisplayName(data.currentDisplayName);
       return data;
     },
     [],
@@ -144,44 +130,9 @@ export function useAuthState(): AuthState {
         password,
       );
       const data = await syncAuthContext(credential.user);
-      const currentConsultant = (data.consultants ?? []).find(
-        (consultant) =>
-          consultant.organizationId === data.currentOrganizationId,
-      );
-
-      return {
-        currentOrganizationId: data.currentOrganizationId,
-        currentIsConsultant: !!currentConsultant,
-      };
+      return data.consultants ?? [];
     },
     [syncAuthContext],
-  );
-
-  const setCurrentOrganizationId = useCallback(
-    async (organizationId: string) => {
-      if (!user || !token) {
-        throw new Error("Not authenticated");
-      }
-
-      const response = await fetch(
-        `${envClient.apiUrl}/api/auth/organization`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ organizationId }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to update current organization");
-      }
-
-      setCurrentOrganizationIdState(organizationId);
-    },
-    [user, token],
   );
 
   const refreshAuthContext = useCallback(async () => {
@@ -213,10 +164,15 @@ export function useAuthState(): AuthState {
     }
   }, []);
 
+  // URL の organizationId を正とする。所属していない組織を指している場合は
+  // 相談員ではない扱いにして、レイアウト側で 404 に落とす。
   const currentConsultant = consultants.find(
-    (consultant) => consultant.organizationId === currentOrganizationId,
+    (consultant) => consultant.organizationId === routeOrganizationId,
   );
   const currentIsConsultant = !!currentConsultant;
+  const currentOrganizationId = currentConsultant?.organizationId ?? null;
+  const currentDisplayName = currentConsultant?.displayName ?? null;
+  const defaultOrganizationId = findDefaultOrganizationId(consultants);
 
   return useMemo(
     () => ({
@@ -224,13 +180,13 @@ export function useAuthState(): AuthState {
       token,
       consultants,
       currentOrganizationId,
+      defaultOrganizationId,
       currentDisplayName,
       currentIsConsultant,
       isConsultant: currentIsConsultant,
       isLoading,
       signIn,
       sendPasswordResetEmail,
-      setCurrentOrganizationId,
       refreshAuthContext,
       signOut,
     }),
@@ -239,12 +195,12 @@ export function useAuthState(): AuthState {
       token,
       consultants,
       currentOrganizationId,
+      defaultOrganizationId,
       currentDisplayName,
       currentIsConsultant,
       isLoading,
       signIn,
       sendPasswordResetEmail,
-      setCurrentOrganizationId,
       refreshAuthContext,
       signOut,
     ],

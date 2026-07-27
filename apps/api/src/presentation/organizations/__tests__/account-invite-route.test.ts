@@ -151,8 +151,6 @@ describe("account invite route", () => {
     mocks.verifyAuth.mockResolvedValue({
       authUid: "admin-1",
       accounts: [],
-      currentOrganizationId: "org-1",
-      currentDisplayName: "Admin",
     });
     mocks.requireSystemAdminRole.mockReturnValue({ roleId: "admin" });
     mocks.createRoleRepository.mockReturnValue({

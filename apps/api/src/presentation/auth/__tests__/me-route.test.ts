@@ -22,8 +22,6 @@ describe("GET /api/auth/me", () => {
       authUid: "authUid-1",
       accounts: [],
       consultants: [],
-      currentOrganizationId: "org-1",
-      currentDisplayName: "User",
     });
 
     const response = await GET(new Request("http://localhost/api/auth/me"));

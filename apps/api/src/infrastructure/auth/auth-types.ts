@@ -2,7 +2,10 @@ import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-p
 
 export interface Account {
   organizationId: string;
+  /** 所属組織の名前 */
   name: string;
+  /** その組織でのアカウント表示名 */
+  displayName: string | null;
   roleId: string;
   roleName: string;
   permissions: AuthorizationPermission[];
@@ -12,7 +15,10 @@ export interface Account {
 
 export interface Consultant {
   organizationId: string;
+  /** 所属組織の名前 */
   name: string;
+  /** その組織での相談員表示名 */
+  displayName: string;
   isActive: boolean;
   createdAt: string;
 }
@@ -20,15 +26,11 @@ export interface Consultant {
 export interface AccountAuthUser {
   authUid: string;
   accounts: Account[];
-  currentOrganizationId: string | null;
-  currentDisplayName: string | null;
 }
 
 export interface ConsultantAuthUser {
   authUid: string;
   consultants: Consultant[];
-  currentOrganizationId: string | null;
-  currentDisplayName: string | null;
 }
 
 /**

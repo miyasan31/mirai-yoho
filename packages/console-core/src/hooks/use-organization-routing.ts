@@ -29,26 +29,8 @@ export function buildOrganizationPath(
   return `/${organizationId}${normalizedPath}`;
 }
 
-export function switchOrganizationInPath(
-  pathname: string,
-  nextOrganizationId: string,
-): string {
-  const segments = pathname.split("/").filter(Boolean);
-
-  if (segments.length === 0) {
-    return `/${nextOrganizationId}`;
-  }
-
-  if (segments[0]) {
-    segments[0] = nextOrganizationId;
-  }
-
-  return `/${segments.join("/")}`;
-}
-
 export function useOrganizationRouting() {
   const organizationId = useOrganizationIdFromRoute();
-  const pathname = useLocation({ select: (location) => location.pathname });
   const navigate = useNavigate();
   const navigateRef = useRef(navigate);
   navigateRef.current = navigate;
@@ -60,12 +42,16 @@ export function useOrganizationRouting() {
         toAppPath(
           organizationId ? buildOrganizationPath(organizationId, path) : path,
         ),
+      /**
+       * 組織を切り替える。切り替え先に存在しない ID を含むパス
+       * （詳細ページなど）に迷い込まないよう、常にホームへ遷移する。
+       */
       replaceOrganization: (nextOrganizationId: string) => {
         void navigateRef.current({
-          href: switchOrganizationInPath(pathname, nextOrganizationId),
+          href: buildOrganizationPath(nextOrganizationId, "/home"),
         });
       },
     }),
-    [organizationId, pathname],
+    [organizationId],
   );
 }

@@ -9,6 +9,7 @@ import { UserCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { useAuth } from "@/hooks/use-auth";
+import { findDefaultOrganizationId } from "@/lib/organization-access";
 import { type LoginFormValues, loginFormSchema } from "./login-form-schema";
 
 export default function ConsultantLoginPage() {
@@ -28,13 +29,15 @@ export default function ConsultantLoginPage() {
 
   const onSubmit = async (values: LoginFormValues) => {
     try {
-      const result = await signIn(values.email, values.password);
-      if (!result.currentOrganizationId || !result.currentIsConsultant) {
+      const consultants = await signIn(values.email, values.password);
+      // 相談員として所属する最古の組織へ入る
+      const organizationId = findDefaultOrganizationId(consultants);
+      if (!organizationId) {
         throw new Error("No consultant access");
       }
       void navigate({
         to: "/$organizationId/home",
-        params: { organizationId: result.currentOrganizationId },
+        params: { organizationId },
       });
     } catch {
       toaster.create({ type: "error", title: "ログインに失敗しました" });

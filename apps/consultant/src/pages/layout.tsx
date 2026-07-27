@@ -37,11 +37,10 @@ export default function ConsultantLayout({
     user,
     isConsultant,
     consultants,
-    currentOrganizationId,
+    defaultOrganizationId,
     currentDisplayName,
     isLoading,
     signOut,
-    setCurrentOrganizationId,
   } = useAuth();
   const { data: consultantProfileData } = useConsultantProfile();
   const navigate = useNavigate();
@@ -63,10 +62,10 @@ export default function ConsultantLayout({
     }
 
     if (!organizationId) {
-      if (currentOrganizationId) {
+      if (defaultOrganizationId) {
         void navigate({
           to: "/$organizationId/home",
-          params: { organizationId: currentOrganizationId },
+          params: { organizationId: defaultOrganizationId },
           replace: true,
         });
         return;
@@ -79,7 +78,7 @@ export default function ConsultantLayout({
       void navigate({ href: "/404", replace: true });
     }
   }, [
-    currentOrganizationId,
+    defaultOrganizationId,
     isConsultant,
     isLoading,
     navigate,
@@ -119,11 +118,8 @@ export default function ConsultantLayout({
           label: consultant.name,
           value: consultant.organizationId,
         })),
-        value: currentOrganizationId,
-        onChange: async (nextOrganizationId) => {
-          await setCurrentOrganizationId(nextOrganizationId);
-          replaceOrganization(nextOrganizationId);
-        },
+        value: organizationId,
+        onChange: replaceOrganization,
       }}
       currentDisplayName={sidebarDisplayName}
       onSignOut={signOut}

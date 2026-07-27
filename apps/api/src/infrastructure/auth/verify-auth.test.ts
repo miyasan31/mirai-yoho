@@ -56,8 +56,6 @@ describe("verifyAccountAuth", () => {
           createdAt: "2026-01-01T00:00:00.000Z",
         },
       ],
-      currentOrganizationId: "org-1",
-      currentDisplayName: "Admin",
     });
 
     await expect(verifyAccountAuth(bearerRequest("t"))).resolves.toMatchObject({
@@ -73,8 +71,6 @@ describe("verifyAccountAuth", () => {
     mockLoadAccountAuthUser.mockResolvedValueOnce({
       authUid: "user-2",
       accounts: [],
-      currentOrganizationId: null,
-      currentDisplayName: null,
     });
 
     await expect(verifyAccountAuth(bearerRequest("t"))).rejects.toMatchObject({
@@ -101,8 +97,6 @@ describe("verifyConsultantAuth", () => {
           createdAt: "2026-01-01T00:00:00.000Z",
         },
       ],
-      currentOrganizationId: "org-1",
-      currentDisplayName: "相談員 一郎",
     });
 
     await expect(
@@ -118,8 +112,6 @@ describe("verifyConsultantAuth", () => {
     mockLoadConsultantAuthUser.mockResolvedValueOnce({
       authUid: "not-consultant",
       consultants: [],
-      currentOrganizationId: null,
-      currentDisplayName: null,
     });
 
     await expect(
@@ -152,8 +144,6 @@ describe("verifyEitherAuth", () => {
         },
       ],
       consultants: [],
-      currentOrganizationId: "org-1",
-      currentDisplayName: "Admin",
     });
 
     await expect(verifyEitherAuth(bearerRequest("t"))).resolves.toMatchObject({
@@ -175,8 +165,6 @@ describe("verifyEitherAuth", () => {
           createdAt: "2026-01-01T00:00:00.000Z",
         },
       ],
-      currentOrganizationId: "org-1",
-      currentDisplayName: "相談員 一郎",
     });
 
     await expect(verifyEitherAuth(bearerRequest("t"))).resolves.toMatchObject({
@@ -190,8 +178,6 @@ describe("verifyEitherAuth", () => {
       authUid: "user-2",
       accounts: [],
       consultants: [],
-      currentOrganizationId: null,
-      currentDisplayName: null,
     });
 
     await expect(verifyEitherAuth(bearerRequest("t"))).rejects.toMatchObject({
