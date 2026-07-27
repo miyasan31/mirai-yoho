@@ -79,10 +79,10 @@ describe("ConsultantLayout", () => {
         },
       ],
       currentOrganizationId: "org-test",
+      defaultOrganizationId: "org-test",
       currentDisplayName: "Auth Display Name",
       isLoading: false,
       signOut: vi.fn(),
-      setCurrentOrganizationId: vi.fn(),
     });
   }
 
@@ -118,10 +118,10 @@ describe("ConsultantLayout", () => {
         },
       ],
       currentOrganizationId: "org-test",
+      defaultOrganizationId: "org-test",
       currentDisplayName: "",
       isLoading: false,
       signOut: vi.fn(),
-      setCurrentOrganizationId: vi.fn(),
     });
     mockUseConsultantProfile.mockReturnValue({
       data: {

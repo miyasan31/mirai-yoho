@@ -9,7 +9,7 @@ import { ShieldCheck } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { useAuth } from "@/hooks/use-auth";
-import { CONSOLE_NAV_PERMISSIONS } from "../nav-items";
+import { findDefaultOrganizationId } from "@/lib/organization-access";
 import { type LoginFormValues, loginFormSchema } from "./login-form-schema";
 
 export default function ConsoleLoginPage() {
@@ -29,19 +29,15 @@ export default function ConsoleLoginPage() {
 
   const onSubmit = async (values: LoginFormValues) => {
     try {
-      const result = await signIn(values.email, values.password);
-      if (!result.currentOrganizationId) {
-        throw new Error("No organization available");
-      }
-      const hasAdminAccess = result.currentPermissions.some((permission) =>
-        CONSOLE_NAV_PERMISSIONS.includes(permission),
-      );
-      if (!hasAdminAccess) {
+      const accounts = await signIn(values.email, values.password);
+      // 所属する組織のうち、コンソールを開ける最古の組織へ入る
+      const organizationId = findDefaultOrganizationId(accounts);
+      if (!organizationId) {
         throw new Error("No admin access");
       }
       void navigate({
         to: "/$organizationId/home",
-        params: { organizationId: result.currentOrganizationId },
+        params: { organizationId },
       });
     } catch {
       toaster.create({ type: "error", title: "ログインに失敗しました" });

@@ -2,7 +2,6 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { envServer } from "@/config/env.server";
 import * as authMe from "@/presentation/auth/me";
-import * as authOrganization from "@/presentation/auth/organization";
 import * as zoomAuthorize from "@/presentation/auth/zoom-authorize";
 import * as zoomCallback from "@/presentation/auth/zoom-callback";
 import * as zoomRevoke from "@/presentation/auth/zoom-revoke";
@@ -28,7 +27,6 @@ export function createApp(): Hono {
   );
 
   app.get("/api/auth/me", (c) => authMe.GET(c.req.raw));
-  app.patch("/api/auth/organization", (c) => authOrganization.PATCH(c.req.raw));
   app.post("/api/auth/zoom/authorize", (c) => zoomAuthorize.POST(c.req.raw));
   app.get("/api/auth/zoom/callback", (c) => zoomCallback.GET(c.req.raw));
   app.post("/api/auth/zoom/revoke", (c) => zoomRevoke.POST(c.req.raw));

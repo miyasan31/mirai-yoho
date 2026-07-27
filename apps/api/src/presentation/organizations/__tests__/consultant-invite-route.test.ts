@@ -138,8 +138,6 @@ describe("consultant invite route", () => {
       authUid: "admin-1",
       accounts: [],
       consultants: [],
-      currentOrganizationId: "org-1",
-      currentDisplayName: "Admin",
     });
     mocks.requireSystemAdminRole.mockReturnValue({ roleId: "admin" });
     mocks.createConsultantRepository.mockReturnValue({

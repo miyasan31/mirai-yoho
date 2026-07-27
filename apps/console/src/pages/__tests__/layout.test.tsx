@@ -72,13 +72,14 @@ describe("ConsoleLayout", () => {
         {
           name: "Org Test",
           organizationId: "org-test",
+          permissions: ["console.dashboard.read", "console.accounts.read"],
         },
       ],
       currentOrganizationId: "org-test",
+      defaultOrganizationId: "org-test",
       currentDisplayName: "Operator",
       isLoading: false,
       signOut: vi.fn(),
-      setCurrentOrganizationId: vi.fn(),
     });
 
     render(

@@ -1,4 +1,5 @@
 import { envClient } from "@mirai-yoho/console-core/config/env.client";
+import { useOrganizationIdFromRoute } from "@mirai-yoho/console-core/hooks/use-organization-routing";
 import { auth } from "@mirai-yoho/console-core/lib/firebase";
 import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-permission";
 import { useQueryClient } from "@tanstack/react-query";
@@ -17,10 +18,14 @@ import {
   useMemo,
   useState,
 } from "react";
+import { findDefaultOrganizationId } from "@/lib/organization-access";
 
 export interface Account {
   organizationId: string;
+  /** 所属組織の名前 */
   name: string;
+  /** その組織でのアカウント表示名 */
+  displayName: string | null;
   roleId: string;
   roleName: string;
   permissions: AuthorizationPermission[];
@@ -32,7 +37,10 @@ export interface AuthState {
   user: User | null;
   token: string | null;
   accounts: Account[];
+  /** URL の organizationId。所属していない組織のときは null */
   currentOrganizationId: string | null;
+  /** URL に組織がないときの遷移先（コンソールを開ける最古の組織） */
+  defaultOrganizationId: string | null;
   currentDisplayName: string | null;
   currentRoleId: string | null;
   roleId: string | null;
@@ -40,16 +48,8 @@ export interface AuthState {
   hasPermission: (permission: AuthorizationPermission) => boolean;
   hasAnyPermission: (permissions: AuthorizationPermission[]) => boolean;
   isLoading: boolean;
-  signIn: (
-    email: string,
-    password: string,
-  ) => Promise<{
-    currentOrganizationId: string | null;
-    currentRoleId: string | null;
-    currentPermissions: AuthorizationPermission[];
-  }>;
+  signIn: (email: string, password: string) => Promise<Account[]>;
   sendPasswordResetEmail: (email: string) => Promise<void>;
-  setCurrentOrganizationId: (organizationId: string) => Promise<void>;
   refreshAuthContext: () => Promise<void>;
   signOut: () => Promise<void>;
 }
@@ -58,8 +58,6 @@ export const AuthContext = createContext<AuthState | null>(null);
 
 interface AuthMePayload {
   accounts: Account[];
-  currentOrganizationId: string | null;
-  currentDisplayName: string | null;
 }
 
 export function useAuthState(): AuthState {
@@ -67,13 +65,8 @@ export function useAuthState(): AuthState {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
-  const [currentOrganizationId, setCurrentOrganizationIdState] = useState<
-    string | null
-  >(null);
-  const [currentDisplayName, setCurrentDisplayName] = useState<string | null>(
-    null,
-  );
   const [isLoading, setIsLoading] = useState(true);
+  const routeOrganizationId = useOrganizationIdFromRoute();
 
   const syncAuthContext = useCallback(
     async (nextUser: User | null): Promise<AuthMePayload> => {
@@ -81,13 +74,7 @@ export function useAuthState(): AuthState {
         setUser(null);
         setToken(null);
         setAccounts([]);
-        setCurrentOrganizationIdState(null);
-        setCurrentDisplayName(null);
-        return {
-          accounts: [],
-          currentOrganizationId: null,
-          currentDisplayName: null,
-        };
+        return { accounts: [] };
       }
 
       const idTokenResult = await nextUser.getIdTokenResult();
@@ -124,8 +111,6 @@ export function useAuthState(): AuthState {
       const data = (await response.json()) as AuthMePayload;
 
       setAccounts(data.accounts);
-      setCurrentOrganizationIdState(data.currentOrganizationId);
-      setCurrentDisplayName(data.currentDisplayName);
       return data;
     },
     [],
@@ -152,44 +137,9 @@ export function useAuthState(): AuthState {
         password,
       );
       const data = await syncAuthContext(credential.user);
-      const currentAccount = data.accounts.find(
-        (account) => account.organizationId === data.currentOrganizationId,
-      );
-
-      return {
-        currentOrganizationId: data.currentOrganizationId,
-        currentRoleId: currentAccount?.roleId ?? null,
-        currentPermissions: currentAccount?.permissions ?? [],
-      };
+      return data.accounts;
     },
     [syncAuthContext],
-  );
-
-  const setCurrentOrganizationId = useCallback(
-    async (organizationId: string) => {
-      if (!user || !token) {
-        throw new Error("Not authenticated");
-      }
-
-      const response = await fetch(
-        `${envClient.apiUrl}/api/auth/organization`,
-        {
-          method: "PATCH",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({ organizationId }),
-        },
-      );
-
-      if (!response.ok) {
-        throw new Error("Failed to update current organization");
-      }
-
-      setCurrentOrganizationIdState(organizationId);
-    },
-    [user, token],
   );
 
   const refreshAuthContext = useCallback(async () => {
@@ -221,11 +171,16 @@ export function useAuthState(): AuthState {
     }
   }, []);
 
+  // URL の organizationId を正とする。所属していない組織を指している場合は
+  // 権限なし（currentOrganizationId = null）として扱い、レイアウト側で 404 に落とす。
   const currentAccount = accounts.find(
-    (account) => account.organizationId === currentOrganizationId,
+    (account) => account.organizationId === routeOrganizationId,
   );
+  const currentOrganizationId = currentAccount?.organizationId ?? null;
+  const currentDisplayName = currentAccount?.displayName ?? null;
   const currentRoleId = currentAccount?.roleId ?? null;
   const permissions = currentAccount?.permissions ?? [];
+  const defaultOrganizationId = findDefaultOrganizationId(accounts);
 
   const hasPermission = useCallback(
     (permission: AuthorizationPermission) => permissions.includes(permission),
@@ -243,6 +198,7 @@ export function useAuthState(): AuthState {
       token,
       accounts,
       currentOrganizationId,
+      defaultOrganizationId,
       currentDisplayName,
       currentRoleId,
       roleId: currentRoleId,
@@ -252,7 +208,6 @@ export function useAuthState(): AuthState {
       isLoading,
       signIn,
       sendPasswordResetEmail,
-      setCurrentOrganizationId,
       refreshAuthContext,
       signOut,
     }),
@@ -261,6 +216,7 @@ export function useAuthState(): AuthState {
       token,
       accounts,
       currentOrganizationId,
+      defaultOrganizationId,
       currentDisplayName,
       currentRoleId,
       permissions,
@@ -269,7 +225,6 @@ export function useAuthState(): AuthState {
       isLoading,
       signIn,
       sendPasswordResetEmail,
-      setCurrentOrganizationId,
       refreshAuthContext,
       signOut,
     ],

@@ -181,8 +181,6 @@ describe("batch charge / consultation reminder routes", () => {
     mocks.verifyAuth.mockResolvedValue({
       authUid: "admin-1",
       accounts: [],
-      currentOrganizationId: "org-charge-admin",
-      currentDisplayName: "Admin",
     });
 
     const response = await postBatch("org-charge-admin", "charge", {

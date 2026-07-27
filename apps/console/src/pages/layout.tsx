@@ -8,6 +8,7 @@ import {
   SidebarLayoutSkeleton,
 } from "@/components/sidebar-layout";
 import { useAuth } from "@/hooks/use-auth";
+import { canOpenConsole } from "@/lib/organization-access";
 import { CONSOLE_NAV_PERMISSIONS, NAV_ITEMS } from "./nav-items";
 
 export default function ConsoleLayout({ children }: { children: ReactNode }) {
@@ -15,11 +16,10 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
     user,
     hasAnyPermission,
     accounts,
-    currentOrganizationId,
+    defaultOrganizationId,
     currentDisplayName,
     isLoading,
     signOut,
-    setCurrentOrganizationId,
   } = useAuth();
   const navigate = useNavigate();
   const { organizationId, buildPath, replaceOrganization } =
@@ -36,10 +36,10 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
     }
 
     if (!organizationId) {
-      if (currentOrganizationId) {
+      if (defaultOrganizationId) {
         void navigate({
           to: "/$organizationId/home",
-          params: { organizationId: currentOrganizationId },
+          params: { organizationId: defaultOrganizationId },
           replace: true,
         });
         return;
@@ -52,7 +52,7 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
       void navigate({ href: "/404", replace: true });
     }
   }, [
-    currentOrganizationId,
+    defaultOrganizationId,
     hasAnyPermission,
     isLoading,
     navigate,
@@ -70,6 +70,12 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
       window.removeEventListener(UNAUTHORIZED_EVENT_NAME, handleUnauthorized);
     };
   }, [navigate]);
+
+  // コンソールを開けない組織に切り替えると 404 に落ちるため、一覧から除く
+  const switchableAccounts = useMemo(
+    () => accounts.filter(canOpenConsole),
+    [accounts],
+  );
 
   const visibleItems = useMemo(
     () =>
@@ -93,15 +99,12 @@ export default function ConsoleLayout({ children }: { children: ReactNode }) {
       title="管理メニュー"
       navItems={visibleItems}
       organizationSwitcher={{
-        items: accounts.map((account) => ({
+        items: switchableAccounts.map((account) => ({
           label: account.name,
           value: account.organizationId,
         })),
-        value: currentOrganizationId,
-        onChange: async (nextOrganizationId) => {
-          await setCurrentOrganizationId(nextOrganizationId);
-          replaceOrganization(nextOrganizationId);
-        },
+        value: organizationId,
+        onChange: replaceOrganization,
       }}
       currentDisplayName={currentDisplayName ?? user.email ?? "-"}
       onSignOut={signOut}

@@ -64,10 +64,12 @@ vi.mock("styled-system/recipes", () => ({
   tooltip: () => ({}),
 }));
 
+// nav-items が使うアイコンも含めてスタブする（login ページから間接的に import される）
 vi.mock("lucide-react", () => ({
   ShieldCheck: () => <span>ShieldCheck</span>,
   CalendarDays: () => <span>CalendarDays</span>,
   CreditCard: () => <span>CreditCard</span>,
+  FileText: () => <span>FileText</span>,
   House: () => <span>House</span>,
   LayoutDashboard: () => <span>LayoutDashboard</span>,
   Settings: () => <span>Settings</span>,
@@ -106,7 +108,26 @@ vi.mock("@mirai-yoho/ui/components/ui/text", () => ({
   },
 }));
 
+import type { AuthorizationPermission } from "@mirai-yoho/shared/authorization-permission";
+import type { Account } from "@/hooks/use-auth";
 import ConsoleLoginPage from "../page";
+
+function account(
+  organizationId: string,
+  roleId: string,
+  permissions: AuthorizationPermission[],
+): Account {
+  return {
+    organizationId,
+    name: organizationId,
+    displayName: "テスト太郎",
+    roleId,
+    roleName: roleId,
+    permissions,
+    status: "active",
+    createdAt: "2026-01-01T00:00:00.000Z",
+  };
+}
 
 describe("ConsoleLoginPage", () => {
   afterEach(() => {
@@ -126,11 +147,9 @@ describe("ConsoleLoginPage", () => {
   });
 
   it("redirects to admin home when the account has admin permissions", async () => {
-    mockSignIn.mockResolvedValue({
-      currentOrganizationId: "org-test",
-      currentRoleId: "admin",
-      currentPermissions: ["console.dashboard.read"],
-    });
+    mockSignIn.mockResolvedValue([
+      account("org-test", "admin", ["console.dashboard.read"]),
+    ]);
 
     const { container } = render(<ConsoleLoginPage />);
 
@@ -153,11 +172,9 @@ describe("ConsoleLoginPage", () => {
   });
 
   it("redirects to admin home when a custom role has admin permissions", async () => {
-    mockSignIn.mockResolvedValue({
-      currentOrganizationId: "org-test",
-      currentRoleId: "reception-custom-role",
-      currentPermissions: ["console.bookings.read"],
-    });
+    mockSignIn.mockResolvedValue([
+      account("org-test", "reception-custom-role", ["console.bookings.read"]),
+    ]);
 
     const { container } = render(<ConsoleLoginPage />);
 
@@ -179,13 +196,34 @@ describe("ConsoleLoginPage", () => {
     });
   });
 
-  it("does not navigate when the account has no admin permissions", async () => {
-    mockSignIn.mockResolvedValue({
-      currentOrganizationId: "org-test",
-      currentRoleId: "consultant-only",
-      currentIsConsultant: true,
-      currentPermissions: [],
+  it("skips organizations without console permissions", async () => {
+    mockSignIn.mockResolvedValue([
+      account("org-oldest", "consultant-only", []),
+      account("org-admin", "admin", ["console.dashboard.read"]),
+    ]);
+
+    const { container } = render(<ConsoleLoginPage />);
+
+    fireEvent.change(container.querySelector("#email") as HTMLInputElement, {
+      target: { value: "admin@example.com" },
     });
+    fireEvent.change(container.querySelector("#password") as HTMLInputElement, {
+      target: { value: "password" },
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "ログイン" }));
+    });
+
+    await waitFor(() => {
+      expect(mockNavigate).toHaveBeenCalledWith({
+        to: "/$organizationId/home",
+        params: { organizationId: "org-admin" },
+      });
+    });
+  });
+
+  it("does not navigate when the account has no admin permissions", async () => {
+    mockSignIn.mockResolvedValue([account("org-test", "consultant-only", [])]);
 
     const { container } = render(<ConsoleLoginPage />);
 

@@ -161,8 +161,6 @@ describe("late arrival alert route", () => {
     mocks.verifyAuth.mockResolvedValue({
       authUid: "admin-1",
       accounts: [],
-      currentOrganizationId: "org-1",
-      currentDisplayName: "Admin",
     });
 
     const response = await postLateArrivalAlerts({

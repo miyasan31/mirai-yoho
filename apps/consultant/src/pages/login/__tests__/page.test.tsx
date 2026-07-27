@@ -116,11 +116,15 @@ describe("ConsultantLoginPage", () => {
   });
 
   it("redirects to consultant home after successful login", async () => {
-    mockSignIn.mockResolvedValue({
-      currentOrganizationId: "org-test",
-      currentRoleId: "admin",
-      currentIsConsultant: true,
-    });
+    mockSignIn.mockResolvedValue([
+      {
+        organizationId: "org-test",
+        name: "テスト組織",
+        displayName: "テスト占い師",
+        isActive: true,
+        createdAt: "2026-01-01T00:00:00.000Z",
+      },
+    ]);
 
     const { container } = render(<ConsultantLoginPage />);
 
