@@ -237,20 +237,19 @@ function DiffPanel({ chunks }: { chunks: PolicyDiffChunk[] }) {
 function DiffRow({ line }: { line: DiffLine }) {
   const isAdd = line.kind === "add";
   const isRemove = line.kind === "remove";
-  const rowBg = isAdd
-    ? "green.subtle"
-    : isRemove
-      ? "red.subtle"
-      : "transparent";
-  const gutterBg = isAdd ? "green.muted" : isRemove ? "red.muted" : "bg.subtle";
+  // 追加行（新版）は blue、削除行（以前）は slate（gray）で表示
+  const rowBg = isAdd ? "blue.a4" : isRemove ? "slate.a4" : "transparent";
+  const gutterBg = isAdd ? "blue.a6" : isRemove ? "slate.a6" : "bg.subtle";
+  const gutterColor = isAdd ? "blue.11" : isRemove ? "slate.11" : "fg.muted";
   const sign = isAdd ? "+" : isRemove ? "-" : " ";
-  const contentColor = isAdd ? "green.fg" : isRemove ? "red.fg" : "fg.default";
+  const signColor = isAdd ? "blue.11" : isRemove ? "slate.11" : "fg.muted";
+  const contentColor = isAdd ? "blue.12" : isRemove ? "slate.11" : "fg.default";
 
   return (
     <styled.tr bg={rowBg}>
       <styled.td
         bg={gutterBg}
-        color="fg.muted"
+        color={gutterColor}
         textAlign="right"
         px="2"
         minW="12"
@@ -258,12 +257,13 @@ function DiffRow({ line }: { line: DiffLine }) {
         borderRightWidth="1px"
         borderRightColor="border"
         verticalAlign="top"
+        fontWeight={isAdd || isRemove ? "semibold" : "normal"}
       >
         {line.oldLine ?? ""}
       </styled.td>
       <styled.td
         bg={gutterBg}
-        color="fg.muted"
+        color={gutterColor}
         textAlign="right"
         px="2"
         minW="12"
@@ -271,16 +271,18 @@ function DiffRow({ line }: { line: DiffLine }) {
         borderRightWidth="1px"
         borderRightColor="border"
         verticalAlign="top"
+        fontWeight={isAdd || isRemove ? "semibold" : "normal"}
       >
         {line.newLine ?? ""}
       </styled.td>
       <styled.td
-        color={contentColor}
+        color={signColor}
         textAlign="center"
         px="2"
         userSelect="none"
         verticalAlign="top"
         w="6"
+        fontWeight="bold"
       >
         {sign}
       </styled.td>
