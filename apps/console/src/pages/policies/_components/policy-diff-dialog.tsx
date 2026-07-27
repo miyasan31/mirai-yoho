@@ -1,4 +1,5 @@
 import type {
+  PolicyDiffChunk,
   PolicyRevision,
   PolicyType,
 } from "@mirai-yoho/api-client/schemas";
@@ -115,65 +116,7 @@ export function PolicyDiffDialog({
                   差分の取得に失敗しました。
                 </Text>
               )}
-              {diff && (
-                <styled.div
-                  w="full"
-                  alignSelf="stretch"
-                  border="1px solid"
-                  borderColor="border"
-                  rounded="l2"
-                  overflow="auto"
-                  maxH="60vh"
-                  fontFamily="mono"
-                  fontSize="xs"
-                  bg="bg.canvas"
-                >
-                  {diff.chunks.map((chunk, index) => {
-                    const bg = chunk.added
-                      ? "green.subtle"
-                      : chunk.removed
-                        ? "red.subtle"
-                        : "transparent";
-                    const color = chunk.added
-                      ? "green.fg"
-                      : chunk.removed
-                        ? "red.fg"
-                        : "fg.default";
-                    const prefix = chunk.added
-                      ? "+ "
-                      : chunk.removed
-                        ? "- "
-                        : "  ";
-                    return (
-                      <styled.pre
-                        // biome-ignore lint/suspicious/noArrayIndexKey: diff chunks are stable positionally
-                        key={index}
-                        bg={bg}
-                        color={color}
-                        px="3"
-                        py="1"
-                        whiteSpace="pre-wrap"
-                        wordBreak="break-word"
-                        margin="0"
-                      >
-                        {chunk.value
-                          .split("\n")
-                          .map((line, i, arr) =>
-                            i === arr.length - 1 && line === ""
-                              ? ""
-                              : `${prefix}${line}\n`,
-                          )
-                          .join("")}
-                      </styled.pre>
-                    );
-                  })}
-                  {diff.chunks.length === 0 && (
-                    <Text textStyle="sm" color="fg.muted" p="3">
-                      差分はありません。
-                    </Text>
-                  )}
-                </styled.div>
-              )}
+              {diff && <DiffPanel chunks={diff.chunks} />}
             </Dialog.Body>
             <Dialog.Footer>
               <Dialog.CloseTrigger asChild>
@@ -184,5 +127,172 @@ export function PolicyDiffDialog({
         </Dialog.Content>
       </Dialog.Positioner>
     </Dialog.Root>
+  );
+}
+
+// ---------- GitHub 風の line-by-line diff ----------
+
+type DiffLineKind = "context" | "add" | "remove";
+
+interface DiffLine {
+  oldLine: number | null;
+  newLine: number | null;
+  kind: DiffLineKind;
+  content: string;
+}
+
+function flattenChunksToLines(chunks: PolicyDiffChunk[]): DiffLine[] {
+  let oldNum = 0;
+  let newNum = 0;
+  const lines: DiffLine[] = [];
+  for (const chunk of chunks) {
+    const raw = chunk.value.split("\n");
+    // 末尾が改行で終わっている場合は空要素を落として重複行を防ぐ
+    if (raw.length > 0 && raw[raw.length - 1] === "") raw.pop();
+    for (const line of raw) {
+      if (chunk.added) {
+        newNum += 1;
+        lines.push({
+          oldLine: null,
+          newLine: newNum,
+          kind: "add",
+          content: line,
+        });
+      } else if (chunk.removed) {
+        oldNum += 1;
+        lines.push({
+          oldLine: oldNum,
+          newLine: null,
+          kind: "remove",
+          content: line,
+        });
+      } else {
+        oldNum += 1;
+        newNum += 1;
+        lines.push({
+          oldLine: oldNum,
+          newLine: newNum,
+          kind: "context",
+          content: line,
+        });
+      }
+    }
+  }
+  return lines;
+}
+
+function DiffPanel({ chunks }: { chunks: PolicyDiffChunk[] }) {
+  const lines = useMemo(() => flattenChunksToLines(chunks), [chunks]);
+
+  if (lines.length === 0) {
+    return (
+      <styled.div
+        w="full"
+        alignSelf="stretch"
+        border="1px solid"
+        borderColor="border"
+        rounded="l2"
+        p="4"
+        bg="bg.canvas"
+      >
+        <Text textStyle="sm" color="fg.muted">
+          差分はありません。
+        </Text>
+      </styled.div>
+    );
+  }
+
+  return (
+    <styled.div
+      w="full"
+      alignSelf="stretch"
+      border="1px solid"
+      borderColor="border"
+      rounded="l2"
+      overflow="auto"
+      maxH="60vh"
+      bg="bg.canvas"
+    >
+      <styled.table
+        w="full"
+        borderCollapse="collapse"
+        fontFamily="mono"
+        fontSize="xs"
+        lineHeight="1.6"
+      >
+        <styled.tbody>
+          {lines.map((line, index) => (
+            <DiffRow
+              // biome-ignore lint/suspicious/noArrayIndexKey: diff lines are positional
+              key={index}
+              line={line}
+            />
+          ))}
+        </styled.tbody>
+      </styled.table>
+    </styled.div>
+  );
+}
+
+function DiffRow({ line }: { line: DiffLine }) {
+  const isAdd = line.kind === "add";
+  const isRemove = line.kind === "remove";
+  const rowBg = isAdd
+    ? "green.subtle"
+    : isRemove
+      ? "red.subtle"
+      : "transparent";
+  const gutterBg = isAdd ? "green.muted" : isRemove ? "red.muted" : "bg.subtle";
+  const sign = isAdd ? "+" : isRemove ? "-" : " ";
+  const contentColor = isAdd ? "green.fg" : isRemove ? "red.fg" : "fg.default";
+
+  return (
+    <styled.tr bg={rowBg}>
+      <styled.td
+        bg={gutterBg}
+        color="fg.muted"
+        textAlign="right"
+        px="2"
+        minW="12"
+        userSelect="none"
+        borderRightWidth="1px"
+        borderRightColor="border"
+        verticalAlign="top"
+      >
+        {line.oldLine ?? ""}
+      </styled.td>
+      <styled.td
+        bg={gutterBg}
+        color="fg.muted"
+        textAlign="right"
+        px="2"
+        minW="12"
+        userSelect="none"
+        borderRightWidth="1px"
+        borderRightColor="border"
+        verticalAlign="top"
+      >
+        {line.newLine ?? ""}
+      </styled.td>
+      <styled.td
+        color={contentColor}
+        textAlign="center"
+        px="2"
+        userSelect="none"
+        verticalAlign="top"
+        w="6"
+      >
+        {sign}
+      </styled.td>
+      <styled.td
+        color={contentColor}
+        px="2"
+        w="full"
+        whiteSpace="pre-wrap"
+        wordBreak="break-word"
+      >
+        {line.content || " "}
+      </styled.td>
+    </styled.tr>
   );
 }
