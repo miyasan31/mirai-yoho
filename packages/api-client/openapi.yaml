@@ -1544,6 +1544,219 @@ paths:
                     type: integer
                     minimum: 0
 
+  /organizations/{organizationId}/policies/{type}/latest:
+    get:
+      operationId: getLatestPublishedPolicy
+      summary: 現在有効な最新公開版のポリシーを取得（公開エンドポイント）
+      tags: [public]
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/PolicyTypeParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyRevision"
+
+  /organizations/{organizationId}/console/policies/{type}:
+    get:
+      operationId: getConsolePolicyRevisions
+      summary: 指定種別の改版一覧を取得（status 問わず）
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/PolicyTypeParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [revisions]
+                properties:
+                  revisions:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PolicyRevision"
+
+  /organizations/{organizationId}/console/policies/{type}/drafts:
+    post:
+      operationId: createPolicyRevisionDraft
+      summary: 新規ドラフト（改版）を作成
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/PolicyTypeParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyRevisionDraftInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyRevision"
+
+  /organizations/{organizationId}/console/policies/{type}/diff:
+    get:
+      operationId: getPolicyRevisionDiff
+      summary: 2 改版間の markdown 行差分を取得
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/PolicyTypeParam"
+        - name: from
+          in: query
+          required: false
+          description: 比較元の revisionId。省略時は空文字列との差分（新規追加相当）
+          schema:
+            type: string
+        - name: to
+          in: query
+          required: true
+          description: 比較先の revisionId
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyDiff"
+
+  /organizations/{organizationId}/console/policies/{type}/{revisionId}:
+    get:
+      operationId: getConsolePolicyRevision
+      summary: 改版の詳細を取得
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/PolicyTypeParam"
+        - $ref: "#/components/parameters/PolicyRevisionIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyRevision"
+    patch:
+      operationId: updatePolicyRevisionDraft
+      summary: ドラフトの内容（version / title / body）を更新
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/PolicyTypeParam"
+        - $ref: "#/components/parameters/PolicyRevisionIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyRevisionDraftUpdate"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyRevision"
+
+  /organizations/{organizationId}/console/policies/{type}/{revisionId}/publish:
+    post:
+      operationId: publishPolicyRevision
+      summary: 下書きを公開する（既存 published は archived になる）
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/PolicyTypeParam"
+        - $ref: "#/components/parameters/PolicyRevisionIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [effectiveFrom]
+              properties:
+                effectiveFrom:
+                  type: string
+                  format: date-time
+                  description: 効力発生日時（未来日付を指定可能）
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyRevision"
+
+  /organizations/{organizationId}/customer/policies/status:
+    get:
+      operationId: getCustomerPolicyAgreementStatus
+      summary: 現在ログイン中の顧客の各ポリシー同意状況を取得
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PolicyAgreementStatus"
+
+  /organizations/{organizationId}/customer/policies/agree:
+    post:
+      operationId: recordCustomerPolicyAgreement
+      summary: ポリシー再同意モーダル等から同意を記録
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PolicyAgreementInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [agreements]
+                properties:
+                  agreements:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PolicyAgreement"
+
 components:
   parameters:
     OrganizationIdParam:
@@ -1554,6 +1767,18 @@ components:
         type: string
     BookingIdParam:
       name: bookingId
+      in: path
+      required: true
+      schema:
+        type: string
+    PolicyTypeParam:
+      name: type
+      in: path
+      required: true
+      schema:
+        $ref: "#/components/schemas/PolicyType"
+    PolicyRevisionIdParam:
+      name: revisionId
       in: path
       required: true
       schema:
@@ -1855,6 +2080,8 @@ components:
         - console.roles.manage
         - console.coupons.read
         - console.coupons.manage
+        - console.policies.read
+        - console.policies.manage
 
     Role:
       type: object
@@ -2396,7 +2623,8 @@ components:
           selectionId,
           startsAt,
           durationMinutes,
-          agreedTermsVersion,
+          agreedTermsRevisionId,
+          agreedCancellationPolicyRevisionId,
           agreedAt,
         ]
       properties:
@@ -2425,14 +2653,16 @@ components:
         selectedUserCouponId:
           type: string
           description: 適用する UserCoupon の ID（1枚のみ、任意）
-        agreedTermsVersion:
+        agreedTermsRevisionId:
           type: string
-          description: '顧客が同意した利用規約のバージョン (例 2026-08-01)'
-          example: "2026-08-01"
+          description: '同意した利用規約 (policy_revisions/{revisionId}) の ID。/organizations/{orgId}/policies/terms/latest から取得したもの'
+        agreedCancellationPolicyRevisionId:
+          type: string
+          description: '同意したキャンセルポリシー (policy_revisions/{revisionId}) の ID'
         agreedAt:
           type: string
           format: date-time
-          description: 利用規約への同意日時 (ISO 8601)
+          description: 利用規約およびキャンセルポリシーへの同意日時 (ISO 8601)
         guardianName:
           type: string
           description: '未成年 (18歳未満) 顧客の親権者氏名。未成年のときは必須'
@@ -2693,3 +2923,250 @@ components:
           minimum: 0
         alreadyReceived:
           type: boolean
+
+    PolicyType:
+      type: string
+      enum: [terms, cancellation_policy, privacy_policy]
+
+    PolicyRevisionStatus:
+      type: string
+      enum: [draft, published, archived]
+
+    PolicySubjectType:
+      type: string
+      enum: [user, customer]
+
+    PolicyAgreementVia:
+      type: string
+      enum: [booking, reagreement_modal, registration]
+
+    PolicyRevision:
+      type: object
+      required:
+        - revisionId
+        - organizationId
+        - type
+        - version
+        - title
+        - body
+        - status
+        - effectiveFrom
+        - publishedAt
+        - archivedAt
+        - createdBy
+        - createdAt
+        - updatedAt
+      properties:
+        revisionId:
+          type: string
+        organizationId:
+          type: string
+        type:
+          $ref: "#/components/schemas/PolicyType"
+        version:
+          type: string
+          description: 例 "2026-08-01" や "v1.2"（組織 × 種別内で unique）
+        title:
+          type: string
+        body:
+          type: string
+          description: markdown 本文
+        status:
+          $ref: "#/components/schemas/PolicyRevisionStatus"
+        effectiveFrom:
+          type: string
+          format: date-time
+          nullable: true
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        archivedAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdBy:
+          type: string
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    PolicyRevisionDraftInput:
+      type: object
+      required: [version, title, body]
+      properties:
+        version:
+          type: string
+          minLength: 1
+          maxLength: 40
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        body:
+          type: string
+          maxLength: 200000
+
+    PolicyRevisionDraftUpdate:
+      type: object
+      properties:
+        version:
+          type: string
+          minLength: 1
+          maxLength: 40
+        title:
+          type: string
+          minLength: 1
+          maxLength: 120
+        body:
+          type: string
+          maxLength: 200000
+
+    PolicyDiffChunk:
+      type: object
+      required: [value, added, removed]
+      properties:
+        value:
+          type: string
+        added:
+          type: boolean
+        removed:
+          type: boolean
+
+    PolicyDiff:
+      type: object
+      required:
+        - fromRevisionId
+        - fromVersion
+        - toRevisionId
+        - toVersion
+        - chunks
+      properties:
+        fromRevisionId:
+          type: string
+          nullable: true
+        fromVersion:
+          type: string
+          nullable: true
+        toRevisionId:
+          type: string
+        toVersion:
+          type: string
+        chunks:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyDiffChunk"
+
+    PolicyAgreement:
+      type: object
+      required:
+        - agreementId
+        - organizationId
+        - type
+        - subjectType
+        - subjectId
+        - revisionId
+        - version
+        - agreedVia
+        - bookingId
+        - agreedAt
+      properties:
+        agreementId:
+          type: string
+        organizationId:
+          type: string
+        type:
+          $ref: "#/components/schemas/PolicyType"
+        subjectType:
+          $ref: "#/components/schemas/PolicySubjectType"
+        subjectId:
+          type: string
+        revisionId:
+          type: string
+        version:
+          type: string
+        agreedVia:
+          $ref: "#/components/schemas/PolicyAgreementVia"
+        bookingId:
+          type: string
+          nullable: true
+        agreedAt:
+          type: string
+          format: date-time
+
+    PolicyAgreementStatusEntry:
+      type: object
+      required:
+        - type
+        - latestRevision
+        - latestAgreedRevisionId
+        - latestAgreedVersion
+        - latestAgreedAt
+        - latestAgreedVia
+        - needsAgreement
+      properties:
+        type:
+          $ref: "#/components/schemas/PolicyType"
+        latestRevision:
+          allOf:
+            - $ref: "#/components/schemas/PolicyRevision"
+          nullable: true
+        latestAgreedRevisionId:
+          type: string
+          nullable: true
+        latestAgreedVersion:
+          type: string
+          nullable: true
+        latestAgreedAt:
+          type: string
+          format: date-time
+          nullable: true
+        latestAgreedVia:
+          allOf:
+            - $ref: "#/components/schemas/PolicyAgreementVia"
+          nullable: true
+        needsAgreement:
+          type: boolean
+
+    PolicyAgreementStatus:
+      type: object
+      required:
+        - organizationId
+        - subjectType
+        - subjectId
+        - entries
+        - needsReagreement
+      properties:
+        organizationId:
+          type: string
+        subjectType:
+          $ref: "#/components/schemas/PolicySubjectType"
+        subjectId:
+          type: string
+        entries:
+          type: array
+          items:
+            $ref: "#/components/schemas/PolicyAgreementStatusEntry"
+        needsReagreement:
+          type: boolean
+
+    PolicyAgreementInput:
+      type: object
+      required: [items]
+      properties:
+        agreedVia:
+          $ref: "#/components/schemas/PolicyAgreementVia"
+        items:
+          type: array
+          minItems: 1
+          items:
+            type: object
+            required: [type, revisionId]
+            properties:
+              type:
+                $ref: "#/components/schemas/PolicyType"
+              revisionId:
+                type: string

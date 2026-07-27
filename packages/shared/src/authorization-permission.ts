@@ -23,6 +23,8 @@ export const AUTHORIZATION_PERMISSIONS = [
   "console.roles.manage",
   "console.coupons.read",
   "console.coupons.manage",
+  "console.policies.read",
+  "console.policies.manage",
 ] as const;
 
 export type AuthorizationPermission =
@@ -56,6 +58,8 @@ export const AUTHORIZATION_PERMISSION_LABELS: Record<
   "console.roles.manage": "ロール管理",
   "console.coupons.read": "クーポン閲覧",
   "console.coupons.manage": "クーポン管理",
+  "console.policies.read": "利用規約・キャンセルポリシー閲覧",
+  "console.policies.manage": "利用規約・キャンセルポリシー編集",
 };
 
 export const PERMISSION_DEPENDENCIES: Partial<
@@ -87,6 +91,7 @@ export const PERMISSION_DEPENDENCIES: Partial<
   "console.accounts.password-reset": ["console.accounts.read"],
   "console.roles.manage": ["console.roles.read"],
   "console.coupons.manage": ["console.coupons.read"],
+  "console.policies.manage": ["console.policies.read"],
 };
 
 export const SYSTEM_ADMIN_ONLY_PERMISSIONS = [

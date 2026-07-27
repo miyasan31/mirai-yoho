@@ -126,5 +126,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /policy-revisions/{revisionId} {
+      // published 版は API 経由の公開エンドポイントに委ね、Firestore への直読は
+      // 組織 admin のみ許容する（draft/archived を含む全履歴を触れる）。
+      allow read: if isOrganizationAdmin(resource.data.organizationId);
+      allow write: if false;
+    }
+
+    match /policy-agreements/{agreementId} {
+      // 同意証跡は API 経由（Firebase Admin SDK が rules をバイパス）でのみ書き込み、
+      // クライアントからの直読は組織 admin にのみ許容する。
+      allow read: if resource.data.organizationId is string
+        && isOrganizationAdmin(resource.data.organizationId);
+      allow write: if false;
+    }
+
   }
 }

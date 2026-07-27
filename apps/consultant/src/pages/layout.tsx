@@ -4,6 +4,7 @@ import { useNavigate } from "@tanstack/react-router";
 import {
   CalendarDays,
   Clock,
+  FileText,
   House,
   ReceiptText,
   UserCircle,
@@ -23,6 +24,7 @@ const NAV_ITEMS: Array<Omit<NavItem, "href"> & { path: string }> = [
   { path: "/bookings", label: "予約一覧", icon: CalendarDays },
   { path: "/slots", label: "スケジュール管理", icon: Clock },
   { path: "/price-plans", label: "料金プラン", icon: ReceiptText },
+  { path: "/policies", label: "利用規約・ポリシー", icon: FileText },
   { path: "/profile", label: "プロフィール", icon: UserCircle },
 ];
 
