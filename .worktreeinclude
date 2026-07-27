@@ -12,6 +12,9 @@
 # pnpm install で用意する (prepare 内で pnpm generate が走り styled-system / API クライアントも生成)。
 
 # ローカル開発用の秘密値 (APIキー等)。pnpm loadenv のカスケードで読まれる。
-# .env は追跡ファイルなので自動で入る。
+# ルート .env はワークスペース共通の値。各 apps/*/.env* は Vite / Hono
+# それぞれの VITE_* / process.env で読まれるため、両方コピーする必要がある。
 .env
 .env.*
+apps/*/.env
+apps/*/.env.*
