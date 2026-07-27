@@ -87,6 +87,11 @@ export class ZoomSession extends AggregateRoot {
     );
 
     if (existingRoom) {
+      // 同じ日に同じ相談員を複数枠予約した場合、ブレイクアウトルームには
+      // 1 度だけ入れれば足りるので何もしない
+      if (existingRoom.hasParticipant(customerEmail)) {
+        return;
+      }
       const updatedRoom = existingRoom.addParticipant(customerEmail);
       this.breakoutRooms = this.breakoutRooms.map((r) =>
         r.getConsultantId() === consultantId ? updatedRoom : r,

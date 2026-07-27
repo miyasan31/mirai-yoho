@@ -50,11 +50,12 @@ export function logUnexpectedPostError(
   error: unknown,
   context: PostErrorLogContext,
 ): void {
-  if (
-    error instanceof AuthError ||
-    error instanceof DomainError ||
-    error instanceof AppError
-  ) {
+  if (error instanceof AuthError || error instanceof DomainError) {
+    return;
+  }
+
+  // 5xx の AppError は外部連携などサーバー側の失敗なので、原因を残さないと調査できない
+  if (error instanceof AppError && error.statusCode < 500) {
     return;
   }
 
@@ -63,5 +64,6 @@ export function logUnexpectedPostError(
     organizationId: context.organizationId,
     segments: context.segments,
     error,
+    cause: error instanceof Error ? error.cause : undefined,
   });
 }

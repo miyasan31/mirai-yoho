@@ -132,13 +132,17 @@ describe("ZoomSession", () => {
       expect(rooms[1].getRoomName()).toBe("佐藤花子");
     });
 
-    it("同じメールを同じルームに二重追加すると PARTICIPANT_ALREADY_ASSIGNED エラー", () => {
+    it("同じ相談員・同じメールを再度割り当てても重複せずエラーにならない", () => {
       const session = createSession();
       session.assignParticipant("c-1", "田中太郎", "customer@example.com");
 
       expect(() =>
         session.assignParticipant("c-1", "田中太郎", "customer@example.com"),
-      ).toThrow(DomainError);
+      ).not.toThrow();
+
+      const rooms = session.getBreakoutRooms();
+      expect(rooms).toHaveLength(1);
+      expect(rooms[0].getParticipantEmails()).toEqual(["customer@example.com"]);
     });
   });
 
