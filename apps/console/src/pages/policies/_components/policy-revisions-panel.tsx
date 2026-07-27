@@ -61,6 +61,13 @@ function formatDate(iso: string | null): string {
   });
 }
 
+function todayVersionString(): string {
+  // 新規改版 version のデフォルト。既存の運用に合わせて YYYY-MM-DD 形式
+  const d = new Date();
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 export function PolicyRevisionsPanel({
   type,
   revisions,
@@ -257,7 +264,7 @@ export function PolicyRevisionsPanel({
         onOpenChange={setCreateOpen}
         type={type}
         initialValues={{
-          version: "",
+          version: todayVersionString(),
           title: DEFAULT_TITLE[type],
           body: createSeedBody,
         }}
