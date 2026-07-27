@@ -18,6 +18,7 @@ import { useConsultantBookings } from "@/hooks/use-consultant-bookings";
 import { ConsultantJoinControl } from "../bookings/consultant-join-control";
 import { buildConsultantHomeViewModel } from "./home-view-model";
 import { PoliciesNotice } from "./policies-notice";
+import { ReagreementNotice } from "./reagreement-notice";
 
 function formatDatetime(value: string): string {
   return new Date(value).toLocaleString("ja-JP", {
@@ -88,7 +89,12 @@ export default function ConsultantHomePage() {
         </Text>
       </styled.div>
 
-      {organizationId && <PoliciesNotice organizationId={organizationId} />}
+      {organizationId && (
+        <>
+          <ReagreementNotice organizationId={organizationId} />
+          <PoliciesNotice organizationId={organizationId} />
+        </>
+      )}
 
       <styled.div
         display="grid"
