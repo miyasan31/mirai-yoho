@@ -229,6 +229,8 @@ export function createCreateBookingUseCase() {
     new FirestoreSettingsRepository(),
     new FirestoreUserRepository(),
     new FirestoreUserCouponRepository(),
+    new FirestorePolicyRevisionRepository(),
+    new FirestorePolicyAgreementRepository(),
   );
 }
 

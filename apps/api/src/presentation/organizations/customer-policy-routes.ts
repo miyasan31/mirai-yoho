@@ -9,7 +9,11 @@ import {
 } from "@/infrastructure/container";
 import { getRoute, jsonError, noStoreJson, postRoute } from "./route-handler";
 
-const policyTypeSchema = v.picklist(["terms", "cancellation_policy"]);
+const policyTypeSchema = v.picklist([
+  "terms",
+  "cancellation_policy",
+  "privacy_policy",
+]);
 
 const agreeBodySchema = v.object({
   items: v.pipe(

@@ -1,10 +1,11 @@
 import { DomainError } from "@mirai-yoho/shared/domain-error";
 
-export type PolicyType = "terms" | "cancellation_policy";
+export type PolicyType = "terms" | "cancellation_policy" | "privacy_policy";
 
 export const POLICY_TYPES: readonly PolicyType[] = [
   "terms",
   "cancellation_policy",
+  "privacy_policy",
 ] as const;
 
 export function validatePolicyType(value: string): PolicyType {

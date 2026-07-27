@@ -44,6 +44,12 @@ const STATUS_COLOR: Record<
   archived: "purple",
 };
 
+const DEFAULT_TITLE: Record<PolicyType, string> = {
+  terms: "利用規約",
+  cancellation_policy: "キャンセルポリシー",
+  privacy_policy: "プライバシーポリシー",
+};
+
 function formatDate(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("ja-JP", {
@@ -252,7 +258,7 @@ export function PolicyRevisionsPanel({
         type={type}
         initialValues={{
           version: "",
-          title: type === "terms" ? "利用規約" : "キャンセルポリシー",
+          title: DEFAULT_TITLE[type],
           body: createSeedBody,
         }}
         onSubmit={handleCreate}

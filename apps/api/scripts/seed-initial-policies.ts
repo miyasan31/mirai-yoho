@@ -43,7 +43,7 @@ function parseArgs(argv: string[]): ParsedArgs {
 }
 
 interface PolicySeedInput {
-  type: "terms" | "cancellation_policy";
+  type: "terms" | "cancellation_policy" | "privacy_policy";
   title: string;
   fileName: string;
 }
@@ -58,6 +58,11 @@ const POLICY_INPUTS: PolicySeedInput[] = [
     type: "cancellation_policy",
     title: "キャンセルポリシー",
     fileName: "policy-cancellation-policy-initial.md",
+  },
+  {
+    type: "privacy_policy",
+    title: "プライバシーポリシー",
+    fileName: "policy-privacy-policy-initial.md",
   },
 ];
 

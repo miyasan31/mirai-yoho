@@ -3,7 +3,11 @@ import * as v from "valibot";
 import { createGetLatestPublishedPolicyUseCase } from "@/infrastructure/container";
 import { getRoute, jsonError, noStoreJson } from "./route-handler";
 
-const policyTypeSchema = v.picklist(["terms", "cancellation_policy"]);
+const policyTypeSchema = v.picklist([
+  "terms",
+  "cancellation_policy",
+  "privacy_policy",
+]);
 
 export const publicPolicyRoutes = new Hono();
 

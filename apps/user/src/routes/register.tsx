@@ -135,21 +135,7 @@ function RegisterPage() {
           からログインしてください。
         </Text>
         <Text textStyle="xs" color="fg.muted">
-          会員登録により
-          <Link
-            to="/terms"
-            style={{ textDecoration: "underline", marginLeft: "0.25rem" }}
-          >
-            利用規約
-          </Link>
-          および
-          <Link
-            to="/cancellation-policy"
-            style={{ textDecoration: "underline", marginLeft: "0.25rem" }}
-          >
-            キャンセルポリシー
-          </Link>
-          に同意したものとみなされます。
+          利用規約とキャンセルポリシーは組織ごとに定められており、予約時に該当組織の最新版を確認・同意いただきます。
         </Text>
       </styled.div>
     </styled.div>

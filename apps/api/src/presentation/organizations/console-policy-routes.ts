@@ -18,7 +18,11 @@ import {
   postRoute,
 } from "./route-handler";
 
-const policyTypeSchema = v.picklist(["terms", "cancellation_policy"]);
+const policyTypeSchema = v.picklist([
+  "terms",
+  "cancellation_policy",
+  "privacy_policy",
+]);
 
 const createDraftBodySchema = v.object({
   version: v.pipe(v.string(), v.minLength(1), v.maxLength(40)),

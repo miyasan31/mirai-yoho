@@ -16,12 +16,17 @@ import { PolicyRevisionsPanel } from "./_components/policy-revisions-panel";
 type PoliciesTab = PolicyType;
 
 function isPoliciesTab(value: string | null): value is PoliciesTab {
-  return value === "terms" || value === "cancellation_policy";
+  return (
+    value === "terms" ||
+    value === "cancellation_policy" ||
+    value === "privacy_policy"
+  );
 }
 
 const TAB_LABEL: Record<PoliciesTab, string> = {
   terms: "利用規約",
   cancellation_policy: "キャンセルポリシー",
+  privacy_policy: "プライバシーポリシー",
 };
 
 export default function ConsolePoliciesPage() {
@@ -98,6 +103,9 @@ export default function ConsolePoliciesPage() {
           <Tabs.Trigger value="cancellation_policy">
             {TAB_LABEL.cancellation_policy}
           </Tabs.Trigger>
+          <Tabs.Trigger value="privacy_policy">
+            {TAB_LABEL.privacy_policy}
+          </Tabs.Trigger>
           <Tabs.Indicator />
         </Tabs.List>
         <Tabs.Content value="terms">
@@ -110,6 +118,13 @@ export default function ConsolePoliciesPage() {
         <Tabs.Content value="cancellation_policy">
           <PoliciesTabContent
             type="cancellation_policy"
+            canManage={canManage}
+            onInvalidate={invalidate}
+          />
+        </Tabs.Content>
+        <Tabs.Content value="privacy_policy">
+          <PoliciesTabContent
+            type="privacy_policy"
             canManage={canManage}
             onInvalidate={invalidate}
           />
