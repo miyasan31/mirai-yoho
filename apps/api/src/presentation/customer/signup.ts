@@ -16,6 +16,7 @@ const signupBodySchema = v.object({
   birthDate: v.pipe(v.string(), v.regex(/^\d{4}-\d{2}-\d{2}$/)),
   providerUid: v.optional(v.string()),
   primaryEmail: v.optional(v.pipe(v.string(), v.trim(), v.email())),
+  phoneNumber: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1))),
 });
 
 function jsonError(statusCode: number, code: string, message: string) {
@@ -75,6 +76,7 @@ export async function POST(request: Request) {
         providerUid: input.providerUid,
         primaryEmail: input.primaryEmail,
         displayName: input.displayName,
+        phoneNumber: input.phoneNumber,
         birthDate: input.birthDate,
       });
       return withNoStore(Response.json(result));
@@ -83,6 +85,7 @@ export async function POST(request: Request) {
     const result = await createSignupAnonymouslyUseCase().execute({
       authUid,
       displayName: input.displayName,
+      phoneNumber: input.phoneNumber,
       birthDate: input.birthDate,
     });
     return withNoStore(Response.json({ ...result, isNew: true }));

@@ -38,6 +38,7 @@ export interface CustomerAuthState {
     displayName: string;
     birthDate: string;
     primaryEmail?: string;
+    phoneNumber?: string;
     providerUid?: string;
   }) => Promise<{ userId: string; isNew: boolean }>;
   refreshProfile: () => Promise<void>;

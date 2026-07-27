@@ -14,6 +14,7 @@ import { withNoStore } from "../cache-control";
 const updateProfileBodySchema = v.object({
   displayName: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1))),
   primaryEmail: v.optional(v.pipe(v.string(), v.trim(), v.email())),
+  phoneNumber: v.optional(v.pipe(v.string(), v.trim(), v.minLength(1))),
   birthDate: v.optional(v.pipe(v.string(), v.regex(/^\d{4}-\d{2}-\d{2}$/))),
 });
 
@@ -59,6 +60,7 @@ export async function GET(request: Request) {
         authUid: user.getAuthUid(),
         displayName: user.getDisplayName(),
         primaryEmail: user.getPrimaryEmail() ?? null,
+        phoneNumber: user.getPhoneNumber() ?? null,
         birthDate: user.getBirthDate().getValue(),
         status: user.getStatus(),
         authProviders: user.getAuthProviders().map((p) => ({

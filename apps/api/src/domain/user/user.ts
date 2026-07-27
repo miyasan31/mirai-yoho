@@ -12,6 +12,7 @@ interface UserCreateAnonymousProps {
   userId: string;
   authUid: string;
   displayName: string;
+  phoneNumber?: string;
   birthDate: BirthDate;
   createdAt?: Date;
   updatedAt?: Date;
@@ -23,6 +24,7 @@ interface UserCreateWithGoogleProps {
   providerUid: string;
   primaryEmail: string;
   displayName: string;
+  phoneNumber?: string;
   birthDate: BirthDate;
   createdAt?: Date;
   updatedAt?: Date;
@@ -34,6 +36,7 @@ interface UserReconstructProps {
   authProviders: AuthProvider[];
   displayName: string;
   primaryEmail?: string;
+  phoneNumber?: string;
   birthDate: BirthDate;
   zoomConnection?: UserZoomConnection;
   status: UserStatus;
@@ -49,6 +52,7 @@ export class User extends AggregateRoot {
     private authProviders: AuthProvider[],
     private displayName: string,
     private primaryEmail: string | undefined,
+    private phoneNumber: string | undefined,
     private birthDate: BirthDate,
     private zoomConnection: UserZoomConnection | undefined,
     private status: UserStatus,
@@ -72,6 +76,7 @@ export class User extends AggregateRoot {
       ],
       props.displayName,
       undefined,
+      props.phoneNumber,
       props.birthDate,
       undefined,
       "active",
@@ -95,6 +100,7 @@ export class User extends AggregateRoot {
       ],
       props.displayName,
       props.primaryEmail,
+      props.phoneNumber,
       props.birthDate,
       undefined,
       "active",
@@ -111,6 +117,7 @@ export class User extends AggregateRoot {
       [...props.authProviders],
       props.displayName,
       props.primaryEmail,
+      props.phoneNumber,
       props.birthDate,
       props.zoomConnection,
       props.status,
@@ -138,6 +145,7 @@ export class User extends AggregateRoot {
   updateProfile(props: {
     displayName?: string;
     primaryEmail?: string;
+    phoneNumber?: string;
     birthDate?: BirthDate;
   }): void {
     this.assertActive();
@@ -146,6 +154,9 @@ export class User extends AggregateRoot {
     }
     if (props.primaryEmail !== undefined) {
       this.primaryEmail = props.primaryEmail;
+    }
+    if (props.phoneNumber !== undefined) {
+      this.phoneNumber = props.phoneNumber;
     }
     if (props.birthDate !== undefined) {
       this.birthDate = props.birthDate;
@@ -245,6 +256,10 @@ export class User extends AggregateRoot {
 
   getPrimaryEmail(): string | undefined {
     return this.primaryEmail;
+  }
+
+  getPhoneNumber(): string | undefined {
+    return this.phoneNumber;
   }
 
   getBirthDate(): BirthDate {

@@ -190,6 +190,14 @@ export class CreateBookingUseCase {
       });
     }
 
+    // 予約フォームで入力された最新の情報でユーザープロフィールも更新する
+    user.updateProfile({
+      displayName: input.customerName,
+      primaryEmail: input.customerEmail,
+      phoneNumber: input.customerPhone,
+      birthDate: BirthDate.create(input.customerBirthDate, new Date()),
+    });
+
     const startsAt = resolved.usageSlots[0].getTimeRange().getStartsAt();
     const endsAt = new Date(
       startsAt.getTime() + resolved.usageSlots.length * getSlotUnitMs(),
@@ -303,6 +311,7 @@ export class CreateBookingUseCase {
 
     await this.unitOfWork.runInTransaction(async (tx) => {
       await this.customerRepository.save(customer);
+      await this.userRepository.save(user);
       for (const slot of [...resolved.usageSlots, ...resolved.bufferSlots]) {
         await this.slotRepository.saveInTx(slot, tx);
       }

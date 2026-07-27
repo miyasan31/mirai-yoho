@@ -7,6 +7,7 @@ interface SignInWithGoogleInput {
   providerUid: string;
   primaryEmail: string;
   displayName: string;
+  phoneNumber?: string;
   birthDate: string;
 }
 
@@ -32,6 +33,7 @@ export class SignInWithGoogleUseCase {
       providerUid: input.providerUid,
       primaryEmail: input.primaryEmail,
       displayName: input.displayName,
+      phoneNumber: input.phoneNumber,
       birthDate,
     });
 

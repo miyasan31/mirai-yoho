@@ -106,17 +106,27 @@ describe("User", () => {
   });
 
   describe("updateProfile", () => {
-    it("displayName / primaryEmail / birthDate を更新できる", () => {
+    it("displayName / primaryEmail / phoneNumber / birthDate を更新できる", () => {
       const user = createAnonymousUser();
       const newBirthDate = BirthDate.create("1985-01-01", REFERENCE_DATE);
       user.updateProfile({
         displayName: "改名",
         primaryEmail: "new@example.com",
+        phoneNumber: "090-1234-5678",
         birthDate: newBirthDate,
       });
       expect(user.getDisplayName()).toBe("改名");
       expect(user.getPrimaryEmail()).toBe("new@example.com");
+      expect(user.getPhoneNumber()).toBe("090-1234-5678");
       expect(user.getBirthDate().getValue()).toBe("1985-01-01");
+    });
+
+    it("未指定の項目は既存値を維持する", () => {
+      const user = createAnonymousUser();
+      user.updateProfile({ phoneNumber: "09012345678" });
+      user.updateProfile({ displayName: "改名のみ" });
+      expect(user.getDisplayName()).toBe("改名のみ");
+      expect(user.getPhoneNumber()).toBe("09012345678");
     });
   });
 

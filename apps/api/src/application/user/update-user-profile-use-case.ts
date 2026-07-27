@@ -6,6 +6,7 @@ interface UpdateUserProfileInput {
   authUid: string;
   displayName?: string;
   primaryEmail?: string;
+  phoneNumber?: string;
   birthDate?: string;
 }
 
@@ -25,6 +26,7 @@ export class UpdateUserProfileUseCase {
     user.updateProfile({
       displayName: input.displayName,
       primaryEmail: input.primaryEmail,
+      phoneNumber: input.phoneNumber,
       birthDate,
     });
 
