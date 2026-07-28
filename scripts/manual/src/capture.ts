@@ -14,6 +14,7 @@ import type {
   PageDef,
   ResolvedApp,
 } from "./types.js";
+import { validateAppConfig } from "./validate-config.js";
 
 function buildUrl(
   baseUrl: string,
@@ -92,14 +93,30 @@ async function capturePage(
     .catch(() => {});
   await page.waitForTimeout(500);
 
+  if (def.setup) {
+    try {
+      await def.setup({ page, baseUrl: app.baseUrl, params });
+      await page.waitForTimeout(500);
+    } catch (error) {
+      const reason = error instanceof Error ? error.message : String(error);
+      console.warn(`- スキップ: ${def.id}（setup に失敗）\n  ${reason}`);
+      return null;
+    }
+  }
+
+  // モーダルは画面に重なるので viewport で撮る。boundingBox() は
+  // ビューポート相対なので、この場合だけピン座標の基準も viewport に揃える。
+  const isViewportShot = def.captureMode === "viewport";
   const imageName = `${def.id}.png`;
   const imagePath = join(imagesDir, imageName);
-  await page.screenshot({ path: imagePath, fullPage: true });
+  await page.screenshot({ path: imagePath, fullPage: !isViewportShot });
 
-  const dims = await page.evaluate(() => ({
-    width: document.documentElement.scrollWidth,
-    height: document.documentElement.scrollHeight,
-  }));
+  const dims = isViewportShot
+    ? { width: VIEWPORT.width, height: VIEWPORT.height }
+    : await page.evaluate(() => ({
+        width: document.documentElement.scrollWidth,
+        height: document.documentElement.scrollHeight,
+      }));
 
   const annotations: CapturedAnnotation[] = [];
   for (const annotation of def.annotations) {
@@ -115,12 +132,14 @@ async function capturePage(
     imageWidth: dims.width,
     imageHeight: dims.height,
     annotations,
+    relations: [...(def.relations ?? [])],
   };
 }
 
 async function main() {
   const { appId, env: envArg } = parseCliArgs();
   const config = await loadAppConfig(appId);
+  validateAppConfig(config);
   const app = resolveApp(config, envArg);
   const paths = appPaths(appId, app.env);
 
@@ -181,6 +200,7 @@ async function main() {
     env: app.env,
     baseUrl: app.baseUrl,
     capturedAt: new Date().toISOString(),
+    serviceMap: config.serviceMap,
     sections,
   };
 
