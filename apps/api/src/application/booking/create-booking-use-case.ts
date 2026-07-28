@@ -90,7 +90,7 @@ function toBreakoutRoomParams(
 ): Array<{ name: string; participants: string[] }> {
   return session.getBreakoutRooms().map((r) => ({
     name: r.getRoomName(),
-    participants: [...r.getParticipantEmails()],
+    participants: [r.getCustomerEmail()],
   }));
 }
 
@@ -266,7 +266,14 @@ export class CreateBookingUseCase {
         sessionId: crypto.randomUUID(),
         sessionDate,
       });
-    session.assignParticipant(resolved.consultantId, consultantName, zoomEmail);
+    session.assignBooking({
+      bookingId,
+      consultantId: resolved.consultantId,
+      consultantName,
+      startsAt,
+      endsAt,
+      customerEmail: zoomEmail,
+    });
 
     if (existingSession) {
       await callZoom(() =>

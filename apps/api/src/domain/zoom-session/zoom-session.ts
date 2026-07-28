@@ -2,6 +2,22 @@ import { DomainError } from "@mirai-yoho/shared/domain-error";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
 import { BreakoutRoom } from "@/domain/zoom-session/breakout-room";
 
+/**
+ * 1 ミーティングあたりのブレイクアウトルーム上限。
+ * Zoom 標準プランの上限が 50 ルーム / 200 人（`Breakout Rooms 100` 有効時は 100 ルーム / 1,000 人）。
+ * 1 日 1 ミーティングにその日の全予約をルームとして載せるため、日次の予約数がこの上限になる。
+ */
+export const MAX_BREAKOUT_ROOMS_PER_SESSION = 50;
+
+interface AssignBookingProps {
+  bookingId: string;
+  consultantId: string;
+  consultantName: string;
+  startsAt: Date;
+  endsAt: Date;
+  customerEmail: string;
+}
+
 interface ZoomSessionCreateProps {
   organizationId: string;
   sessionId: string;
@@ -77,40 +93,36 @@ export class ZoomSession extends AggregateRoot {
     this.joinUrl = joinUrl;
   }
 
-  assignParticipant(
-    consultantId: string,
-    consultantName: string,
-    customerEmail: string,
-  ): void {
-    const existingRoom = this.breakoutRooms.find(
-      (r) => r.getConsultantId() === consultantId,
-    );
-
-    if (existingRoom) {
-      // 同じ日に同じ相談員を複数枠予約した場合、ブレイクアウトルームには
-      // 1 度だけ入れれば足りるので何もしない
-      if (existingRoom.hasParticipant(customerEmail)) {
-        return;
-      }
-      const updatedRoom = existingRoom.addParticipant(customerEmail);
-      this.breakoutRooms = this.breakoutRooms.map((r) =>
-        r.getConsultantId() === consultantId ? updatedRoom : r,
+  assignBooking(props: AssignBookingProps): void {
+    if (this.breakoutRooms.some((r) => r.getBookingId() === props.bookingId)) {
+      throw new DomainError(
+        "BOOKING_ALREADY_ASSIGNED",
+        `Booking ${props.bookingId} is already assigned to a breakout room`,
       );
-    } else {
-      const newRoom = BreakoutRoom.create({
-        consultantId,
-        roomName: consultantName,
-        participantEmails: [customerEmail],
-      });
-      this.breakoutRooms = [...this.breakoutRooms, newRoom];
     }
+    if (this.breakoutRooms.length >= MAX_BREAKOUT_ROOMS_PER_SESSION) {
+      throw new DomainError(
+        "BREAKOUT_ROOM_LIMIT_EXCEEDED",
+        `A Zoom meeting can hold at most ${MAX_BREAKOUT_ROOMS_PER_SESSION} breakout rooms`,
+      );
+    }
+
+    const newRoom = BreakoutRoom.create({
+      bookingId: props.bookingId,
+      consultantId: props.consultantId,
+      roomName: BreakoutRoom.composeRoomName({
+        consultantName: props.consultantName,
+        startsAt: props.startsAt,
+        endsAt: props.endsAt,
+      }),
+      customerEmail: props.customerEmail,
+    });
+    this.breakoutRooms = [...this.breakoutRooms, newRoom];
   }
 
-  removeParticipant(customerEmail: string): void {
-    this.breakoutRooms = this.breakoutRooms.map((room) =>
-      room.hasParticipant(customerEmail)
-        ? room.removeParticipant(customerEmail)
-        : room,
+  removeBooking(bookingId: string): void {
+    this.breakoutRooms = this.breakoutRooms.filter(
+      (room) => room.getBookingId() !== bookingId,
     );
   }
 

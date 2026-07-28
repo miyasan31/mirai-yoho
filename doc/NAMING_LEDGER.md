@@ -556,6 +556,9 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 **補足（joinUrl 統一の理由）**  
 現状、予約確定時に `session.joinUrl` をそのまま `booking.zoomUrl` にコピーしており、値は同一 URL。集約は分かれるが名称は **`joinUrl`** に統一する。
 
+**補足（`breakoutRooms[]` の要素・2026-07-28 更新）**  
+ルームの粒度を相談員単位から**予約単位**に変更したことに伴い、要素のプロパティを `{ bookingId, consultantId, roomName, customerEmail }` に変更した。旧形式の `participantEmails[]`（1 相談員のルームに当日の顧客が相乗り）は廃止。`roomName` は `{相談員名} {開始}-{終了}`（JST・32 文字以内）で自動生成する。
+
 **根拠**: `firestore-zoom-daily-session-repository.ts`, `create-booking-use-case.ts`, `domain/booking/booking.ts`
 
 ---
