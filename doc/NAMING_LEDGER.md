@@ -4,6 +4,8 @@
 > 対象: 策定時点の全11コレクション + 横断命名ルール（その後 `organization-roles`（現 `roles`）/`users`/`user-zoom-credentials`/`user-coupons`/`coupons`/`policy-revisions`/`policy-agreements` が追加され現行17コレクション。詳細は §6.5・§3.12）  
 > 目的: 永続化・ドメイン・API の名称を整理し、今後の実装・リネームの基準とする
 
+> **呼称について（2026-07-28）**: 日本語の職種呼称は PR #137 で「相談員」→「**占い師**」に変更された。英語・コード上の識別子（`Consultant` / `consultantId` / `consultantMemo` など）は**変更しない**方針のため、本台帳の識別子は現行のままで正しい。日付入りの改訂記録（§0 系・§3.5 など）に残る「相談員」は当時の表記としてそのまま残す。
+
 ---
 
 ## 0. 改訂: `organization-` プレフィックス全廃（2026-07-14）
