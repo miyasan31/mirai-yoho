@@ -1,4 +1,19 @@
+import type { CaptureContext } from "../src/context.js";
 import type { AppConfig } from "../src/types.js";
+
+/** Park UI の Dialog は unmountOnExit なので、開いている 1 つだけが DOM に存在する */
+const OPEN_DIALOG = '[data-scope="dialog"][data-part="content"]';
+
+/** トリガーを押してダイアログが開くまで待つ setup を作る */
+const openDialog =
+  (trigger: string) =>
+  async ({ page }: CaptureContext): Promise<void> => {
+    await page.locator(trigger).first().click();
+    await page.waitForSelector(OPEN_DIALOG, {
+      state: "visible",
+      timeout: 5_000,
+    });
+  };
 
 const config: AppConfig = {
   appId: "consultant",
@@ -49,6 +64,20 @@ const config: AppConfig = {
     if (!href) return {};
     const match = href.match(/\/bookings\/([^/]+)\/memo/);
     return match ? { bookingId: decodeURIComponent(match[1]) } : {};
+  },
+  serviceMap: {
+    summary:
+      "占い師コンソールで整えた内容は、そのまま予約サイトに公開されます。予約可能な時間帯、選べる料金プラン、掲載されるプロフィールは、いずれもここでの操作が起点です。各画面の「関連する動き」欄に、その操作が予約サイトのどこに出るかを記載しています。",
+    flows: [
+      {
+        path: "占い師コンソール → 予約サイト",
+        items: [
+          "予約枠管理で追加した枠が、予約サイトで選べる開始時刻になります。削除すると選べなくなります。",
+          "料金プランで作成したプランが、予約サイトの料金プラン選択に並びます。アーカイブすると消えます。",
+          "プロフィールの表示名・自己紹介・専門分野・アイコンが、占い師一覧のカードに反映されます。",
+        ],
+      },
+    ],
   },
   sections: [
     {
@@ -159,6 +188,46 @@ const config: AppConfig = {
               description:
                 "今日の担当件数・残件数・完了件数・メモ未入力件数を数値で確認できます。",
             },
+            {
+              n: 5,
+              selector: "text=組織ポリシーが更新されました",
+              title: "ポリシー更新の案内",
+              description:
+                "規約が改版されると表示され、同意するまで新しい予約枠を追加できません。",
+            },
+          ],
+        },
+        {
+          id: "reagreement",
+          title: "ポリシーの再同意",
+          overview:
+            "規約が改版されたときに、最新版の本文を確認して同意します。同意するまで新しい予約枠を追加できません。",
+          route: "/{orgId}/home",
+          requiresAuth: true,
+          waitForSelector: 'button:has-text("内容を確認して同意")',
+          setup: openDialog('button:has-text("内容を確認して同意")'),
+          captureMode: "viewport",
+          annotations: [
+            {
+              n: 1,
+              selector: '[data-scope="dialog"][data-part="title"]',
+              title: "対象の文書と版",
+              description:
+                "同意を求められている文書名と版番号を表示します。前回同意した版も併記されます。",
+            },
+            {
+              n: 2,
+              selector: `${OPEN_DIALOG} button:has-text("同意する")`,
+              title: "同意する",
+              description:
+                "最新版に同意し、予約枠の追加を再び行えるようにします。",
+            },
+            {
+              n: 3,
+              selector: `${OPEN_DIALOG} button:has-text("あとで")`,
+              title: "あとで",
+              description: "同意せずに閉じます。案内はホームに残り続けます。",
+            },
           ],
         },
         {
@@ -197,6 +266,13 @@ const config: AppConfig = {
               title: "表示件数・並び順",
               description:
                 "画面下部のバーで 1 ページの表示件数と並び順を切り替えます。右側のページ送りで前後のページを表示できます。",
+            },
+            {
+              n: 5,
+              selector: 'button:has-text("入室確認")',
+              title: "入室確認",
+              description:
+                "開始 15 分前から押せます。押しておくと入室済みとして記録され、遅刻の確認対象から外れます。",
             },
           ],
         },
@@ -280,6 +356,48 @@ const config: AppConfig = {
                 "確定済みの予約、開放中の空き枠、バッファが色分けされて表示されます。",
             },
           ],
+          relations: [
+            {
+              target: "user",
+              screen: "開始時刻選択",
+              effect:
+                "追加した枠が、そのまま予約できる開始時刻として並びます。削除すると選べなくなります。",
+            },
+          ],
+        },
+        {
+          id: "slot-delete",
+          title: "予約枠の削除",
+          overview:
+            "カレンダー上の空き枠をクリックすると削除の確認が出ます。削除した時間帯はその場で予約を受け付けなくなります。",
+          route: "/{orgId}/slots",
+          requiresAuth: true,
+          waitForSelector: ".rbc-event",
+          setup: openDialog(".rbc-event"),
+          captureMode: "viewport",
+          annotations: [
+            {
+              n: 1,
+              selector: `${OPEN_DIALOG} button:has-text("削除")`,
+              title: "削除",
+              description:
+                "枠を削除します。すでに予約が入っている時間帯の枠は削除できません。",
+            },
+            {
+              n: 2,
+              selector: `${OPEN_DIALOG} button:has-text("キャンセル")`,
+              title: "キャンセル",
+              description: "削除せずに閉じます。",
+            },
+          ],
+          relations: [
+            {
+              target: "user",
+              screen: "開始時刻選択",
+              effect:
+                "削除した時間帯は、予約できる開始時刻の一覧から即座に消えます。",
+            },
+          ],
         },
         {
           id: "price-plans",
@@ -326,6 +444,33 @@ const config: AppConfig = {
               description:
                 "プラン名の編集、アーカイブ、復元ができます。アーカイブ後は顧客側に表示されません。",
             },
+            {
+              n: 6,
+              selector: "text=現在の設定範囲",
+              title: "設定範囲の表示",
+              description:
+                "作成できる税込金額の上限と下限で、この範囲は運営側が決めています。",
+            },
+          ],
+          relations: [
+            {
+              target: "user",
+              screen: "料金プラン選択",
+              effect:
+                "作成したプランが選択肢に並び、アーカイブすると表示されなくなります。",
+            },
+            {
+              target: "user",
+              screen: "開始時刻選択",
+              effect:
+                "選ばれたプランの相談時間だけ連続して空いている枠が、開始時刻の候補になります。",
+            },
+            {
+              target: "user",
+              screen: "料金プラン選択",
+              effect:
+                "プラン名を変えると別のプランとして扱われるため、選択中だった予約者は選び直しになります。",
+            },
           ],
         },
         {
@@ -367,6 +512,39 @@ const config: AppConfig = {
               selector: 'button[type="submit"]',
               title: "保存",
               description: "変更内容を保存します。反映は数秒以内に完了します。",
+            },
+          ],
+          relations: [
+            {
+              target: "user",
+              screen: "占い師一覧",
+              effect:
+                "表示名・自己紹介・専門分野・アイコンが、そのままカードの内容になります。",
+            },
+          ],
+        },
+        {
+          id: "policies",
+          title: "利用規約・ポリシー",
+          overview:
+            "この組織で現在有効な利用規約・キャンセルポリシー・プライバシーポリシーを閲覧します。改版はこの画面からは行いません。",
+          route: "/{orgId}/policies",
+          requiresAuth: true,
+          waitForSelector: '[role="tab"]',
+          annotations: [
+            {
+              n: 1,
+              selector: '[role="tab"]',
+              title: "文書タブ",
+              description:
+                "利用規約・キャンセルポリシー・プライバシーポリシーを切り替えます。",
+            },
+            {
+              n: 2,
+              selector: '[role="tabpanel"][data-state="open"]',
+              title: "本文",
+              description:
+                "現在有効な版の本文と効力発生日を表示します。まだ公開版がない場合はその旨が表示されます。",
             },
           ],
         },

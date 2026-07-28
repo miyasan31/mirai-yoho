@@ -6,10 +6,12 @@ import { loadAppConfig, parseCliArgs, resolveApp } from "./load-app.js";
 import { appPaths } from "./paths.js";
 import { renderHtml } from "./template.js";
 import type { CaptureResult } from "./types.js";
+import { validateAppConfig } from "./validate-config.js";
 
 async function main() {
   const { appId, env: envArg } = parseCliArgs();
   const config = await loadAppConfig(appId);
+  validateAppConfig(config);
   const app = resolveApp(config, envArg);
   const paths = appPaths(appId, app.env);
 

@@ -12,6 +12,9 @@ const DUMMY_CUSTOMER = {
 /** 予約完了・キャンセル画面を撮るためのダミー予約 ID。実予約が取れなかった場合のフォールバック。 */
 const SAMPLE_BOOKING_ID = "sample-booking-id";
 
+/** Park UI の Dialog は unmountOnExit なので、開いている 1 つだけが DOM に存在する */
+const OPEN_DIALOG = '[data-scope="dialog"][data-part="content"]';
+
 function isProdBaseUrl(baseUrl: string): boolean {
   return /^https:\/\/user\.miraiyohou\.com/.test(baseUrl);
 }
@@ -586,6 +589,13 @@ const config: AppConfig = {
               title: "保存",
               description: "入力した会員情報を保存します。",
             },
+            {
+              n: 5,
+              selector: 'a[href*="/mypage/withdraw"]',
+              title: "退会について",
+              description:
+                "サービスの利用をやめる場合の手続き画面へ移動します。",
+            },
           ],
         },
         {
@@ -614,6 +624,45 @@ const config: AppConfig = {
               selector: 'button:has-text("キャンセル")',
               title: "キャンセル",
               description: "キャンセルポリシーの範囲内で予約を取り消します。",
+            },
+            {
+              n: 4,
+              selector: "text=クーポン",
+              title: "クーポン割引",
+              description:
+                "クーポンを使った予約では、割引額とお支払い金額を並べて表示します。",
+            },
+          ],
+        },
+        {
+          id: "mypage-booking-cancel",
+          title: "キャンセルの確認",
+          overview:
+            "予約一覧のキャンセルボタンを押すと表示される確認画面です。実行すると取り消せません。",
+          route: "/mypage/bookings",
+          requiresAuth: true,
+          waitForSelector: 'button:has-text("キャンセル")',
+          setup: async ({ page }) => {
+            await page.locator('button:has-text("キャンセル")').first().click();
+            await page.waitForSelector(OPEN_DIALOG, {
+              state: "visible",
+              timeout: 5_000,
+            });
+          },
+          captureMode: "viewport",
+          annotations: [
+            {
+              n: 1,
+              selector: `${OPEN_DIALOG} button:has-text("キャンセルする")`,
+              title: "キャンセルする",
+              description:
+                "予約を取り消し、確認メールを送ります。取り消した予約は元に戻せません。",
+            },
+            {
+              n: 2,
+              selector: `${OPEN_DIALOG} button:has-text("戻る")`,
+              title: "戻る",
+              description: "キャンセルせずに予約一覧へ戻ります。",
             },
           ],
         },
@@ -750,7 +799,7 @@ const config: AppConfig = {
           id: "withdraw",
           title: "退会",
           overview:
-            "会員登録を取り消す画面です。実行すると会員情報が削除され、元に戻せません。",
+            "会員登録を取り消す画面です。プロフィールの「退会について」から移動します。実行すると会員情報が削除され、元に戻せません。",
           route: "/mypage/withdraw",
           requiresAuth: true,
           waitForSelector: 'h1:has-text("退会する")',

@@ -6,7 +6,7 @@ import * as Field from "@mirai-yoho/ui/components/ui/field";
 import { Input } from "@mirai-yoho/ui/components/ui/input";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
-import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { createFileRoute, Link, useRouter } from "@tanstack/react-router";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
@@ -235,6 +235,33 @@ function ProfilePage() {
           <Button variant="outline" onClick={onLinkGoogle}>
             Google で連携する
           </Button>
+        </styled.section>
+      )}
+
+      {isSignedUp && (
+        <styled.section
+          borderTopWidth="1"
+          borderColor="border"
+          pt="4"
+          display="flex"
+          flexDir="column"
+          alignItems="flex-start"
+          gap="2"
+        >
+          <Text textStyle="sm" color="fg.muted">
+            サービスのご利用をやめる場合は、退会の手続きができます。
+          </Text>
+          <Link to="/mypage/withdraw">
+            <Text
+              as="span"
+              textStyle="sm"
+              color="fg.muted"
+              textDecoration="underline"
+              _hover={{ color: "fg.default" }}
+            >
+              退会について
+            </Text>
+          </Link>
         </styled.section>
       )}
     </styled.div>
