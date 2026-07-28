@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { chromium } from "playwright";
 import { loadAppConfig, parseCliArgs, resolveApp } from "./load-app.js";
-import { appPaths, VIEWPORT } from "./paths.js";
+import { appPaths, BROWSER_CHANNEL, VIEWPORT } from "./paths.js";
 import { loadState, saveState } from "./state.js";
 
 async function main() {
@@ -27,6 +27,7 @@ async function main() {
 
   const context = await chromium.launchPersistentContext(paths.profileDir, {
     headless: false,
+    channel: BROWSER_CHANNEL,
     viewport: VIEWPORT,
     locale: "ja-JP",
     timezoneId: "Asia/Tokyo",

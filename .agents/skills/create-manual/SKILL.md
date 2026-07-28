@@ -72,11 +72,18 @@ defaultEnv: "local",
 
 ### セクション設計
 
-3 セクション構成を基本とする（画面が少ないアプリはこの限りでない）:
+管理系アプリ（consultant / console）は 3 セクション構成を基本とする:
 
 1. **サインイン** … ログイン / パスワード再設定など認証まわり
 2. **日々の運用** … ホーム / 一覧 / 個別編集など、毎日触る画面
 3. **設定・管理** … 頻度の低い設定変更（プロフィール、料金、権限等）
+
+エンドユーザー向け（user）は毎日触る画面という概念がないため、利用者の導線順に並べる:
+
+1. **はじめに** … トップ / 会員登録
+2. **予約する** … 占い師選択から予約完了・キャンセルまで
+3. **マイページ** … プロフィール / 予約一覧 / Zoom 連携 / クーポン
+4. **規約・退会** … 規約類と退会
 
 ### ページ定義
 
@@ -135,6 +142,16 @@ defaultEnv: "local",
 
 各画面のソース（`apps/<app>/src/pages/<page>/page.tsx` または `apps/<app>/src/routes/**/*.tsx`）を読み、目立つ UI 要素のクラス・ロール・テキストを確認する。Park UI の `Button` は `<button>` に展開されるので `button[type="submit"]` などが安定。テキストマッチ `text=見出し` も有効。
 
+## user（予約サイト）固有の前提
+
+`user` は認証と組織 ID の扱いが管理系アプリと異なる。詳細は `scripts/manual/README.md` の「user 固有の注意」を参照。要点:
+
+- 専用ログイン画面がないため `loginPath` は `/register`、ログイン完了は `/mypage` への遷移で検知する
+- ログイン後の URL に組織 ID が含まれないので `MANUAL_ORG_ID` / `USER_*_ORG_ID` の指定が必須
+- 予約フォームは会員情報登録と Zoom 連携が済んだアカウントでしか表示されない。プロフィールの氏名・メール・電話番号が予約フォームに初期表示され PDF に写るため、撮影用アカウントにはダミー値を登録する
+- お支払い画面の撮影には実在の予約が必要なため、`capture` が予約を 1 件作成する（Zoom 生成とメール送信を伴う）。local / dev は既定で作成、prod は `MANUAL_CREATE_BOOKING=1` を明示したときのみ。作成した予約は撮影後に片付ける
+- Google ログインが Playwright 同梱 Chromium で弾かれる場合は `MANUAL_BROWSER_CHANNEL=chrome` を `login` と `capture` の両方に指定する
+
 ## 実行例
 
 ```bash
@@ -151,6 +168,12 @@ pnpm --filter manual build consultant dev
 
 # orgId を一時的に上書き
 MANUAL_ORG_ID=abc123 pnpm --filter manual build consultant dev
+
+# user（orgId 必須。Google ログインが弾かれる場合は channel を指定）
+pnpm dev:user
+MANUAL_ORG_ID=abc123 pnpm --filter manual login user
+MANUAL_ORG_ID=abc123 pnpm --filter manual build user
+# → doc/manual/user-manual.pdf
 ```
 
 ## トラブルシューティング

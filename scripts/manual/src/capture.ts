@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { chromium, type Page } from "playwright";
 import type { CaptureContext } from "./context.js";
 import { loadAppConfig, parseCliArgs, resolveApp } from "./load-app.js";
-import { appPaths, VIEWPORT } from "./paths.js";
+import { appPaths, BROWSER_CHANNEL, VIEWPORT } from "./paths.js";
 import { loadState, saveState } from "./state.js";
 import type {
   Annotation,
@@ -140,6 +140,7 @@ async function main() {
 
   const context = await chromium.launchPersistentContext(paths.profileDir, {
     headless: true,
+    channel: BROWSER_CHANNEL,
     viewport: VIEWPORT,
     locale: "ja-JP",
     timezoneId: "Asia/Tokyo",
