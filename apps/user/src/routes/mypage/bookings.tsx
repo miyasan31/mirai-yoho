@@ -130,11 +130,16 @@ function MyBookingsList() {
   }
 
   const now = Date.now();
-  const upcoming = bookings.filter(
-    (b) =>
-      (b.status === "pending" || b.status === "confirmed") &&
-      new Date(b.startsAt).getTime() > now,
-  );
+  // API は startsAt 降順で返すため、今後の予約は開始が早い順に並べ替える
+  const upcoming = bookings
+    .filter(
+      (b) =>
+        (b.status === "pending" || b.status === "confirmed") &&
+        new Date(b.startsAt).getTime() > now,
+    )
+    .sort(
+      (a, b) => new Date(a.startsAt).getTime() - new Date(b.startsAt).getTime(),
+    );
   const past = bookings.filter(
     (b) =>
       b.status === "completed" ||
