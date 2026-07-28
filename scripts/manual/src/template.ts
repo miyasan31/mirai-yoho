@@ -186,10 +186,11 @@ const CSS = `
     background: var(--surface-muted);
     line-height: 0;
   }
+  /* 注釈と関連する動きの分の余白を確保するための上限。収まりは pnpm preview で検査する */
   .screen__image img {
     display: block;
     max-width: 100%;
-    max-height: 140mm;
+    max-height: 126mm;
     width: auto;
     height: auto;
   }
@@ -251,7 +252,84 @@ const CSS = `
   .annotation--unresolved .annotation__n {
     background: var(--page-fg-muted);
   }
+  .relations {
+    margin-top: auto;
+    padding-top: 3mm;
+    border-top: 1px solid var(--border);
+  }
+  .relations__title {
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    color: var(--accent);
+    margin: 0 0 1.5mm;
+  }
+  .relations__list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 1.5mm;
+  }
+  .relations__item {
+    display: grid;
+    grid-template-columns: max-content 1fr;
+    gap: 3mm;
+    align-items: baseline;
+    font-size: 9pt;
+  }
+  .relations__where {
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .relations__effect {
+    margin: 0;
+    line-height: 1.45;
+  }
+  .service-map {
+    padding: 20mm 18mm;
+  }
+  .service-map__title {
+    font-size: 20pt;
+    font-weight: 700;
+    margin: 0 0 6mm;
+    padding-bottom: 4mm;
+    border-bottom: 2px solid var(--page-fg);
+  }
+  .service-map__summary {
+    font-size: 10.5pt;
+    line-height: 1.7;
+    margin: 0 0 10mm;
+    max-width: 155mm;
+  }
+  .service-map__flow {
+    margin-bottom: 8mm;
+    padding: 4mm 5mm;
+    border: 1px solid var(--border);
+    border-radius: 1.5mm;
+    background: var(--surface-muted);
+  }
+  .service-map__path {
+    font-size: 12pt;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 0 0 3mm;
+  }
+  .service-map__items {
+    margin: 0;
+    padding-left: 5mm;
+  }
+  .service-map__item {
+    font-size: 10pt;
+    line-height: 1.6;
+  }
 `;
+
+/** relations の target をマニュアル本文での呼び名に変換する */
+const TARGET_LABELS: Record<string, string> = {
+  consultant: "占い師コンソール",
+  user: "予約サイト",
+};
 
 function escapeHtml(input: string): string {
   return input
@@ -272,6 +350,28 @@ function renderPin(
   const leftPct = (centerX / imageWidth) * 100;
   const topPct = (centerY / imageHeight) * 100;
   return `<span class="pin" style="left:${leftPct.toFixed(2)}%;top:${topPct.toFixed(2)}%">${annotation.n}</span>`;
+}
+
+function renderRelations(screen: CapturedPage): string {
+  const relations = screen.relations ?? [];
+  if (relations.length === 0) return "";
+  const items = relations
+    .map((relation) => {
+      const label = TARGET_LABELS[relation.target] ?? relation.target;
+      return `
+        <li class="relations__item">
+          <span class="relations__where">→ ${escapeHtml(label)}／${escapeHtml(relation.screen)}</span>
+          <p class="relations__effect">${escapeHtml(relation.effect)}</p>
+        </li>
+      `;
+    })
+    .join("");
+  return `
+    <div class="relations">
+      <p class="relations__title">関連する動き</p>
+      <ul class="relations__list">${items}</ul>
+    </div>
+  `;
 }
 
 function renderScreen(screen: CapturedPage, sectionTitle: string): string {
@@ -310,6 +410,7 @@ function renderScreen(screen: CapturedPage, sectionTitle: string): string {
         </div>
       </div>
       <div class="annotations">${annotations}</div>
+      ${renderRelations(screen)}
     </section>
   `;
 }
@@ -374,9 +475,35 @@ function renderToc(result: CaptureResult): string {
   `;
 }
 
+function renderServiceMap(result: CaptureResult): string {
+  const serviceMap = result.serviceMap;
+  if (!serviceMap) return "";
+  const flows = serviceMap.flows
+    .map((flow) => {
+      const items = flow.items
+        .map((item) => `<li class="service-map__item">${escapeHtml(item)}</li>`)
+        .join("");
+      return `
+        <div class="service-map__flow">
+          <p class="service-map__path">${escapeHtml(flow.path)}</p>
+          <ul class="service-map__items">${items}</ul>
+        </div>
+      `;
+    })
+    .join("");
+  return `
+    <section class="page service-map">
+      <h2 class="service-map__title">サービス連携の全体像</h2>
+      <p class="service-map__summary">${escapeHtml(serviceMap.summary)}</p>
+      ${flows}
+    </section>
+  `;
+}
+
 export function renderHtml(result: CaptureResult): string {
   const cover = renderCover(result);
   const toc = renderToc(result);
+  const serviceMap = renderServiceMap(result);
   const sections = result.sections.map((s, i) => renderSection(s, i)).join("");
   return `<!doctype html>
 <html lang="ja">
@@ -388,6 +515,7 @@ export function renderHtml(result: CaptureResult): string {
 <body>
   ${cover}
   ${toc}
+  ${serviceMap}
   ${sections}
 </body>
 </html>`;

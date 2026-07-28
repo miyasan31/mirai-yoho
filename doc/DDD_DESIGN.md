@@ -437,12 +437,12 @@ apps/api/src/
   card の場合:
     5a. StripeService.createSetupIntent()      ← カード登録のみ（引き落としなし）
     6a. Payment.createDeferred()               ← status: setup_pending
-    出力: { customerSecret, mode: 'setup' }
+    出力: { clientSecret, mode: 'setup' }
 
   paypay の場合:
     5b. StripeService.createPaymentIntent()    ← payment_method_types: ['paypay']
     6b. Payment.createImmediate()              ← status: setup_pending → 決済完了で charged
-    出力: { customerSecret, mode: 'payment' }
+    出力: { clientSecret, mode: 'payment' }
 ```
 
 > `clientSecret` は Stripe の `client_secret` をそのまま返す。SPA は `mode` に応じて Stripe Payment Element を setup / payment モードで初期化する（`apps/user/src/routes/$organizationId/booking/payment/index.tsx`）。
