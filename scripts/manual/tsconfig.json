@@ -5,5 +5,5 @@
     "moduleResolution": "bundler",
     "outDir": "dist"
   },
-  "include": ["src/**/*"]
+  "include": ["src/**/*", "apps/**/*"]
 }

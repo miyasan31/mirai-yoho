@@ -73,6 +73,14 @@ MANUAL_ORG_ID=abc123 pnpm --filter manual capture consultant dev
 - `capture <appId> [env]` … 各画面を巡回してスクショと注釈座標を取得
 - `render <appId> [env]` … capture 結果から HTML → PDF を生成
 - `build <appId> [env]` … capture → render をまとめて実行
+- `preview <appId>` … スクショ無しでレイアウトだけ検査する。ログインも SPA の起動も不要
+
+`preview` は config の文言をプレースホルダ画像に載せて HTML を組み、A4 1 ページ（265mm）に
+収まらない画面があれば id と実高さを出して異常終了します。config を編集したら実行してください。
+
+```bash
+pnpm --filter manual preview console
+```
 
 ## ブラウザチャネルの切り替え
 
@@ -106,6 +114,23 @@ MANUAL_ORG_ID=<組織ID> pnpm --filter manual build user
 # → doc/manual/user-manual.pdf
 ```
 
+## サービス間の関連性
+
+各画面には「その操作が下流サービスのどこに届くか」を `relations` として書けます。PDF では注釈欄の下に
+「関連する動き」として出力されます。`AppConfig.serviceMap` を定義すると、目次の直後に
+「サービス連携の全体像」ページが 1 枚挿入されます。
+
+書ける向きは `console → consultant` / `console → user` / `consultant → user` の一方向だけです。
+下流から上流を指す記述と、予約サイト（`user`）の config での他サービスへの言及は
+`src/validate-config.ts` が `capture` / `render` の起動時にエラーで止めます。
+
+## モーダルの撮影
+
+ダイアログでしか開けない機能は、`PageDef` に `setup`（スクショ前の操作）と
+`captureMode: "viewport"` を指定して独立した画面として撮ります。`setup` が失敗した画面は
+警告を出してスキップされるので、データ依存でトリガーが出ない場合も他の画面には影響しません。
+
 ## 新しいアプリを追加する
 
 `apps/<appId>.ts` を作成し `AppConfig` を default export してください。`create-manual` スキル（`.claude/skills/create-manual/`）に文言・注釈設計の指針があります。
+あわせて `src/validate-config.ts` の `DOWNSTREAM` にその appId の下流を登録してください。

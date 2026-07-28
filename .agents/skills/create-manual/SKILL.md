@@ -99,7 +99,18 @@ defaultEnv: "local",
 
 ### 注釈（annotations）
 
-**主要操作 3〜5 個** に絞ること。網羅は避け、その画面を初めて触るユーザーが最初に理解すべき要素を選ぶ。
+**主要操作 3〜8 個**。1 画面 = A4 1 ページ（`.screen` は 265mm 固定）なので 8 個が上限だが、
+実際に収まるかは注釈数だけでなく説明文の長さと `relations` の件数で決まる。説明が長いなら 5〜6 個に抑える。
+
+収まりは実際に測れる。config を編集したら必ず実行すること（ログイン不要、SPA の起動も不要）:
+
+```bash
+pnpm --filter manual preview console
+```
+
+はみ出した画面 id と実高さが出るので、注釈か `relations` を減らす。
+
+機能を網羅したい場合は注釈を増やすのではなく**画面を増やす**（モーダルは別画面として撮る）。
 
 各注釈:
 
@@ -109,6 +120,73 @@ defaultEnv: "local",
 - `description`: **1 文の日本語**。ですます調で「〜します」で終える。何がどうなるかを書く。UI の見た目は書かない
 
 セレクタが見つからなくても注釈自体は掲載される（テンプレートが番号を灰色で表示する）。
+
+### モーダル画面（setup / captureMode）
+
+ダイアログでしか開けない機能は、独立した `PageDef` として撮る。
+
+```ts
+{
+  id: "coupon-create",        // <親画面 id>-<動作> の形
+  title: "クーポン作成",
+  route: "/{orgId}/coupons",  // 親画面と同じ route
+  waitForSelector: 'button:has-text("新規作成")',
+  setup: openDialog('button:has-text("新規作成")'),
+  captureMode: "viewport",    // モーダルは必ず viewport
+  annotations: [...],
+}
+```
+
+- `setup` は goto と `waitForSelector` の後、スクショ前に実行される。失敗するとその画面だけスキップされる
+  （データ依存でトリガーが出ないケースを想定した想定内の挙動）
+- `captureMode: "viewport"` を必ず付ける。`fullPage` だとピン座標の基準がずれる
+- Park UI の Dialog は `unmountOnExit` なので、開いている 1 つだけが
+  `[data-scope="dialog"][data-part="content"]` に一致する。ダイアログ内のセレクタはこれで前置きして絞る
+- 各 app config の先頭に `openDialog()` ヘルパーを置く（既存 config を参照）
+
+### 関連する動き（relations）
+
+その画面での操作が**下流サービス**に及ぼす影響を書く。書ける向きは以下だけで、
+`src/validate-config.ts` が違反を実行時エラーで止める。
+
+| config | 書ける target |
+|---|---|
+| `console` | `consultant`, `user` |
+| `consultant` | `user` |
+| `user` | なし（`relations` も `serviceMap` も書けない） |
+
+```ts
+relations: [
+  {
+    target: "consultant",
+    screen: "料金プラン",              // 影響先アプリでの日本語の画面名
+    effect: "範囲外の金額ではプランを作成できなくなります。",  // 1 文・結果で書く
+  },
+],
+```
+
+- 上流を指す記述（占い師コンソールのマニュアルに運営コンソールの説明を書く等）は**しない**。
+  読み手が触れない画面の話は混乱のもとになる
+- 予約サイトの config には、他サービスを匂わせる語（`コンソール` / `管理画面` / `運営担当` /
+  `オペレーター`）を一切書かない。占い師コンソールの config では `運営コンソール` / `運営担当` /
+  `オペレーター` が禁止語
+
+### サービス連携の全体像（serviceMap）
+
+`AppConfig.serviceMap` を定義すると、目次の直後に 1 ページ挿入される。未定義なら出力されない
+（予約サイトでは定義しない）。
+
+```ts
+serviceMap: {
+  summary: "この読み手の操作が、どのサービスのどこに届くかの総論を 2〜3 文で。",
+  flows: [
+    { path: "運営コンソール → 占い師コンソール", items: ["…", "…"] },
+    { path: "運営コンソール → 予約サイト", items: ["…"] },
+  ],
+},
+```
+
+`path` は「<自分> → <下流>」の形。`items` は 1 項目 1 文で、各画面の `relations` の要約になるように書く。
 
 ### 文言スタイル
 
@@ -132,7 +210,11 @@ defaultEnv: "local",
 - `postLoginUrlPattern`: ログイン成功後に遷移する URL を検知する正規表現
 - `extractOrganizationId`: URL から orgId を取り出す関数（不要なら省略可）
 - `resolveDynamicParams`: `{bookingId}` のような追加 placeholder を実行時に解決する関数（不要なら省略可）
+- `serviceMap`: サービス連携の全体像（最下流のアプリでは定義しない）
 - `sections`: 上記セクション設計に従う配列
+
+新しい appId を追加したら `src/validate-config.ts` の `DOWNSTREAM` にその appId の下流を登録する。
+登録しないと capture / render が起動時にエラーで止まる。
 
 ### 対象 SPA のルート一覧を調べる
 
@@ -185,7 +267,11 @@ MANUAL_ORG_ID=abc123 pnpm --filter manual build user
 
 ## やってはいけないこと
 
-- `scripts/manual/src/template.ts` を app 個別の都合で変更しない（一貫性が壊れる）。デザイン方針を変えたい場合は必ずユーザーに確認
-- 注釈を 6 個以上にしない（PDF が縦に伸びて読みにくくなる）
+- `scripts/manual/src/template.ts` を app 個別の都合で変更しない（一貫性が壊れる）。デザイン方針を変えたい場合は必ずユーザーに確認。
+  表紙・目次・サービス連携の全体像・セクション扉・画面ページ（注釈グリッド + 関連する動き）が既定の構成要素
+- 注釈を 9 個以上にしない。8 個以下でも `pnpm --filter manual preview <app_id>` が通らない構成のまま放置しない
+- 下流から上流を指す `relations` を書かない。特に予約サイトの config には他サービスへの言及を一切書かない
+  （`src/validate-config.ts` が capture / render を停止させる）
+- モーダル画面に `captureMode: "viewport"` を付け忘れない（ピン位置がずれる）
 - スクショに個人情報が写る場合は事前にテストデータへ差し替える
 - `.work/` の中身をコミットしない（`.gitignore` 済み）

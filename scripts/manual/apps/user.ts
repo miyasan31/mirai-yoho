@@ -12,6 +12,9 @@ const DUMMY_CUSTOMER = {
 /** 予約完了・キャンセル画面を撮るためのダミー予約 ID。実予約が取れなかった場合のフォールバック。 */
 const SAMPLE_BOOKING_ID = "sample-booking-id";
 
+/** Park UI の Dialog は unmountOnExit なので、開いている 1 つだけが DOM に存在する */
+const OPEN_DIALOG = '[data-scope="dialog"][data-part="content"]';
+
 function isProdBaseUrl(baseUrl: string): boolean {
   return /^https:\/\/user\.miraiyohou\.com/.test(baseUrl);
 }
@@ -614,6 +617,45 @@ const config: AppConfig = {
               selector: 'button:has-text("キャンセル")',
               title: "キャンセル",
               description: "キャンセルポリシーの範囲内で予約を取り消します。",
+            },
+            {
+              n: 4,
+              selector: "text=クーポン",
+              title: "クーポン割引",
+              description:
+                "クーポンを使った予約では、割引額とお支払い金額を並べて表示します。",
+            },
+          ],
+        },
+        {
+          id: "mypage-booking-cancel",
+          title: "キャンセルの確認",
+          overview:
+            "予約一覧のキャンセルボタンを押すと表示される確認画面です。実行すると取り消せません。",
+          route: "/mypage/bookings",
+          requiresAuth: true,
+          waitForSelector: 'button:has-text("キャンセル")',
+          setup: async ({ page }) => {
+            await page.locator('button:has-text("キャンセル")').first().click();
+            await page.waitForSelector(OPEN_DIALOG, {
+              state: "visible",
+              timeout: 5_000,
+            });
+          },
+          captureMode: "viewport",
+          annotations: [
+            {
+              n: 1,
+              selector: `${OPEN_DIALOG} button:has-text("キャンセルする")`,
+              title: "キャンセルする",
+              description:
+                "予約を取り消し、確認メールを送ります。取り消した予約は元に戻せません。",
+            },
+            {
+              n: 2,
+              selector: `${OPEN_DIALOG} button:has-text("戻る")`,
+              title: "戻る",
+              description: "キャンセルせずに予約一覧へ戻ります。",
             },
           ],
         },

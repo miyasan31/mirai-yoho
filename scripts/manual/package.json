@@ -7,7 +7,9 @@
     "login": "tsx src/login.ts",
     "capture": "tsx src/capture.ts",
     "render": "tsx src/render.ts",
-    "build": "tsx src/build.ts"
+    "build": "tsx src/build.ts",
+    "preview": "tsx src/preview.ts",
+    "tsc": "tsc --noEmit"
   },
   "devDependencies": {
     "@types/node": "^24",

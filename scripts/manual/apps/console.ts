@@ -1,6 +1,24 @@
+import type { CaptureContext } from "../src/context.js";
 import type { AppConfig } from "../src/types.js";
 
 const OPEN_TAB_PANEL = '[role="tabpanel"][data-state="open"]';
+
+/** Park UI の Dialog は unmountOnExit なので、開いている 1 つだけが DOM に存在する */
+const OPEN_DIALOG = '[data-scope="dialog"][data-part="content"]';
+
+const dialogField = (label: string) =>
+  `${OPEN_DIALOG} [data-scope="field"][data-part="root"]:has(> label:text-is("${label}"))`;
+
+/** トリガーを押してダイアログが開くまで待つ setup を作る */
+const openDialog =
+  (trigger: string) =>
+  async ({ page }: CaptureContext): Promise<void> => {
+    await page.locator(trigger).first().click();
+    await page.waitForSelector(OPEN_DIALOG, {
+      state: "visible",
+      timeout: 5_000,
+    });
+  };
 
 const config: AppConfig = {
   appId: "console",
@@ -51,6 +69,31 @@ const config: AppConfig = {
     if (!href) return {};
     const match = href.match(/\/consultants\/([^/?#]+)$/);
     return match ? { consultantId: decodeURIComponent(match[1]) } : {};
+  },
+  serviceMap: {
+    summary:
+      "運営コンソールでの設定は、占い師コンソールと予約サイトの両方に波及します。占い師が何を作成できるか、予約者に何が見えるかは、ここでの設定が起点になります。各画面の「関連する動き」欄に、その操作がどこへ届くかを記載しています。",
+    flows: [
+      {
+        path: "運営コンソール → 占い師コンソール",
+        items: [
+          "設定 - 料金の金額範囲が、占い師の料金プラン作成で許される税込金額を決めます。",
+          "設定 - 営業時間が、占い師の予約枠管理カレンダーの表示範囲と追加できる時間帯を決めます。",
+          "設定 - ステータスで整えた名称が、占い師のプロフィールに表示されます。",
+          "占い師管理からの招待で、占い師コンソールを使えるアカウントが作られます。",
+          "利用規約・キャンセルポリシーを公開すると、占い師に再同意が求められ、同意するまで予約枠を追加できなくなります。",
+        ],
+      },
+      {
+        path: "運営コンソール → 予約サイト",
+        items: [
+          "占い師管理で招待・編集した内容が、予約サイトの占い師一覧にそのまま掲載されます。",
+          "クーポン管理で作成したクーポンを、予約者が自分で取得して予約に使います。",
+          "利用規約・キャンセルポリシーの公開版が、予約サイトの規約ページと予約時の同意対象になります。",
+          "予約管理での課金が、予約者への決済完了メールと予約の終了扱いにつながります。",
+        ],
+      },
+    ],
   },
   sections: [
     {
@@ -253,6 +296,65 @@ const config: AppConfig = {
               description: "次のページの予約を表示します。",
             },
           ],
+          relations: [
+            {
+              target: "user",
+              screen: "予約一覧",
+              effect:
+                "課金すると予約者に決済完了メールが届き、予約が終了扱いになります。",
+            },
+          ],
+        },
+        {
+          id: "zoom-sessions",
+          title: "ブレイクアウトルーム",
+          overview:
+            "当日の Zoom ミーティングに事前割り当てされているブレイクアウトルームを確認します。ルームは予約 1 件につき 1 つ作られ、予約が確定するたびに増えます。",
+          route: "/{orgId}/zoom-sessions",
+          requiresAuth: true,
+          waitForSelector: 'input[aria-label="対象日"]',
+          annotations: [
+            {
+              n: 1,
+              selector: 'input[aria-label="対象日"]',
+              title: "対象日",
+              description: "表示するブレイクアウトルームの日付を切り替えます。",
+            },
+            {
+              n: 2,
+              selector: 'button:has-text("今日")',
+              title: "今日",
+              description: "対象日を当日に戻します。",
+            },
+            {
+              n: 3,
+              selector: 'a:has-text("参加 URL を開く")',
+              title: "参加 URL",
+              description:
+                "その日の予約が共有する Zoom ミーティングを別タブで開きます。",
+            },
+            {
+              n: 4,
+              selector: "table thead tr",
+              title: "一覧の項目",
+              description:
+                "時間・ルーム名・占い師・顧客・割り当て済み Zoom アカウント・予約ステータスを表示します。",
+            },
+            {
+              n: 5,
+              selector: "table tbody tr",
+              title: "ルーム行",
+              description:
+                "ルーム名は担当占い師と時間帯から決まり、予約者が連携した Zoom アカウントが事前に割り当てられます。",
+            },
+            {
+              n: 6,
+              selector: "text=要確認",
+              title: "要確認バッジ",
+              description:
+                "予約が確定していないのにルームが残っている場合に表示され、Zoom 連携の失敗を示します。",
+            },
+          ],
         },
         {
           id: "payments",
@@ -364,6 +466,68 @@ const config: AppConfig = {
               description: "占い師編集画面を開きます。",
             },
           ],
+          relations: [
+            {
+              target: "user",
+              screen: "占い師一覧",
+              effect:
+                "招待が成立した占い師はすぐに掲載され、無効化すると掲載から外れます。",
+            },
+          ],
+        },
+        {
+          id: "consultant-invite",
+          title: "占い師招待",
+          overview:
+            "表示名とメールアドレスを入力して占い師を招待します。送信すると招待メールが届き、占い師コンソールを使い始められます。",
+          route: "/{orgId}/consultants",
+          requiresAuth: true,
+          waitForSelector: 'button:has-text("新規追加")',
+          setup: openDialog('button:has-text("新規追加")'),
+          captureMode: "viewport",
+          annotations: [
+            {
+              n: 1,
+              selector: `${dialogField("表示名")} input`,
+              title: "表示名",
+              description:
+                "予約サイトに掲載される占い師名の初期値になります。本人が後から変更できます。",
+            },
+            {
+              n: 2,
+              selector: `${dialogField("メールアドレス")} input`,
+              title: "メールアドレス",
+              description:
+                "招待メールの宛先で、占い師コンソールのログイン ID になります。",
+            },
+            {
+              n: 3,
+              selector: `${OPEN_DIALOG} button[type="submit"]`,
+              title: "招待送信",
+              description:
+                "招待メールを送信し、同時に占い師を一覧へ登録します。すでに同じメールで登録済みの場合は送信できません。",
+            },
+            {
+              n: 4,
+              selector: `${OPEN_DIALOG} button:has-text("キャンセル")`,
+              title: "キャンセル",
+              description: "招待せずにダイアログを閉じます。",
+            },
+          ],
+          relations: [
+            {
+              target: "consultant",
+              screen: "ログイン",
+              effect:
+                "招待メールから設定したパスワードで占い師コンソールにサインインできるようになります。",
+            },
+            {
+              target: "user",
+              screen: "占い師一覧",
+              effect:
+                "招待した時点で掲載されるため、プロフィール未入力のまま公開されないよう本人に入力を促します。",
+            },
+          ],
         },
         {
           id: "consultant-edit",
@@ -407,6 +571,20 @@ const config: AppConfig = {
                 "稼働を停止します。確認ダイアログで実行後も再度有効化できます。",
             },
           ],
+          relations: [
+            {
+              target: "consultant",
+              screen: "プロフィール",
+              effect:
+                "同じ項目を占い師本人も編集できるため、後から保存した内容が残ります。",
+            },
+            {
+              target: "user",
+              screen: "占い師一覧",
+              effect:
+                "表示名・自己紹介・専門分野・ステータスがカードの表示に反映されます。",
+            },
+          ],
         },
         {
           id: "accounts",
@@ -436,14 +614,67 @@ const config: AppConfig = {
               selector: "table tbody tr",
               title: "アカウント行",
               description:
-                "操作アイコンから表示名変更・ロール変更・招待メール再送・パスワードリセット・削除を行います。",
+                "招待中・有効・無効のステータスによって実行できる操作が変わります。",
             },
             {
               n: 4,
+              selector: "table tbody tr td:last-child",
+              title: "操作アイコン",
+              description:
+                "左から表示名変更・ロール変更・招待メール再送・パスワードリセット・削除で、権限に応じて表示が変わります。",
+            },
+            {
+              n: 5,
               selector: '[aria-label="現在ログイン中のアカウント"]',
               title: "自分のアカウント",
               description:
-                "ログイン中のアカウントには「あなた」バッジが付きます。",
+                "ログイン中のアカウントには「あなた」バッジが付き、自分自身は削除できません。",
+            },
+            {
+              n: 6,
+              selector: 'button[aria-label="次のページ"]',
+              title: "ページ送り",
+              description: "次のページのアカウントを表示します。",
+            },
+          ],
+        },
+        {
+          id: "account-invite",
+          title: "アカウント招待",
+          overview:
+            "運営コンソールを使う管理者・オペレーターを招待します。招待できるのは管理者ロールのアカウントだけです。",
+          route: "/{orgId}/accounts",
+          requiresAuth: true,
+          waitForSelector: 'button:has-text("アカウント招待")',
+          setup: openDialog('button:has-text("アカウント招待")'),
+          captureMode: "viewport",
+          annotations: [
+            {
+              n: 1,
+              selector: `${dialogField("メールアドレス")} input`,
+              title: "メールアドレス",
+              description:
+                "招待メールの宛先で、運営コンソールのログイン ID になります。",
+            },
+            {
+              n: 2,
+              selector: `${dialogField("表示名")} input`,
+              title: "表示名",
+              description: "アカウント一覧に表示される名前です。",
+            },
+            {
+              n: 3,
+              selector: `${OPEN_DIALOG} [data-scope="select"][data-part="trigger"]`,
+              title: "ロール",
+              description:
+                "権限管理で用意したロールから選び、操作できる範囲を決めます。",
+            },
+            {
+              n: 4,
+              selector: `${OPEN_DIALOG} button[type="submit"]`,
+              title: "招待メール送信",
+              description:
+                "招待メールとパスワード設定リンクを送信し、一覧に招待中として追加します。",
             },
           ],
         },
@@ -486,6 +717,52 @@ const config: AppConfig = {
           ],
         },
         {
+          id: "role-create",
+          title: "ロール作成",
+          overview:
+            "運営コンソールの操作権限をまとめたロールを新しく作ります。ここで選んだ権限が、そのロールを割り当てたアカウントのサイドメニューと操作可否を決めます。",
+          route: "/{orgId}/roles",
+          requiresAuth: true,
+          waitForSelector: 'button:has-text("ロール作成")',
+          setup: openDialog('button:has-text("ロール作成")'),
+          captureMode: "viewport",
+          annotations: [
+            {
+              n: 1,
+              selector: `${dialogField("ロールID")} input`,
+              title: "ロール ID",
+              description:
+                "booking-manager のような半角英小文字とハイフンの識別子で、後から変更できません。",
+            },
+            {
+              n: 2,
+              selector: `${dialogField("ロール名")} input`,
+              title: "ロール名",
+              description: "アカウント管理の一覧に表示される日本語名です。",
+            },
+            {
+              n: 3,
+              selector: `${dialogField("説明")} input`,
+              title: "説明",
+              description: "どんな担当者向けのロールかを書き添えます。",
+            },
+            {
+              n: 4,
+              selector: `${OPEN_DIALOG} [data-scope="checkbox"][data-part="root"]`,
+              title: "権限チェック",
+              description:
+                "ホーム・集計、予約・決済、顧客・占い師、予約枠・設定、アカウント・ロールの 5 グループから必要な権限を選びます。",
+            },
+            {
+              n: 5,
+              selector: `${OPEN_DIALOG} button[type="submit"]`,
+              title: "作成",
+              description:
+                "ロールを作成し、アカウント管理のロール選択肢に追加します。",
+            },
+          ],
+        },
+        {
           id: "coupons",
           title: "クーポン管理",
           overview:
@@ -514,6 +791,80 @@ const config: AppConfig = {
               title: "クーポン行",
               description:
                 "操作アイコンから編集と無効化を行います。無効化しても配布済みクーポンは残ります。",
+            },
+          ],
+          relations: [
+            {
+              target: "user",
+              screen: "クーポン取得",
+              effect:
+                "有効なクーポンが取得可能一覧に並び、予約者が自分で受け取ります。",
+            },
+            {
+              target: "user",
+              screen: "保有クーポン",
+              effect:
+                "割引額や枚数を変更しても、すでに配布済みのクーポンには遡って反映されません。",
+            },
+          ],
+        },
+        {
+          id: "coupon-create",
+          title: "クーポン作成",
+          overview:
+            "初回登録特典または誕生月のクーポンを新しく作ります。作成した時点で予約者が取得できるようになります。",
+          route: "/{orgId}/coupons",
+          requiresAuth: true,
+          waitForSelector: 'button:has-text("新規作成")',
+          setup: openDialog('button:has-text("新規作成")'),
+          captureMode: "viewport",
+          annotations: [
+            {
+              n: 1,
+              selector: `${dialogField("種別")} select`,
+              title: "種別",
+              description:
+                "初回登録特典は 1 回限り、誕生月は誕生月の予約者だけが受け取れます。作成後は変更できません。",
+            },
+            {
+              n: 2,
+              selector: `${dialogField("名称")} input`,
+              title: "名称",
+              description: "予約者のクーポン一覧に表示される名前です。",
+            },
+            {
+              n: 3,
+              selector: `${dialogField("割引額（円）")} input`,
+              title: "割引額",
+              description:
+                "予約 1 件あたりの割引額を税込金額から差し引きます。",
+            },
+            {
+              n: 4,
+              selector: `${dialogField("1 度の取得で配る枚数")} input`,
+              title: "枚数",
+              description:
+                "1 回の受け取りで何枚配るかを決めます。予約 1 件に使えるのは 1 枚です。",
+            },
+            {
+              n: 5,
+              selector: `${dialogField("有効日数（受け取り日から）")} input`,
+              title: "有効日数",
+              description: "受け取った日から何日間使えるかを決めます。",
+            },
+            {
+              n: 6,
+              selector: `${OPEN_DIALOG} button[type="submit"]`,
+              title: "作成",
+              description: "クーポンを作成し、取得可能な状態で公開します。",
+            },
+          ],
+          relations: [
+            {
+              target: "user",
+              screen: "クーポン取得",
+              effect:
+                "作成した内容がそのまま取得画面のカードとして表示されます。",
             },
           ],
         },
@@ -557,7 +908,224 @@ const config: AppConfig = {
               selector: `${OPEN_TAB_PANEL} button:has-text("公開")`,
               title: "公開",
               description:
-                "下書きを公開中に切り替え、予約サイトへ即時反映します。",
+                "下書きを公開中に切り替え、既存の公開中の版をアーカイブします。",
+            },
+          ],
+          relations: [
+            {
+              target: "consultant",
+              screen: "ホーム",
+              effect:
+                "公開すると再同意カードが出て、同意するまで占い師は予約枠を追加できなくなります。",
+            },
+            {
+              target: "user",
+              screen: "利用規約",
+              effect:
+                "効力発生日を迎えた版が規約ページの本文として表示されます。",
+            },
+            {
+              target: "user",
+              screen: "予約情報入力",
+              effect: "予約時に同意を求める版が新しい公開版に切り替わります。",
+            },
+          ],
+        },
+        {
+          id: "policies-cancellation-policy",
+          title: "キャンセルポリシー",
+          overview:
+            "キャンセルポリシーの改版を管理します。利用規約と同じ手順で下書きを作り、公開すると予約時の同意対象になります。",
+          route: "/{orgId}/policies?tab=cancellation_policy",
+          requiresAuth: true,
+          waitForSelector: OPEN_TAB_PANEL,
+          annotations: [
+            {
+              n: 1,
+              selector: '[role="tab"][data-state="active"]',
+              title: "選択中のタブ",
+              description:
+                "キャンセルポリシーの改版だけを表示している状態です。",
+            },
+            {
+              n: 2,
+              selector: `${OPEN_TAB_PANEL} button:has-text("新しい改版を作成")`,
+              title: "新しい改版を作成",
+              description: "現在の内容を引き継いだ下書きを作成します。",
+            },
+            {
+              n: 3,
+              selector: `${OPEN_TAB_PANEL} table thead tr`,
+              title: "改版一覧",
+              description:
+                "版番号・タイトル・状態・効力発生日・公開日を表示します。",
+            },
+          ],
+          relations: [
+            {
+              target: "user",
+              screen: "キャンセルポリシー",
+              effect:
+                "公開版がキャンセルポリシーのページと予約時の同意対象になります。",
+            },
+          ],
+        },
+        {
+          id: "policies-privacy-policy",
+          title: "プライバシーポリシー",
+          overview:
+            "プライバシーポリシーの改版を管理します。公開すると予約サイトのプライバシーポリシーページが差し替わります。",
+          route: "/{orgId}/policies?tab=privacy_policy",
+          requiresAuth: true,
+          waitForSelector: OPEN_TAB_PANEL,
+          annotations: [
+            {
+              n: 1,
+              selector: '[role="tab"][data-state="active"]',
+              title: "選択中のタブ",
+              description:
+                "プライバシーポリシーの改版だけを表示している状態です。",
+            },
+            {
+              n: 2,
+              selector: `${OPEN_TAB_PANEL} button:has-text("新しい改版を作成")`,
+              title: "新しい改版を作成",
+              description: "現在の内容を引き継いだ下書きを作成します。",
+            },
+            {
+              n: 3,
+              selector: `${OPEN_TAB_PANEL} table thead tr`,
+              title: "改版一覧",
+              description:
+                "版番号・タイトル・状態・効力発生日・公開日を表示します。",
+            },
+          ],
+          relations: [
+            {
+              target: "user",
+              screen: "プライバシーポリシー",
+              effect: "公開版がプライバシーポリシーのページに表示されます。",
+            },
+          ],
+        },
+        {
+          id: "policy-editor",
+          title: "改版エディタ",
+          overview:
+            "改版の版番号・タイトル・本文を編集します。本文は Markdown で書き、プレビューで表示を確認してから保存します。",
+          route: "/{orgId}/policies",
+          requiresAuth: true,
+          waitForSelector: `${OPEN_TAB_PANEL} button:has-text("新しい改版を作成")`,
+          setup: openDialog(
+            `${OPEN_TAB_PANEL} button:has-text("新しい改版を作成")`,
+          ),
+          captureMode: "viewport",
+          annotations: [
+            {
+              n: 1,
+              selector: `${dialogField("version")} input`,
+              title: "version",
+              description:
+                "2026-08-01 のように版を識別する文字列で、同じ文書内で重複できません。",
+            },
+            {
+              n: 2,
+              selector: `${dialogField("title")} input`,
+              title: "title",
+              description: "改版一覧に表示される見出しです。",
+            },
+            {
+              n: 3,
+              selector: `${OPEN_DIALOG} textarea`,
+              title: "本文",
+              description: "Markdown で規約の本文を記述します。",
+            },
+            {
+              n: 4,
+              selector: `${OPEN_DIALOG} button:has-text("プレビュー")`,
+              title: "プレビュー",
+              description:
+                "Markdown を整形した状態で確認します。編集に戻ると続きを書けます。",
+            },
+            {
+              n: 5,
+              selector: `${OPEN_DIALOG} button[type="submit"]`,
+              title: "保存",
+              description:
+                "下書きとして保存します。保存しただけでは公開されません。",
+            },
+          ],
+        },
+        {
+          id: "policy-publish",
+          title: "改版の公開",
+          overview:
+            "下書きを公開に切り替えます。効力発生日時を指定でき、既存の公開中の版は自動でアーカイブされます。",
+          route: "/{orgId}/policies",
+          requiresAuth: true,
+          waitForSelector: `${OPEN_TAB_PANEL} button:has-text("公開")`,
+          setup: openDialog(`${OPEN_TAB_PANEL} button:has-text("公開")`),
+          captureMode: "viewport",
+          annotations: [
+            {
+              n: 1,
+              selector: `${dialogField("効力発生日時")} input`,
+              title: "効力発生日時",
+              description:
+                "この日時を過ぎると新しい版が適用されます。既定は翌日の 9 時です。",
+            },
+            {
+              n: 2,
+              selector: `${OPEN_DIALOG} button:has-text("公開")`,
+              title: "公開する",
+              description:
+                "公開を確定し、これまでの公開中の版をアーカイブに移します。",
+            },
+            {
+              n: 3,
+              selector: `${OPEN_DIALOG} button:has-text("キャンセル")`,
+              title: "キャンセル",
+              description: "公開せずにダイアログを閉じます。",
+            },
+          ],
+          relations: [
+            {
+              target: "consultant",
+              screen: "予約枠管理",
+              effect:
+                "占い師が再同意するまで、新しい予約枠を追加できない状態になります。",
+            },
+            {
+              target: "user",
+              screen: "予約情報入力",
+              effect:
+                "効力発生日以降の予約は、新しい版への同意を求められるようになります。",
+            },
+          ],
+        },
+        {
+          id: "policy-diff",
+          title: "改版の差分",
+          overview:
+            "選んだ版との変更箇所を行単位で比較します。公開前に何が変わるかを確認する画面です。",
+          route: "/{orgId}/policies",
+          requiresAuth: true,
+          waitForSelector: `${OPEN_TAB_PANEL} button:has-text("差分")`,
+          setup: openDialog(`${OPEN_TAB_PANEL} button:has-text("差分")`),
+          captureMode: "viewport",
+          annotations: [
+            {
+              n: 1,
+              selector: `${dialogField("比較元（version）")} select`,
+              title: "比較元",
+              description:
+                "比較したい版を選びます。なしを選ぶと全文が新規追加として表示されます。",
+            },
+            {
+              n: 2,
+              selector: `${OPEN_DIALOG} button:has-text("閉じる")`,
+              title: "閉じる",
+              description: "差分ビューを閉じて改版一覧に戻ります。",
             },
           ],
         },
@@ -603,6 +1171,20 @@ const config: AppConfig = {
               description: "営業時間設定を保存し、予約枠の判定に反映します。",
             },
           ],
+          relations: [
+            {
+              target: "consultant",
+              screen: "予約枠管理",
+              effect:
+                "カレンダーの表示範囲が営業時間に合わせて変わり、営業時間外には予約枠を追加できなくなります。",
+            },
+            {
+              target: "user",
+              screen: "開始時刻選択",
+              effect:
+                "営業時間から外れた既存の枠は、予約できる開始時刻として表示されなくなります。",
+            },
+          ],
         },
         {
           id: "settings-consultant-statuses",
@@ -638,6 +1220,19 @@ const config: AppConfig = {
               description: "ステータス設定を保存します。",
             },
           ],
+          relations: [
+            {
+              target: "consultant",
+              screen: "プロフィール",
+              effect:
+                "占い師本人のプロフィールに表示されるステータス名が変わります。",
+            },
+            {
+              target: "user",
+              screen: "占い師一覧",
+              effect: "占い師カードに表示されるステータス名が変わります。",
+            },
+          ],
         },
         {
           id: "settings-price",
@@ -665,6 +1260,19 @@ const config: AppConfig = {
               selector: `${OPEN_TAB_PANEL} button[type="submit"]`,
               title: "保存",
               description: "料金設定を保存し、以降のプラン作成に適用します。",
+            },
+          ],
+          relations: [
+            {
+              target: "consultant",
+              screen: "料金プラン",
+              effect:
+                "範囲外の金額ではプランを作成できず、範囲から外れた既存プランには範囲外バッジが付きます。",
+            },
+            {
+              target: "user",
+              screen: "料金プラン選択",
+              effect: "範囲外になったプランは選択肢に表示されなくなります。",
             },
           ],
         },
