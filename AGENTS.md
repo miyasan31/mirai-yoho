@@ -1,9 +1,9 @@
-# Arc - みらい予報 開発ルール
+# あなたのみらい予報 開発ルール
 
 ## リポジトリ構成（pnpm workspace モノレポ）
-- `apps/user` … 顧客向け予約 SPA（Vite + TanStack Router、認証なし）
+- `apps/user` … 顧客向け予約 SPA（Vite + TanStack Router、Firebase 匿名認証 + Google 連携による会員登録あり。予約には会員登録と Zoom 連携が必須）
 - `apps/console` … 管理者・オペレーター向けコンソール SPA（Vite + TanStack Router、`console.miraiyohou.com`）
-- `apps/consultant` … 相談員向け SPA（Vite + TanStack Router、`consultant.miraiyohou.com`）
+- `apps/consultant` … 占い師向け SPA（Vite + TanStack Router、`consultant.miraiyohou.com`）
 - `apps/api` … API サーバー（Hono + @hono/node-server）+ batch worker。domain / application / infrastructure / presentation 層はここに置く
 - `packages/api-client` … OpenAPI スペックと Orval 生成の React Query hooks
 - `packages/console-core` … console / consultant で共有する認証・API クライアント・組織ルーティング等のロジック（panda 非依存）

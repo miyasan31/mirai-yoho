@@ -1,6 +1,6 @@
 # システム環境構築・組織作成ガイド
 
-このドキュメントは、Arc - みらい予報をローカルで起動し、Firebase / GCP 上の環境を用意して、最初の組織を利用可能にするまでの運用手順です。
+このドキュメントは、あなたのみらい予報をローカルで起動し、Firebase / GCP 上の環境を用意して、最初の組織を利用可能にするまでの運用手順です。
 
 > 対象環境は `dev`（`mirai-yoho-dev`）と `prod`（`mirai-yoho-prod`）です。開発・検証は必ず `dev` で行い、本番の Secret、Firestore、Firebase Auth を開発環境と共有しません。
 
@@ -112,7 +112,7 @@ Firestore の初期コレクション作成は行いません。Firestore のコ
 pnpm dev
 ```
 
-API は `http://localhost:3000`、顧客 SPA は `http://localhost:3010`、管理コンソールは `http://localhost:3020`、相談員コンソールは `http://localhost:3030` で起動します。管理コンソール（`:3020`）を開いて動作を確認します。初期管理者を作る前は、ログインしても組織ロールがないため管理 API にはアクセスできません。次章の組織作成を行ってください。
+API は `http://localhost:3000`、顧客 SPA は `http://localhost:3010`、管理コンソールは `http://localhost:3020`、占い師コンソールは `http://localhost:3030` で起動します。管理コンソール（`:3020`）を開いて動作を確認します。初期管理者を作る前は、ログインしても組織ロールがないため管理 API にはアクセスできません。次章の組織作成を行ってください。
 
 日常的な確認コマンドです。
 
@@ -266,7 +266,7 @@ make create-organization:dev \
 2. `ADMIN_EMAIL` の Firebase Auth ユーザーを取得する。存在しない場合はランダムな一時パスワードで作成する。
 3. `accounts/{organizationId}_{accountId}` に `roleId: "admin"` を保存する。未ログインのユーザーは `status: invited`、ログイン済みのユーザーは `status: active` になる。
 4. `roles/{organizationId}_{roleId}` にシステムロール（`admin` / `operator`）を保存する。
-5. `settings/{organizationId}` に初期設定を作成する。初期ステータスは `standard`（表示名: `標準`）である（予約フローは「相談員 → プラン → 枠 → 情報」に固定されており、相談員選択の有効/無効を切り替える設定項目は存在しない）。
+5. `settings/{organizationId}` に初期設定を作成する。初期ステータスは `standard`（表示名: `標準`）である（予約フローは「占い師 → プラン → 枠 → 情報」に固定されており、占い師選択の有効/無効を切り替える設定項目は存在しない）。
 6. Firebase Auth のパスワード再設定リンクを出力する。新規ユーザーの場合は一時パスワードも標準出力に出る。
 
 出力されるパスワード再設定リンクと一時パスワードは認証情報です。運用記録に残さず、安全な経路で初期管理者に渡してください。初期管理者はリンクからパスワードを設定します。
@@ -277,7 +277,7 @@ make create-organization:dev \
 
 組織ごとの認可は、Firebase カスタムクレームではなく Firestore の `accounts` を参照します。通常の組織運用ではカスタムクレームの手動設定は不要です。
 
-初期管理者は、組織の管理画面から admin / operator / consultant を招待できます。招待時は Firebase Auth ユーザー、account、必要に応じて consultant レコードが作られ、Resend によりパスワード再設定リンクを含む招待メールが送信されます。
+初期管理者は、組織の管理画面から admin / operator / 占い師（consultant）を招待できます。招待時は Firebase Auth ユーザー、account、必要に応じて consultant レコードが作られ、Resend によりパスワード再設定リンクを含む招待メールが送信されます。
 
 ### 4.4 定期バッチを有効にする
 
@@ -314,7 +314,7 @@ make apply ENV=dev
 - [ ] `organizations`、`accounts`、`roles`、`settings` に想定したドキュメントがある。
 - [ ] 初期管理者がパスワードを設定し、ログイン後に対象組織へアクセスできる。
 - [ ] `accounts/{organizationId}_{accountId}` が `roleId: admin`、初回認証後に `status: active` になっている。
-- [ ] 管理画面で営業時間、料金範囲、相談員ステータスなどを組織要件に合わせて設定した。
+- [ ] 管理画面で営業時間、料金範囲、占い師ステータスなどを組織要件に合わせて設定した。
 - [ ] 公開 URL の `/<organizationId>/consultants` と `/<organizationId>/booking` が正しい組織として表示される。
 - [ ] Scheduler を利用する場合、`organization_ids` への追加と Terraform apply が完了し、3 種類のジョブがある。
 - [ ] Secret の値が空でなく、Cloud Run（`api`）が最新イメージ・最新 Secret version で稼働している。
