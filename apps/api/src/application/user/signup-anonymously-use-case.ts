@@ -6,6 +6,7 @@ import type { IUserRepository } from "@/domain/user/user-repository";
 interface SignupAnonymouslyInput {
   authUid: string;
   displayName: string;
+  primaryEmail?: string;
   phoneNumber?: string;
   birthDate: string;
 }
@@ -35,6 +36,7 @@ export class SignupAnonymouslyUseCase {
       userId,
       authUid: input.authUid,
       displayName: input.displayName,
+      primaryEmail: input.primaryEmail,
       phoneNumber: input.phoneNumber,
       birthDate,
     });

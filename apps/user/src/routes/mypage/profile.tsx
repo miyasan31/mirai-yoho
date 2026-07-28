@@ -87,16 +87,15 @@ function ProfilePage() {
         await signupOrLink({
           displayName: values.displayName,
           birthDate: values.birthDate,
-          primaryEmail:
-            values.primaryEmail || googleProviderData?.email || undefined,
-          phoneNumber: values.phoneNumber || undefined,
+          primaryEmail: values.primaryEmail,
+          phoneNumber: values.phoneNumber,
           providerUid: googleProviderData?.uid ?? undefined,
         });
       } else {
         await updateCustomerProfile({
           displayName: values.displayName,
-          primaryEmail: values.primaryEmail || undefined,
-          phoneNumber: values.phoneNumber || undefined,
+          primaryEmail: values.primaryEmail,
+          phoneNumber: values.phoneNumber,
           birthDate: values.birthDate,
         });
         await refreshProfile();
@@ -169,25 +168,26 @@ function ProfilePage() {
         </Field.Root>
 
         <Field.Root invalid={!!errors.primaryEmail}>
-          <Field.Label>メールアドレス（任意）</Field.Label>
+          <Field.Label>メールアドレス</Field.Label>
           <Input
             id="primaryEmail"
             type="email"
-            disabled={isAnonymous && !hasGoogleProvider}
+            // Google 連携済みの場合は Google アカウントのメールアドレスを正とする
+            disabled={hasGoogleProvider}
             {...register("primaryEmail")}
           />
-          {isAnonymous && !hasGoogleProvider && (
-            <Field.HelperText>
-              メールアドレスを設定するには Google アカウントの連携が必要です。
-            </Field.HelperText>
-          )}
+          <Field.HelperText>
+            {hasGoogleProvider
+              ? "連携中の Google アカウントのメールアドレスです。"
+              : "Zoom 連携と各種ご連絡に使用します。"}
+          </Field.HelperText>
           {errors.primaryEmail && (
             <Field.ErrorText>{errors.primaryEmail.message}</Field.ErrorText>
           )}
         </Field.Root>
 
         <Field.Root invalid={!!errors.phoneNumber}>
-          <Field.Label>電話番号（任意）</Field.Label>
+          <Field.Label>電話番号</Field.Label>
           <Input
             id="phoneNumber"
             type="tel"
@@ -195,7 +195,7 @@ function ProfilePage() {
             {...register("phoneNumber")}
           />
           <Field.HelperText>
-            設定すると予約時に自動で入力されます。（ハイフンあり・なし可）
+            予約時に自動で入力されます。（ハイフンあり・なし可）
           </Field.HelperText>
           {errors.phoneNumber && (
             <Field.ErrorText>{errors.phoneNumber.message}</Field.ErrorText>

@@ -10,26 +10,21 @@ export const profileFormSchema = v.object({
     v.trim(),
     v.minLength(1, "名前を入力してください"),
   ),
-  // 任意項目のため空文字を許容する（フォームの初期値は "" で undefined にならない）
-  primaryEmail: v.optional(
-    v.pipe(
-      v.string(),
-      v.trim(),
-      v.check(
-        (value) => value === "" || v.EMAIL_REGEX.test(value),
-        "メールアドレスの形式が不正です",
-      ),
-    ),
+  // Zoom 連携に必要なため必須項目とする
+  primaryEmail: v.pipe(
+    v.string(),
+    v.trim(),
+    v.minLength(1, "メールアドレスを入力してください"),
+    v.email("メールアドレスの形式が不正です"),
   ),
-  // 任意項目のため空文字を許容する（フォームの初期値は "" で undefined にならない）
-  phoneNumber: v.optional(
-    v.pipe(
-      v.string(),
-      v.trim(),
-      v.check(
-        (value) => value === "" || PHONE_NUMBER_PATTERN.test(value),
-        "電話番号の形式が不正です",
-      ),
+  // 予約時に必須のため必須項目とする
+  phoneNumber: v.pipe(
+    v.string(),
+    v.trim(),
+    v.minLength(1, "電話番号を入力してください"),
+    v.check(
+      (value) => PHONE_NUMBER_PATTERN.test(value),
+      "電話番号の形式が不正です",
     ),
   ),
   birthDate: v.pipe(
