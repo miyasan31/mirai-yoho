@@ -10,6 +10,7 @@ import {
   UserLock,
   UserRoundSearch,
   UserStar,
+  Video,
 } from "lucide-react";
 import type { NavItem } from "@/components/sidebar-layout";
 
@@ -35,6 +36,12 @@ export const NAV_ITEMS: Array<
     path: "/bookings",
     label: "予約管理",
     icon: CalendarDays,
+    permissions: ["console.bookings.read"],
+  },
+  {
+    path: "/zoom-sessions",
+    label: "ブレイクアウトルーム",
+    icon: Video,
     permissions: ["console.bookings.read"],
   },
   {

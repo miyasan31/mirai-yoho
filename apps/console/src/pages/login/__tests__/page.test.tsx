@@ -77,6 +77,7 @@ vi.mock("lucide-react", () => ({
   UserLock: () => <span>UserLock</span>,
   UserRoundSearch: () => <span>UserRoundSearch</span>,
   UserStar: () => <span>UserStar</span>,
+  Video: () => <span>Video</span>,
 }));
 
 vi.mock("@mirai-yoho/ui/components/ui/button", () => ({
