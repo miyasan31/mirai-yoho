@@ -85,6 +85,7 @@ export async function POST(request: Request) {
     const result = await createSignupAnonymouslyUseCase().execute({
       authUid,
       displayName: input.displayName,
+      primaryEmail: input.primaryEmail,
       phoneNumber: input.phoneNumber,
       birthDate: input.birthDate,
     });

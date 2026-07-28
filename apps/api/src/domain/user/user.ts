@@ -12,6 +12,7 @@ interface UserCreateAnonymousProps {
   userId: string;
   authUid: string;
   displayName: string;
+  primaryEmail?: string;
   phoneNumber?: string;
   birthDate: BirthDate;
   createdAt?: Date;
@@ -75,7 +76,7 @@ export class User extends AggregateRoot {
         }),
       ],
       props.displayName,
-      undefined,
+      props.primaryEmail,
       props.phoneNumber,
       props.birthDate,
       undefined,

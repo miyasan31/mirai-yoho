@@ -14,22 +14,25 @@ describe("profileFormSchema primaryEmail", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts an empty email because it is optional", () => {
+  it("rejects an empty email because it is required", () => {
     const result = v.safeParse(profileFormSchema, {
       ...validValues,
       primaryEmail: "",
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.issues[0].message).toBe("メールアドレスを入力してください");
+    }
   });
 
-  it("accepts a whitespace-only email as empty", () => {
+  it("rejects a whitespace-only email", () => {
     const result = v.safeParse(profileFormSchema, {
       ...validValues,
       primaryEmail: "  ",
     });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.output.primaryEmail).toBe("");
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.issues[0].message).toBe("メールアドレスを入力してください");
     }
   });
 
@@ -57,22 +60,25 @@ describe("profileFormSchema phoneNumber", () => {
     },
   );
 
-  it("accepts an empty phone number because it is optional", () => {
+  it("rejects an empty phone number because it is required", () => {
     const result = v.safeParse(profileFormSchema, {
       ...validValues,
       phoneNumber: "",
     });
-    expect(result.success).toBe(true);
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.issues[0].message).toBe("電話番号を入力してください");
+    }
   });
 
-  it("accepts a whitespace-only phone number as empty", () => {
+  it("rejects a whitespace-only phone number", () => {
     const result = v.safeParse(profileFormSchema, {
       ...validValues,
       phoneNumber: "  ",
     });
-    expect(result.success).toBe(true);
-    if (result.success) {
-      expect(result.output.phoneNumber).toBe("");
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.issues[0].message).toBe("電話番号を入力してください");
     }
   });
 
