@@ -306,7 +306,10 @@ apps/api/src/
 7. ZoomSessionRepository.findByDate() → 当日セッションが無ければ ZoomService.createDailyMeeting()、
    あれば ZoomService.updateBreakoutRooms()  ← 参加者をブレイクアウトルームへ割り当て
 8. booking.confirm(joinUrl)                ← BookingConfirmedEvent 発火（現状 UseCase は未使用）
-9. EmailService.sendBookingConfirmation()  ← 入力値から直接送信（イベント経由ではない）
+9. EmailService.sendBookingConfirmation()  ← 入力値から直接送信（イベント経由ではない）。
+   本文には CancelTokenService.generateToken() で発行した署名付きキャンセル URL
+   （`{USER_APP_URL}/{organizationId}/booking/cancel?token=...`）を含める。
+   トークンの有効期限は cancelDeadlineAt（相談開始 24h 前）
 10. UnitOfWork.runInTransaction(customer, usageSlots, bufferSlots, booking, zoomSession)
     ← Firestore トランザクション
 
@@ -331,8 +334,12 @@ apps/api/src/
 6. ZoomSessionRepository.findByDate() → 参加者を Breakout Room から除外し
    ZoomService.updateBreakoutRooms() を呼ぶ
 7. 各 Repository.save()（並列）
-8. booking.pullDomainEvents() → BookingCancelledEvent を判定し
+8. booking.pullDomainEvents() → BookingCancelledEvent を判定し、イベントの
+   customerId / consultantId から Customer・Consultant を引いて
    EmailService.sendBookingCancellation() でキャンセル確認メールを送信
+   ← 集約は ID 参照のみ（§5.4）なのでイベントに宛先は載せず、UseCase 側で解決する。
+     退会済み顧客（mask() でメール空）は送信をスキップし、送信失敗は
+     ログに残して握り潰す（キャンセル自体は永続化済みのため）
 ```
 
 ### 8.3 課金（`ChargePaymentUseCase`）

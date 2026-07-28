@@ -1,4 +1,5 @@
 import { BusinessHours } from "@mirai-yoho/shared/business-hours";
+import type { Timestamp } from "firebase-admin/firestore";
 import type { ConsultantStatusProps } from "@/domain/settings/consultant-status";
 import { PricePlanRange } from "@/domain/settings/price-plan-range";
 import { Settings } from "@/domain/settings/settings";
@@ -14,6 +15,14 @@ interface SettingsDoc {
   consultantStatuses?: ConsultantStatusProps[];
   defaultConsultantStatusId?: string;
   pricePlanRange?: ReturnType<PricePlanRange["toJSON"]>;
+  createdAt?: Timestamp | Date;
+  updatedAt?: Timestamp | Date;
+}
+
+function toDate(value?: Timestamp | Date): Date | undefined {
+  if (!value) return undefined;
+  if (value instanceof Date) return value;
+  return value.toDate();
 }
 
 function toDomain(doc: SettingsDoc): Settings {
@@ -24,6 +33,8 @@ function toDomain(doc: SettingsDoc): Settings {
     defaultConsultantStatusId: doc.defaultConsultantStatusId,
     pricePlanRange:
       doc.pricePlanRange ?? PricePlanRange.createDefault().toJSON(),
+    createdAt: toDate(doc.createdAt),
+    updatedAt: toDate(doc.updatedAt),
   });
 }
 
@@ -34,6 +45,8 @@ function toFirestore(settings: Settings): SettingsDoc {
     consultantStatuses: settings.getConsultantStatuses(),
     defaultConsultantStatusId: settings.getDefaultConsultantStatusId(),
     pricePlanRange: settings.getPricePlanRange().toJSON(),
+    createdAt: settings.getCreatedAt(),
+    updatedAt: settings.getUpdatedAt(),
   };
 }
 

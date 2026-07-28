@@ -6,6 +6,8 @@ export interface IEmailService {
     joinUrl: string;
     startsAt: Date;
     bookingId: string;
+    /** キャンセル期限まで有効な署名付きキャンセル URL */
+    cancelUrl: string;
   }): Promise<void>;
 
   sendBookingCancellation(params: {

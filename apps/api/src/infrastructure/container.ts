@@ -79,6 +79,7 @@ import { FirestoreZoomSessionRepository } from "@/infrastructure/firestore/fires
 import { LineWorksLateArrivalAlertService } from "@/infrastructure/line-works/line-works-late-arrival-alert-service";
 import { ResendEmailService } from "@/infrastructure/resend/resend-email-service";
 import { StripeService } from "@/infrastructure/stripe/stripe-service";
+import { HmacCancelTokenService } from "@/infrastructure/token/cancel-token-service";
 import { StubZoomService } from "@/infrastructure/zoom/stub-zoom-service";
 import { StubZoomUserOAuthService } from "@/infrastructure/zoom/stub-zoom-user-oauth-service";
 import { ZoomService } from "@/infrastructure/zoom/zoom-service";
@@ -241,6 +242,8 @@ export function createCreateBookingUseCase() {
     new FirestoreUserCouponRepository(),
     new FirestorePolicyRevisionRepository(),
     new FirestorePolicyAgreementRepository(),
+    new HmacCancelTokenService(),
+    envServer.userAppUrl,
   );
 }
 
@@ -285,6 +288,8 @@ export function createCancelBookingUseCase() {
     new FirestoreZoomSessionRepository(),
     createZoomService(),
     new FirestoreUserCouponRepository(),
+    new FirestoreCustomerRepository(),
+    new FirestoreConsultantRepository(),
   );
 }
 

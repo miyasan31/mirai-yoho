@@ -3,6 +3,8 @@ import type { IStripeService } from "@/application/shared/stripe-service";
 import type { IZoomService } from "@/application/shared/zoom-service";
 import type { BookingCancelledEvent } from "@/domain/booking/booking-events";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
+import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
+import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import type { IUserCouponRepository } from "@/domain/user-coupon/user-coupon-repository";
@@ -25,6 +27,8 @@ export class CancelBookingUseCase {
     private readonly zoomSessionRepository: IZoomSessionRepository,
     private readonly zoomService: IZoomService,
     private readonly userCouponRepository: IUserCouponRepository,
+    private readonly customerRepository: ICustomerRepository,
+    private readonly consultantRepository: IConsultantRepository,
   ) {}
 
   async execute(input: CancelBookingInput): Promise<void> {
@@ -114,15 +118,56 @@ export class CancelBookingUseCase {
     const events = booking.pullDomainEvents();
     for (const event of events) {
       if (event.eventName === "BookingCancelled") {
-        const e = event as BookingCancelledEvent;
-        await this.emailService.sendBookingCancellation({
-          customerEmail: "",
-          customerName: "",
-          consultantName: "",
-          bookingId: e.payload.bookingId,
-          cancelledBy: e.payload.cancelledBy,
-        });
+        await this.sendCancellationEmail(
+          input.organizationId,
+          event as BookingCancelledEvent,
+        );
       }
+    }
+  }
+
+  // 予約はキャンセル済みで永続化まで終わっているため、メール送信の失敗で
+  // 呼び出し元を失敗させない（ログに残して続行する）。
+  private async sendCancellationEmail(
+    organizationId: string,
+    event: BookingCancelledEvent,
+  ): Promise<void> {
+    try {
+      const [customer, consultant] = await Promise.all([
+        this.customerRepository.findById(
+          organizationId,
+          event.payload.customerId,
+        ),
+        this.consultantRepository.findById(
+          organizationId,
+          event.payload.consultantId,
+        ),
+      ]);
+
+      const customerEmail = customer?.getEmail() ?? "";
+      if (!customerEmail) {
+        // 退会済み顧客は mask() でメールアドレスが空になる
+        console.warn("Skipped booking cancellation email: no customer email", {
+          organizationId,
+          bookingId: event.payload.bookingId,
+          customerId: event.payload.customerId,
+        });
+        return;
+      }
+
+      await this.emailService.sendBookingCancellation({
+        customerEmail,
+        customerName: customer?.getName() ?? "",
+        consultantName: consultant?.getProfile().getDisplayName() ?? "",
+        bookingId: event.payload.bookingId,
+        cancelledBy: event.payload.cancelledBy,
+      });
+    } catch (error) {
+      console.error("Failed to send booking cancellation email", {
+        organizationId,
+        bookingId: event.payload.bookingId,
+        error,
+      });
     }
   }
 }

@@ -55,7 +55,7 @@ service cloud.firestore {
     match /accounts/{accountId} {
       allow read: if isAuthenticated()
         && (
-          resource.data.uid == request.auth.uid
+          resource.data.accountId == request.auth.uid
           || isOrganizationAdmin(resource.data.organizationId)
         );
       allow write: if false;

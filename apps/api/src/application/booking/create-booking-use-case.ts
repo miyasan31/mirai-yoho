@@ -7,6 +7,7 @@ import {
   type SupportedDurationMinutes,
 } from "@mirai-yoho/shared/slot-availability";
 import { AppError } from "@/application/shared/app-error";
+import type { ICancelTokenService } from "@/application/shared/cancel-token-service";
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IUnitOfWork } from "@/application/shared/unit-of-work";
 import type { IZoomService } from "@/application/shared/zoom-service";
@@ -110,7 +111,23 @@ export class CreateBookingUseCase {
     private readonly userCouponRepository: IUserCouponRepository,
     private readonly policyRevisionRepository: IPolicyRevisionRepository,
     private readonly policyAgreementRepository: IPolicyAgreementRepository,
+    private readonly cancelTokenService: ICancelTokenService,
+    private readonly userAppUrl: string,
   ) {}
+
+  // 確認メールに載せる署名付きキャンセル URL。トークンはキャンセル期限まで有効。
+  private buildCancelUrl(
+    organizationId: string,
+    bookingId: string,
+    cancelDeadlineAt: Date,
+  ): string {
+    const token = this.cancelTokenService.generateToken(
+      bookingId,
+      cancelDeadlineAt,
+    );
+    const baseUrl = this.userAppUrl.replace(/\/$/, "");
+    return `${baseUrl}/${organizationId}/booking/cancel?token=${encodeURIComponent(token)}`;
+  }
 
   async execute(input: CreateBookingInput): Promise<CreateBookingOutput> {
     if (!isSupportedDuration(input.durationMinutes)) {
@@ -307,6 +324,11 @@ export class CreateBookingUseCase {
         joinUrl: session.getJoinUrl(),
         startsAt: booking.getStartsAt(),
         bookingId,
+        cancelUrl: this.buildCancelUrl(
+          input.organizationId,
+          bookingId,
+          booking.getCancelDeadlineAt().getValue(),
+        ),
       });
     } catch {
       throw new AppError(
