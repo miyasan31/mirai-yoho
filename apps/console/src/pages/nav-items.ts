@@ -68,7 +68,7 @@ export const NAV_ITEMS: Array<
     permissions: ["console.coupons.read"],
   },
   {
-    path: "/documents",
+    path: "/policies",
     label: "文書管理",
     icon: FileText,
     permissions: ["console.policies.read"],

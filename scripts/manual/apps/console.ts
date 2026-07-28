@@ -818,11 +818,11 @@ const config: AppConfig = {
           ],
         },
         {
-          id: "documents",
+          id: "policies",
           title: "文書管理",
           overview:
             "利用規約・キャンセルポリシー・プライバシーポリシーを版管理します。下書きの作成から公開までをこの画面で行います。",
-          route: "/{orgId}/documents",
+          route: "/{orgId}/policies",
           requiresAuth: true,
           waitForSelector: '[role="tab"]',
           annotations: [
@@ -881,11 +881,11 @@ const config: AppConfig = {
           ],
         },
         {
-          id: "documents-cancellation-policy",
+          id: "policies-cancellation-policy",
           title: "キャンセルポリシー",
           overview:
             "キャンセルポリシーの改版を管理します。利用規約と同じ手順で下書きを作り、公開すると予約時の同意対象になります。",
-          route: "/{orgId}/documents?tab=cancellation_policy",
+          route: "/{orgId}/policies?tab=cancellation_policy",
           requiresAuth: true,
           waitForSelector: OPEN_TAB_PANEL,
           annotations: [
@@ -920,11 +920,11 @@ const config: AppConfig = {
           ],
         },
         {
-          id: "documents-privacy-policy",
+          id: "policies-privacy-policy",
           title: "プライバシーポリシー",
           overview:
             "プライバシーポリシーの改版を管理します。公開すると予約サイトのプライバシーポリシーページが差し替わります。",
-          route: "/{orgId}/documents?tab=privacy_policy",
+          route: "/{orgId}/policies?tab=privacy_policy",
           requiresAuth: true,
           waitForSelector: OPEN_TAB_PANEL,
           annotations: [
@@ -962,7 +962,7 @@ const config: AppConfig = {
           title: "改版エディタ",
           overview:
             "改版の版番号・タイトル・本文を編集します。本文は Markdown で書き、プレビューで表示を確認してから保存します。",
-          route: "/{orgId}/documents",
+          route: "/{orgId}/policies",
           requiresAuth: true,
           waitForSelector: `${OPEN_TAB_PANEL} button:has-text("新しい改版を作成")`,
           setup: openDialog(
@@ -1010,7 +1010,7 @@ const config: AppConfig = {
           title: "改版の公開",
           overview:
             "下書きを公開に切り替えます。効力発生日時を指定でき、既存の公開中の版は自動でアーカイブされます。",
-          route: "/{orgId}/documents",
+          route: "/{orgId}/policies",
           requiresAuth: true,
           waitForSelector: `${OPEN_TAB_PANEL} button:has-text("公開")`,
           setup: openDialog(`${OPEN_TAB_PANEL} button:has-text("公開")`),
@@ -1057,7 +1057,7 @@ const config: AppConfig = {
           title: "改版の差分",
           overview:
             "選んだ版との変更箇所を行単位で比較します。公開前に何が変わるかを確認する画面です。",
-          route: "/{orgId}/documents",
+          route: "/{orgId}/policies",
           requiresAuth: true,
           waitForSelector: `${OPEN_TAB_PANEL} button:has-text("差分")`,
           setup: openDialog(`${OPEN_TAB_PANEL} button:has-text("差分")`),

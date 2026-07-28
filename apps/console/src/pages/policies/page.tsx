@@ -29,7 +29,7 @@ const TAB_LABEL: Record<PoliciesTab, string> = {
   privacy_policy: "プライバシーポリシー",
 };
 
-export default function ConsoleDocumentsPage() {
+export default function ConsolePoliciesPage() {
   const { organizationId } = useOrganizationRouting();
   const navigate = useNavigate();
   const search = useSearch({ strict: false }) as Record<string, unknown>;

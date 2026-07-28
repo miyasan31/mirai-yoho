@@ -15,7 +15,7 @@ const TABS: Array<{ type: PolicyType; label: string }> = [
   { type: "privacy_policy", label: "プライバシーポリシー" },
 ];
 
-export default function ConsultantDocumentsPage() {
+export default function ConsultantPoliciesPage() {
   const { organizationId } = useOrganizationRouting();
   const [currentTab, setCurrentTab] = useState<PolicyType>("terms");
 
