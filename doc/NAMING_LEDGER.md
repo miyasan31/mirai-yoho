@@ -57,7 +57,7 @@
 - デフォルト: `authUid` を持つ doc に `accountId` を複製（冪等、`authUid` は温存）
 - `--delete-source`: 新コードデプロイ後、旧 `authUid` フィールドを削除
 
-`firestore.rules` は uid フィールドを参照していないため Terraform 影響なし。
+`firestore.rules` の accounts ルールは自ドキュメント読み取りの判定に主識別子を参照するため、`resource.data.accountId == request.auth.uid` へ追随が必要（**terraform apply 必須**）。§0.1 の「rules 影響なし」は誤りで、2026-07-28 に修正済み。
 
 ---
 
@@ -78,7 +78,9 @@
 - `providerUid`（User 集約）… 認証プロバイダ発行の uid で **別概念**
 - `consultantId`（値は Firebase Auth uid）… §3.4 の合意どおり維持
 
-**データ移行**: `apps/api/scripts/migrate-accounts-auth-uid.ts`（`uid` → `authUid` を複製 → 新コードをデプロイ → `--delete-source` で旧フィールド削除）。`firestore.rules` / Firestore インデックスへの影響なし（accounts のクエリは等価フィルタのみ）。
+**データ移行**: `apps/api/scripts/migrate-accounts-auth-uid.ts`（`uid` → `authUid` を複製 → 新コードをデプロイ → `--delete-source` で旧フィールド削除）。Firestore インデックスへの影響はない（accounts のクエリは等価フィルタのみ）。
+
+> **訂正（2026-07-28）**: 本項は当初「`firestore.rules` への影響なし」としていたが誤り。`firestore.rules` の `match /accounts/{accountId}` は自ドキュメント読み取りの判定で主識別子を参照しており、`uid` → `authUid` → `accountId`（§0.2）の改名に追随していなかったため、当該分岐が恒久的に false になっていた。`resource.data.accountId` へ修正済み（**反映には terraform apply が必要**）。
 
 ---
 
@@ -430,7 +432,7 @@
 | 相談員ステータス（旧称: ランク） | `consultantStatuses` | **`consultantRanks` → `consultantStatuses` にリネーム（マイグレーション要）** |
 | デフォルトステータス ID（旧称: ランク） | `defaultConsultantStatusId` | **`defaultConsultantRankId` → `defaultConsultantStatusId` にリネーム** |
 | 料金プラン範囲 | `pricePlanRange`（ネスト維持） | 維持 |
-| 作成/更新 | `createdAt`, `updatedAt` | **Repository に追加** |
+| 作成/更新 | `createdAt`, `updatedAt` | **Repository に追加 ✅ 実装済み（2026-07-28）** |
 
 **ネスト構造（維持）**
 
@@ -446,7 +448,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 **合意サマリー**
 - コレクション名・フィールド名は現状維持
 - `businessHours` / `pricePlanRange` のネスト構造も維持
-- `createdAt` / `updatedAt` を Repository 型・`toFirestore` に追加
+- `createdAt` / `updatedAt` を Repository 型・`toFirestore` に追加 ✅ 実装済み（2026-07-28）。`Settings` 集約が両フィールドを保持し、更新系メソッドが `updatedAt` を更新する。従来は `SettingsDoc` に両フィールドが無く `save()` が merge なしの `.set()` だったため、`create-organization.ts` が書いた値が初回更新で消えていた
 
 **根拠**: `firestore-settings-repository.ts`, `scripts/create-organization.ts`
 
@@ -593,7 +595,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 | `organizations` Repository 化 | 新規 repository, `load-auth-context.ts`, `route.ts`, scripts |
 | `organization-accounts` Repository 化 + `name` 追加 | 新規 repository, auth, route, scripts |
 | **`user-preferences` 廃止** | `load-auth-context.ts`, `create-organization.ts`, `POST /api/auth/organization`, クライアント localStorage 化 |
-| `organization-settings` に `createdAt`/`updatedAt` 追加 | repository, scripts |
+| ~~`organization-settings` に `createdAt`/`updatedAt` 追加~~ ✅ 完了（2026-07-28） | repository, scripts |
 | `consultants.displayName` → `name`、API `rank` → `rankId` | domain, repository, openapi, route |
 
 ### 4.3 優先度: 低（将来検討）
