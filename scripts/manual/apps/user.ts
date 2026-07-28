@@ -589,6 +589,13 @@ const config: AppConfig = {
               title: "保存",
               description: "入力した会員情報を保存します。",
             },
+            {
+              n: 5,
+              selector: 'a[href*="/mypage/withdraw"]',
+              title: "退会について",
+              description:
+                "サービスの利用をやめる場合の手続き画面へ移動します。",
+            },
           ],
         },
         {
@@ -792,7 +799,7 @@ const config: AppConfig = {
           id: "withdraw",
           title: "退会",
           overview:
-            "会員登録を取り消す画面です。実行すると会員情報が削除され、元に戻せません。",
+            "会員登録を取り消す画面です。プロフィールの「退会について」から移動します。実行すると会員情報が削除され、元に戻せません。",
           route: "/mypage/withdraw",
           requiresAuth: true,
           waitForSelector: 'h1:has-text("退会する")',
