@@ -7,8 +7,10 @@ import { PaymentStatus } from "@/domain/payment/payment-status";
 import { PaymentStrategy } from "@/domain/payment/payment-strategy";
 import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
+import { chunkArray } from "@/lib/chunk-array";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.payments;
+const FIRESTORE_IN_QUERY_CHUNK_SIZE = 10;
 
 interface PaymentDoc {
   organizationId: string;
@@ -81,6 +83,28 @@ export class FirestorePaymentRepository implements IPaymentRepository {
       .get();
     if (snapshot.empty) return null;
     return toDomain(snapshot.docs[0].data() as PaymentDoc);
+  }
+
+  async findByBookingIds(
+    organizationId: string,
+    bookingIds: string[],
+  ): Promise<Payment[]> {
+    const uniqueBookingIds = [...new Set(bookingIds)];
+    if (uniqueBookingIds.length === 0) return [];
+
+    const snapshots = await Promise.all(
+      chunkArray(uniqueBookingIds, FIRESTORE_IN_QUERY_CHUNK_SIZE).map((ids) =>
+        db
+          .collection(COLLECTION)
+          .where("organizationId", "==", organizationId)
+          .where("bookingId", "in", ids)
+          .get(),
+      ),
+    );
+
+    return snapshots.flatMap((snapshot) =>
+      snapshot.docs.map((doc) => toDomain(doc.data() as PaymentDoc)),
+    );
   }
 
   async findBySetupIntentId(setupIntentId: string): Promise<Payment | null> {

@@ -5,6 +5,10 @@ export interface IPaymentRepository {
     organizationId: string,
     bookingId: string,
   ): Promise<Payment | null>;
+  findByBookingIds(
+    organizationId: string,
+    bookingIds: string[],
+  ): Promise<Payment[]>;
   findByPaymentIntentId(paymentIntentId: string): Promise<Payment | null>;
   findBySetupIntentId(setupIntentId: string): Promise<Payment | null>;
   findAll(organizationId: string): Promise<Payment[]>;

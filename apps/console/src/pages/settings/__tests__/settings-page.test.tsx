@@ -128,15 +128,35 @@ vi.mock("@/hooks/use-console-booking-settings", () => ({
     data: {
       data: {
         consultantStatuses: [
-          { statusId: "premium", name: "プレミアム" },
-          { statusId: "standard", name: "標準" },
+          {
+            statusId: "premium",
+            name: "プレミアム",
+            settlementRatePercent: 40,
+          },
+          { statusId: "standard", name: "標準", settlementRatePercent: 30 },
         ],
         defaultConsultantStatusId: "standard",
       },
     },
     isLoading: false,
   }),
+  useConsoleCompanyInfo: () => ({
+    data: {
+      data: {
+        companyInfo: {
+          companyName: "みらい予報株式会社",
+          address: "東京都渋谷区1-1-1",
+          officeAddress: "東京都渋谷区2-2-2",
+        },
+      },
+    },
+    isLoading: false,
+  }),
   useUpdateConsoleBookingSettings: () => ({
+    mutateAsync: mockMutateAsync,
+    isPending: false,
+  }),
+  useUpdateConsoleCompanyInfo: () => ({
     mutateAsync: mockMutateAsync,
     isPending: false,
   }),

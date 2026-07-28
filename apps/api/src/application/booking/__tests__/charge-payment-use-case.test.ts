@@ -76,6 +76,13 @@ class InMemoryPaymentRepository implements IPaymentRepository {
     return this.payment;
   }
 
+  async findByBookingIds(
+    _organizationId: string,
+    _bookingIds: string[],
+  ): Promise<Payment[]> {
+    return this.payment ? [this.payment] : [];
+  }
+
   async findByPaymentIntentId(
     _paymentIntentId: string,
   ): Promise<Payment | null> {

@@ -17,9 +17,14 @@ import {
 } from "@/hooks/use-console-booking-settings";
 
 const STANDARD_CONSULTANT_STATUS_ID = "standard";
+const DEFAULT_SETTLEMENT_RATE_PERCENT = 30;
 
 export type ConsultantStatusFormValues = {
-  consultantStatuses: Array<{ statusId: string; name: string }>;
+  consultantStatuses: Array<{
+    statusId: string;
+    name: string;
+    settlementRatePercent: number;
+  }>;
   defaultConsultantStatusId: string;
 };
 
@@ -72,10 +77,28 @@ function ConsultantStatusesSettingsTabView({
           ステータス設定
         </Text>
         <Text color="fg.muted" textStyle="sm">
-          上にあるステータスほど重要度が高く表示されます。
+          上にあるステータスほど重要度が高く表示されます。料率は精算書のシステム利用料（外税）に使われます。
         </Text>
       </styled.div>
       <styled.div display="grid" gap="2">
+        <styled.div
+          display={{ base: "none", md: "grid" }}
+          gridTemplateColumns="40px 1fr 128px 112px 112px"
+          gap="2"
+          alignItems="center"
+        >
+          <Text textStyle="xs" color="fg.muted" textAlign="center">
+            既定
+          </Text>
+          <Text textStyle="xs" color="fg.muted">
+            ステータス名
+          </Text>
+          <Text textStyle="xs" color="fg.muted">
+            料率
+          </Text>
+          <styled.span />
+          <styled.span />
+        </styled.div>
         {fields.map((field, index) => {
           const status = statuses[index] ?? field;
           const isStandard = status.statusId === STANDARD_CONSULTANT_STATUS_ID;
@@ -83,7 +106,10 @@ function ConsultantStatusesSettingsTabView({
             <styled.div
               key={field.id}
               display="grid"
-              gridTemplateColumns={{ base: "1fr", md: "40px 1fr 112px 112px" }}
+              gridTemplateColumns={{
+                base: "1fr",
+                md: "40px 1fr 128px 112px 112px",
+              }}
               gap="2"
               alignItems="center"
             >
@@ -111,6 +137,25 @@ function ConsultantStatusesSettingsTabView({
                 aria-label={`ステータス名 ${index + 1}`}
                 disabled={isDisabled}
               />
+              <styled.div display="flex" alignItems="center" gap="1">
+                <Input
+                  type="number"
+                  min={0}
+                  max={100}
+                  step={1}
+                  {...register(
+                    `consultantStatuses.${index}.settlementRatePercent`,
+                    {
+                      valueAsNumber: true,
+                    },
+                  )}
+                  aria-label={`料率 ${index + 1}`}
+                  disabled={isDisabled}
+                />
+                <Text textStyle="sm" color="fg.muted">
+                  %
+                </Text>
+              </styled.div>
               <styled.div display="flex" gap="1">
                 <Button
                   type="button"
@@ -193,8 +238,14 @@ export function ConsultantStatusesSettingsTab({
   const queryClient = useQueryClient();
   const form = useForm<ConsultantStatusFormValues>({
     defaultValues: {
-      consultantStatuses: [{ statusId: "standard", name: "標準" }],
-      defaultConsultantStatusId: "standard",
+      consultantStatuses: [
+        {
+          statusId: STANDARD_CONSULTANT_STATUS_ID,
+          name: "標準",
+          settlementRatePercent: DEFAULT_SETTLEMENT_RATE_PERCENT,
+        },
+      ],
+      defaultConsultantStatusId: STANDARD_CONSULTANT_STATUS_ID,
     },
   });
   const { reset } = form;
@@ -218,11 +269,26 @@ export function ConsultantStatusesSettingsTab({
     const consultantStatuses = values.consultantStatuses.map((status) => ({
       statusId: status.statusId,
       name: status.name.trim(),
+      settlementRatePercent: Number(status.settlementRatePercent),
     }));
     if (consultantStatuses.some((status) => !status.name)) {
       toaster.create({
         type: "error",
         title: "ステータス名を入力してください",
+      });
+      return;
+    }
+    if (
+      consultantStatuses.some(
+        (status) =>
+          !Number.isInteger(status.settlementRatePercent) ||
+          status.settlementRatePercent < 0 ||
+          status.settlementRatePercent > 100,
+      )
+    ) {
+      toaster.create({
+        type: "error",
+        title: "料率は 0〜100 の整数で入力してください",
       });
       return;
     }
@@ -279,7 +345,11 @@ export function ConsultantStatusesSettingsTab({
       onMove={fieldArray.move}
       onRemove={remove}
       onAdd={() =>
-        fieldArray.append({ statusId: crypto.randomUUID(), name: "" })
+        fieldArray.append({
+          statusId: crypto.randomUUID(),
+          name: "",
+          settlementRatePercent: DEFAULT_SETTLEMENT_RATE_PERCENT,
+        })
       }
     />
   );

@@ -13,7 +13,7 @@ describe("consultant statuses", () => {
     const settings = Settings.createDefault("org-1");
 
     expect(settings.getConsultantStatuses()).toEqual([
-      { statusId: "standard", name: "標準" },
+      { statusId: "standard", name: "標準", settlementRatePercent: 30 },
     ]);
     expect(settings.getDefaultConsultantStatusId()).toBe("standard");
   });
@@ -86,9 +86,49 @@ describe("consultant statuses", () => {
 
   it("allows renaming standard status while keeping the id", () => {
     const result = validateConsultantStatuses(
-      [{ statusId: "standard", name: "デフォルト" }],
+      [
+        {
+          statusId: "standard",
+          name: "デフォルト",
+          settlementRatePercent: 35,
+        },
+      ],
       "standard",
     );
-    expect(result).toEqual([{ statusId: "standard", name: "デフォルト" }]);
+    expect(result).toEqual([
+      { statusId: "standard", name: "デフォルト", settlementRatePercent: 35 },
+    ]);
+  });
+
+  it("falls back to the default settlement rate for statuses stored before the field existed", () => {
+    const result = validateConsultantStatuses(
+      [{ statusId: "standard", name: "標準" }],
+      "standard",
+    );
+    expect(result[0].settlementRatePercent).toBe(30);
+  });
+
+  it("rejects settlement rates outside 0-100", () => {
+    expect(() =>
+      validateConsultantStatuses(
+        [{ statusId: "standard", name: "標準", settlementRatePercent: 101 }],
+        "standard",
+      ),
+    ).toThrow(DomainError);
+    expect(() =>
+      validateConsultantStatuses(
+        [{ statusId: "standard", name: "標準", settlementRatePercent: -1 }],
+        "standard",
+      ),
+    ).toThrow(DomainError);
+  });
+
+  it("rejects fractional settlement rates", () => {
+    expect(() =>
+      validateConsultantStatuses(
+        [{ statusId: "standard", name: "標準", settlementRatePercent: 30.5 }],
+        "standard",
+      ),
+    ).toThrow(DomainError);
   });
 });

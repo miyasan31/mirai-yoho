@@ -8,17 +8,23 @@ import { styled } from "styled-system/jsx";
 import { useAuth } from "@/hooks/use-auth";
 import { useConsoleBookingSettings } from "@/hooks/use-console-booking-settings";
 import { BusinessHoursSettingsTab } from "./_components/business-hours-settings-tab";
+import { CompanyInfoSettingsTab } from "./_components/company-info-settings-tab";
 import { ConsultantStatusesSettingsTab } from "./_components/consultant-statuses-settings-tab";
 import { PricePlanRangeSettingsTab } from "./_components/price-plan-range-settings-tab";
 import type { PricePlanRange } from "./_components/settings-types";
 
-type SettingsTab = "business-hours" | "consultant-statuses" | "price";
+type SettingsTab =
+  | "business-hours"
+  | "consultant-statuses"
+  | "price"
+  | "company-info";
 
 function isSettingsTab(value: string | null): value is SettingsTab {
   return (
     value === "business-hours" ||
     value === "consultant-statuses" ||
-    value === "price"
+    value === "price" ||
+    value === "company-info"
   );
 }
 
@@ -99,6 +105,7 @@ export default function ConsoleSettingsPage() {
           <Tabs.Trigger value="price" disabled={isLoading}>
             料金
           </Tabs.Trigger>
+          <Tabs.Trigger value="company-info">会社情報</Tabs.Trigger>
           <Tabs.Indicator />
         </Tabs.List>
         <Tabs.Content value="business-hours">
@@ -130,6 +137,12 @@ export default function ConsoleSettingsPage() {
               onPricePlanRangeSaved={setPricePlanRange}
             />
           )}
+        </Tabs.Content>
+        <Tabs.Content value="company-info">
+          <CompanyInfoSettingsTab
+            organizationId={organizationId ?? undefined}
+            isReadOnly={isReadOnly}
+          />
         </Tabs.Content>
       </Tabs.Root>
     </styled.div>

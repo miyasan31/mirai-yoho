@@ -1,7 +1,9 @@
 import {
   useGetConsoleBookingSettings,
+  useGetConsoleCompanyInfo,
   useGetConsoleConsultantStatuses,
   useUpdateConsoleBookingSettings,
+  useUpdateConsoleCompanyInfo,
   useUpdateConsoleConsultantStatuses,
 } from "@mirai-yoho/api-client/api/console/console";
 import { useOrganizationRouting } from "@mirai-yoho/console-core/hooks/use-organization-routing";
@@ -32,4 +34,20 @@ export function useConsoleConsultantStatuses() {
   });
 }
 
-export { useUpdateConsoleBookingSettings, useUpdateConsoleConsultantStatuses };
+export function useConsoleCompanyInfo() {
+  const { token, hasPermission } = useAuth();
+  const { organizationId } = useOrganizationRouting();
+  return useGetConsoleCompanyInfo(organizationId ?? "", {
+    query: {
+      ...cachePolicy.normal,
+      enabled:
+        !!token && !!organizationId && hasPermission("console.settings.read"),
+    },
+  });
+}
+
+export {
+  useUpdateConsoleBookingSettings,
+  useUpdateConsoleCompanyInfo,
+  useUpdateConsoleConsultantStatuses,
+};
