@@ -54,6 +54,7 @@ import { WithdrawUserUseCase } from "@/application/user/withdraw-user-use-case";
 import { ListUserCouponsUseCase } from "@/application/user-coupon/list-user-coupons-use-case";
 import { ReceiveBirthdayCouponUseCase } from "@/application/user-coupon/receive-birthday-coupon-use-case";
 import { ReceiveWelcomeCouponsUseCase } from "@/application/user-coupon/receive-welcome-coupons-use-case";
+import { GetZoomSessionUseCase } from "@/application/zoom-session/get-zoom-session-use-case";
 import { envServer } from "@/config/env.server";
 import { AesGcmTokenCipher } from "@/infrastructure/crypto/aes-gcm-token-cipher";
 import { FirebaseAuthAdminService } from "@/infrastructure/firebase/firebase-auth-admin-service";
@@ -195,6 +196,15 @@ export function createGetDashboardUseCase() {
   return new GetDashboardUseCase(
     new FirestoreBookingRepository(),
     new FirestorePaymentRepository(),
+    new FirestoreCustomerRepository(),
+    new FirestoreConsultantRepository(),
+  );
+}
+
+export function createGetZoomSessionUseCase() {
+  return new GetZoomSessionUseCase(
+    new FirestoreZoomSessionRepository(),
+    new FirestoreBookingRepository(),
     new FirestoreCustomerRepository(),
     new FirestoreConsultantRepository(),
   );
