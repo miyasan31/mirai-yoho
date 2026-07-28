@@ -3,7 +3,6 @@ import type { IStripeService } from "@/application/shared/stripe-service";
 import type { IZoomService } from "@/application/shared/zoom-service";
 import type { BookingCancelledEvent } from "@/domain/booking/booking-events";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
-import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import type { IUserCouponRepository } from "@/domain/user-coupon/user-coupon-repository";
@@ -25,7 +24,6 @@ export class CancelBookingUseCase {
     private readonly emailService: IEmailService,
     private readonly zoomSessionRepository: IZoomSessionRepository,
     private readonly zoomService: IZoomService,
-    private readonly customerRepository: ICustomerRepository,
     private readonly userCouponRepository: IUserCouponRepository,
   ) {}
 
@@ -84,20 +82,14 @@ export class CancelBookingUseCase {
       sessionDate,
     );
     if (session) {
-      const customer = await this.customerRepository.findById(
-        input.organizationId,
-        booking.getCustomerId(),
-      );
-      if (customer) {
-        session.removeParticipant(customer.getEmail());
-        await this.zoomService.updateBreakoutRooms({
-          meetingId: session.getZoomMeetingId(),
-          breakoutRooms: session.getBreakoutRooms().map((r) => ({
-            name: r.getRoomName(),
-            participants: [...r.getParticipantEmails()],
-          })),
-        });
-      }
+      session.removeBooking(input.bookingId);
+      await this.zoomService.updateBreakoutRooms({
+        meetingId: session.getZoomMeetingId(),
+        breakoutRooms: session.getBreakoutRooms().map((r) => ({
+          name: r.getRoomName(),
+          participants: [r.getCustomerEmail()],
+        })),
+      });
     }
 
     // 適用中のクーポンを未使用状態に戻す（キャンセル時のクーポン戻し）

@@ -274,7 +274,6 @@ export function createCancelBookingUseCase() {
     new ResendEmailService(),
     new FirestoreZoomSessionRepository(),
     createZoomService(),
-    new FirestoreCustomerRepository(),
     new FirestoreUserCouponRepository(),
   );
 }
