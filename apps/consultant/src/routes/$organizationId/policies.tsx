@@ -3,6 +3,6 @@ import { pageHead } from "@/lib/head";
 import ConsultantPoliciesPage from "@/pages/policies/page";
 
 export const Route = createFileRoute("/$organizationId/policies")({
-  head: () => pageHead("利用規約・ポリシー"),
+  head: () => pageHead("文書管理"),
   component: ConsultantPoliciesPage,
 });

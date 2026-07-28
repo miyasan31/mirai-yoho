@@ -58,8 +58,8 @@ export const AUTHORIZATION_PERMISSION_LABELS: Record<
   "console.roles.manage": "ロール管理",
   "console.coupons.read": "クーポン閲覧",
   "console.coupons.manage": "クーポン管理",
-  "console.policies.read": "利用規約・キャンセルポリシー閲覧",
-  "console.policies.manage": "利用規約・キャンセルポリシー編集",
+  "console.policies.read": "文書管理閲覧",
+  "console.policies.manage": "文書管理編集",
 };
 
 export const PERMISSION_DEPENDENCIES: Partial<

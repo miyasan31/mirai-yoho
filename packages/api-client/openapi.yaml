@@ -836,30 +836,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/DashboardData"
 
-  /organizations/{organizationId}/console/zoom-sessions:
-    get:
-      operationId: getConsoleZoomSession
-      summary: Zoom ブレイクアウトルーム割り当て取得（管理画面）
-      tags: [console]
-      security:
-        - bearerAuth: []
-      parameters:
-        - $ref: "#/components/parameters/OrganizationIdParam"
-        - name: date
-          in: query
-          required: false
-          description: JST の YYYY-MM-DD。省略時は当日
-          schema:
-            type: string
-            pattern: '^\d{4}-\d{2}-\d{2}$'
-      responses:
-        "200":
-          description: OK
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ConsoleZoomSession"
-
   /organizations/{organizationId}/console/slots:
     get:
       operationId: getConsoleSlots
@@ -2669,61 +2645,6 @@ components:
         totalPages:
           type: integer
           minimum: 1
-
-    ConsoleBreakoutRoom:
-      type: object
-      required: [bookingId, roomName, consultantId, consultantName, customerId, customerName, customerEmail, startsAt, endsAt, bookingStatus, isStale]
-      properties:
-        bookingId:
-          type: string
-        roomName:
-          type: string
-          description: Zoom 側に設定されているブレイクアウトルーム名
-        consultantId:
-          type: string
-        consultantName:
-          type: string
-          nullable: true
-        customerId:
-          type: string
-          nullable: true
-        customerName:
-          type: string
-          nullable: true
-        customerEmail:
-          type: string
-          description: ルームに事前割り当てされている Zoom アカウントのメール
-        startsAt:
-          type: string
-          format: date-time
-          nullable: true
-        endsAt:
-          type: string
-          format: date-time
-          nullable: true
-        bookingStatus:
-          type: string
-          nullable: true
-        isStale:
-          type: boolean
-          description: 予約が存在しない、または confirmed でないのにルームが残っている状態
-
-    ConsoleZoomSession:
-      type: object
-      required: [sessionDate, zoomMeetingId, joinUrl, breakoutRooms]
-      properties:
-        sessionDate:
-          type: string
-        zoomMeetingId:
-          type: string
-          nullable: true
-        joinUrl:
-          type: string
-          nullable: true
-        breakoutRooms:
-          type: array
-          items:
-            $ref: "#/components/schemas/ConsoleBreakoutRoom"
 
     DashboardData:
       type: object

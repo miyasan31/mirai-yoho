@@ -5,7 +5,6 @@ import { verifyEitherAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createCustomerRepository,
   createGetDashboardUseCase,
-  createGetZoomSessionUseCase,
   createListAvailableSlotsUseCase,
   createListBookingsWithChargeEligibilityUseCase,
   createPaymentRepository,
@@ -49,27 +48,6 @@ consoleListingRoutes.get(
     requirePermission(authUser, organizationId, "console.dashboard.read");
     const result = await createGetDashboardUseCase().execute({
       organizationId,
-    });
-    return noStoreJson(result);
-  }),
-);
-
-const SESSION_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-
-consoleListingRoutes.get(
-  "/console/zoom-sessions",
-  getRoute(async ({ organizationId, request, requestUrl }) => {
-    const authUser = await verifyEitherAuth(request);
-    requirePermission(authUser, organizationId, "console.bookings.read");
-
-    const date = requestUrl.searchParams.get("date");
-    if (date !== null && !SESSION_DATE_PATTERN.test(date)) {
-      return jsonError(400, "VALIDATION_ERROR", "date must be YYYY-MM-DD");
-    }
-
-    const result = await createGetZoomSessionUseCase().execute({
-      organizationId,
-      sessionDate: date ?? undefined,
     });
     return noStoreJson(result);
   }),
