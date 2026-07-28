@@ -49,7 +49,7 @@ vi.mock("@/infrastructure/container", () => ({
   createSlotRepository: vi.fn(),
 }));
 
-vi.mock("@/infrastructure/firestore/firestore-customer", () => ({
+vi.mock("@/infrastructure/firestore/firestore-client", () => ({
   app: {},
   db: {},
 }));

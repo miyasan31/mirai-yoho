@@ -14,7 +14,7 @@ function getStripeCustomer(): Stripe {
 export class StripeService implements IStripeService {
   async createSetupIntent(params: {
     metadata: Record<string, string>;
-  }): Promise<{ setupIntentId: string; customerSecret: string }> {
+  }): Promise<{ setupIntentId: string; clientSecret: string }> {
     const setupIntent = await getStripeCustomer().setupIntents.create({
       metadata: params.metadata,
       usage: "off_session",
@@ -22,14 +22,14 @@ export class StripeService implements IStripeService {
 
     return {
       setupIntentId: setupIntent.id,
-      customerSecret: setupIntent.client_secret as string,
+      clientSecret: setupIntent.client_secret as string,
     };
   }
 
   async createPaymentIntent(params: {
     amountJPY: number;
     metadata: Record<string, string>;
-  }): Promise<{ paymentIntentId: string; customerSecret: string }> {
+  }): Promise<{ paymentIntentId: string; clientSecret: string }> {
     const paymentIntent = await getStripeCustomer().paymentIntents.create({
       amount: params.amountJPY,
       currency: "jpy",
@@ -39,7 +39,7 @@ export class StripeService implements IStripeService {
 
     return {
       paymentIntentId: paymentIntent.id,
-      customerSecret: paymentIntent.client_secret as string,
+      clientSecret: paymentIntent.client_secret as string,
     };
   }
 

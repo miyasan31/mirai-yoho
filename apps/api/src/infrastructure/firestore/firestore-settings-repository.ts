@@ -4,8 +4,8 @@ import type { ConsultantStatusProps } from "@/domain/settings/consultant-status"
 import { PricePlanRange } from "@/domain/settings/price-plan-range";
 import { Settings } from "@/domain/settings/settings";
 import type { ISettingsRepository } from "@/domain/settings/settings-repository";
+import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
-import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.settings;
 

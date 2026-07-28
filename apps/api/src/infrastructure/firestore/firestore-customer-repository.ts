@@ -2,8 +2,8 @@ import { FieldPath, type Timestamp } from "firebase-admin/firestore";
 import type { Customer } from "@/domain/customer/customer";
 import { Customer as CustomerEntity } from "@/domain/customer/customer";
 import type { ICustomerRepository } from "@/domain/customer/customer-repository";
+import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
-import { db } from "@/infrastructure/firestore/firestore-customer";
 import { chunkArray } from "@/lib/chunk-array";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.customers;

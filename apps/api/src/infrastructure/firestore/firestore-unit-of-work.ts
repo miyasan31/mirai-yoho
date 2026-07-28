@@ -1,6 +1,6 @@
 import type { IUnitOfWork } from "@/application/shared/unit-of-work";
 import type { TransactionScope } from "@/domain/shared/transaction-scope";
-import { db } from "@/infrastructure/firestore/firestore-customer";
+import { db } from "@/infrastructure/firestore/firestore-client";
 import { FirestoreTransactionScope } from "@/infrastructure/firestore/firestore-transaction-scope";
 
 export class FirestoreUnitOfWork implements IUnitOfWork {

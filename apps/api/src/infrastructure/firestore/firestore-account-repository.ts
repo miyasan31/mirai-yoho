@@ -5,8 +5,8 @@ import {
   type AccountStatus,
   isAccountStatus,
 } from "@/domain/account/account-status";
+import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
-import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.accounts;
 

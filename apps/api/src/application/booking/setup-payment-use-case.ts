@@ -15,7 +15,7 @@ interface SetupPaymentInput {
 }
 
 interface SetupPaymentOutput {
-  customerSecret: string;
+  clientSecret: string;
   mode: "setup" | "payment";
 }
 
@@ -59,7 +59,7 @@ export class SetupPaymentUseCase {
     const money = Money.fromTaxIncluded(effectiveTotalJPY, TAX_RATE);
 
     if (input.paymentMethodType === "card") {
-      const { setupIntentId, customerSecret } =
+      const { setupIntentId, clientSecret } =
         await this.stripeService.createSetupIntent({
           metadata: { bookingId: input.bookingId },
         });
@@ -77,10 +77,10 @@ export class SetupPaymentUseCase {
         await this.paymentRepository.save(payment);
       });
 
-      return { customerSecret, mode: "setup" };
+      return { clientSecret, mode: "setup" };
     }
 
-    const { paymentIntentId, customerSecret } =
+    const { paymentIntentId, clientSecret } =
       await this.stripeService.createPaymentIntent({
         amountJPY: money.getTotalJPY(),
         metadata: { bookingId: input.bookingId },
@@ -99,6 +99,6 @@ export class SetupPaymentUseCase {
       await this.paymentRepository.save(payment);
     });
 
-    return { customerSecret, mode: "payment" };
+    return { clientSecret, mode: "payment" };
   }
 }

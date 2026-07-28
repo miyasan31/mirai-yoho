@@ -1,7 +1,7 @@
 import { FieldValue } from "firebase-admin/firestore";
 import { Role } from "../src/domain/authorization/role";
+import { db } from "../src/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore-collections";
-import { db } from "../src/infrastructure/firestore/firestore-customer";
 import { getRoleDocId } from "../src/infrastructure/firestore/firestore-role-repository";
 
 const ORGANIZATION_COLLECTION = FIRESTORE_COLLECTIONS.organizations;

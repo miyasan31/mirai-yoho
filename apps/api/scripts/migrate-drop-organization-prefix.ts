@@ -1,4 +1,4 @@
-import { db } from "../src/infrastructure/firestore/firestore-customer";
+import { db } from "../src/infrastructure/firestore/firestore-client";
 
 /**
  * organization- プレフィックス削除に伴う Firestore コレクション移行。

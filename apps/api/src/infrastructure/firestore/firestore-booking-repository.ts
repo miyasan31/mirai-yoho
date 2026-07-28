@@ -11,8 +11,8 @@ import { CancelDeadline } from "@/domain/booking/cancel-deadline";
 import { ConsultantMemo } from "@/domain/booking/consultant-memo";
 import { ZoomUrl } from "@/domain/booking/zoom-url";
 import type { TransactionScope } from "@/domain/shared/transaction-scope";
+import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
-import { db } from "@/infrastructure/firestore/firestore-customer";
 import { toFirestoreTransaction } from "@/infrastructure/firestore/firestore-transaction-scope";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.bookings;

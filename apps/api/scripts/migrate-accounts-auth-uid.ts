@@ -1,5 +1,5 @@
 import { FieldValue } from "firebase-admin/firestore";
-import { db } from "../src/infrastructure/firestore/firestore-customer";
+import { db } from "../src/infrastructure/firestore/firestore-client";
 
 /**
  * accounts コレクションのフィールドリネーム移行: `uid` -> `authUid`

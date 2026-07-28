@@ -445,7 +445,7 @@ apps/api/src/
     出力: { customerSecret, mode: 'payment' }
 ```
 
-> `customerSecret` は Stripe の `client_secret`。SPA は `mode` に応じて Stripe Payment Element を setup / payment モードで初期化する（`apps/user/src/routes/$organizationId/booking/payment/index.tsx`）。**この名前は `client*` → `customer*` 一括改名の巻き込みで、本来は `clientSecret`**（`doc/NAMING_LEDGER.md` §1.5 の適用範囲を参照）。
+> `clientSecret` は Stripe の `client_secret` をそのまま返す。SPA は `mode` に応じて Stripe Payment Element を setup / payment モードで初期化する（`apps/user/src/routes/$organizationId/booking/payment/index.tsx`）。
 
 #### 決済戦略の違い
 

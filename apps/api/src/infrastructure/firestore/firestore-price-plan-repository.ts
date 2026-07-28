@@ -5,8 +5,8 @@ import {
 import type { Timestamp } from "firebase-admin/firestore";
 import { PricePlan } from "@/domain/price-plan/price-plan";
 import type { IPricePlanRepository } from "@/domain/price-plan/price-plan-repository";
+import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
-import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.pricePlans;
 

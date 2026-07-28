@@ -2922,9 +2922,9 @@ components:
 
     SetupPaymentResponse:
       type: object
-      required: [customerSecret, mode]
+      required: [clientSecret, mode]
       properties:
-        customerSecret:
+        clientSecret:
           type: string
         mode:
           type: string

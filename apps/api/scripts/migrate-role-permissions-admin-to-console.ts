@@ -1,6 +1,6 @@
 import { FieldValue } from "firebase-admin/firestore";
+import { db } from "../src/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore-collections";
-import { db } from "../src/infrastructure/firestore/firestore-customer";
 
 /**
  * roles コレクションの `permissions` 配列の要素を `admin.*` → `console.*` にリネームする。

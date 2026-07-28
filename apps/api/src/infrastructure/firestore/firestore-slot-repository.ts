@@ -8,8 +8,8 @@ import type { Slot } from "@/domain/slot/slot";
 import { Slot as SlotEntity } from "@/domain/slot/slot";
 import type { ISlotRepository } from "@/domain/slot/slot-repository";
 import { TimeRange } from "@/domain/slot/time-range";
+import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
-import { db } from "@/infrastructure/firestore/firestore-customer";
 import { toFirestoreTransaction } from "@/infrastructure/firestore/firestore-transaction-scope";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.slots;

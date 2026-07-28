@@ -186,11 +186,11 @@ vi.mock("lucide-react", () => ({
 import ConsultantBookingsPage from "../page";
 
 function createWrapper() {
-  const queryCustomer = new QueryClient({
+  const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryCustomer}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 }
 

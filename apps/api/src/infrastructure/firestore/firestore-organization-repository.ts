@@ -1,8 +1,8 @@
 import type { Timestamp } from "firebase-admin/firestore";
 import { Organization } from "@/domain/organization/organization";
 import type { IOrganizationRepository } from "@/domain/organization/organization-repository";
+import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
-import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.organizations;
 

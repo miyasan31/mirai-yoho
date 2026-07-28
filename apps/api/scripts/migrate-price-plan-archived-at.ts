@@ -1,6 +1,6 @@
 import { FieldValue, type Timestamp } from "firebase-admin/firestore";
+import { db } from "../src/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore-collections";
-import { db } from "../src/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.pricePlans;
 const BATCH_DOC_SIZE = 200;

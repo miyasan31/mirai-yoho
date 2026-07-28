@@ -158,12 +158,30 @@
 |---|---|
 | コレクション名 | kebab-case（Firestore）、TS 定数は camelCase（`FIRESTORE_COLLECTIONS`） |
 | 通貨 | `*JPY` サフィックス（例: `totalJPY`, `amountJPY`） |
-| 顧客参照 | **`customer*` に統一**。API / Domain / FS すべて `client*` 禁止（§3.2, §6.3-A 合意） |
+| 顧客参照 | **`customer*` に統一**。API / Domain / FS すべて `client*` 禁止（§3.2, §6.3-A 合意）。**適用範囲は「サービスの顧客」を指す語のみ**（下記） |
 | アカウント参照 | 管理画面文言は **`アカウント`** を使用（`ユーザー管理` ではなく `アカウント管理`） |
 | ドキュメント ID | エンティティ ID 単体を原則。複合 ID は `{organizationId}_{entityId}` 形式 |
 | Firebase Auth uid | **`authUid`** に統一（§0.1）。修飾時も `*AuthUid`（例: `actorAuthUid`）。SDK プロパティ参照（`decoded.uid` 等）のみ `uid` |
 | null / omit | optional フィールドは Repository 層で方針統一（booking/payment: `null`、customer: omit） |
 | 真偽値 | 状態は `is*` プレフィックス（例: `isActive`, `isAvailable`, `isClosed`）。意味反転の別名は持たない |
+
+### 1.6 `client*` 禁止ルールの適用範囲（2026-07-28 明確化）
+
+§1.5 の「`client*` 禁止」は **「サービスの顧客」を指す語だけ**が対象。SDK クライアント・OAuth クライアント・`client_secret` など、顧客と無関係な "client" は **`client` のまま**にする。
+
+過去に一括改名の巻き込みで以下が `customer*` になっていたため、2026-07-28 に是正した。
+
+| 是正前 | 是正後 | 実体 |
+|---|---|---|
+| `customerSecret`（`openapi.yaml` / `IStripeService` / `SetupPaymentUseCase`） | **`clientSecret`** | Stripe の `client_secret`。SPA 側は受け取った直後に `clientSecret` へ戻しており、§1.1「同一概念に複数の別名を持たせない」に違反していた |
+| `infrastructure/firestore/firestore-customer.ts` | **`firestore-client.ts`** | Firestore の `app` / `db` 初期化。顧客リポジトリ `firestore-customer-repository.ts` と紛らわしかった |
+| `envServer.firebaseCustomerEmail` | **`firebaseClientEmail`** | `FIREBASE_CLIENT_EMAIL`（サービスアカウント） |
+| `envServer.zoomCustomerId` / `zoomCustomerSecret` | **`zoomClientId` / `zoomClientSecret`** | `ZOOM_CLIENT_ID` / `ZOOM_CLIENT_SECRET`（OAuth クライアント） |
+| `resendCustomer` / `getResendCustomer()` | **`resendClient` / `getResendClient()`** | Resend SDK クライアント |
+| `storage.rules` の `Browser customers` | **`Browser clients`** | ブラウザクライアント |
+| テストの `queryCustomer` | **`queryClient`** | TanStack `QueryClient` |
+
+**判定の目安**: その語が「サービスを利用する人」を指すなら `customer`、「サーバに接続する側のプログラム／認証情報」を指すなら `client`。環境変数名（`FIREBASE_CLIENT_EMAIL` / `ZOOM_CLIENT_*`）は外部サービス由来なので当然 `CLIENT` のまま。
 
 ---
 
