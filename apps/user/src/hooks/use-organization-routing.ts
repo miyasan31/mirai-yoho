@@ -1,6 +1,23 @@
 import { useLocation, useParams, useRouter } from "@tanstack/react-router";
 import { useMemo, useRef } from "react";
 
+// 第 1 セグメントが組織 ID ではないパス。
+// 静的なトップレベルルート（/mypage, /register）をここに入れ忘れると、
+// ルート名がそのまま組織 ID として扱われてしまう。
+const NON_ORGANIZATION_SEGMENTS: string[] = [
+  "admin",
+  "consultant",
+  "consultants",
+  "booking",
+  "api",
+  "mypage",
+  "register",
+];
+
+export function isOrganizationSegment(segment: string): boolean {
+  return segment !== "" && !NON_ORGANIZATION_SEGMENTS.includes(segment);
+}
+
 export function useOrganizationIdFromRoute(): string | null {
   const params = useParams({ strict: false });
   const { pathname } = useLocation();
@@ -10,12 +27,7 @@ export function useOrganizationIdFromRoute(): string | null {
   }
 
   const firstSegment = pathname.split("/").filter(Boolean)[0];
-  if (
-    firstSegment &&
-    !["admin", "consultant", "consultants", "booking", "api"].includes(
-      firstSegment,
-    )
-  ) {
+  if (firstSegment && isOrganizationSegment(firstSegment)) {
     return firstSegment;
   }
 

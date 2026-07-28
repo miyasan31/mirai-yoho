@@ -1,3 +1,5 @@
+import { isOrganizationSegment } from "@/hooks/use-organization-routing";
+
 const STORAGE_KEY = "mirai-yoho:pending-organization-id";
 // 直近に訪問した組織をどれくらいの期間有効なリダイレクト先とみなすか
 const TTL_MS = 1000 * 60 * 60 * 24 * 30;
@@ -41,6 +43,11 @@ export function readPendingOrganizationId(): string | null {
       return null;
     }
     if (Date.now() - entry.updatedAt > TTL_MS) {
+      storage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    // 過去に /mypage などの静的ルート名を組織 ID として保存していた不正な値を捨てる
+    if (!isOrganizationSegment(entry.organizationId)) {
       storage.removeItem(STORAGE_KEY);
       return null;
     }
