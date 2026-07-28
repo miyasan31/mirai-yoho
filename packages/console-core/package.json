@@ -17,7 +17,6 @@
   "dependencies": {
     "@mirai-yoho/api-client": "workspace:*",
     "@mirai-yoho/shared": "workspace:*",
-    "@mirai-yoho/ui": "workspace:*",
     "firebase": "^12.11.0"
   },
   "peerDependencies": {
