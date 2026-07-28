@@ -12,7 +12,8 @@ function getResendClient(): Resend {
 }
 
 type EmailPayload = {
-  to: string;
+  /** 複数宛先は Resend の to 配列として送る */
+  to: string | string[];
   subject: string;
   html: string;
 };
@@ -27,6 +28,15 @@ const EMAIL_FOOTER = `
 
 function withFooter(bodyHtml: string): string {
   return `${bodyHtml}${EMAIL_FOOTER}`;
+}
+
+function formatDate(date: Date): string {
+  return date.toLocaleDateString("ja-JP", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
 }
 
 function formatDatetime(date: Date): string {
@@ -139,16 +149,37 @@ export class ResendEmailService implements IEmailService {
     customerEmail: string;
     customerName: string;
     amountJPY: number;
+    taxAmountJPY: number;
+    taxRate: number;
+    totalJPY: number;
     bookingId: string;
+    chargedAt: Date;
   }): Promise<void> {
-    const subject = "【あなたのみらい予報】お支払い完了のお知らせ";
+    const subject = "【あなたのみらい予報】お支払い完了のお知らせ（領収書）";
+    // 適格請求書等保存方式（インボイス制度）で必要な記載事項:
+    // 発行者の氏名・登録番号 / 取引年月日 / 取引内容 / 税率ごとの対価の額と適用税率 /
+    // 税率ごとの消費税額 / 交付を受ける者の氏名
+    const registrationNumber = envServer.invoiceRegistrationNumber;
+    const taxRatePercent = Math.round(params.taxRate * 1000) / 10;
     const html = withFooter(`
 				<h2>お支払いが完了しました</h2>
 				<p>${params.customerName} 様</p>
+				<p>下記のとおり領収いたしました。本メールは適格請求書（インボイス）を兼ねます。</p>
 				<ul>
-					<li><strong>金額:</strong> ¥${params.amountJPY.toLocaleString()}</li>
-					<li><strong>予約ID:</strong> ${params.bookingId}</li>
+					<li><strong>取引年月日:</strong> ${formatDate(params.chargedAt)}</li>
+					<li><strong>取引内容:</strong> オンライン鑑定（予約ID: ${params.bookingId}）</li>
+					<li><strong>税抜金額:</strong> ¥${params.amountJPY.toLocaleString()}</li>
+					<li><strong>消費税額（${taxRatePercent}%対象）:</strong> ¥${params.taxAmountJPY.toLocaleString()}</li>
+					<li><strong>お支払金額（税込）:</strong> ¥${params.totalJPY.toLocaleString()}</li>
 				</ul>
+				<p>
+					発行者: 一般社団法人JKK<br />
+					${
+            registrationNumber
+              ? `登録番号: ${registrationNumber}`
+              : "登録番号: （未設定）"
+          }
+				</p>
 			`);
 
     await deliverEmail("payment-receipt", {
@@ -182,6 +213,104 @@ export class ResendEmailService implements IEmailService {
 
     await deliverEmail("consultation-reminder", {
       to: params.customerEmail,
+      subject,
+      html,
+    });
+  }
+
+  async sendConsultantBookingNotice(params: {
+    consultantEmail: string;
+    consultantName: string;
+    customerName: string;
+    joinUrl: string;
+    startsAt: Date;
+    bookingId: string;
+  }): Promise<void> {
+    const subject = "【あなたのみらい予報】新しいご予約が入りました";
+    const html = withFooter(`
+				<h2>新しいご予約が入りました</h2>
+				<p>${params.consultantName} 様</p>
+				<ul>
+					<li><strong>日時:</strong> ${formatDatetime(params.startsAt)}</li>
+					<li><strong>お客様:</strong> ${params.customerName} 様</li>
+					<li><strong>予約ID:</strong> ${params.bookingId}</li>
+				</ul>
+				<p><strong>Zoom URL:</strong> <a href="${params.joinUrl}">${params.joinUrl}</a></p>
+			`);
+
+    await deliverEmail("consultant-booking-notice", {
+      to: params.consultantEmail,
+      subject,
+      html,
+    });
+  }
+
+  async sendConsultantCancellationNotice(params: {
+    consultantEmail: string;
+    consultantName: string;
+    customerName: string;
+    startsAt: Date;
+    bookingId: string;
+    cancelledBy: "customer" | "admin";
+  }): Promise<void> {
+    const cancelledByText =
+      params.cancelledBy === "customer" ? "お客様" : "管理者";
+    const subject = "【あなたのみらい予報】ご予約がキャンセルされました";
+    const html = withFooter(`
+				<h2>担当予約がキャンセルされました</h2>
+				<p>${params.consultantName} 様</p>
+				<p>${cancelledByText}により、下記のご予約がキャンセルされました。</p>
+				<ul>
+					<li><strong>日時:</strong> ${formatDatetime(params.startsAt)}</li>
+					<li><strong>お客様:</strong> ${params.customerName} 様</li>
+					<li><strong>予約ID:</strong> ${params.bookingId}</li>
+				</ul>
+			`);
+
+    await deliverEmail("consultant-cancellation-notice", {
+      to: params.consultantEmail,
+      subject,
+      html,
+    });
+  }
+
+  async sendBatchChargeReport(params: {
+    adminEmails: string[];
+    organizationId: string;
+    startedAt: Date;
+    chargedCount: number;
+    completedCount: number;
+    errors: Array<{ bookingId: string; error: string }>;
+    consoleBookingsUrl: string;
+  }): Promise<void> {
+    if (params.adminEmails.length === 0) {
+      return;
+    }
+
+    const hasErrors = params.errors.length > 0;
+    const subject = hasErrors
+      ? "【あなたのみらい予報】課金バッチが完了しました（エラーあり）"
+      : "【あなたのみらい予報】課金バッチが完了しました";
+    const errorList = hasErrors
+      ? `<p><strong>エラー詳細:</strong></p><ul>${params.errors
+          .map((e) => `<li>${e.bookingId}: ${e.error}</li>`)
+          .join("")}</ul>`
+      : "";
+    const html = withFooter(`
+				<h2>課金バッチが完了しました</h2>
+				<ul>
+					<li><strong>組織:</strong> ${params.organizationId}</li>
+					<li><strong>実行日時:</strong> ${formatDatetime(params.startedAt)}</li>
+					<li><strong>課金件数:</strong> ${params.chargedCount}</li>
+					<li><strong>完了件数:</strong> ${params.completedCount}</li>
+					<li><strong>エラー件数:</strong> ${params.errors.length}</li>
+				</ul>
+				${errorList}
+				<p><a href="${params.consoleBookingsUrl}">予約一覧を開く</a></p>
+			`);
+
+    await deliverEmail("batch-charge-report", {
+      to: params.adminEmails,
       subject,
       html,
     });

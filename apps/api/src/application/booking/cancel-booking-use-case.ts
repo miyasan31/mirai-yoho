@@ -1,5 +1,6 @@
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IStripeService } from "@/application/shared/stripe-service";
+import type { IUserContactService } from "@/application/shared/user-contact-service";
 import type { IZoomService } from "@/application/shared/zoom-service";
 import type { BookingCancelledEvent } from "@/domain/booking/booking-events";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
@@ -29,6 +30,7 @@ export class CancelBookingUseCase {
     private readonly userCouponRepository: IUserCouponRepository,
     private readonly customerRepository: ICustomerRepository,
     private readonly consultantRepository: IConsultantRepository,
+    private readonly userContactService: IUserContactService,
   ) {}
 
   async execute(input: CancelBookingInput): Promise<void> {
@@ -121,6 +123,7 @@ export class CancelBookingUseCase {
         await this.sendCancellationEmail(
           input.organizationId,
           event as BookingCancelledEvent,
+          booking.getStartsAt(),
         );
       }
     }
@@ -131,9 +134,10 @@ export class CancelBookingUseCase {
   private async sendCancellationEmail(
     organizationId: string,
     event: BookingCancelledEvent,
+    startsAt: Date,
   ): Promise<void> {
     try {
-      const [customer, consultant] = await Promise.all([
+      const [customer, consultant, contacts] = await Promise.all([
         this.customerRepository.findById(
           organizationId,
           event.payload.customerId,
@@ -142,26 +146,42 @@ export class CancelBookingUseCase {
           organizationId,
           event.payload.consultantId,
         ),
+        this.userContactService.findByUids([event.payload.consultantId]),
       ]);
 
+      const customerName = customer?.getName() ?? "";
+      const consultantName = consultant?.getProfile().getDisplayName() ?? "";
+
       const customerEmail = customer?.getEmail() ?? "";
-      if (!customerEmail) {
+      if (customerEmail) {
+        await this.emailService.sendBookingCancellation({
+          customerEmail,
+          customerName,
+          consultantName,
+          bookingId: event.payload.bookingId,
+          cancelledBy: event.payload.cancelledBy,
+        });
+      } else {
         // 退会済み顧客は mask() でメールアドレスが空になる
         console.warn("Skipped booking cancellation email: no customer email", {
           organizationId,
           bookingId: event.payload.bookingId,
           customerId: event.payload.customerId,
         });
-        return;
       }
 
-      await this.emailService.sendBookingCancellation({
-        customerEmail,
-        customerName: customer?.getName() ?? "",
-        consultantName: consultant?.getProfile().getDisplayName() ?? "",
-        bookingId: event.payload.bookingId,
-        cancelledBy: event.payload.cancelledBy,
-      });
+      // 担当占い師へのキャンセル通知（PRD §3.7）
+      const consultantEmail = contacts.get(event.payload.consultantId)?.email;
+      if (consultantEmail) {
+        await this.emailService.sendConsultantCancellationNotice({
+          consultantEmail,
+          consultantName,
+          customerName,
+          startsAt,
+          bookingId: event.payload.bookingId,
+          cancelledBy: event.payload.cancelledBy,
+        });
+      }
     } catch (error) {
       console.error("Failed to send booking cancellation email", {
         organizationId,

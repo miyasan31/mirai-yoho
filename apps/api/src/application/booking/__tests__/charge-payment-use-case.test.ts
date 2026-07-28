@@ -213,6 +213,9 @@ function createUseCase(input: {
       sendBookingCancellation: vi.fn(),
       sendPaymentReceipt: vi.fn().mockResolvedValue(undefined),
       sendConsultationReminder: vi.fn(),
+      sendConsultantBookingNotice: vi.fn(),
+      sendConsultantCancellationNotice: vi.fn(),
+      sendBatchChargeReport: vi.fn(),
       sendInvitation: vi.fn(),
       sendPasswordReset: vi.fn(),
     } satisfies IEmailService);

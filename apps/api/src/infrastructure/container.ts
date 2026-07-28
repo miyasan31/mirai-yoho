@@ -243,6 +243,7 @@ export function createCreateBookingUseCase() {
     new FirestorePolicyRevisionRepository(),
     new FirestorePolicyAgreementRepository(),
     new HmacCancelTokenService(),
+    new FirebaseUserContactService(),
     envServer.userAppUrl,
   );
 }
@@ -290,6 +291,7 @@ export function createCancelBookingUseCase() {
     new FirestoreUserCouponRepository(),
     new FirestoreCustomerRepository(),
     new FirestoreConsultantRepository(),
+    new FirebaseUserContactService(),
   );
 }
 
@@ -330,6 +332,9 @@ export function createBatchChargeUseCase() {
     new FirestoreCustomerRepository(),
     new StripeService(),
     new ResendEmailService(),
+    new FirestoreAccountRepository(),
+    new FirebaseUserContactService(),
+    envServer.consoleAppUrl,
   );
 }
 

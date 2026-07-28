@@ -1,6 +1,7 @@
 import { CancelBookingUseCase } from "@/application/booking/cancel-booking-use-case";
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IStripeService } from "@/application/shared/stripe-service";
+import type { IUserContactService } from "@/application/shared/user-contact-service";
 import type { IZoomService } from "@/application/shared/zoom-service";
 import { Booking } from "@/domain/booking/booking";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
@@ -67,9 +68,15 @@ function createConsultant(): Consultant {
 interface Deps {
   customer: Customer | null;
   consultant: Consultant | null;
+  /** 占い師の Firebase Auth メールアドレス。null なら引けなかった扱い */
+  consultantEmail?: string | null;
 }
 
-function createUseCase({ customer, consultant }: Deps) {
+function createUseCase({
+  customer,
+  consultant,
+  consultantEmail = "uranai@example.com",
+}: Deps) {
   const booking = createBooking();
 
   const bookingRepository = {
@@ -120,6 +127,9 @@ function createUseCase({ customer, consultant }: Deps) {
     sendBookingCancellation: vi.fn().mockResolvedValue(undefined),
     sendPaymentReceipt: vi.fn(),
     sendConsultationReminder: vi.fn(),
+    sendConsultantBookingNotice: vi.fn(),
+    sendConsultantCancellationNotice: vi.fn().mockResolvedValue(undefined),
+    sendBatchChargeReport: vi.fn(),
     sendInvitation: vi.fn(),
     sendPasswordReset: vi.fn(),
   } satisfies IEmailService;
@@ -166,6 +176,21 @@ function createUseCase({ customer, consultant }: Deps) {
     delete: vi.fn().mockResolvedValue(undefined),
   } satisfies IConsultantRepository;
 
+  const userContactService = {
+    findByUids: vi
+      .fn()
+      .mockResolvedValue(
+        consultantEmail
+          ? new Map([
+              [
+                CONSULTANT_ID,
+                { authUid: CONSULTANT_ID, email: consultantEmail },
+              ],
+            ])
+          : new Map(),
+      ),
+  } satisfies IUserContactService;
+
   const useCase = new CancelBookingUseCase(
     bookingRepository,
     paymentRepository,
@@ -177,6 +202,7 @@ function createUseCase({ customer, consultant }: Deps) {
     userCouponRepository,
     customerRepository,
     consultantRepository,
+    userContactService,
   );
 
   return { useCase, emailService, booking };
@@ -220,6 +246,49 @@ describe("CancelBookingUseCase", () => {
     });
 
     expect(emailService.sendBookingCancellation).not.toHaveBeenCalled();
+  });
+
+  it("担当占い師にもキャンセル通知を送る", async () => {
+    const { useCase, emailService } = createUseCase({
+      customer: createCustomer(),
+      consultant: createConsultant(),
+    });
+
+    await useCase.execute({
+      organizationId: ORGANIZATION_ID,
+      bookingId: BOOKING_ID,
+      cancelledBy: "admin",
+    });
+
+    expect(emailService.sendConsultantCancellationNotice).toHaveBeenCalledWith(
+      expect.objectContaining({
+        consultantEmail: "uranai@example.com",
+        consultantName: "鈴木 花子",
+        customerName: "山田 太郎",
+        bookingId: BOOKING_ID,
+        cancelledBy: "admin",
+      }),
+    );
+  });
+
+  it("占い師のメールアドレスが引けないときは占い師通知を送らない", async () => {
+    const { useCase, emailService } = createUseCase({
+      customer: createCustomer(),
+      consultant: createConsultant(),
+      consultantEmail: null,
+    });
+
+    await useCase.execute({
+      organizationId: ORGANIZATION_ID,
+      bookingId: BOOKING_ID,
+      cancelledBy: "customer",
+    });
+
+    expect(
+      emailService.sendConsultantCancellationNotice,
+    ).not.toHaveBeenCalled();
+    // 顧客宛は送られる
+    expect(emailService.sendBookingCancellation).toHaveBeenCalledTimes(1);
   });
 
   it("メール送信が失敗してもキャンセル自体は成功させる", async () => {

@@ -90,6 +90,71 @@ describe("ResendEmailService", () => {
     );
   });
 
+  it("領収書メールにインボイス記載事項（登録番号・税率・税額）を含める", async () => {
+    process.env.EMAIL_DELIVERY_MODE = "resend";
+    process.env.INVOICE_REGISTRATION_NUMBER = "T1234567890123";
+    const service = await createService();
+
+    await service.sendPaymentReceipt({
+      customerEmail: "taro@example.com",
+      customerName: "太郎",
+      amountJPY: 4546,
+      taxAmountJPY: 454,
+      taxRate: 0.1,
+      totalJPY: 5000,
+      bookingId: "booking-123",
+      chargedAt: new Date("2026-04-21T00:30:00+09:00"),
+    });
+
+    const html = sendEmailMock.mock.calls[0][0].html as string;
+    expect(html).toContain("T1234567890123");
+    expect(html).toContain("10%対象");
+    expect(html).toContain("¥454");
+    expect(html).toContain("¥4,546");
+    expect(html).toContain("¥5,000");
+    expect(html).toContain("2026/04/21");
+  });
+
+  it("バッチ実行レポートは宛先が空なら送らない", async () => {
+    process.env.EMAIL_DELIVERY_MODE = "resend";
+    const service = await createService();
+
+    await service.sendBatchChargeReport({
+      adminEmails: [],
+      organizationId: "org-1",
+      startedAt: new Date("2026-04-21T00:00:00+09:00"),
+      chargedCount: 0,
+      completedCount: 0,
+      errors: [],
+      consoleBookingsUrl: "https://console.example.com/org-1/bookings",
+    });
+
+    expect(sendEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("バッチ実行レポートはエラー件数を件名と本文に載せる", async () => {
+    process.env.EMAIL_DELIVERY_MODE = "resend";
+    const service = await createService();
+
+    await service.sendBatchChargeReport({
+      adminEmails: ["admin1@example.com", "admin2@example.com"],
+      organizationId: "org-1",
+      startedAt: new Date("2026-04-21T00:00:00+09:00"),
+      chargedCount: 3,
+      completedCount: 1,
+      errors: [{ bookingId: "booking-9", error: "Payment not found" }],
+      consoleBookingsUrl: "https://console.example.com/org-1/bookings",
+    });
+
+    expect(sendEmailMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        to: ["admin1@example.com", "admin2@example.com"],
+        subject: expect.stringContaining("エラーあり"),
+        html: expect.stringContaining("booking-9: Payment not found"),
+      }),
+    );
+  });
+
   it("Resend がエラーを返したら握り潰さずログに残す", async () => {
     process.env.EMAIL_DELIVERY_MODE = "resend";
     sendEmailMock.mockResolvedValue({

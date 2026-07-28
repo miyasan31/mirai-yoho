@@ -255,6 +255,26 @@ ChargePaymentUseCase
             └─ EmailService.sendPaymentReceipt(...) で顧客へ領収書メール
 ```
 
+### 6.3 メール通知一覧
+
+`IEmailService`（`application/shared/email-service.ts`）が定義するポート。実装は Resend（`infrastructure/resend/`）。`EMAIL_DELIVERY_MODE=log` でローカルは標準出力に切り替わる。
+
+| メソッド | トリガー | 宛先 | 内容 |
+|---|---|---|---|
+| `sendBookingConfirmation` | 予約確定（§8.1） | 顧客 | 日時・占い師・Zoom URL・署名付きキャンセルリンク |
+| `sendConsultantBookingNotice` | 予約確定（§8.1） | 担当占い師 | 日時・顧客名・Zoom URL |
+| `sendBookingCancellation` | キャンセル（§8.2） | 顧客 | キャンセル実行者・占い師・予約 ID |
+| `sendConsultantCancellationNotice` | キャンセル（§8.2） | 担当占い師 | キャンセル実行者・日時・顧客名 |
+| `sendPaymentReceipt` | 課金確定（§8.3） | 顧客 | インボイス対応領収書（登録番号・税率・税額） |
+| `sendBatchChargeReport` | 課金バッチ完了 | 組織の管理者（`roleId: admin` かつ `active`） | 実行日時・課金/完了/エラー件数・エラー詳細 |
+| `sendConsultationReminder` | 相談開始 15 分前バッチ | 顧客 | 開始時刻・Zoom URL |
+| `sendInvitation` | アカウント / 占い師招待 | 招待対象 | パスワード設定リンク |
+| `sendPasswordReset` | パスワードリセット | 対象アカウント | 再設定リンク |
+
+> 占い師・管理者の宛先は `IUserContactService`（Firebase Auth からメールアドレスを引く）で解決する。`consultants` / `accounts` コレクションはメールアドレスを持たない。
+>
+> 通知系（占い師宛・管理者宛）の送信失敗は **ログに残して握り潰す**。予約・キャンセル・課金は既に永続化済みで、通知の失敗で呼び出し元を失敗させないため。顧客宛の予約確認メールだけは例外で、失敗時に `502 EMAIL_DELIVERY_ERROR` を返す。
+
 ---
 
 ## 7. レイヤー構成とフォルダ構造
@@ -370,7 +390,9 @@ apps/api/src/
     トークンの有効期限は cancelDeadlineAt（相談開始 24h 前）。失敗時は 502 EMAIL_DELIVERY_ERROR
 14. UnitOfWork.runInTransaction(customer, user, usageSlots, bufferSlots, booking,
     zoomSession, appliedCoupon)            ← Firestore トランザクション
-15. recordAgreements()                     ← PolicyAgreement を bookingId 付きで記録（§2.2）
+15. notifyConsultant()                     ← 担当占い師へ予約確定を通知。宛先は
+    UserContactService（Firebase Auth）から解決。失敗はログのみ（予約は確定済み）
+16. recordAgreements()                     ← PolicyAgreement を bookingId 付きで記録（§2.2）
 
 出力: { bookingId, joinUrl }
 ```
@@ -395,10 +417,11 @@ apps/api/src/
 7. 適用中クーポンがあれば restoredCoupon.restore()  ← 未使用状態に戻す
 8. 各 Repository.save()（並列）
 9. booking.pullDomainEvents() → BookingCancelledEvent を判定し、イベントの
-   customerId / consultantId から Customer・Consultant を引いて
-   EmailService.sendBookingCancellation() でキャンセル確認メールを送信
+   customerId / consultantId から Customer・Consultant・占い師の連絡先を引いて
+   EmailService.sendBookingCancellation()（顧客宛）と
+   EmailService.sendConsultantCancellationNotice()（占い師宛）を送信
    ← 集約は ID 参照のみ（§5.4）なのでイベントに宛先は載せず、UseCase 側で解決する。
-     退会済み顧客（mask() でメール空）は送信をスキップし、送信失敗は
+     退会済み顧客（mask() でメール空）は顧客宛をスキップし、送信失敗は
      ログに残して握り潰す（キャンセル自体は永続化済みのため）
 ```
 
@@ -418,6 +441,9 @@ apps/api/src/
 9. 各 Repository.save()（並列）
 10. payment.pullDomainEvents() → event.eventName === "PaymentCharged" を判定し
     EmailService.sendPaymentReceipt() で領収書メール
+    ← 適格請求書（インボイス）の記載事項を含む: 発行者・登録番号
+      （INVOICE_REGISTRATION_NUMBER）/ 取引年月日 / 取引内容 / 税抜金額 /
+      税率と税率ごとの消費税額 / 税込合計
 
 失敗時: catch 節で payment.failCharge() → save し、エラーを re-throw
 ```
