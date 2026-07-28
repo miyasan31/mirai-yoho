@@ -25,7 +25,7 @@ type CustomerSummary = {
   name: string;
   email: string;
   phone: string;
-  memo?: string | null;
+  note?: string | null;
 };
 
 type ConsultantSummary = {
@@ -67,7 +67,7 @@ function CustomerCell({
                 電話: {customer.phone}
               </Text>
               <Text textStyle="xs" color="fg.muted">
-                メモ: {customer.memo ?? "-"}
+                メモ: {customer.note ?? "-"}
               </Text>
             </>
           ) : (

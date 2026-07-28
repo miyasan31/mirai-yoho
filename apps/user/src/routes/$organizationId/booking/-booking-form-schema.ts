@@ -47,7 +47,7 @@ export const bookingFormSchema = v.pipe(
         "未来の日付は指定できません",
       ),
     ),
-    consultantContent: v.optional(v.string()),
+    consultationContent: v.optional(v.string()),
     // 未成年 (18歳未満) の場合のみ必須。valibot の cross-field チェックで確認する
     guardianName: v.optional(v.pipe(v.string(), v.trim())),
     guardianConsent: v.optional(v.boolean()),

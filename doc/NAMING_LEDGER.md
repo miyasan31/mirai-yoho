@@ -210,7 +210,7 @@
 | 遅刻アラート送信時刻 | `lateArrivalAlertSentAt` | 同名 | `lateArrivalAlertSentAt` | 同名 | 維持 |
 | 相談員メモ | `consultantMemo` | `consultantMemo` | `consultantMemo` | `consultantMemo` | 維持 |
 | 相談内容 | `consultationContent` | `consultationContent` | `consultationContent` | `consultationContent` | 維持 |
-| 相談内容（入力） | — | — | `consultantContent` → | **`consultationContent`** | **合意: リネーム** |
+| 相談内容（入力） | — | — | ~~`consultantContent`~~ | **`consultationContent`** | ✅ 実装済み（2026-07-28） |
 | 料金プラン ID | `pricePlanId` | `pricePlanId` | — | `pricePlanId` | 維持（スナップショット） |
 | 料金プラン名 | `pricePlanName` | `pricePlanName` | — | `pricePlanName` | 維持 |
 | 料金プラン金額 | `pricePlanTotalJPY` | `pricePlanTotalJPY` | — | `pricePlanTotalJPY` | 維持 |
@@ -220,7 +220,7 @@
 
 **合意サマリー**
 - コレクション名 `bookings`、Doc ID `bookingId` は維持
-- CreateBookingRequest の `consultantContent` → `consultationContent` に統一
+- CreateBookingRequest の `consultantContent` → `consultationContent` に統一 ✅ 実装済み（2026-07-28）
 - `zoomUrl` → **`joinUrl`** に全レイヤー統一
 - `startDatetime` → **`startsAt`**、`cancelDeadline` → **`cancelDeadlineAt`**
 - CreateBooking の枠指定: `startDatetime`/`endDatetime` → **`startsAt`/`endsAt`**
@@ -248,7 +248,7 @@
 | メール | `email` | `email` | 維持 |
 | 電話 | `phone` | `phone` | 維持 |
 | 生年月日 | `birthdate` | **`birthDate`** | **リネーム**（`*Date` / `YYYY-MM-DD` 文字列・API 非公開） |
-| メモ | `memo` | **`note`** | **リネーム** |
+| メモ | `memo` | **`note`** | **リネーム** ✅ 実装済み |
 | 作成/更新 | `createdAt`, `updatedAt` | 同名 | 維持 |
 
 #### API スキーマ（`client*` 完全排除）✅ 合意（2026-06-26）
@@ -267,12 +267,12 @@
 - `Client` → `Customer`、`clients` → `customers`、`clientId` → `customerId` を全レイヤーで統一
 - **API から `client*` プレフィックスを完全排除**（スキーマ名・フィールド名・ネストキーすべて）
 - `birthDate` は `YYYY-MM-DD` 文字列のまま（フル datetime 化しない）
-- `memo` → `note` を FS / Domain / API 全レイヤーで統一
+- `memo` → `note` を FS / Domain / API 全レイヤーで統一 ✅ 実装済み（API は 2026-07-28。`CustomerDetail.note` / `ConsultantBookingDetail.customer.note`）
 - **注意**: DDD_DESIGN.md の「Client ≠ Customer」定義と矛盾するため、ドキュメント更新が必要
 
 **影響**: `domain/client/` → `domain/customer/`、`firestore-client-repository.ts`、`bookings.customerId`、`openapi.yaml`、`booking-form-schema.ts`、予約フォーム、管理 UI、Orval 生成物、全テスト
 
-**根拠**: `firestore-client-repository.ts`, `domain/client/client.ts`, `openapi.yaml`
+**根拠**（当時のファイル名。現行は `firestore-customer-repository.ts` / `domain/customer/customer.ts`）: `firestore-client-repository.ts`, `domain/client/client.ts`, `openapi.yaml`
 
 ---
 
@@ -300,7 +300,7 @@
 - API の `pricePlanSelectionId` → **`selectionId`** に統一
 - `normalizedName` は Firestore 専用のまま
 
-**根拠**: `firestore-consultant-price-plan-repository.ts`, `consultant-price-plan.ts`, `openapi.yaml`
+**根拠**（当時のファイル名。現行は `firestore-price-plan-repository.ts` / `domain/price-plan/price-plan.ts`）: `firestore-consultant-price-plan-repository.ts`, `consultant-price-plan.ts`, `openapi.yaml`
 
 ---
 
@@ -319,14 +319,25 @@
 | 専門分野 | `specialties` | `specialties` | 維持 |
 | 電話 | `phone` | `phone` | 維持 |
 | 画像 URL | `imageUrl` | `imageUrl` | 維持 |
-| ステータス（旧称: ランク） | `statusId` / API `status` オブジェクト | **`statusId`** | **API も statusId のみ。UI 表示・内部識別子ともに `status` に統一** |
+| ステータス（旧称: ランク） | `statusId` / API `status` オブジェクト | **FS/Domain は `statusId`、API は `status` 展開オブジェクト** | **「API も statusId のみ」は撤回（下記）。`rank` → `status` への改名のみ適用済み** |
 | 有効フラグ | `isActive` | `isActive` | 維持 |
 | 作成/更新 | `createdAt`, `updatedAt` | 同名 | 維持 |
 
 **合意サマリー**
 - コレクション名 `consultants`、複合 Doc ID は維持
-- `displayName` → **`name`** に全レイヤー統一（FS / Domain / API）
-- API の `rank` オブジェクト展開を廃止し **`rankId`** のみ返す
+- `displayName` → **`name`** に全レイヤー統一（FS / Domain / API）✅ 実装済み
+- ~~API の `rank` オブジェクト展開を廃止し `rankId` のみ返す~~ → **撤回（2026-07-28）**
+
+#### 2026-07-28 撤回: API の `status` 展開オブジェクトは維持する
+
+**決定**: 「API も `statusId` のみ返す」という 2026-06-26 の合意を **撤回**し、`Consultant` / `ConsultantDetail` / `ConsultantProfile` は `status: { statusId, name }` を返し続ける。`rank` → `status` への改名（`rankId` ではなく `statusId`）は合意どおり適用済み。
+
+**理由**:
+- §1.1 のレイヤー表は API 層について「顧客向け公開名。**計算値・展開オブジェクト可**」と明記しており、展開オブジェクト自体は禁じていない。§3.4 の「`statusId` のみ」は §1.1 と矛盾していた
+- `statusId` だけを返すと、表示名の解決に `settings.consultantStatuses` との join が必要になる。ところが **公開エンドポイント `GET /settings/public` は `businessHours` / `pricePlanRange` しか返さない**（`settings-response.ts`）ため、未認証の顧客向け占い師一覧（`apps/user/src/components/consultants-page.tsx`）で名前を解決できない
+- 解決するには組織設定のステータス一覧を公開するか公開エンドポイントを新設する必要があり、内部設定の露出とリクエスト増を招く。展開オブジェクトを返す現行のほうが API として素直
+
+**適用範囲**: なし（現行実装を正とする。ドキュメントのみ更新）
 
 **根拠**: `firestore-consultant-repository.ts`, `consultant.ts`, `consultant-profile.ts`, `openapi.yaml`, `firestore.rules`
 
@@ -383,7 +394,7 @@
 - 実行: `pnpm dlx tsx --env-file=.env.local apps/api/scripts/migrate-account-role-to-role-id.ts`
 
 **連鎖影響**
-- `openapi.yaml` ConsoleAccount.status enum 変更（`pending` / `registered`）
+- ~~`openapi.yaml` ConsoleAccount.status enum 変更（`pending` / `registered`）~~ → §0.2 で Firestore と揃えた `active` / `invited` / `disabled` に変更済み。この行は §0.2 より前の記述（2026-07-28 訂正）
 - `load-auth-context.ts` の name 取得元変更、および consultants コレクションを uid で 1 クエリ引いて `isConsultant` を展開
 - ConsoleAccount API の `displayName` → **`name`** にリネーム
 - ~~`user-preferences`~~ 廃止（§3.10）
@@ -452,7 +463,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 - `businessHours` / `pricePlanRange` のネスト構造も維持
 - `createdAt` / `updatedAt` を Repository 型・`toFirestore` に追加 ✅ 実装済み（2026-07-28）。`Settings` 集約が両フィールドを保持し、更新系メソッドが `updatedAt` を更新する。従来は `SettingsDoc` に両フィールドが無く `save()` が merge なしの `.set()` だったため、`create-organization.ts` が書いた値が初回更新で消えていた
 
-**根拠**: `firestore-settings-repository.ts`, `scripts/create-organization.ts`
+**根拠**: `firestore-settings-repository.ts`, `apps/api/scripts/create-organization.ts`
 
 ---
 
@@ -475,7 +486,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 
 **連鎖影響**: `auth-types.ts` OrganizationAccount、`load-auth-context.ts`、admin/consultant layout
 
-**根拠**: `load-auth-context.ts`, `scripts/create-organization.ts`
+**根拠**: `load-auth-context.ts`, `apps/api/scripts/create-organization.ts`
 
 ---
 
@@ -543,7 +554,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 - 最後に選択した org は **サーバーに保存せず** クライアント側で保持
 - `load-auth-context.ts` / `setLastOrganizationId` / `POST /api/auth/organization` を削除またはクライアント専用化
 
-**根拠**: `load-auth-context.ts`, `scripts/create-organization.ts`, `src/app/api/auth/organization/route.ts`
+**根拠**（当時のパス。`src/app/api/**` は Next.js 時代のもので現存しない）: `load-auth-context.ts`, `apps/api/scripts/create-organization.ts`, `src/app/api/auth/organization/route.ts`
 
 ---
 
@@ -630,10 +641,10 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 | `slots.isReserved` → `isAvailable` | 同上 + Domain `slot.ts` + API route |
 | API クエリ `startDatetime`/`endDatetime` → `startsAt`/`endsAt` | openapi, route, 予約 UI, Orval |
 | `booking.zoomUrl` → `joinUrl` | `domain/booking/`, repository, openapi, email templates |
-| CreateBookingRequest `consultantContent` → `consultationContent` | `openapi.yaml`, route, 予約フォーム, Orval |
+| ~~CreateBookingRequest `consultantContent` → `consultationContent`~~ ✅ 完了（2026-07-28） | `openapi.yaml`, route, 予約フォーム, Orval |
 | API `pricePlanSelectionId` → `selectionId` | `openapi.yaml`, route, 公開予約 UI, Orval |
 | CreateBooking から `clientBirthdate` 削除 | `openapi.yaml`, route, 予約フォーム |
-| `customers.memo` → `note` | customer repository, openapi, 管理 UI |
+| ~~`customers.memo` → `note`~~ ✅ 完了（2026-07-28） | customer repository, openapi, 管理 UI |
 | ConsoleAccount `displayName` → `name`、status enum 統一 | openapi, route, admin UI |
 | `organizations.organizationName` → `name` | auth-types, layouts, load-auth-context |
 
@@ -645,7 +656,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 | `organization-accounts` Repository 化 + `name` 追加 | 新規 repository, auth, route, scripts |
 | **`user-preferences` 廃止** | `load-auth-context.ts`, `create-organization.ts`, `POST /api/auth/organization`, クライアント localStorage 化 |
 | ~~`organization-settings` に `createdAt`/`updatedAt` 追加~~ ✅ 完了（2026-07-28） | repository, scripts |
-| `consultants.displayName` → `name`、API `rank` → `rankId` | domain, repository, openapi, route |
+| ~~`consultants.displayName` → `name`~~ ✅ 完了。API `rank` → `rankId` は **撤回**（§3.4） | domain, repository, openapi, route |
 
 ### 4.3 優先度: 低（将来検討）
 

@@ -58,7 +58,7 @@ bookingRoutes.post(
       customerEmail,
       customerPhone,
       customerBirthDate,
-      consultantContent,
+      consultationContent,
       selectionId,
       selectedUserCouponId,
       agreedTermsRevisionId,
@@ -179,7 +179,7 @@ bookingRoutes.post(
       customerEmail,
       customerPhone,
       customerBirthDate: customerBirthDate.trim(),
-      consultationContent: consultantContent,
+      consultationContent,
       selectionId,
       selectedUserCouponId:
         typeof selectedUserCouponId === "string" && selectedUserCouponId

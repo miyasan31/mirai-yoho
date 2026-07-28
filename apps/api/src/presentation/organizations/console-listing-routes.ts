@@ -146,7 +146,7 @@ consoleListingRoutes.get(
         name: c.getName(),
         email: c.getEmail(),
         phone: c.getPhone(),
-        memo: c.getNote() ?? null,
+        note: c.getNote() ?? null,
         createdAt: c.getCreatedAt().toISOString(),
         updatedAt: c.getUpdatedAt().toISOString(),
       })),

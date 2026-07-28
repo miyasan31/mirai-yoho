@@ -75,7 +75,7 @@ export default function ConsoleCustomersPage() {
                   <Table.Cell>{c.name}</Table.Cell>
                   <Table.Cell>{c.email}</Table.Cell>
                   <Table.Cell>{c.phone}</Table.Cell>
-                  <Table.Cell>{c.memo ?? "-"}</Table.Cell>
+                  <Table.Cell>{c.note ?? "-"}</Table.Cell>
                 </Table.Row>
               ))}
             </Table.Body>

@@ -2546,9 +2546,10 @@ components:
           format: email
         phone:
           type: string
-        memo:
+        note:
           type: string
           nullable: true
+          description: 管理者向けの顧客メモ（Firestore / Domain とも `note`）
         createdAt:
           type: string
           format: date-time
@@ -2795,7 +2796,7 @@ components:
         customerBirthDate:
           type: string
           format: date
-        consultantContent:
+        consultationContent:
           type: string
         selectionId:
           type: string

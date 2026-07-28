@@ -26,7 +26,7 @@ function createBooking(
       name: "山田 太郎",
       email: "taro@example.com",
       phone: "090-0000-0000",
-      memo: null,
+      note: null,
       createdAt: "2026-04-01T00:00:00+09:00",
       updatedAt: "2026-04-01T00:00:00+09:00",
     },
