@@ -147,6 +147,36 @@ describe("customFetch", () => {
     expect(onError).not.toHaveBeenCalled();
   });
 
+  it("resolves with undefined data for 204 No Content responses", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(null, { status: 204 })),
+    );
+
+    await expect(
+      customFetch("/test", { method: "POST" }),
+    ).resolves.toMatchObject({
+      data: undefined,
+      status: 204,
+    });
+
+    expect(onError).not.toHaveBeenCalled();
+  });
+
+  it("resolves with undefined data for empty success bodies", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response("", { status: 200 })),
+    );
+
+    await expect(
+      customFetch("/test", { method: "POST" }),
+    ).resolves.toMatchObject({
+      data: undefined,
+      status: 200,
+    });
+  });
+
   it("falls back to no Authorization header when getToken returns null", async () => {
     getToken.mockResolvedValue(null);
     vi.stubGlobal(
