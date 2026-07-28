@@ -77,7 +77,7 @@
 | 公開中の利用規約・キャンセルポリシーの `revisionId` を同意済みとして送る | `404 POLICY_REVISION_NOT_FOUND` / `400 POLICY_REVISION_NOT_PUBLISHED`（§2.2） |
 | 18 歳未満の場合は親権者同意（`guardianName` / `guardianConsentedAt`） | `400 GUARDIAN_CONSENT_REQUIRED` |
 
-退会時は `User.withdraw()` が `UserWithdrawnEvent` を発火し、`Customer.mask()` で氏名・メール・電話・生年月日をマスキングする（§6.1）。
+退会時は `WithdrawUserUseCase` が Zoom トークンを revoke → `User.withdraw()` → 所属組織すべての `Customer.mask()`（氏名・メール・電話・生年月日をマスキング）を同一トランザクションで実行し、最後に Firebase Auth ユーザーを無効化する。`User.withdraw()` は `UserWithdrawnEvent` を発火するが現状は消費されていない（§6.1）。
 
 ### 2.2 ポリシー（利用規約 / キャンセルポリシー / プライバシーポリシー）
 
@@ -149,11 +149,15 @@
 
 | 集約ルート | 内包する Value Object | 主なドメインメソッド | トランザクション境界 |
 |---|---|---|---|
-| `Booking` | `BookingStatus` `CancelDeadline` `ZoomUrl` `ConsultantMemo` | `confirm()` `cancel()` `complete()` `updateMemo()` | 予約作成・キャンセル・完了 |
+| `Booking` | `BookingStatus` `CancelDeadline` `ZoomUrl` `ConsultantMemo` | `confirm()` `cancel()` `complete()` `updateMemo()` `markConsultantJoined()` `markConsultationReminderEmailSent()` `markLateArrivalAlertSent()` | 予約作成・キャンセル・完了・バッチ処理の実行済み記録 |
 | `Slot` | `TimeRange` | `reserve()` `release()` | 予約作成・キャンセル |
 | `Payment` | `Money` `PaymentStatus` `PaymentStrategy` | `completeSetup()` `charge()` `refund()` `cancel()` `failCharge()` | 決済操作 |
-| `Consultant` | `ConsultantProfile` | `updateProfile()` `deactivate()` | プロフィール更新・論理削除 |
+| `Consultant` | `ConsultantProfile` | `updateProfile()` `changeStatus()` `deactivate()` | プロフィール更新・ステータス変更・論理削除 |
 | `Customer` | —（シンプルなデータ保持） | `updateInfo()` `updateNote()` `linkUser()` `mask()` | 顧客情報更新・退会時マスキング |
+| `User` | `BirthDate` `UserZoomConnection` `AuthProvider` | `updateProfile()` `connectZoom()` `disconnectZoom()` `withdraw()` | 会員情報更新・Zoom 連携・退会（§2.1） |
+| `PolicyRevision` | `PolicyType` | `publish()` `archive()` `updateDraft()` | ポリシー本文の改訂（§2.2） |
+| `PolicyAgreement` | `PolicyType` | —（記録専用・不変） | 同意証跡の記録（§2.2） |
+| `Settings` | `BusinessHours` `PricePlanRange` `ConsultantStatus` | `updateBusinessHours()` `updateConsultantStatuses()` `updatePricePlanRange()` | 組織設定の更新 |
 
 ### 5.2 Booking 集約詳細
 
@@ -175,6 +179,7 @@ Booking（集約ルート）
 ├── pricePlanId / pricePlanName / pricePlanTotalJPY?  予約確定時点の料金プランを非正規化
 ├── appliedUserCouponId / couponDiscountJPY / discountedTotalJPY?  適用クーポンと割引後金額（任意）
 ├── consultantJoinedAt / consultationReminderEmailSentAt / lateArrivalAlertSentAt?: Date  バッチ処理の実行済みフラグ
+├── agreedTermsVersion / agreedCancellationPolicyVersion / agreedAt?  予約時に同意したポリシーの版名と日時（§2.2）
 └── _domainEvents: DomainEvent[]    pullDomainEvents() で取り出す
 ```
 
@@ -232,8 +237,9 @@ class Booking {
 | イベント名 | 発火元 | 発火タイミング | ハンドラ（通知） |
 |---|---|---|---|
 | `BookingConfirmedEvent` | `Booking.confirm()` | Zoom Join URL セット後 | （集約に追加はされるが `CreateBookingUseCase` は現状未使用。確認メールは UseCase が直接送信） |
-| `BookingCancelledEvent` | `Booking.cancel()` | キャンセル確定後 | `CancelBookingUseCase` が `pullDomainEvents()` で取り出し、顧客キャンセル確認メールを送信 |
+| `BookingCancelledEvent` | `Booking.cancel()` | キャンセル確定後 | `CancelBookingUseCase` が `pullDomainEvents()` で取り出し、ペイロードの `customerId` / `consultantId` から宛先を解決して顧客キャンセル確認メールを送信（§8.2） |
 | `PaymentChargedEvent` | `Payment.charge()` | 課金確定後 | `ChargePaymentUseCase` が `pullDomainEvents()` で取り出し、顧客領収書メールを送信 |
+| `UserWithdrawnEvent` | `User.withdraw()` | 退会確定後 | **未消費**。`WithdrawUserUseCase` は `pullDomainEvents()` を呼ばず、所属組織すべての `Customer.mask()` を同一トランザクションで直接実行している（`BookingConfirmedEvent` と同じくイベント未活用箇所） |
 
 ### 6.2 イベントの流れ
 
@@ -295,18 +301,23 @@ apps/api/src/
 │   ├── consultant/ · price-plan/
 │   ├── customer/ · user/ · user-coupon/
 │   ├── settings/ · authorization/ · account/ · organization/ · coupon/
+│   ├── policy/                       ← PolicyRevision / PolicyAgreement（§2.2）
 │   └── zoom-session/
+│                                     ↑ domain 直下は全ディレクトリを列挙している
 │
-├── application/
-│   ├── booking/
-│   │   ├── create-booking-use-case.ts   ← 集約横断トランザクション
-│   │   ├── cancel-booking-use-case.ts
-│   │   └── charge-payment-use-case.ts
+├── application/                      ← 以下は代表例。実際は集約とほぼ 1 対 1 で
+│   ├── booking/                        authorization / consultant / coupon / dashboard /
+│   │   ├── create-booking-use-case.ts   payment / policy / price-plan / settings / slot /
+│   │   ├── cancel-booking-use-case.ts   user / user-coupon / zoom-session が並ぶ
+│   │   ├── charge-payment-use-case.ts
+│   │   └── setup-payment-use-case.ts  ← カード登録 / PayPay 即時決済（§8.4）
 │   └── shared/                      ← UseCase から使うポート（Interface）
 │       ├── stripe-service.ts · zoom-service.ts · email-service.ts
+│       ├── cancel-token-service.ts  ← キャンセルリンクの HMAC 署名
 │       └── unit-of-work.ts          ← トランザクション境界
 │
 ├── infrastructure/                  ← 上記ポートの実装（Firestore / Stripe / Zoom / Resend）
+│   └── container.ts                 ← UseCase の組み立て（DI コンテナ）
 │
 ├── presentation/                    ← Hono ルートハンドラ（Application のみ依存）
 │   ├── auth/                        ← /api/auth/*
@@ -329,31 +340,42 @@ apps/api/src/
 ```
 入力: organizationId / userId / consultantId / startsAt / durationMinutes（30|60|90|120） /
        customerName / customerEmail / customerPhone / customerBirthDate /
-       consultationContent? / selectionId（料金プラン選択） / selectedUserCouponId?
+       consultationContent? / selectionId（料金プラン選択） / selectedUserCouponId? /
+       agreedTermsRevisionId / agreedCancellationPolicyRevisionId / agreedAt /
+       guardianName? / guardianConsentedAt?（18歳未満のとき必須）
 
-1. UserRepository.findById(userId)         ← アクティブ・Zoom 連携済みチェック
-2. resolveContinuousAndPricePlan()         ← selectionId → PricePlan、durationMinutes 分の
+1. resolvePublishedRevision() × 2          ← terms / cancellation_policy の revisionId が
+   その組織の公開中の改訂かを検証（§2.2）
+2. BirthDate.isMinor(customerBirthDate) なら guardianName / guardianConsentedAt を必須化
+   ← 欠けていれば 400 GUARDIAN_CONSENT_REQUIRED
+3. UserRepository.findById(userId)         ← アクティブ・Zoom 連携済みチェック
+4. resolveContinuousAndPricePlan()         ← selectionId → PricePlan、durationMinutes 分の
    15分スロットが startsAt から連続空きか + 直後 1 コマ（15分）のバッファスロットの空き
-3. usageSlot.reserve(newBookingId) / bufferSlot.reserve(newBookingId)（各コマ）
+5. usageSlot.reserve(newBookingId) / bufferSlot.reserve(newBookingId)（各コマ）
    ← 二重予約・過去日時チェック（DomainError）。バッファは以後の空き枠検索から除外される
-4. resolveAppliedCoupon()                  ← selectedUserCouponId があれば UserCoupon を検証し割引額算出
-5. CustomerRepository.findByUserIdAndOrganizationId() → 既存なければ Customer.create({...})
-6. Booking.create({...})                   ← status: pending。usageSlotIds/bufferSlotIds・
-   料金プラン・適用クーポンを非正規化して保持
-7. ZoomSessionRepository.findByDate() → 当日セッションが無ければ ZoomService.createDailyMeeting()、
-   あれば ZoomService.updateBreakoutRooms()  ← 参加者をブレイクアウトルームへ割り当て
-8. booking.confirm(joinUrl)                ← BookingConfirmedEvent 発火（現状 UseCase は未使用）
-9. EmailService.sendBookingConfirmation()  ← 入力値から直接送信（イベント経由ではない）。
-   本文には CancelTokenService.generateToken() で発行した署名付きキャンセル URL
-   （`{USER_APP_URL}/{organizationId}/booking/cancel?token=...`）を含める。
-   トークンの有効期限は cancelDeadlineAt（相談開始 24h 前）
-10. UnitOfWork.runInTransaction(customer, usageSlots, bufferSlots, booking, zoomSession)
-    ← Firestore トランザクション
+6. resolveAppliedCoupon()                  ← selectedUserCouponId があれば UserCoupon を検証し割引額算出
+7. CustomerRepository.findByUserIdAndOrganizationId() → 既存なければ Customer.create({...})、
+   既存なら customer.updateInfo()          ← 親権者情報もここで更新
+8. user.updateProfile()                    ← 予約フォームの入力で User 側のプロフィールも更新
+9. Booking.create({...})                   ← status: pending。usageSlotIds/bufferSlotIds・
+   料金プラン・適用クーポン・同意した版名（agreed*Version / agreedAt）を非正規化して保持
+10. ZoomSessionRepository.findByDate() → 当日セッションが無ければ ZoomService.createDailyMeeting()、
+    あれば ZoomService.updateBreakoutRooms()  ← 予約単位のブレイクアウトルームを割り当て
+    ← 失敗時は 502 ZOOM_INTEGRATION_ERROR
+11. booking.confirm(joinUrl)               ← BookingConfirmedEvent 発火（現状 UseCase は未使用）
+12. appliedCoupon.redeem(bookingId)        ← クーポンを使用済みにする
+13. EmailService.sendBookingConfirmation() ← 入力値から直接送信（イベント経由ではない）。
+    本文には CancelTokenService.generateToken() で発行した署名付きキャンセル URL
+    （`{USER_APP_URL}/{organizationId}/booking/cancel?token=...`）を含める。
+    トークンの有効期限は cancelDeadlineAt（相談開始 24h 前）。失敗時は 502 EMAIL_DELIVERY_ERROR
+14. UnitOfWork.runInTransaction(customer, user, usageSlots, bufferSlots, booking,
+    zoomSession, appliedCoupon)            ← Firestore トランザクション
+15. recordAgreements()                     ← PolicyAgreement を bookingId 付きで記録（§2.2）
 
 出力: { bookingId, joinUrl }
 ```
 
-> 決済（Stripe SetupIntent でのカード登録・課金）はこのフローに含まれない。カード登録は別ユースケース、課金は §8.3 `ChargePaymentUseCase` がバッチ/手動で別途行う。
+> 決済（カード登録 / PayPay 即時決済）はこのフローに含まれない。予約確定後に §8.4 `SetupPaymentUseCase` が決済手段を登録し、カードの課金は §8.3 `ChargePaymentUseCase` がバッチ/手動で別途行う。
 
 ### 8.2 キャンセル（`CancelBookingUseCase`）
 
@@ -368,10 +390,11 @@ apps/api/src/
      deferred かつ setup_pending|setup_complete → payment.cancel()（Stripe 側は未課金なので返金不要）
 5. booking.getAllOccupiedSlotIds()（usageSlotIds + bufferSlotIds）を SlotRepository.findById() で取得
    → 各 slot.release()
-6. ZoomSessionRepository.findByDate() → 参加者を Breakout Room から除外し
+6. ZoomSessionRepository.findByDate() → session.removeBooking(bookingId) で該当ルームを外し
    ZoomService.updateBreakoutRooms() を呼ぶ
-7. 各 Repository.save()（並列）
-8. booking.pullDomainEvents() → BookingCancelledEvent を判定し、イベントの
+7. 適用中クーポンがあれば restoredCoupon.restore()  ← 未使用状態に戻す
+8. 各 Repository.save()（並列）
+9. booking.pullDomainEvents() → BookingCancelledEvent を判定し、イベントの
    customerId / consultantId から Customer・Consultant を引いて
    EmailService.sendBookingCancellation() でキャンセル確認メールを送信
    ← 集約は ID 参照のみ（§5.4）なのでイベントに宛先は載せず、UseCase 側で解決する。
@@ -398,6 +421,49 @@ apps/api/src/
 
 失敗時: catch 節で payment.failCharge() → save し、エラーを re-throw
 ```
+
+### 8.4 決済登録（`SetupPaymentUseCase`）
+
+予約作成（§8.1）と決済は分離されており、予約確定後に顧客が決済手段を選ぶ。カードと PayPay で `PaymentStrategy` が分かれる。
+
+```
+入力: organizationId / bookingId / paymentMethodType: 'card' | 'paypay'
+
+1. BookingRepository.findById()                ← 無ければ 404 BOOKING_NOT_FOUND
+2. PaymentRepository.findByBookingId()         ← 既にあれば 409 PAYMENT_ALREADY_EXISTS
+3. booking.getEffectiveTotalJPY()              ← クーポン適用後の金額。未設定は 400
+4. Money.fromTaxIncluded(effectiveTotalJPY, 0.1)
+
+  card の場合:
+    5a. StripeService.createSetupIntent()      ← カード登録のみ（引き落としなし）
+    6a. Payment.createDeferred()               ← status: setup_pending
+    出力: { customerSecret, mode: 'setup' }
+
+  paypay の場合:
+    5b. StripeService.createPaymentIntent()    ← payment_method_types: ['paypay']
+    6b. Payment.createImmediate()              ← status: setup_pending → 決済完了で charged
+    出力: { customerSecret, mode: 'payment' }
+```
+
+> `customerSecret` は Stripe の `client_secret`。SPA は `mode` に応じて Stripe Payment Element を setup / payment モードで初期化する（`apps/user/src/routes/$organizationId/booking/payment/index.tsx`）。**この名前は `client*` → `customer*` 一括改名の巻き込みで、本来は `clientSecret`**（`doc/NAMING_LEDGER.md` §1.5 の適用範囲を参照）。
+
+#### 決済戦略の違い
+
+| | `deferred`（card） | `immediate`（paypay） |
+|---|---|---|
+| 予約直後 | カード登録のみ。引き落としなし | その場で決済完了 |
+| 課金 | 鑑定後に §8.3 `ChargePaymentUseCase` がバッチ / 手動で実行 | なし（登録時点で完了） |
+| キャンセル時 | `payment.cancel()`（Stripe 側は未課金なので返金不要） | `StripeService.refundPaymentIntent()` → `payment.refund()` |
+
+#### Stripe Webhook（`POST /api/webhooks/stripe`）
+
+`stripe-signature` の署名検証後、以下を処理する。
+
+| イベント | 処理 |
+|---|---|
+| `setup_intent.succeeded` | `CompleteSetupUseCase` → `payment.completeSetup(paymentMethodId)`（`status: setup_complete`）。以後 §8.3 の off-session 課金が可能になる |
+| `setup_intent.setup_failed` | `CancelPaymentUseCase` → `payment.cancel()` |
+| `payment_intent.payment_failed` | `FailPaymentUseCase` → `payment.failCharge()` |
 
 ---
 
