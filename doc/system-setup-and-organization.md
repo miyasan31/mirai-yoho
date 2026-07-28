@@ -62,10 +62,13 @@ Firebase Authentication ではメール / パスワードと匿名ログイン�
 
 ### 2.1 環境変数を作る
 
-`.env.example` をコピーして `.env.local` を作成し、ローカル起動で使う値を設定します。
+`.env.example` は各アプリのディレクトリにあります（リポジトリルートにはありません）。コピーして値を設定します。
 
 ```bash
-cp .env.example .env.local
+cp apps/api/.env.example apps/api/.env.local
+cp apps/user/.env.example apps/user/.env
+cp apps/console/.env.example apps/console/.env
+cp apps/consultant/.env.example apps/consultant/.env
 ```
 
 このリポジトリの env 運用は用途ごとに分かれます。
@@ -169,11 +172,12 @@ dev と prod の remote state は、それぞれ別の GCS bucket で管理し�
 
 ### 3.3 Worker イメージと初回 apply
 
-Terraform は Cloud Run Job 用の `worker_image` を必須とします。一方で、初回は Artifact Registry がまだないため、以下の順番で進めます。
+Terraform は Cloud Run Job 用の `worker_image` と Cloud Run service 用の `api_image` を必須とします。通常の `make plan` / `make apply` は HEAD のコミット SHA から両方を自動導出しますが、初回は Artifact Registry がまだないため `make` を経由せず target apply します。その際は必須変数を両方 export してください（この時点ではイメージが実在しなくて構いません）。
 
 ```bash
 cd infra/terraform/gcp
 export TF_VAR_worker_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:bootstrap"
+export TF_VAR_api_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/api/api:bootstrap"
 terraform -chdir=dev apply -var-file=".tfvars" \
   -target=module.artifact_registry.google_artifact_registry_repository.batch_worker
 
@@ -181,11 +185,10 @@ cd ../../..
 export IMAGE_TAG="$(git rev-parse HEAD)"
 gcloud builds submit \
   --project="mirai-yoho-dev" \
-  --config=cloudbuild.worker.yaml \
+  --config=apps/api/cloudbuild.worker.yaml \
   --substitutions="_IMAGE=asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:$IMAGE_TAG"
 
 cd infra/terraform/gcp
-export TF_VAR_worker_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:$IMAGE_TAG"
 make plan ENV=dev
 make apply ENV=dev
 ```
@@ -235,6 +238,21 @@ Secret の詳しい運用・確認方法は [Secret Manager 運用手順](secret
 - `deploy-hosting.yml` … SPA（user / console / consultant）をビルドして Firebase Hosting にデプロイ
 - `deploy-batch-worker.yml` … Worker イメージをビルド・push し、Cloud Run Job を更新（`gcloud run jobs update`）。Terraform apply は別ワークフロー `terraform-apply.yml`（`main` push 時、`infra/terraform/**` 変更時）が担当
 
+> `terraform-apply.yml` は現状 **dev のみ有効**です（prod は WIF プール / プロバイダ未整備のため matrix から外してあります）。prod のインフラ変更は、整備が終わるまで手元から `make apply ENV=prod` で適用してください。
+
+#### 手元からデプロイする（GitHub Actions を使わない場合）
+
+GitHub Actions のクレジットが枯渇したときなどに、同じ内容を手元から実行できます。事前に `gcloud auth login` / `gcloud auth application-default login`、hosting は `pnpm dlx firebase-tools login` が必要です。SPA のビルドに `VITE_*` を使うため、hosting だけは `.env.dev` / `.env.prod` を用意します。
+
+```bash
+make deploy-hosting:dev        # SPA 3 つをビルドして Firebase Hosting へ
+make deploy-api:dev            # API イメージをビルドして Cloud Run service を更新
+make deploy-batch-worker:dev   # Worker イメージをビルドして Cloud Run Job を更新
+make deploy-all:dev            # hosting → api → batch-worker の順に連続実行
+```
+
+実体は `scripts/deploy/{hosting,api,batch-worker}.sh` で、ワークフローと同じ `apps/api/cloudbuild.yaml` / `apps/api/cloudbuild.worker.yaml` を使います。`:prod` サフィックスで本番に切り替わります。
+
 ## 4. 組織作成フロー
 
 ### 4.1 組織 ID を決める
@@ -254,9 +272,12 @@ make auth-adc-organization-operator:dev
 ```bash
 make create-organization:dev \
   ORGANIZATION_ID=tokyo-shibuya \
-  ORGANIZATION_NAME="渋谷相談室" \
-  ADMIN_EMAIL=admin@example.com
+  ORGANIZATION_NAME="渋谷鑑定室" \
+  ADMIN_EMAIL=admin@example.com \
+  ADMIN_NAME="山田 太郎"
 ```
+
+`ADMIN_NAME` は任意です。省略すると `accounts.name` が未設定のまま作られるので、初回ログイン後に管理画面（アカウント管理）で設定します。
 
 スクリプトは、同じ組織 ID が既にある場合は失敗します。安全のため既存組織を上書きしません。
 
@@ -268,6 +289,19 @@ make create-organization:dev \
 4. `roles/{organizationId}_{roleId}` にシステムロール（`admin` / `operator`）を保存する。
 5. `settings/{organizationId}` に初期設定を作成する。初期ステータスは `standard`（表示名: `標準`）である（予約フローは「占い師 → プラン → 枠 → 情報」に固定されており、占い師選択の有効/無効を切り替える設定項目は存在しない）。
 6. Firebase Auth のパスワード再設定リンクを出力する。新規ユーザーの場合は一時パスワードも標準出力に出る。
+
+### 4.2.1 初期ポリシーを投入する
+
+このスクリプトは `policy-revisions` を作りません。**公開中の利用規約とキャンセルポリシーが無いと顧客は予約できない**（`DDD_DESIGN.md` §2.2）ため、組織作成後に seed スクリプトで投入します。
+
+```bash
+pnpm dlx tsx --env-file=.env.dev apps/api/scripts/seed-initial-policies.ts \
+  --only-org tokyo-shibuya \
+  --version 2026-08-01 \
+  --effective-from 2026-08-01T00:00:00+09:00
+```
+
+利用規約 / キャンセルポリシー / プライバシーポリシーの 3 種を `apps/api/scripts/seed-data/policy-*-initial.md` から読み込んで公開します。既に `policy-revisions` を持つ組織はスキップされます。以降の改訂は運営コンソールの「利用規約・キャンセルポリシー」画面から行います。
 
 出力されるパスワード再設定リンクと一時パスワードは認証情報です。運用記録に残さず、安全な経路で初期管理者に渡してください。初期管理者はリンクからパスワードを設定します。
 
@@ -287,12 +321,10 @@ make create-organization:dev \
 organization_ids = ["mirai-yoho-dev", "tokyo-shibuya"]
 ```
 
-続けて Worker イメージを指定して apply します。
+続けて apply します（イメージ URI は make が HEAD の SHA から導出します）。
 
 ```bash
 cd infra/terraform/gcp
-export IMAGE_TAG="$(git rev-parse HEAD)"
-export TF_VAR_worker_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:$IMAGE_TAG"
 make plan ENV=dev
 make apply ENV=dev
 ```
@@ -312,6 +344,7 @@ make apply ENV=dev
 ## 5. 作成後の確認チェックリスト
 
 - [ ] `organizations`、`accounts`、`roles`、`settings` に想定したドキュメントがある。
+- [ ] `policy-revisions` に利用規約・キャンセルポリシーの `published` な改訂がある（無いと予約できない）。
 - [ ] 初期管理者がパスワードを設定し、ログイン後に対象組織へアクセスできる。
 - [ ] `accounts/{organizationId}_{accountId}` が `roleId: admin`、初回認証後に `status: active` になっている。
 - [ ] 管理画面で営業時間、料金範囲、占い師ステータスなどを組織要件に合わせて設定した。
@@ -326,7 +359,7 @@ make apply ENV=dev
 | --------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
 | `User has no assigned role`                   | organization 作成時のメールアドレスとログインした Firebase Auth ユーザーが同じか、account の `status` が `active` / `invited` かを確認する。     |
 | `Organization '<id>' already exists`          | 既存組織の上書きはできない。ID を確認し、既存データを利用するか別 ID を選ぶ。                                                                      |
-| `No value for required variable worker_image` | `make plan` / `make apply` の前に `TF_VAR_worker_image` を設定する。                                                     |
+| `No value for required variable worker_image` / `api_image` | `make plan` / `make apply` は HEAD の SHA から両方を自動導出するので、通常は発生しない。`terraform` を直接叩いた場合は `TF_VAR_worker_image` と `TF_VAR_api_image` を両方 export する（URI は `make print-worker-image` / `make print-api-image` で確認）。 |
 | Cloud Run で Secret を読めない                     | Secret の存在・値・`api-server` 実行サービスアカウントの参照権限を確認し、再デプロイする。詳細は [Secret 運用手順](secret-manager.md) を参照。 |
 | 定期バッチが対象組織に存在しない                              | `.tfvars` の `organization_ids` に組織 ID を追加して Terraform apply する。                                                 |
 

@@ -108,4 +108,4 @@ MANUAL_ORG_ID=<組織ID> pnpm --filter manual build user
 
 ## 新しいアプリを追加する
 
-`apps/<appId>.ts` を作成し `AppConfig` を default export してください。`create-manual` スキル（`.claude/skills/create-manual/`）に文言・注釈設計の指針があります。
+`apps/<appId>.ts` を作成し `AppConfig` を default export してください。`create-manual` スキル（`.agents/skills/create-manual/`。`.claude/skills` はここへの symlink）に文言・注釈設計の指針があります。

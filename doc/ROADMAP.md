@@ -75,10 +75,10 @@
 | | タスク | ツール |
 |---|---|---|
 | `[ ]` | Resend 独自ドメイン設定（SPF / DKIM / DMARC レコード追加・検証） | |
-| `[x]` | GCP prod 環境構築（Cloud Run + Secret Manager） | `Claude Code` |
+| `[x]` | GCP prod 環境構築（Cloud Run + Secret Manager） | `Claude Code` ※Terraform の**継続適用（`terraform-apply.yml`）は dev のみ有効**。prod は WIF 未整備で手動 apply |
 | `[x]` | dev / prod 環境変数の分離確認 | `Claude Code` |
 | `[x]` | GitHub Actions CI パイプライン（Lint・Format・Unit・Component・Build） | `Claude Code` |
-| `[x]` | Cloud Scheduler 有効化（prod 環境のみ） | `Claude Code` |
+| `[x]` | Cloud Scheduler 有効化 | `Claude Code` ※現在は dev / prod 両方で有効（`common/batch` は環境で分岐せず `organization_ids` で for_each する） |
 | `[ ]` | Stripe 本番モード切り替え（`sk_live_...`） | |
 | `[ ]` | インボイス登録番号を環境変数に設定 | |
 | `[x]` | 独自ドメイン + HTTPS 設定（Cloud Run） | `Claude Code` |

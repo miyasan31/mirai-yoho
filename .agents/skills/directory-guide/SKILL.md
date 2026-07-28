@@ -456,7 +456,7 @@ apps/console/src/pages/settings/_components/settings-panel.tsx
 ### 2. 「utils / helpers ディレクトリを作る」
 
 ```
-# NG: 雑多な関数を utils/ に集める
+# NG: 雑多な関数を utils/ や helpers/ に集める
 apps/api/src/utils/
   ├── format-date.ts
   ├── calculate-price.ts     ← domain 層のロジックでは？
@@ -465,7 +465,10 @@ apps/api/src/utils/
 # OK: 適切なレイヤーに置く
 apps/api/src/domain/payment/money.ts     ← 価格計算はドメインロジック
 apps/api/src/infrastructure/resend/...   ← メール送信は infrastructure
+apps/api/src/lib/chunk-array.ts          ← どの層にも属さない純粋ユーティリティのみ lib/
 ```
+
+> `apps/api` の横断ユーティリティ置き場は **`lib/`**（`doc/DDD_DESIGN.md` §7.2）。`utils/` は作らない。フロント・API 双方で使う純粋ロジックは `packages/shared` に置く。
 
 ### 3. 「domain 層に外部ライブラリを import する」
 

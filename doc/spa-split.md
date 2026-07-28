@@ -37,7 +37,7 @@
 
 ### SPA（ビルド時に GitHub Actions の environment vars から注入）
 
-- `apps/user`: `VITE_API_URL`, `VITE_STRIPE_PUBLISHABLE_KEY`
+- `apps/user`: `VITE_API_URL`, `VITE_STRIPE_PUBLISHABLE_KEY`, `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`（顧客の会員化に伴い Firebase Auth を使うようになったため。`DDD_DESIGN.md` §2.1）
 - `apps/console`: `VITE_API_URL`, `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`
 - `apps/consultant`: `VITE_API_URL`, `VITE_FIREBASE_API_KEY`, `VITE_FIREBASE_AUTH_DOMAIN`, `VITE_FIREBASE_PROJECT_ID`
 
@@ -61,6 +61,8 @@
 6. **移行完了後のクリーンアップ**: 旧 `NEXT_PUBLIC_*` シークレットを `terraform state rm` + 手動削除（deletion_protection のため Terraform では消せない）。
 
 ## ドメイン移行手順（2026-07: `admin.console` / `consultant.console` → `console` / `consultant`）
+
+> 以下 2 節は **当時の移行手順の記録**。現行のデプロイ対象は `deploy-hosting.yml` の `--only hosting:user,hosting:console,hosting:consultant` で、3 サイトすべてを対象にしている。
 
 `apps/console`（旧 `apps/admin`）を `admin.console.miraiyohou.com` → `console.miraiyohou.com`、`apps/consultant` を `consultant.console.miraiyohou.com` → `consultant.miraiyohou.com` へ移行する際の手順。同時に Firebase Hosting site `${project}-admin` を廃止し `${project}-console` を新規作成する。apps ディレクトリも `apps/admin` → `apps/console` にリネームされる。
 
