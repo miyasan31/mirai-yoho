@@ -46,6 +46,9 @@ export const envServer = {
       DEFAULT_ZOOM_INTEGRATION_MODE
     );
   },
+  get invoiceRegistrationNumber(): string | undefined {
+    return process.env.INVOICE_REGISTRATION_NUMBER;
+  },
   get cancelTokenSecret(): string {
     return requireServerEnv("CANCEL_TOKEN_SECRET");
   },

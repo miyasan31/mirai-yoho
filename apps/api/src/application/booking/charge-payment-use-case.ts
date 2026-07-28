@@ -74,6 +74,7 @@ export class ChargePaymentUseCase {
         this.paymentRepository.save(payment),
       ]);
 
+      const money = payment.getMoney();
       const events = payment.pullDomainEvents();
       for (const event of events) {
         if (event.eventName === "PaymentCharged") {
@@ -81,8 +82,12 @@ export class ChargePaymentUseCase {
           await this.emailService.sendPaymentReceipt({
             customerEmail: customer.getEmail(),
             customerName: customer.getName(),
-            amountJPY: e.payload.amountJPY,
+            amountJPY: money.getAmountJPY(),
+            taxAmountJPY: money.getTaxAmountJPY(),
+            taxRate: money.getTaxRate(),
+            totalJPY: e.payload.amountJPY,
             bookingId: e.payload.bookingId,
+            chargedAt: event.occurredAt,
           });
         }
       }

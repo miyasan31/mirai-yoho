@@ -280,6 +280,9 @@ function createEmailService(
     sendBookingCancellation: vi.fn(),
     sendPaymentReceipt: vi.fn(),
     sendConsultationReminder,
+    sendConsultantBookingNotice: vi.fn(),
+    sendConsultantCancellationNotice: vi.fn(),
+    sendBatchChargeReport: vi.fn(),
     sendInvitation: vi.fn(),
     sendPasswordReset: vi.fn(),
   };

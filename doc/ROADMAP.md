@@ -80,7 +80,7 @@
 | `[x]` | GitHub Actions CI パイプライン（Lint・Format・Unit・Component・Build） | `Claude Code` |
 | `[x]` | Cloud Scheduler 有効化 | `Claude Code` ※現在は dev / prod 両方で有効（`common/batch` は環境で分岐せず `organization_ids` で for_each する） |
 | `[ ]` | Stripe 本番モード切り替え（`sk_live_...`） | |
-| `[ ]` | インボイス登録番号を環境変数に設定 | |
+| `[x]` | インボイス登録番号を環境変数に設定 | `INVOICE_REGISTRATION_NUMBER`。領収書メールへの記載も実装済み（PR #206） |
 | `[x]` | 独自ドメイン + HTTPS 設定（Cloud Run） | `Claude Code` |
 | `[ ]` | 本番環境での動作確認（予約〜本決済の全フロー） | |
 
@@ -128,6 +128,8 @@
 | `[x]` | 組織の切り替えを URL の組織 ID 基準に統一 | PR #175 |
 | `[x]` | ブレイクアウトルームを予約単位に分割し、割当状況の確認画面を追加 | PR #179, #180 |
 | `[x]` | ドキュメント全体監査で見つかったバグ 4 件を修正（キャンセルメール / `firestore.rules` / settings 監査フィールド / キャンセルリンク） | PR #201 |
+| `[x]` | PRD §3.7 の未実装メール 3 種を実装（占い師向け予約確定・キャンセル、管理者向けバッチ完了） | `DDD_DESIGN.md` §6.3 |
+| `[x]` | インボイス対応領収書（登録番号・税率・税額）を実装 | `DDD_DESIGN.md` §8.3 |
 
 ---
 

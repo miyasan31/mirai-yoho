@@ -68,10 +68,11 @@ Secret を追加・更新したら Cloud Run を再デプロイして反映し�
 
 `runtime_secret_ids` に載っていても、アプリケーションから読まれていないものがある。Secret を追加したあと実装が入らないと、この状態のまま残る。
 
+（`INVOICE_REGISTRATION_NUMBER` は 2026-07-28 に領収書メールで参照するようになり解消済み）
+
 | キー | 状態 |
 |---|---|
 | `COUPON_WEBHOOK_SECRET` | Terraform（`common/firebase/main.tf`）と `Makefile` の `SECRET_KEYS` にはあるが、コードから未参照。`apps/api/.env.example` にも無いため `make setup-secrets-from-env` では空のままになる |
-| `INVOICE_REGISTRATION_NUMBER` | Terraform・Makefile・デプロイスクリプト・`env.d.ts` まで配線済みだが、`apps/api/src/config/env.server.ts` にアクセサが無く未参照（領収書メールへの記載が未実装） |
 
 新しい Secret を足すときは、**Terraform の参照リスト・env ファイル・`env.server.ts` のアクセサの 3 点セット**で入れること。片方だけだと上記のように宙に浮く。
 

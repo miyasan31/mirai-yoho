@@ -1,9 +1,13 @@
 import { ChargePaymentUseCase } from "@/application/booking/charge-payment-use-case";
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IStripeService } from "@/application/shared/stripe-service";
+import type { IUserContactService } from "@/application/shared/user-contact-service";
+import type { IAccountRepository } from "@/domain/account/account-repository";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import type { ICustomerRepository } from "@/domain/customer/customer-repository";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
+
+const SYSTEM_ADMIN_ROLE_ID = "admin";
 
 interface BatchChargeResult {
   chargedCount: number;
@@ -25,7 +29,10 @@ export class BatchChargeUseCase {
     private readonly paymentRepository: IPaymentRepository,
     private readonly customerRepository: ICustomerRepository,
     stripeService: IStripeService,
-    emailService: IEmailService,
+    private readonly emailService: IEmailService,
+    private readonly accountRepository: IAccountRepository,
+    private readonly userContactService: IUserContactService,
+    private readonly consoleAppUrl: string,
   ) {
     this.chargeUseCase = new ChargePaymentUseCase(
       bookingRepository,
@@ -36,18 +43,71 @@ export class BatchChargeUseCase {
     );
   }
 
+  /**
+   * バッチ実行結果を組織の管理者（roleId: admin）へ通知する（PRD §3.7）。
+   * 課金処理自体は完了しているため、失敗してもログに残して続行する。
+   */
+  private async reportToAdmins(
+    organizationId: string,
+    startedAt: Date,
+    result: BatchChargeResult,
+  ): Promise<void> {
+    try {
+      const accounts =
+        await this.accountRepository.findByOrganizationId(organizationId);
+      const adminAccountIds = accounts
+        .filter(
+          (account) =>
+            account.getRoleId() === SYSTEM_ADMIN_ROLE_ID &&
+            account.getStatus() === "active",
+        )
+        .map((account) => account.getAccountId());
+
+      if (adminAccountIds.length === 0) {
+        return;
+      }
+
+      const contacts =
+        await this.userContactService.findByUids(adminAccountIds);
+      const adminEmails = adminAccountIds
+        .map((accountId) => contacts.get(accountId)?.email)
+        .filter((email): email is string => Boolean(email));
+
+      if (adminEmails.length === 0) {
+        return;
+      }
+
+      await this.emailService.sendBatchChargeReport({
+        adminEmails,
+        organizationId,
+        startedAt,
+        chargedCount: result.chargedCount,
+        completedCount: result.completedCount,
+        errors: result.errors,
+        consoleBookingsUrl: `${this.consoleAppUrl.replace(/\/$/, "")}/${organizationId}/bookings`,
+      });
+    } catch (error) {
+      console.error("Failed to send batch charge report", {
+        organizationId,
+        error,
+      });
+    }
+  }
+
   async execute(organizationId: string): Promise<BatchChargeResult> {
+    const startedAt = new Date();
     const confirmedBookings = await this.bookingRepository.findByStatus(
       organizationId,
       "confirmed",
     );
 
-    const now = new Date();
+    const now = startedAt;
     const eligibleBookings = confirmedBookings.filter(
       (booking) => booking.getStartsAt() < now,
     );
 
     if (eligibleBookings.length === 0) {
+      // 対象 0 件のときは通知しない（毎日 0 時に空のメールが飛ぶのを避ける）
       return { chargedCount: 0, completedCount: 0, errors: [] };
     }
 
@@ -121,6 +181,8 @@ export class BatchChargeUseCase {
       }
     });
 
-    return { chargedCount, completedCount, errors };
+    const result = { chargedCount, completedCount, errors };
+    await this.reportToAdmins(organizationId, startedAt, result);
+    return result;
   }
 }

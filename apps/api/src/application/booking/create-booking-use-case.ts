@@ -10,6 +10,7 @@ import { AppError } from "@/application/shared/app-error";
 import type { ICancelTokenService } from "@/application/shared/cancel-token-service";
 import type { IEmailService } from "@/application/shared/email-service";
 import type { IUnitOfWork } from "@/application/shared/unit-of-work";
+import type { IUserContactService } from "@/application/shared/user-contact-service";
 import type { IZoomService } from "@/application/shared/zoom-service";
 import { Booking } from "@/domain/booking/booking";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
@@ -112,8 +113,50 @@ export class CreateBookingUseCase {
     private readonly policyRevisionRepository: IPolicyRevisionRepository,
     private readonly policyAgreementRepository: IPolicyAgreementRepository,
     private readonly cancelTokenService: ICancelTokenService,
+    private readonly userContactService: IUserContactService,
     private readonly userAppUrl: string,
   ) {}
+
+  /**
+   * 担当占い師へ予約確定を通知する（PRD §3.7）。
+   * 予約自体は確定しているため、宛先が引けない・送信に失敗した場合も
+   * ログに残して続行する（顧客向け確認メールと違い致命的ではない）。
+   */
+  private async notifyConsultant(params: {
+    consultantId: string;
+    consultantName: string;
+    customerName: string;
+    joinUrl: string;
+    startsAt: Date;
+    bookingId: string;
+  }): Promise<void> {
+    try {
+      const contacts = await this.userContactService.findByUids([
+        params.consultantId,
+      ]);
+      const consultantEmail = contacts.get(params.consultantId)?.email;
+      if (!consultantEmail) {
+        console.warn("Skipped consultant booking notice: no email", {
+          consultantId: params.consultantId,
+          bookingId: params.bookingId,
+        });
+        return;
+      }
+      await this.emailService.sendConsultantBookingNotice({
+        consultantEmail,
+        consultantName: params.consultantName,
+        customerName: params.customerName,
+        joinUrl: params.joinUrl,
+        startsAt: params.startsAt,
+        bookingId: params.bookingId,
+      });
+    } catch (error) {
+      console.error("Failed to send consultant booking notice", {
+        bookingId: params.bookingId,
+        error,
+      });
+    }
+  }
 
   // 確認メールに載せる署名付きキャンセル URL。トークンはキャンセル期限まで有効。
   private buildCancelUrl(
@@ -350,6 +393,15 @@ export class CreateBookingUseCase {
       if (appliedCoupon) {
         await this.userCouponRepository.save(appliedCoupon);
       }
+    });
+
+    await this.notifyConsultant({
+      consultantId: resolved.consultantId,
+      consultantName,
+      customerName: input.customerName,
+      joinUrl: session.getJoinUrl(),
+      startsAt: booking.getStartsAt(),
+      bookingId,
     });
 
     await this.recordAgreements({
