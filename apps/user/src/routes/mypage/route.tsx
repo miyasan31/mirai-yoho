@@ -16,9 +16,9 @@ import {
   CalendarPlus,
   LogIn,
   LogOut,
+  Plug,
   Ticket,
   User,
-  Video,
 } from "lucide-react";
 import { useMemo, useTransition } from "react";
 import { styled } from "styled-system/jsx";
@@ -38,7 +38,7 @@ const NAV_ITEMS = [
     icon: CalendarCheck,
     exact: false,
   },
-  { to: "/mypage/zoom", label: "Zoom 連携", icon: Video, exact: false },
+  { to: "/mypage/zoom", label: "外部連携", icon: Plug, exact: false },
   { to: "/mypage/coupons", label: "クーポン", icon: Ticket, exact: false },
 ] as const;
 

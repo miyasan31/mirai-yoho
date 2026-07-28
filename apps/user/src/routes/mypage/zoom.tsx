@@ -6,6 +6,7 @@ import { Button } from "@mirai-yoho/ui/components/ui/button";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { createFileRoute } from "@tanstack/react-router";
+import { Video } from "lucide-react";
 import { useEffect, useTransition } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
@@ -18,16 +19,33 @@ interface ZoomSearch {
 }
 
 export const Route = createFileRoute("/mypage/zoom")({
-  head: () => pageHead("Zoom 連携"),
+  head: () => pageHead("外部連携"),
   validateSearch: (search: Record<string, unknown>): ZoomSearch => ({
     status: typeof search.status === "string" ? search.status : undefined,
     reason: typeof search.reason === "string" ? search.reason : undefined,
     returnTo: typeof search.returnTo === "string" ? search.returnTo : undefined,
   }),
-  component: ZoomLinkPage,
+  component: ExternalIntegrationPage,
 });
 
-function ZoomLinkPage() {
+function ExternalIntegrationPage() {
+  return (
+    <styled.div display="flex" flexDir="column" gap="6">
+      <styled.div display="flex" flexDir="column" gap="1">
+        <Text as="h1" textStyle="2xl" fontWeight="bold">
+          外部連携
+        </Text>
+        <Text color="fg.muted" textStyle="sm">
+          ご利用中の外部サービスとの連携を管理できます。
+        </Text>
+      </styled.div>
+
+      <ZoomIntegrationSection />
+    </styled.div>
+  );
+}
+
+function ZoomIntegrationSection() {
   const { profile, hasActiveZoomConnection, refreshProfile } =
     useCustomerAuth();
   const { status: callbackStatus, reason: callbackReason } = Route.useSearch();
@@ -68,13 +86,18 @@ function ZoomLinkPage() {
   };
 
   return (
-    <styled.div display="flex" flexDir="column" gap="4">
-      <Text as="h1" textStyle="2xl" fontWeight="bold">
-        Zoom 連携
-      </Text>
-      <Text color="fg.muted" textStyle="sm">
-        ご予約には Zoom アカウントの連携が必要です。
-      </Text>
+    <styled.section display="flex" flexDir="column" gap="3">
+      <styled.div display="flex" flexDir="column" gap="1">
+        <styled.div display="flex" alignItems="center" gap="2">
+          <Video size={18} color="var(--colors-fg-muted)" />
+          <Text as="h2" textStyle="lg" fontWeight="semibold">
+            Zoom
+          </Text>
+        </styled.div>
+        <Text color="fg.muted" textStyle="sm">
+          ご予約には Zoom アカウントの連携が必要です。
+        </Text>
+      </styled.div>
 
       <styled.div
         border="1px solid"
@@ -117,6 +140,6 @@ function ZoomLinkPage() {
           </Button>
         )}
       </styled.div>
-    </styled.div>
+    </styled.section>
   );
 }
