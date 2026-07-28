@@ -80,6 +80,19 @@ function normalizeErrorPayload(
   };
 }
 
+// 204 No Content など本文を持たないレスポンスは JSON パースできないため undefined を返す。
+// （例: POST /customer/me/bookings/{bookingId}/cancel は 204 を返す）
+async function parseSuccessPayload(response: Response): Promise<unknown> {
+  if (response.status === 204 || response.status === 205) {
+    return undefined;
+  }
+  const text = await response.text();
+  if (text.length === 0) {
+    return undefined;
+  }
+  return JSON.parse(text);
+}
+
 async function parseErrorPayload(response: Response): Promise<unknown> {
   const contentType = response.headers.get("Content-Type") ?? "";
   if (contentType.includes("application/json")) {
@@ -132,7 +145,7 @@ export const customFetch = async <T>(
     throw new ApiResponseError(normalizedError);
   }
 
-  const data = await response.json();
+  const data = await parseSuccessPayload(response);
 
   return {
     data,
