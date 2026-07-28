@@ -1,3 +1,8 @@
+import { GetAppraisalReportUseCase } from "@/application/appraisal-report/get-appraisal-report-use-case";
+import { ListConsultantAppraisalReportsUseCase } from "@/application/appraisal-report/list-consultant-appraisal-reports-use-case";
+import { ListCustomerAppraisalReportsUseCase } from "@/application/appraisal-report/list-customer-appraisal-reports-use-case";
+import { PublishAppraisalReportUseCase } from "@/application/appraisal-report/publish-appraisal-report-use-case";
+import { SaveAppraisalReportDraftUseCase } from "@/application/appraisal-report/save-appraisal-report-draft-use-case";
 import { CreateRoleUseCase } from "@/application/authorization/create-role-use-case";
 import { DeleteRoleUseCase } from "@/application/authorization/delete-role-use-case";
 import { UpdateRoleUseCase } from "@/application/authorization/update-role-use-case";
@@ -64,6 +69,7 @@ import { AesGcmTokenCipher } from "@/infrastructure/crypto/aes-gcm-token-cipher"
 import { FirebaseAuthAdminService } from "@/infrastructure/firebase/firebase-auth-admin-service";
 import { FirebaseUserContactService } from "@/infrastructure/firebase/firebase-user-contact-service";
 import { FirestoreAccountRepository } from "@/infrastructure/firestore/firestore-account-repository";
+import { FirestoreAppraisalReportRepository } from "@/infrastructure/firestore/firestore-appraisal-report-repository";
 import { FirestoreBookingRatingRepository } from "@/infrastructure/firestore/firestore-booking-rating-repository";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
@@ -202,6 +208,42 @@ export function createListConsultantRatingsUseCase() {
   return new ListConsultantRatingsUseCase(
     new FirestoreConsultantRepository(),
     new FirestoreBookingRatingRepository(),
+  );
+}
+
+export function createGetAppraisalReportUseCase() {
+  return new GetAppraisalReportUseCase(
+    new FirestoreBookingRepository(),
+    new FirestoreAppraisalReportRepository(),
+  );
+}
+
+export function createSaveAppraisalReportDraftUseCase() {
+  return new SaveAppraisalReportDraftUseCase(
+    new FirestoreBookingRepository(),
+    new FirestoreAppraisalReportRepository(),
+  );
+}
+
+export function createPublishAppraisalReportUseCase() {
+  return new PublishAppraisalReportUseCase(
+    new FirestoreBookingRepository(),
+    new FirestoreAppraisalReportRepository(),
+  );
+}
+
+export function createListConsultantAppraisalReportsUseCase() {
+  return new ListConsultantAppraisalReportsUseCase(
+    new FirestoreAppraisalReportRepository(),
+  );
+}
+
+export function createListCustomerAppraisalReportsUseCase() {
+  return new ListCustomerAppraisalReportsUseCase(
+    new FirestoreAppraisalReportRepository(),
+    new FirestoreCustomerRepository(),
+    new FirestoreConsultantRepository(),
+    new FirestoreOrganizationRepository(),
   );
 }
 

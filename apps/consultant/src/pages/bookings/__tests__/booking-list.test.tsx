@@ -30,6 +30,12 @@ vi.mock("@/hooks/use-consultant-bookings", () => ({
   useJoinConsultantBooking: () => mockUseJoinConsultantBooking(),
 }));
 
+const mockUseConsultantAppraisalReports = vi.fn();
+
+vi.mock("@/hooks/use-consultant-appraisal-reports", () => ({
+  useConsultantAppraisalReports: () => mockUseConsultantAppraisalReports(),
+}));
+
 vi.mock("@mirai-yoho/console-core/hooks/use-list-query-params", () => ({
   useListQueryParams: () => ({
     page: 1,
@@ -165,6 +171,12 @@ vi.mock("@mirai-yoho/ui/components/ui/table", () => ({
   Cell: (props: React.ComponentProps<"td">) => <td {...props} />,
 }));
 
+vi.mock("@mirai-yoho/ui/components/ui/badge", () => ({
+  Badge: ({ children }: { children: React.ReactNode }) => (
+    <span>{children}</span>
+  ),
+}));
+
 vi.mock("@mirai-yoho/ui/components/status-badge", () => ({
   BookingStatusBadge: ({ status }: { status: string }) => <span>{status}</span>,
 }));
@@ -180,6 +192,7 @@ vi.mock("@mirai-yoho/ui/components/truncated-id", () => ({
 vi.mock("lucide-react", () => ({
   CalendarX: () => <span>CalendarX</span>,
   ExternalLink: () => <span>ExternalLink</span>,
+  FileText: () => <span>FileText</span>,
   Pencil: () => <span>Pencil</span>,
 }));
 
@@ -195,6 +208,12 @@ function createWrapper() {
 }
 
 describe("ConsultantBookingsPage", () => {
+  beforeEach(() => {
+    mockUseConsultantAppraisalReports.mockReturnValue({
+      data: { data: { reports: [] } },
+    });
+  });
+
   afterEach(() => {
     cleanup();
     vi.restoreAllMocks();

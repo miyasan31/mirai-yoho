@@ -5,6 +5,7 @@ import { ListControls } from "@mirai-yoho/ui/components/list-controls";
 import { BookingStatusBadge } from "@mirai-yoho/ui/components/status-badge";
 import { TableSkeleton } from "@mirai-yoho/ui/components/table-skeleton";
 import { TruncatedId } from "@mirai-yoho/ui/components/truncated-id";
+import { Badge } from "@mirai-yoho/ui/components/ui/badge";
 import { HoverCard } from "@mirai-yoho/ui/components/ui/hover-card";
 import { IconButton } from "@mirai-yoho/ui/components/ui/icon-button";
 import * as Table from "@mirai-yoho/ui/components/ui/table";
@@ -13,9 +14,10 @@ import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
 import { Link } from "@tanstack/react-router";
 import { format, parseISO } from "date-fns";
 import { ja } from "date-fns/locale";
-import { CalendarX, ExternalLink, Pencil } from "lucide-react";
+import { CalendarX, ExternalLink, FileText, Pencil } from "lucide-react";
 import { useState } from "react";
 import { styled } from "styled-system/jsx";
+import { useConsultantAppraisalReports } from "@/hooks/use-consultant-appraisal-reports";
 import { useConsultantBookings } from "@/hooks/use-consultant-bookings";
 import { BookingOutdatedPolicyBadge } from "../home/booking-outdated-policy-badge";
 import { ConsultantJoinControl } from "./consultant-join-control";
@@ -96,6 +98,60 @@ function CustomerCell({
   );
 }
 
+type AppraisalReportStatus = "draft" | "published";
+
+function AppraisalReportCell({
+  href,
+  status,
+  reportable,
+}: {
+  href: string;
+  status: AppraisalReportStatus | undefined;
+  reportable: boolean;
+}) {
+  const label =
+    status === "published" ? "発行済み" : status ? "下書き" : "未作成";
+  const badge =
+    status === "published" ? (
+      <Badge colorPalette="green">{label}</Badge>
+    ) : status ? (
+      <Badge colorPalette="yellow">{label}</Badge>
+    ) : (
+      <Text color="fg.subtle" textStyle="sm">
+        {label}
+      </Text>
+    );
+
+  // 未作成かつ鑑定終了前・キャンセル済みの予約では鑑定書を作成できない
+  const openable = reportable || !!status;
+
+  return (
+    <styled.div display="inline-flex" alignItems="center" gap="2">
+      {badge}
+      {openable ? (
+        <Tooltip
+          content={status === "published" ? "鑑定書を見る" : "鑑定書を編集"}
+          showArrow
+        >
+          <IconButton variant="subtle" size="sm" asChild>
+            <Link to={href}>
+              <FileText size={16} />
+            </Link>
+          </IconButton>
+        </Tooltip>
+      ) : (
+        <Tooltip content="鑑定の終了後に作成できます" showArrow>
+          <styled.span display="inline-flex">
+            <IconButton variant="subtle" size="sm" disabled>
+              <FileText size={16} />
+            </IconButton>
+          </styled.span>
+        </Tooltip>
+      )}
+    </styled.div>
+  );
+}
+
 export default function ConsultantBookingsPage() {
   const { buildPath, organizationId } = useOrganizationRouting();
   const { page, pageSize, sortBy, setPage, setPageSize, setSortBy } =
@@ -106,6 +162,13 @@ export default function ConsultantBookingsPage() {
     sortBy,
     sortOrder: "desc",
   });
+  const { data: appraisalReportData } = useConsultantAppraisalReports();
+  const reportStatusByBookingId = new Map(
+    (appraisalReportData?.data?.reports ?? []).map((report) => [
+      report.bookingId,
+      report.status,
+    ]),
+  );
   const bookings = data?.data?.bookings ?? [];
   const pagination = data?.data?.pagination ?? {
     page,
@@ -122,10 +185,10 @@ export default function ConsultantBookingsPage() {
             予約一覧
           </Text>
           <Text textStyle="sm" color="fg.muted">
-            担当予約の日時・ステータスを確認し、Zoom参加や鑑定メモ編集へ進む画面です。
+            担当予約の日時・ステータスを確認し、Zoom参加や鑑定メモ・鑑定書の編集へ進む画面です。
           </Text>
         </styled.div>
-        <TableSkeleton columns={8} rows={5} />
+        <TableSkeleton columns={9} rows={5} />
       </styled.div>
     );
   }
@@ -137,7 +200,7 @@ export default function ConsultantBookingsPage() {
           予約一覧
         </Text>
         <Text textStyle="sm" color="fg.muted">
-          担当予約の日時・ステータスを確認し、Zoom参加や鑑定メモ編集へ進む画面です。
+          担当予約の日時・ステータスを確認し、Zoom参加や鑑定メモ・鑑定書の編集へ進む画面です。
         </Text>
       </styled.div>
 
@@ -158,6 +221,7 @@ export default function ConsultantBookingsPage() {
                 <Table.Header>料金プラン</Table.Header>
                 <Table.Header>Zoom</Table.Header>
                 <Table.Header>メモ</Table.Header>
+                <Table.Header>鑑定書</Table.Header>
                 <Table.Header>入室確認</Table.Header>
                 <Table.Header>操作</Table.Header>
               </Table.Row>
@@ -232,6 +296,18 @@ export default function ConsultantBookingsPage() {
                       >
                         {b.consultantMemo || "-"}
                       </Text>
+                    </Table.Cell>
+                    <Table.Cell>
+                      <AppraisalReportCell
+                        href={buildPath(
+                          `/bookings/${b.bookingId}/appraisal-report`,
+                        )}
+                        status={reportStatusByBookingId.get(b.bookingId)}
+                        reportable={
+                          b.status !== "cancelled" &&
+                          parseISO(b.endsAt).getTime() < Date.now()
+                        }
+                      />
                     </Table.Cell>
                     <Table.Cell>
                       <ConsultantJoinControl

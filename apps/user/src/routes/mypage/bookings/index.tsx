@@ -11,10 +11,11 @@ import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CalendarX, CircleX, Star, Video } from "lucide-react";
+import { CalendarX, CircleX, ScrollText, Star, Video } from "lucide-react";
 import { Suspense, useState } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
+import { useSuspenseMyAppraisalReports } from "@/hooks/use-my-appraisal-reports";
 import { useSuspenseMyBookings } from "@/hooks/use-my-bookings";
 import { pageHead } from "@/lib/head";
 import { formatDateTimeRange, formatYen } from "./-booking-format";
@@ -101,7 +102,14 @@ function MypageBookingsPage() {
 
 function MyBookingsList() {
   const { data } = useSuspenseMyBookings();
+  const { data: appraisalReportData } = useSuspenseMyAppraisalReports();
   const bookings = data.data.bookings;
+  const reportIdByBookingId = new Map(
+    appraisalReportData.data.reports.map((report) => [
+      report.bookingId,
+      report.reportId,
+    ]),
+  );
 
   if (bookings.length === 0) {
     return (
@@ -133,8 +141,16 @@ function MyBookingsList() {
 
   return (
     <>
-      <BookingSection title="今後の予約" items={upcoming} />
-      <BookingSection title="過去の予約" items={past} />
+      <BookingSection
+        title="今後の予約"
+        items={upcoming}
+        reportIdByBookingId={reportIdByBookingId}
+      />
+      <BookingSection
+        title="過去の予約"
+        items={past}
+        reportIdByBookingId={reportIdByBookingId}
+      />
     </>
   );
 }
@@ -142,9 +158,11 @@ function MyBookingsList() {
 function BookingSection({
   title,
   items,
+  reportIdByBookingId,
 }: {
   title: string;
   items: MyBooking[];
+  reportIdByBookingId: Map<string, string>;
 }) {
   return (
     <styled.section display="flex" flexDir="column" gap="3">
@@ -158,7 +176,11 @@ function BookingSection({
       ) : (
         <styled.ul display="flex" flexDir="column" gap="3" listStyle="none">
           {items.map((booking) => (
-            <BookingCard key={booking.bookingId} booking={booking} />
+            <BookingCard
+              key={booking.bookingId}
+              booking={booking}
+              reportId={reportIdByBookingId.get(booking.bookingId)}
+            />
           ))}
         </styled.ul>
       )}
@@ -166,7 +188,13 @@ function BookingSection({
   );
 }
 
-function BookingCard({ booking }: { booking: MyBooking }) {
+function BookingCard({
+  booking,
+  reportId,
+}: {
+  booking: MyBooking;
+  reportId?: string;
+}) {
   const now = Date.now();
   const startsAtMs = new Date(booking.startsAt).getTime();
   const endsAtMs = new Date(booking.endsAt).getTime();
@@ -269,6 +297,17 @@ function BookingCard({ booking }: { booking: MyBooking }) {
               </styled.span>
             </Tooltip>
           ))}
+        {reportId && (
+          <Button asChild variant="outline" size="sm">
+            <Link
+              to="/mypage/appraisal-reports/$reportId"
+              params={{ reportId }}
+            >
+              <ScrollText size={16} />
+              鑑定書を見る
+            </Link>
+          </Button>
+        )}
         {isCancellable && (
           <CancelButton
             bookingId={booking.bookingId}

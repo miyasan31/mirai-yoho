@@ -208,6 +208,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MyBookingRating"
+  /customer/me/appraisal-reports:
+    get:
+      operationId: getMyAppraisalReports
+      summary: ログイン顧客の発行済み鑑定書一覧（組織横断）
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reports]
+                properties:
+                  reports:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/MyAppraisalReportSummary"
+  /customer/me/appraisal-reports/{reportId}:
+    get:
+      operationId: getMyAppraisalReport
+      summary: ログイン顧客の鑑定書詳細
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyAppraisalReport"
   /organizations/{organizationId}/customers/me/bookings:
     get:
       operationId: getCustomerBookings
@@ -654,6 +694,87 @@ paths:
       responses:
         "200":
           description: OK
+
+  /organizations/{organizationId}/consultant/appraisal-reports:
+    get:
+      operationId: getConsultantAppraisalReports
+      summary: 相談員の鑑定書一覧
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [reports]
+                properties:
+                  reports:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/AppraisalReportSummary"
+
+  /organizations/{organizationId}/consultant/bookings/{bookingId}/appraisal-report:
+    get:
+      operationId: getConsultantAppraisalReport
+      summary: 鑑定書取得（未作成なら report は null）
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/BookingIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConsultantAppraisalReportResponse"
+    patch:
+      operationId: saveConsultantAppraisalReportDraft
+      summary: 鑑定書の下書き保存
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/BookingIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AppraisalReportInput"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppraisalReport"
+
+  /organizations/{organizationId}/consultant/bookings/{bookingId}/appraisal-report/publish:
+    post:
+      operationId: publishConsultantAppraisalReport
+      summary: 鑑定書発行（発行後は編集不可）
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/BookingIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AppraisalReport"
 
   /organizations/{organizationId}/consultant/bookings/{id}/join:
     post:
@@ -2388,6 +2509,159 @@ components:
                 maximum: 5
               count:
                 type: integer
+    AppraisalReportInput:
+      type: object
+      required:
+        [
+          title,
+          customerName,
+          birthDate,
+          appraisalDate,
+          theme,
+          currentSituation,
+          result,
+          luckyAction,
+          summary,
+        ]
+      properties:
+        title:
+          type: string
+          description: 鑑定書のタイトル
+        customerName:
+          type: string
+          description: 鑑定対象の方のお名前
+        birthDate:
+          type: string
+          description: 生年月日（YYYY-MM-DD、未入力は空文字）
+        appraisalDate:
+          type: string
+          description: 鑑定日（YYYY-MM-DD、未入力は空文字）
+        theme:
+          type: string
+          description: 鑑定テーマ
+        currentSituation:
+          type: string
+          description: 現状
+        result:
+          type: string
+          description: 鑑定結果（発行には必須）
+        luckyAction:
+          type: string
+          description: 開運アクション
+        summary:
+          type: string
+          description: 総括
+    AppraisalReportSummary:
+      type: object
+      required: [reportId, bookingId, status, publishedAt, updatedAt]
+      properties:
+        reportId:
+          type: string
+        bookingId:
+          type: string
+        status:
+          type: string
+          enum: [draft, published]
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+        updatedAt:
+          type: string
+          format: date-time
+    AppraisalReport:
+      allOf:
+        - $ref: "#/components/schemas/AppraisalReportSummary"
+        - $ref: "#/components/schemas/AppraisalReportInput"
+        - type: object
+          required: [createdAt]
+          properties:
+            createdAt:
+              type: string
+              format: date-time
+    ConsultantAppraisalReportResponse:
+      type: object
+      required: [report, editable, memoDefaults]
+      properties:
+        report:
+          allOf:
+            - $ref: "#/components/schemas/AppraisalReport"
+          nullable: true
+        editable:
+          type: boolean
+          description: 下書き保存・発行を受け付けられるか（鑑定終了済み・未キャンセル・未発行）
+        memoDefaults:
+          type: object
+          required: [customerName, birthDate, appraisalDate]
+          description: 未作成時のフォーム初期値に使う鑑定メモの値
+          properties:
+            customerName:
+              type: string
+            birthDate:
+              type: string
+            appraisalDate:
+              type: string
+    MyAppraisalReportSummary:
+      type: object
+      required:
+        [
+          reportId,
+          organizationId,
+          bookingId,
+          title,
+          appraisalDate,
+          publishedAt,
+        ]
+      properties:
+        reportId:
+          type: string
+        organizationId:
+          type: string
+        organizationName:
+          type: string
+          nullable: true
+        bookingId:
+          type: string
+        consultantName:
+          type: string
+          nullable: true
+        title:
+          type: string
+        appraisalDate:
+          type: string
+        publishedAt:
+          type: string
+          format: date-time
+          nullable: true
+    MyAppraisalReport:
+      allOf:
+        - $ref: "#/components/schemas/MyAppraisalReportSummary"
+        - type: object
+          required:
+            [
+              customerName,
+              birthDate,
+              theme,
+              currentSituation,
+              result,
+              luckyAction,
+              summary,
+            ]
+          properties:
+            customerName:
+              type: string
+            birthDate:
+              type: string
+            theme:
+              type: string
+            currentSituation:
+              type: string
+            result:
+              type: string
+            luckyAction:
+              type: string
+            summary:
+              type: string
     AuthMe:
       type: object
       required: [authUid, accounts, consultants]
