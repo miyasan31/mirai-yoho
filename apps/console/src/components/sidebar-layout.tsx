@@ -343,8 +343,9 @@ function SidebarOrganizationMenu({
 
           <Menu.Item
             value={SIGN_OUT_ITEM_VALUE}
-            color="red.default"
-            _hover={{ bg: "red.subtle" }}
+            color="red.plain.fg"
+            _hover={{ bg: "red.plain.bg.hover" }}
+            _highlighted={{ bg: "red.plain.bg.hover" }}
           >
             <LogOut size={16} />
             <Menu.ItemText>ログアウト</Menu.ItemText>

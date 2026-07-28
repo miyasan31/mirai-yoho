@@ -46,7 +46,7 @@ export function MobileNavMenu({
         key={item.key}
         value={item.key}
         onClick={item.onSelect}
-        color={item.danger ? "red.default" : undefined}
+        color={item.danger ? "red.plain.fg" : undefined}
         fontWeight={item.active ? "bold" : undefined}
         bg={item.active ? "colorPalette.subtle" : undefined}
       >

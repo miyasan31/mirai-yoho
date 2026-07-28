@@ -157,7 +157,12 @@ function MypageLayout() {
           })}
         </styled.nav>
         <styled.div mt="4">
-          <Button variant="plain" size="sm" onClick={handleSignOut}>
+          <Button
+            variant="plain"
+            size="sm"
+            colorPalette="red"
+            onClick={handleSignOut}
+          >
             <LogOut size={16} />
             ログアウト
           </Button>
