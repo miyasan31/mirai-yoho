@@ -22,10 +22,10 @@ export const envServer = {
   get zoomAccountId(): string {
     return requireServerEnv("ZOOM_ACCOUNT_ID");
   },
-  get zoomCustomerId(): string {
+  get zoomClientId(): string {
     return requireServerEnv("ZOOM_CLIENT_ID");
   },
-  get zoomCustomerSecret(): string {
+  get zoomClientSecret(): string {
     return requireServerEnv("ZOOM_CLIENT_SECRET");
   },
   get zoomHostUserId(): string {
@@ -88,7 +88,7 @@ export const envServer = {
   get firebaseProjectId(): string | undefined {
     return process.env.FIREBASE_PROJECT_ID;
   },
-  get firebaseCustomerEmail(): string | undefined {
+  get firebaseClientEmail(): string | undefined {
     return process.env.FIREBASE_CLIENT_EMAIL;
   },
   get firebasePrivateKey(): string | undefined {

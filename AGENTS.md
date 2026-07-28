@@ -14,7 +14,8 @@
 - 軽量DDD。domain / application / infrastructure / presentation の4層（apps/api 内）
 - domain 層は外部依存ゼロ（firebase / stripe 等を import しない）。純粋ロジックの `@mirai-yoho/shared` のみ import 可
 - 集約をまたぐ処理は application 層の UseCase が責任を持つ
-- SPA → API は必ず `packages/api-client` の生成 hooks 経由で呼ぶ
+- SPA → API は原則 `packages/api-client` の生成 hooks 経由で呼ぶ
+  - 例外は**認証ブートストラップのみ**。`customFetch` は 401 でセッション切れイベント、403/404 で `/404` へのリダイレクトを行うため、これらを「エラーではなく状態」として扱う必要がある箇所では生の `fetch` を使う（`packages/console-core/src/lib/auth-me.ts` の `fetchAuthMe`、`apps/user/src/hooks/use-customer-auth.tsx` の `fetchProfile`）。その場合も型は `openapi.yaml` から生成したものを使い、理由をコメントに残す
 
 ## 命名規則
 - ファイル名はすべて kebab-case（例: booking-status.ts）

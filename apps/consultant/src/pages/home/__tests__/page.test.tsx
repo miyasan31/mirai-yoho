@@ -105,11 +105,11 @@ vi.mock("@mirai-yoho/ui/components/empty-state", () => ({
 import ConsultantHomePage from "../page";
 
 function createWrapper() {
-  const queryCustomer = new QueryClient({
+  const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryCustomer}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 }
 
@@ -151,7 +151,7 @@ describe("ConsultantHomePage", () => {
                 name: "山田 太郎",
                 email: "taro@example.com",
                 phone: "090-0000-0000",
-                memo: null,
+                note: null,
               },
             },
             {
@@ -172,7 +172,7 @@ describe("ConsultantHomePage", () => {
                 name: "佐藤 花子",
                 email: "hanako@example.com",
                 phone: "080-0000-0000",
-                memo: null,
+                note: null,
               },
             },
           ],
@@ -251,7 +251,7 @@ describe("ConsultantHomePage", () => {
                 name: "山田 太郎",
                 email: "taro@example.com",
                 phone: "090-0000-0000",
-                memo: null,
+                note: null,
               },
             },
           ],

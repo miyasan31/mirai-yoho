@@ -9,8 +9,8 @@ import {
   createConsultantRepository,
   createSettingsRepository,
 } from "@/infrastructure/container";
+import { app } from "@/infrastructure/firestore/firestore-client";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
-import { app } from "@/infrastructure/firestore/firestore-customer";
 import {
   resolveConsultantStatus,
   toConsultantStatusResponse,

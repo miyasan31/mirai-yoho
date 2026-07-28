@@ -4,8 +4,8 @@ import { Consultant as ConsultantEntity } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
 import { DEFAULT_CONSULTANT_STATUS_ID } from "@/domain/settings/consultant-status";
+import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
-import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.consultants;
 

@@ -5,8 +5,8 @@ import {
 } from "@/domain/policy/policy-revision";
 import type { IPolicyRevisionRepository } from "@/domain/policy/policy-revision-repository";
 import type { PolicyType } from "@/domain/policy/policy-type";
+import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
-import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.policyRevisions;
 

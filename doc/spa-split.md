@@ -143,6 +143,8 @@
 ## 開発メモ
 
 - ローカルは `pnpm dev`（全サービス同時起動）または `pnpm dev:api`（:3000）/ `pnpm dev:user`（:3010）/ `pnpm dev:console`（:3020）/ `pnpm dev:consultant`（:3030）。API 側 `.env.local` の `CORS_ALLOWED_ORIGINS` に各 SPA のオリジンを入れる。
-- `apps/console` と `apps/consultant` の共有ロジック（認証 `use-auth`、API クライアント初期化、組織ルーティング、共有クエリ hooks 等）は `packages/console-core` に集約。UI（`sidebar-layout` / `not-found` 等）は各アプリが所有し、将来のモバイル/PWA 対応で相談員側が乖離できるようにしている。
+- `apps/console` と `apps/consultant` の共有ロジック（Firebase 初期化、API クライアント初期化、`GET /auth/me` の取得（`lib/auth-me.ts`）、組織ルーティング、共有クエリ hooks 等）は `packages/console-core` に集約。`console-core` は **panda / UI 非依存**で、トースト表示のようなアプリ固有の見せ方は `setupApiClient({ onError })` で注入する。
+- `use-auth` 自体は各アプリが所有する。console は `accounts[]` と権限（`AuthorizationPermission`）、consultant は `consultants[]` と `isConsultant` を扱い、`AuthState` の形が異なるため（`doc/NAMING_LEDGER.md` §3.5.1 の排他モデル）。共通部分は `fetchAuthMe` に切り出してある。
+- UI（`sidebar-layout` / `not-found` 等）は各アプリが所有し、将来のモバイル/PWA 対応で占い師側が乖離できるようにしている。
 - Panda CSS のテーマは `packages/ui/panda.preset.ts` に集約。各アプリの `panda.config.ts` が preset を読み込み、自アプリ + `packages/ui/src` を include して styled-system を生成する。
 - `styled-system` は各パッケージ内で codegen される生成物（gitignore 済み）。`pnpm generate` で再生成。

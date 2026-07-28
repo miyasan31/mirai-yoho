@@ -19,8 +19,8 @@ pnpm dlx tsx scripts/migrate-zoom-session-breakout-rooms.ts --skip-zoom
 
 import type { Timestamp } from "firebase-admin/firestore";
 import { ZoomSession } from "../src/domain/zoom-session/zoom-session";
+import { db } from "../src/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore-collections";
-import { db } from "../src/infrastructure/firestore/firestore-customer";
 import { FirestoreZoomSessionRepository } from "../src/infrastructure/firestore/firestore-zoom-session-repository";
 import { ZoomService } from "../src/infrastructure/zoom/zoom-service";
 

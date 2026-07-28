@@ -186,11 +186,11 @@ vi.mock("lucide-react", () => ({
 import ConsultantBookingsPage from "../page";
 
 function createWrapper() {
-  const queryCustomer = new QueryClient({
+  const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return ({ children }: { children: ReactNode }) => (
-    <QueryClientProvider client={queryCustomer}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 }
 
@@ -240,7 +240,7 @@ describe("ConsultantBookingsPage", () => {
                 name: "山田 太郎",
                 email: "taro@example.com",
                 phone: "090-0000-0000",
-                memo: "初回相談",
+                note: "初回相談",
               },
             },
           ],
@@ -286,7 +286,7 @@ describe("ConsultantBookingsPage", () => {
                 name: "山田 太郎",
                 email: "taro@example.com",
                 phone: "090-0000-0000",
-                memo: "初回相談",
+                note: "初回相談",
               },
             },
           ],

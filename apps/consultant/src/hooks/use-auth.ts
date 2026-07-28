@@ -1,5 +1,5 @@
-import { envClient } from "@mirai-yoho/console-core/config/env.client";
 import { useOrganizationIdFromRoute } from "@mirai-yoho/console-core/hooks/use-organization-routing";
+import { fetchAuthMe } from "@mirai-yoho/console-core/lib/auth-me";
 import { auth } from "@mirai-yoho/console-core/lib/firebase";
 import { useQueryClient } from "@tanstack/react-query";
 import {
@@ -74,34 +74,7 @@ export function useAuthState(): AuthState {
       setUser(nextUser);
       setToken(idTokenResult.token);
 
-      const response = await fetch(`${envClient.apiUrl}/api/auth/me`, {
-        headers: {
-          Authorization: `Bearer ${idTokenResult.token}`,
-        },
-      });
-
-      if (!response.ok) {
-        let errorMessage = "Failed to load auth context";
-
-        try {
-          const errorData = (await response.json()) as {
-            code?: string;
-            message?: string;
-          };
-          if (errorData.code === "NO_ROLE") {
-            errorMessage =
-              "このアカウントはまだ組織に所属していません。管理者に確認してください。";
-          } else if (errorData.message) {
-            errorMessage = errorData.message;
-          }
-        } catch {
-          // ignore JSON parse failures and keep the fallback message
-        }
-
-        throw new Error(errorMessage);
-      }
-
-      const data = (await response.json()) as AuthMePayload;
+      const data = await fetchAuthMe(idTokenResult.token);
 
       setConsultants(data.consultants ?? []);
       return data;

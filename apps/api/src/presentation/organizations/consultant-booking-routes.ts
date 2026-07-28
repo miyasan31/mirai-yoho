@@ -70,7 +70,7 @@ consultantBookingRoutes.get(
               name: customer.getName(),
               email: customer.getEmail(),
               phone: customer.getPhone(),
-              memo: customer.getNote() ?? null,
+              note: customer.getNote() ?? null,
             }
           : null,
         createdAt: b.getCreatedAt().toISOString(),

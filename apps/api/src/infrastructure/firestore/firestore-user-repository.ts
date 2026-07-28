@@ -4,8 +4,8 @@ import { BirthDate } from "@/domain/user/birth-date";
 import { User, type UserStatus } from "@/domain/user/user";
 import type { IUserRepository } from "@/domain/user/user-repository";
 import { UserZoomConnection } from "@/domain/user/user-zoom-connection";
+import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
-import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const USERS = FIRESTORE_COLLECTIONS.users;
 const CREDENTIALS = FIRESTORE_COLLECTIONS.userZoomCredentials;

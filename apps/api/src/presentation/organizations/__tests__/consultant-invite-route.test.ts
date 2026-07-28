@@ -66,7 +66,7 @@ vi.mock("@/infrastructure/container", () => ({
   createUpdatePricePlanUseCase: vi.fn(),
 }));
 
-vi.mock("@/infrastructure/firestore/firestore-customer", () => ({
+vi.mock("@/infrastructure/firestore/firestore-client", () => ({
   app: {},
   db: {
     collection: vi.fn(() => ({

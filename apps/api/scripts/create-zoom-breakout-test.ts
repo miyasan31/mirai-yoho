@@ -63,9 +63,9 @@ function getTomorrowDate(): string {
 
 async function getAccessToken(): Promise<string> {
   const accountId = process.env.ZOOM_ACCOUNT_ID as string;
-  const customerId = process.env.ZOOM_CLIENT_ID as string;
-  const customerSecret = process.env.ZOOM_CLIENT_SECRET as string;
-  const credentials = Buffer.from(`${customerId}:${customerSecret}`).toString(
+  const clientId = process.env.ZOOM_CLIENT_ID as string;
+  const clientSecret = process.env.ZOOM_CLIENT_SECRET as string;
+  const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString(
     "base64",
   );
 

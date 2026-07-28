@@ -2,13 +2,13 @@ import { Resend } from "resend";
 import type { IEmailService } from "@/application/shared/email-service";
 import { envServer } from "@/config/env.server";
 
-let resendCustomer: Resend | null = null;
+let resendClient: Resend | null = null;
 
-function getResendCustomer(): Resend {
-  if (!resendCustomer) {
-    resendCustomer = new Resend(envServer.resendApiKey);
+function getResendClient(): Resend {
+  if (!resendClient) {
+    resendClient = new Resend(envServer.resendApiKey);
   }
-  return resendCustomer;
+  return resendClient;
 }
 
 type EmailPayload = {
@@ -59,7 +59,7 @@ async function deliverEmail(
 
   // Resend SDK は API エラーを例外ではなく戻り値で返すため、明示的に検査しないと
   // 配信失敗が無言で握り潰される
-  const { error } = await getResendCustomer().emails.send({
+  const { error } = await getResendClient().emails.send({
     from: envServer.resendFromEmail,
     to: payload.to,
     subject: payload.subject,

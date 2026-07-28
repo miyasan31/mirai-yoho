@@ -5,8 +5,8 @@ import { Payment as PaymentEntity } from "@/domain/payment/payment";
 import type { IPaymentRepository } from "@/domain/payment/payment-repository";
 import { PaymentStatus } from "@/domain/payment/payment-status";
 import { PaymentStrategy } from "@/domain/payment/payment-strategy";
+import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
-import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.payments;
 

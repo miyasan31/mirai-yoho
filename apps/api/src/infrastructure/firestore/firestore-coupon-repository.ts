@@ -1,8 +1,8 @@
 import type { Timestamp } from "firebase-admin/firestore";
 import { Coupon, type CouponType } from "@/domain/coupon/coupon";
 import type { ICouponRepository } from "@/domain/coupon/coupon-repository";
+import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
-import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.coupons;
 

@@ -10,8 +10,8 @@ import {
   Role,
 } from "@/domain/authorization/role";
 import type { RoleRepository } from "@/domain/authorization/role-repository";
+import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
-import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.roles;
 

@@ -1,5 +1,6 @@
 import { setupApiClient } from "@mirai-yoho/console-core/lib/api-client";
 import { createQueryClient } from "@mirai-yoho/console-core/query/create-query-client";
+import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { createRouter, RouterProvider } from "@tanstack/react-router";
@@ -8,7 +9,14 @@ import { createRoot } from "react-dom/client";
 import { routeTree } from "./routeTree.gen";
 import "./index.css";
 
-setupApiClient();
+setupApiClient({
+  onError: (error) => {
+    toaster.error({
+      title: "エラー",
+      description: error.message,
+    });
+  },
+});
 
 const queryClient = createQueryClient();
 

@@ -191,7 +191,7 @@ function BookingPageInner() {
       customerEmail: profile?.primaryEmail ?? "",
       customerPhone: profile?.phoneNumber ?? "",
       customerBirthDate: profile?.birthDate ?? "",
-      consultantContent: "",
+      consultationContent: "",
       guardianName: "",
       guardianConsent: false,
       agreedToTerms: false,
@@ -305,7 +305,7 @@ function BookingPageInner() {
           customerEmail: values.customerEmail,
           customerPhone: values.customerPhone,
           customerBirthDate: values.customerBirthDate,
-          consultantContent: values.consultantContent?.trim() || undefined,
+          consultationContent: values.consultationContent?.trim() || undefined,
           selectionId,
           selectedUserCouponId: selectedUserCouponId || undefined,
           agreedTermsRevisionId: termsRevision.revisionId,
@@ -520,7 +520,7 @@ function BookingPageInner() {
           <Field.Root>
             <Field.Label>ご相談内容（任意）</Field.Label>
             <Textarea
-              {...register("consultantContent")}
+              {...register("consultationContent")}
               placeholder="ご相談内容をお書きください"
               rows={4}
             />

@@ -190,6 +190,30 @@ paths:
                     type: array
                     items:
                       $ref: "#/components/schemas/CustomerBooking"
+  /auth/me:
+    get:
+      operationId: getAuthMe
+      summary: ログイン中ユーザーの所属組織（アカウント / 占い師）を取得
+      description: |
+        console / consultant SPA が認証ブートストラップで参照する。
+        Firebase Auth の ID トークンから accounts と consultants を独立に引いて返す
+        （占い師は accounts に doc を持たない排他モデル。doc/NAMING_LEDGER.md §3.5.1）。
+      tags: [auth]
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AuthMe"
+        "401":
+          description: 未認証、またはどの組織にも所属していない（`NO_ROLE`）
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /auth/zoom/authorize:
     post:
       operationId: createZoomAuthorizeUrl
@@ -2109,6 +2133,78 @@ components:
         discountedTotalJPY:
           type: integer
           nullable: true
+    AuthMe:
+      type: object
+      required: [authUid, accounts, consultants]
+      properties:
+        authUid:
+          type: string
+          description: Firebase Auth の uid
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuthMeAccount"
+        consultants:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuthMeConsultant"
+
+    AuthMeAccount:
+      type: object
+      required:
+        [
+          organizationId,
+          name,
+          displayName,
+          roleId,
+          roleName,
+          permissions,
+          status,
+          createdAt,
+        ]
+      properties:
+        organizationId:
+          type: string
+        name:
+          type: string
+          description: 所属組織の名前
+        displayName:
+          type: string
+          nullable: true
+          description: その組織でのアカウント表示名
+        roleId:
+          type: string
+        roleName:
+          type: string
+        permissions:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuthorizationPermission"
+        status:
+          type: string
+          enum: [active, invited, disabled]
+        createdAt:
+          type: string
+          format: date-time
+
+    AuthMeConsultant:
+      type: object
+      required: [organizationId, name, displayName, isActive, createdAt]
+      properties:
+        organizationId:
+          type: string
+        name:
+          type: string
+          description: 所属組織の名前
+        displayName:
+          type: string
+          description: その組織での占い師表示名
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
     ConsoleAccount:
       type: object
       required: [accountId, email, name, roleId, roleName, status, createdAt, updatedAt]
@@ -2546,9 +2642,10 @@ components:
           format: email
         phone:
           type: string
-        memo:
+        note:
           type: string
           nullable: true
+          description: 管理者向けの顧客メモ（Firestore / Domain とも `note`）
         createdAt:
           type: string
           format: date-time
@@ -2795,7 +2892,7 @@ components:
         customerBirthDate:
           type: string
           format: date
-        consultantContent:
+        consultationContent:
           type: string
         selectionId:
           type: string
@@ -2921,9 +3018,9 @@ components:
 
     SetupPaymentResponse:
       type: object
-      required: [customerSecret, mode]
+      required: [clientSecret, mode]
       properties:
-        customerSecret:
+        clientSecret:
           type: string
         mode:
           type: string

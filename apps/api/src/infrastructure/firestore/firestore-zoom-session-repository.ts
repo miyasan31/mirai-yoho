@@ -3,8 +3,8 @@ import { BreakoutRoom } from "@/domain/zoom-session/breakout-room";
 import type { ZoomSession } from "@/domain/zoom-session/zoom-session";
 import { ZoomSession as ZoomSessionEntity } from "@/domain/zoom-session/zoom-session";
 import type { IZoomSessionRepository } from "@/domain/zoom-session/zoom-session-repository";
+import { db } from "@/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "@/infrastructure/firestore/firestore-collections";
-import { db } from "@/infrastructure/firestore/firestore-customer";
 
 const COLLECTION = FIRESTORE_COLLECTIONS.zoomSessions;
 

@@ -1,5 +1,5 @@
+import { db } from "../src/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore-collections";
-import { db } from "../src/infrastructure/firestore/firestore-customer";
 
 const LEGACY_ACCOUNT_COLLECTION = `organization-${"member"}${"ships"}`;
 const ACCOUNT_COLLECTION = FIRESTORE_COLLECTIONS.accounts;

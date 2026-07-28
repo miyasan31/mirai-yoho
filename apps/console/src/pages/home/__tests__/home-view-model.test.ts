@@ -53,7 +53,7 @@ function createCustomer(
     name: overrides.name ?? "山田 太郎",
     email: overrides.email ?? "taro@example.com",
     phone: overrides.phone ?? "090-0000-0000",
-    memo: overrides.memo ?? null,
+    note: overrides.note ?? null,
     createdAt: overrides.createdAt ?? "2026-04-01T00:00:00+09:00",
     updatedAt: overrides.updatedAt ?? "2026-04-01T00:00:00+09:00",
   };

@@ -19,7 +19,7 @@ function initializeFirebaseAdmin() {
   return initializeApp({
     credential: cert({
       projectId: envServer.firebaseProjectId,
-      clientEmail: envServer.firebaseCustomerEmail,
+      clientEmail: envServer.firebaseClientEmail,
       privateKey: envServer.firebasePrivateKey,
     }),
   });

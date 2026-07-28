@@ -139,7 +139,7 @@ function PaymentMethodSelector({
       },
       {
         onSuccess: (result) => {
-          setClientSecret(result.data.customerSecret);
+          setClientSecret(result.data.clientSecret);
           setMode(result.data.mode);
         },
       },

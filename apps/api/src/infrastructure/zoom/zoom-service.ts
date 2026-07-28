@@ -22,9 +22,9 @@ export class ZoomService implements IZoomService {
     }
 
     const accountId = envServer.zoomAccountId;
-    const customerId = envServer.zoomCustomerId;
-    const customerSecret = envServer.zoomCustomerSecret;
-    const credentials = Buffer.from(`${customerId}:${customerSecret}`).toString(
+    const clientId = envServer.zoomClientId;
+    const clientSecret = envServer.zoomClientSecret;
+    const credentials = Buffer.from(`${clientId}:${clientSecret}`).toString(
       "base64",
     );
 
