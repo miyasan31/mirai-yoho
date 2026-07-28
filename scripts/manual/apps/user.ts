@@ -668,12 +668,12 @@ const config: AppConfig = {
         },
         {
           id: "mypage-zoom",
-          title: "Zoom 連携",
+          title: "外部連携",
           overview:
-            "予約に必須の Zoom アカウント連携を行う画面です。連携が完了すると予約フォームに進めるようになります。",
+            "外部サービスとの連携を管理する画面です。Zoom セクションから予約に必須の Zoom アカウント連携を行うと、予約フォームに進めるようになります。",
           route: "/mypage/zoom",
           requiresAuth: true,
-          waitForSelector: 'h1:has-text("Zoom 連携")',
+          waitForSelector: 'h1:has-text("外部連携")',
           annotations: [
             {
               n: 1,
