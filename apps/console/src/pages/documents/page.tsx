@@ -29,7 +29,7 @@ const TAB_LABEL: Record<PoliciesTab, string> = {
   privacy_policy: "プライバシーポリシー",
 };
 
-export default function ConsolePoliciesPage() {
+export default function ConsoleDocumentsPage() {
   const { organizationId } = useOrganizationRouting();
   const navigate = useNavigate();
   const search = useSearch({ strict: false }) as Record<string, unknown>;
@@ -70,7 +70,7 @@ export default function ConsolePoliciesPage() {
       <EmptyState
         icon={FileText}
         message="権限がありません"
-        hint="このロールでは利用規約・キャンセルポリシーを閲覧できません。"
+        hint="このロールでは文書管理を閲覧できません。"
       />
     );
   }
@@ -79,10 +79,10 @@ export default function ConsolePoliciesPage() {
     <styled.div display="flex" flexDirection="column" gap="6">
       <styled.div>
         <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
-          利用規約・キャンセルポリシー
+          文書管理
         </Text>
         <Text textStyle="sm" color="fg.muted">
-          組織ごとの利用規約とキャンセルポリシーを版管理します。ドラフトの作成・編集・公開、前版との差分表示が可能です。
+          組織ごとの利用規約・キャンセルポリシー・プライバシーポリシーを版管理します。ドラフトの作成・編集・公開、前版との差分表示が可能です。
         </Text>
         {!canManage && (
           <Text textStyle="sm" color="fg.muted" mt="2">

@@ -15,7 +15,7 @@ const TABS: Array<{ type: PolicyType; label: string }> = [
   { type: "privacy_policy", label: "プライバシーポリシー" },
 ];
 
-export default function ConsultantPoliciesPage() {
+export default function ConsultantDocumentsPage() {
   const { organizationId } = useOrganizationRouting();
   const [currentTab, setCurrentTab] = useState<PolicyType>("terms");
 
@@ -33,7 +33,7 @@ export default function ConsultantPoliciesPage() {
     <styled.div display="flex" flexDirection="column" gap="6">
       <styled.div>
         <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
-          利用規約・ポリシー
+          文書管理
         </Text>
         <Text textStyle="sm" color="fg.muted">
           この組織で現在有効な利用規約、キャンセルポリシー、プライバシーポリシーを閲覧できます。改版は
@@ -96,7 +96,7 @@ function PolicyTabContent({
       <EmptyState
         icon={FileText}
         message={`${headingLabel}はまだ公開されていません`}
-        hint="console のポリシー管理から初期版を公開してください。"
+        hint="console の文書管理から初期版を公開してください。"
       />
     );
   }

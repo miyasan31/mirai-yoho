@@ -524,11 +524,11 @@ const config: AppConfig = {
           ],
         },
         {
-          id: "policies",
-          title: "利用規約・ポリシー",
+          id: "documents",
+          title: "文書管理",
           overview:
             "この組織で現在有効な利用規約・キャンセルポリシー・プライバシーポリシーを閲覧します。改版はこの画面からは行いません。",
-          route: "/{orgId}/policies",
+          route: "/{orgId}/documents",
           requiresAuth: true,
           waitForSelector: '[role="tab"]',
           annotations: [

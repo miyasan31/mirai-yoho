@@ -306,57 +306,6 @@ const config: AppConfig = {
           ],
         },
         {
-          id: "zoom-sessions",
-          title: "ブレイクアウトルーム",
-          overview:
-            "当日の Zoom ミーティングに事前割り当てされているブレイクアウトルームを確認します。ルームは予約 1 件につき 1 つ作られ、予約が確定するたびに増えます。",
-          route: "/{orgId}/zoom-sessions",
-          requiresAuth: true,
-          waitForSelector: 'input[aria-label="対象日"]',
-          annotations: [
-            {
-              n: 1,
-              selector: 'input[aria-label="対象日"]',
-              title: "対象日",
-              description: "表示するブレイクアウトルームの日付を切り替えます。",
-            },
-            {
-              n: 2,
-              selector: 'button:has-text("今日")',
-              title: "今日",
-              description: "対象日を当日に戻します。",
-            },
-            {
-              n: 3,
-              selector: 'a:has-text("参加 URL を開く")',
-              title: "参加 URL",
-              description:
-                "その日の予約が共有する Zoom ミーティングを別タブで開きます。",
-            },
-            {
-              n: 4,
-              selector: "table thead tr",
-              title: "一覧の項目",
-              description:
-                "時間・ルーム名・占い師・顧客・割り当て済み Zoom アカウント・予約ステータスを表示します。",
-            },
-            {
-              n: 5,
-              selector: "table tbody tr",
-              title: "ルーム行",
-              description:
-                "ルーム名は担当占い師と時間帯から決まり、予約者が連携した Zoom アカウントが事前に割り当てられます。",
-            },
-            {
-              n: 6,
-              selector: "text=要確認",
-              title: "要確認バッジ",
-              description:
-                "予約が確定していないのにルームが残っている場合に表示され、Zoom 連携の失敗を示します。",
-            },
-          ],
-        },
-        {
           id: "payments",
           title: "決済管理",
           overview:
@@ -869,11 +818,11 @@ const config: AppConfig = {
           ],
         },
         {
-          id: "policies",
-          title: "利用規約・キャンセルポリシー",
+          id: "documents",
+          title: "文書管理",
           overview:
             "利用規約・キャンセルポリシー・プライバシーポリシーを版管理します。下書きの作成から公開までをこの画面で行います。",
-          route: "/{orgId}/policies",
+          route: "/{orgId}/documents",
           requiresAuth: true,
           waitForSelector: '[role="tab"]',
           annotations: [
@@ -932,11 +881,11 @@ const config: AppConfig = {
           ],
         },
         {
-          id: "policies-cancellation-policy",
+          id: "documents-cancellation-policy",
           title: "キャンセルポリシー",
           overview:
             "キャンセルポリシーの改版を管理します。利用規約と同じ手順で下書きを作り、公開すると予約時の同意対象になります。",
-          route: "/{orgId}/policies?tab=cancellation_policy",
+          route: "/{orgId}/documents?tab=cancellation_policy",
           requiresAuth: true,
           waitForSelector: OPEN_TAB_PANEL,
           annotations: [
@@ -971,11 +920,11 @@ const config: AppConfig = {
           ],
         },
         {
-          id: "policies-privacy-policy",
+          id: "documents-privacy-policy",
           title: "プライバシーポリシー",
           overview:
             "プライバシーポリシーの改版を管理します。公開すると予約サイトのプライバシーポリシーページが差し替わります。",
-          route: "/{orgId}/policies?tab=privacy_policy",
+          route: "/{orgId}/documents?tab=privacy_policy",
           requiresAuth: true,
           waitForSelector: OPEN_TAB_PANEL,
           annotations: [
@@ -1013,7 +962,7 @@ const config: AppConfig = {
           title: "改版エディタ",
           overview:
             "改版の版番号・タイトル・本文を編集します。本文は Markdown で書き、プレビューで表示を確認してから保存します。",
-          route: "/{orgId}/policies",
+          route: "/{orgId}/documents",
           requiresAuth: true,
           waitForSelector: `${OPEN_TAB_PANEL} button:has-text("新しい改版を作成")`,
           setup: openDialog(
@@ -1061,7 +1010,7 @@ const config: AppConfig = {
           title: "改版の公開",
           overview:
             "下書きを公開に切り替えます。効力発生日時を指定でき、既存の公開中の版は自動でアーカイブされます。",
-          route: "/{orgId}/policies",
+          route: "/{orgId}/documents",
           requiresAuth: true,
           waitForSelector: `${OPEN_TAB_PANEL} button:has-text("公開")`,
           setup: openDialog(`${OPEN_TAB_PANEL} button:has-text("公開")`),
@@ -1108,7 +1057,7 @@ const config: AppConfig = {
           title: "改版の差分",
           overview:
             "選んだ版との変更箇所を行単位で比較します。公開前に何が変わるかを確認する画面です。",
-          route: "/{orgId}/policies",
+          route: "/{orgId}/documents",
           requiresAuth: true,
           waitForSelector: `${OPEN_TAB_PANEL} button:has-text("差分")`,
           setup: openDialog(`${OPEN_TAB_PANEL} button:has-text("差分")`),
