@@ -18,6 +18,8 @@ export interface SettingsProps {
   consultantStatuses?: ConsultantStatusProps[];
   defaultConsultantStatusId?: string;
   pricePlanRange?: PricePlanRangeProps;
+  createdAt?: Date;
+  updatedAt?: Date;
 }
 
 export class Settings {
@@ -27,6 +29,8 @@ export class Settings {
     private consultantStatuses: ConsultantStatusProps[],
     private defaultConsultantStatusId: string,
     private pricePlanRange: PricePlanRange,
+    private readonly createdAt: Date,
+    private updatedAt: Date,
   ) {}
 
   static create(props: SettingsProps): Settings {
@@ -34,6 +38,7 @@ export class Settings {
       props.consultantStatuses ?? createDefaultConsultantStatuses();
     const defaultStatusId =
       props.defaultConsultantStatusId ?? statuses[0].statusId;
+    const now = new Date();
     return new Settings(
       props.organizationId,
       BusinessHours.create(props.businessHours),
@@ -42,6 +47,8 @@ export class Settings {
       PricePlanRange.create(
         props.pricePlanRange ?? PricePlanRange.createDefault().toJSON(),
       ),
+      props.createdAt ?? now,
+      props.updatedAt ?? now,
     );
   }
 
@@ -58,22 +65,29 @@ export class Settings {
       PricePlanRange.reconstruct(
         props.pricePlanRange ?? PricePlanRange.createDefault().toJSON(),
       ),
+      // 監査フィールド導入前のドキュメントには存在しないため、epoch を既定にする
+      props.createdAt ?? new Date(0),
+      props.updatedAt ?? props.createdAt ?? new Date(0),
     );
   }
 
   static createDefault(organizationId: string): Settings {
     const statuses = createDefaultConsultantStatuses();
+    const now = new Date();
     return new Settings(
       organizationId,
       BusinessHours.createDefault(),
       statuses,
       statuses[0].statusId,
       PricePlanRange.createDefault(),
+      now,
+      now,
     );
   }
 
   updateBusinessHours(businessHours: BusinessHoursProps): void {
     this.businessHours = BusinessHours.create(businessHours);
+    this.updatedAt = new Date();
   }
 
   updateConsultantStatuses(
@@ -85,14 +99,24 @@ export class Settings {
       defaultStatusId,
     );
     this.defaultConsultantStatusId = defaultStatusId;
+    this.updatedAt = new Date();
   }
 
   updatePricePlanRange(pricePlanRange: PricePlanRangeProps): void {
     this.pricePlanRange = PricePlanRange.create(pricePlanRange);
+    this.updatedAt = new Date();
   }
 
   getOrganizationId(): string {
     return this.organizationId;
+  }
+
+  getCreatedAt(): Date {
+    return this.createdAt;
+  }
+
+  getUpdatedAt(): Date {
+    return this.updatedAt;
   }
 
   getBusinessHours(): BusinessHours {
