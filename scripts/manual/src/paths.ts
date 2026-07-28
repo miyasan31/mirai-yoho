@@ -24,3 +24,10 @@ export function appPaths(appId: string, env: string) {
 }
 
 export const VIEWPORT = { width: 1440, height: 900 } as const;
+
+/**
+ * Playwright 同梱 Chromium は Google の OAuth 画面で「安全でないブラウザ」として
+ * ブロックされることがある。その場合は MANUAL_BROWSER_CHANNEL=chrome のように
+ * インストール済みブラウザのチャネルを指定する。login と capture で同じ値を使うこと。
+ */
+export const BROWSER_CHANNEL = process.env.MANUAL_BROWSER_CHANNEL;
