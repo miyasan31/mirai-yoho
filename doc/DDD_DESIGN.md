@@ -159,6 +159,7 @@
 | 集約ルート | 内包する Value Object | 主なドメインメソッド | トランザクション境界 |
 |---|---|---|---|
 | `Booking` | `BookingStatus` `CancelDeadline` `ZoomUrl` `ConsultantMemo` | `confirm()` `cancel()` `complete()` `updateMemo()` `markConsultantJoined()` `markConsultationReminderEmailSent()` `markLateArrivalAlertSent()` | 予約作成・キャンセル・完了・バッチ処理の実行済み記録 |
+| `BookingRating` | `RatingScore` `RatingComment` `RatingWindow` | —（記録専用・不変） | 会員による鑑定評価の記録（§5.3） |
 | `Slot` | `TimeRange` | `reserve()` `release()` | 予約作成・キャンセル |
 | `Payment` | `Money` `PaymentStatus` `PaymentStrategy` | `completeSetup()` `charge()` `refund()` `cancel()` `failCharge()` | 決済操作 |
 | `Consultant` | `ConsultantProfile` | `updateProfile()` `changeStatus()` `deactivate()` | プロフィール更新・ステータス変更・論理削除 |
@@ -204,7 +205,33 @@ pending ─── confirm(joinUrl) ──────► confirmed ─── com
    └── cancel('admin') ──────────────────────────────────────────► cancelled
 ```
 
-### 5.3 Payment 集約詳細
+### 5.3 BookingRating 集約詳細
+
+```
+BookingRating（集約ルート）
+├── organizationId: string          外部参照（マルチテナント境界）
+├── bookingId: string               外部参照（別集約）。Firestore の Doc ID でもある = 1予約1評価
+├── consultantId: string            外部参照（別集約）。一意キーは (organizationId, consultantId)
+├── customerId: string              外部参照（別集約）
+├── score: RatingScore              1〜5 の整数
+├── comment: RatingComment          任意・最大1000文字。空文字はコメントなし
+├── consultedAt: Date               booking.startsAt を非正規化（console 表示のため）
+└── ratedAt: Date
+```
+
+**状態を変更するメソッドを 1 つも持たない**。これが「提出後は編集・削除不可」という仕様の表現であり、
+`IBookingRatingRepository` も `save()` / `delete()` を定義せず `create()` のみを公開する。
+永続化側は `DocumentReference.create()` を使い、二重送信のレースでも既存の評価が上書きされない。
+
+評価可能期間を表す `RatingWindow`（`endsAt` から30日）は集約に永続化しない。`CancelDeadline` と違い
+予約時点のポリシーを固定する必要がなく、`booking.endsAt` から常に導出できるため。
+可否判定そのものは Booking と BookingRating の 2 集約にまたがるので
+`application/booking-rating/rating-eligibility.ts` に置く（`charge-eligibility.ts` と同じ方針）。
+
+評価は運営（console）のみが閲覧でき、占い師には公開しない。この非露出は
+認証段階（console のルートで `verifyEitherAuth` を使わない）・`firestore.rules`・OpenAPI スキーマの 3 層で担保する。
+
+### 5.4 Payment 集約詳細
 
 ```
 Payment（集約ルート）
@@ -219,7 +246,7 @@ Payment（集約ルート）
 └── chargeMethod?: ChargeMethod     batch|manual（charge() 後にセット）
 ```
 
-### 5.4 集約をまたぐ操作の原則
+### 5.5 集約をまたぐ操作の原則
 
 > 集約は ID で参照する。集約をまたぐ整合性は Application Service（UseCase）が責任を持ち、Firestore トランザクションで実現する。
 
@@ -429,7 +456,7 @@ apps/api/src/
    customerId / consultantId から Customer・Consultant・占い師の連絡先を引いて
    EmailService.sendBookingCancellation()（顧客宛）と
    EmailService.sendConsultantCancellationNotice()（占い師宛）を送信
-   ← 集約は ID 参照のみ（§5.4）なのでイベントに宛先は載せず、UseCase 側で解決する。
+   ← 集約は ID 参照のみ（§5.5）なのでイベントに宛先は載せず、UseCase 側で解決する。
      退会済み顧客（mask() でメール空）は顧客宛をスキップし、送信失敗は
      ログに残して握り潰す（キャンセル自体は永続化済みのため）
 ```

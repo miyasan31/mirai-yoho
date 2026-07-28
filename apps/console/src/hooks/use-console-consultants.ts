@@ -1,5 +1,6 @@
 import {
   useDeleteConsoleConsultant,
+  useGetConsoleConsultant,
   useGetConsoleConsultants,
   useInviteConsultant,
   useUpdateConsoleConsultant,
@@ -23,6 +24,21 @@ export function useConsoleConsultants(
         !!token &&
         !!organizationId &&
         enabled &&
+        hasPermission("console.consultants.read"),
+    },
+  });
+}
+
+export function useConsoleConsultant(consultantId: string) {
+  const { token, hasPermission } = useAuth();
+  const { organizationId } = useOrganizationRouting();
+  return useGetConsoleConsultant(organizationId ?? "", consultantId, {
+    query: {
+      ...cachePolicy.normal,
+      enabled:
+        !!token &&
+        !!organizationId &&
+        !!consultantId &&
         hasPermission("console.consultants.read"),
     },
   });

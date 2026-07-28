@@ -12,6 +12,9 @@ import { ListPricePlanOptionsUseCase } from "@/application/booking/list-price-pl
 import { NotifyLateConsultantArrivalUseCase } from "@/application/booking/notify-late-consultant-arrival-use-case";
 import { SendConsultationReminderUseCase } from "@/application/booking/send-consultation-reminder-use-case";
 import { SetupPaymentUseCase } from "@/application/booking/setup-payment-use-case";
+import { GetCustomerBookingRatingUseCase } from "@/application/booking-rating/get-customer-booking-rating-use-case";
+import { ListConsultantRatingsUseCase } from "@/application/booking-rating/list-consultant-ratings-use-case";
+import { SubmitBookingRatingUseCase } from "@/application/booking-rating/submit-booking-rating-use-case";
 import { CreateConsultantUseCase } from "@/application/consultant/create-consultant-use-case";
 import { DeactivateConsultantUseCase } from "@/application/consultant/deactivate-consultant-use-case";
 import { UpdateConsultantUseCase } from "@/application/consultant/update-consultant-use-case";
@@ -61,6 +64,7 @@ import { AesGcmTokenCipher } from "@/infrastructure/crypto/aes-gcm-token-cipher"
 import { FirebaseAuthAdminService } from "@/infrastructure/firebase/firebase-auth-admin-service";
 import { FirebaseUserContactService } from "@/infrastructure/firebase/firebase-user-contact-service";
 import { FirestoreAccountRepository } from "@/infrastructure/firestore/firestore-account-repository";
+import { FirestoreBookingRatingRepository } from "@/infrastructure/firestore/firestore-booking-rating-repository";
 import { FirestoreBookingRepository } from "@/infrastructure/firestore/firestore-booking-repository";
 import { FirestoreConsultantRepository } from "@/infrastructure/firestore/firestore-consultant-repository";
 import { FirestoreCouponRepository } from "@/infrastructure/firestore/firestore-coupon-repository";
@@ -168,6 +172,36 @@ export function createListCustomerBookingsUseCase() {
     new FirestoreCustomerRepository(),
     new FirestoreConsultantRepository(),
     new FirestoreOrganizationRepository(),
+    new FirestoreBookingRatingRepository(),
+  );
+}
+
+export function createBookingRatingRepository() {
+  return new FirestoreBookingRatingRepository();
+}
+
+export function createGetCustomerBookingRatingUseCase() {
+  return new GetCustomerBookingRatingUseCase(
+    new FirestoreBookingRepository(),
+    new FirestoreCustomerRepository(),
+    new FirestoreConsultantRepository(),
+    new FirestoreOrganizationRepository(),
+    new FirestoreBookingRatingRepository(),
+  );
+}
+
+export function createSubmitBookingRatingUseCase() {
+  return new SubmitBookingRatingUseCase(
+    new FirestoreBookingRepository(),
+    new FirestoreCustomerRepository(),
+    new FirestoreBookingRatingRepository(),
+  );
+}
+
+export function createListConsultantRatingsUseCase() {
+  return new ListConsultantRatingsUseCase(
+    new FirestoreConsultantRepository(),
+    new FirestoreBookingRatingRepository(),
   );
 }
 

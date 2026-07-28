@@ -17,7 +17,7 @@ import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Pencil, UserPlus, Users } from "lucide-react";
+import { Eye, Pencil, UserPlus, Users } from "lucide-react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
@@ -229,13 +229,30 @@ export default function ConsoleConsultantsPage() {
                     <ActiveStatusBadge isActive={c.isActive} />
                   </Table.Cell>
                   <Table.Cell>
-                    <Tooltip content="編集">
-                      <IconButton variant="subtle" size="sm" asChild>
-                        <Link to={buildPath(`/consultants/${c.consultantId}`)}>
-                          <Pencil size={16} />
-                        </Link>
-                      </IconButton>
-                    </Tooltip>
+                    <styled.div display="flex" gap="1">
+                      <Tooltip content="詳細">
+                        <IconButton variant="subtle" size="sm" asChild>
+                          <Link
+                            to={buildPath(`/consultants/${c.consultantId}`)}
+                          >
+                            <Eye size={16} />
+                          </Link>
+                        </IconButton>
+                      </Tooltip>
+                      {isAdmin && (
+                        <Tooltip content="編集">
+                          <IconButton variant="subtle" size="sm" asChild>
+                            <Link
+                              to={buildPath(
+                                `/consultants/${c.consultantId}/edit`,
+                              )}
+                            >
+                              <Pencil size={16} />
+                            </Link>
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </styled.div>
                   </Table.Cell>
                 </Table.Row>
               ))}

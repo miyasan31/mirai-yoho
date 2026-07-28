@@ -19,6 +19,7 @@ export { Loader, type LoaderProps } from "./loader";
 export * as Menu from "./menu";
 export * as Pagination from "./pagination";
 export * as RadioGroup from "./radio-group";
+export * as RatingGroup from "./rating-group";
 export * as Select from "./select";
 export {
   Skeleton,

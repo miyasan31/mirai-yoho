@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
+import { InMemoryBookingRatingRepository } from "@/application/booking-rating/__tests__/in-memory-booking-rating-repository";
 import { Booking } from "@/domain/booking/booking";
 import type { IBookingRepository } from "@/domain/booking/booking-repository";
 import { ConsultantMemo } from "@/domain/booking/consultant-memo";
+import { ZoomUrl } from "@/domain/booking/zoom-url";
+import { BookingRating } from "@/domain/booking-rating/booking-rating";
 import { Consultant } from "@/domain/consultant/consultant";
 import { ConsultantProfile } from "@/domain/consultant/consultant-profile";
 import type { IConsultantRepository } from "@/domain/consultant/consultant-repository";
@@ -207,6 +210,7 @@ describe("ListCustomerBookingsUseCase", () => {
       new InMemoryCustomerRepository(customers),
       new InMemoryConsultantRepository(consultants),
       new InMemoryOrganizationRepository(organizations),
+      new InMemoryBookingRatingRepository(),
     );
 
     const results = await useCase.execute({ userId });
@@ -243,6 +247,7 @@ describe("ListCustomerBookingsUseCase", () => {
       new InMemoryCustomerRepository(customers),
       new InMemoryConsultantRepository([]),
       new InMemoryOrganizationRepository([]),
+      new InMemoryBookingRatingRepository(),
     );
 
     const results = await useCase.execute({
@@ -260,6 +265,7 @@ describe("ListCustomerBookingsUseCase", () => {
       new InMemoryCustomerRepository([]),
       new InMemoryConsultantRepository([]),
       new InMemoryOrganizationRepository([]),
+      new InMemoryBookingRatingRepository(),
     );
 
     const results = await useCase.execute({ userId: "unknown" });
@@ -278,6 +284,7 @@ describe("ListCustomerBookingsUseCase", () => {
       new InMemoryCustomerRepository(customers),
       new InMemoryConsultantRepository([]),
       new InMemoryOrganizationRepository([]),
+      new InMemoryBookingRatingRepository(),
     );
 
     const results = await useCase.execute({ userId });
@@ -285,5 +292,71 @@ describe("ListCustomerBookingsUseCase", () => {
     expect(results).toHaveLength(1);
     expect(results[0].consultantName).toBeNull();
     expect(results[0].organizationName).toBeNull();
+  });
+
+  it("評価対象になり得ない予約（pending）は ratableUntil が null", async () => {
+    const userId = "user-1";
+    const customers = [createCustomer("org-a", "customer-a", userId)];
+    const bookings = [
+      createBooking("org-a", "customer-a", "consultant-a", "booking-1"),
+    ];
+    const useCase = new ListCustomerBookingsUseCase(
+      new InMemoryBookingRepository(bookings),
+      new InMemoryCustomerRepository(customers),
+      new InMemoryConsultantRepository([]),
+      new InMemoryOrganizationRepository([]),
+      new InMemoryBookingRatingRepository(),
+    );
+
+    const results = await useCase.execute({ userId });
+
+    expect(results[0].isRated).toBe(false);
+    expect(results[0].ratableUntil).toBeNull();
+  });
+
+  it("確定済み予約は ratableUntil に鑑定終了の30日後を返し、評価済みなら isRated が true", async () => {
+    const userId = "user-1";
+    const customers = [createCustomer("org-a", "customer-a", userId)];
+    const rated = createBooking(
+      "org-a",
+      "customer-a",
+      "consultant-a",
+      "booking-rated",
+    );
+    const unrated = createBooking(
+      "org-a",
+      "customer-a",
+      "consultant-a",
+      "booking-unrated",
+    );
+    rated.confirm(ZoomUrl.create("https://zoom.example.com/j/1"));
+    unrated.confirm(ZoomUrl.create("https://zoom.example.com/j/2"));
+
+    const useCase = new ListCustomerBookingsUseCase(
+      new InMemoryBookingRepository([rated, unrated]),
+      new InMemoryCustomerRepository(customers),
+      new InMemoryConsultantRepository([]),
+      new InMemoryOrganizationRepository([]),
+      new InMemoryBookingRatingRepository([
+        BookingRating.create({
+          organizationId: "org-a",
+          bookingId: "booking-rated",
+          consultantId: "consultant-a",
+          customerId: "customer-a",
+          score: 5,
+          consultedAt: new Date("2026-05-01T10:00:00.000Z"),
+        }),
+      ]),
+    );
+
+    const results = await useCase.execute({ userId });
+    const byId = new Map(results.map((r) => [r.booking.getBookingId(), r]));
+
+    expect(byId.get("booking-rated")?.isRated).toBe(true);
+    expect(byId.get("booking-unrated")?.isRated).toBe(false);
+    // endsAt = 2026-05-01T10:30:00Z の 30 日後
+    expect(byId.get("booking-unrated")?.ratableUntil?.toISOString()).toBe(
+      "2026-05-31T10:30:00.000Z",
+    );
   });
 });

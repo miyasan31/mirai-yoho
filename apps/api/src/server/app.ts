@@ -6,6 +6,7 @@ import * as zoomAuthorize from "@/presentation/auth/zoom-authorize";
 import * as zoomCallback from "@/presentation/auth/zoom-callback";
 import * as zoomRevoke from "@/presentation/auth/zoom-revoke";
 import * as customerMe from "@/presentation/customer/me";
+import * as customerMeBookingRatings from "@/presentation/customer/me-booking-ratings";
 import * as customerMeBookings from "@/presentation/customer/me-bookings";
 import * as customerMeCoupons from "@/presentation/customer/me-coupons";
 import * as customerSignup from "@/presentation/customer/signup";
@@ -41,6 +42,12 @@ export function createApp(): Hono {
   );
   app.post("/api/customer/me/bookings/:bookingId/cancel", (c) =>
     customerMeBookings.CANCEL(c.req.raw, c.req.param("bookingId")),
+  );
+  app.get("/api/customer/me/bookings/:bookingId/rating", (c) =>
+    customerMeBookingRatings.GET(c.req.raw, c.req.param("bookingId")),
+  );
+  app.post("/api/customer/me/bookings/:bookingId/rating", (c) =>
+    customerMeBookingRatings.POST(c.req.raw, c.req.param("bookingId")),
   );
 
   app.post("/api/webhooks/stripe", (c) => stripeWebhook.POST(c.req.raw));
