@@ -57,12 +57,23 @@ async function deliverEmail(
     return;
   }
 
-  await getResendCustomer().emails.send({
+  // Resend SDK は API エラーを例外ではなく戻り値で返すため、明示的に検査しないと
+  // 配信失敗が無言で握り潰される
+  const { error } = await getResendCustomer().emails.send({
     from: envServer.resendFromEmail,
     to: payload.to,
     subject: payload.subject,
     html: payload.html,
   });
+
+  if (error) {
+    console.error("[email:failed]", {
+      emailType,
+      to: payload.to,
+      subject: payload.subject,
+      error,
+    });
+  }
 }
 
 export class ResendEmailService implements IEmailService {
@@ -73,6 +84,7 @@ export class ResendEmailService implements IEmailService {
     joinUrl: string;
     startsAt: Date;
     bookingId: string;
+    cancelUrl: string;
   }): Promise<void> {
     const subject = "【あなたのみらい予報】ご予約確認";
     const html = withFooter(`
@@ -86,6 +98,7 @@ export class ResendEmailService implements IEmailService {
 				</ul>
 				<p><strong>Zoom URL:</strong> <a href="${params.joinUrl}">${params.joinUrl}</a></p>
 				<p>開始時刻の24時間前までキャンセル可能です。</p>
+				<p><a href="${params.cancelUrl}">この予約をキャンセルする</a></p>
 			`);
 
     await deliverEmail("booking-confirmation", {
