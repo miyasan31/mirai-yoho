@@ -1,4 +1,4 @@
-# Arc - みらい予報
+# あなたのみらい予報
 
 オンライン相談・予約サービス。pnpm workspace によるモノレポ構成です。
 
@@ -6,9 +6,9 @@
 
 | パッケージ | 役割 | デプロイ先 |
 | --- | --- | --- |
-| `apps/user` | 顧客向け予約 SPA（Vite + TanStack Router、認証なし） | Firebase Hosting（user.miraiyohou.com、組織は URL パス /<organizationId>/... で判別） |
+| `apps/user` | 顧客向け予約 SPA（Vite + TanStack Router、Firebase 匿名認証 + Google 連携による会員登録あり） | Firebase Hosting（user.miraiyohou.com、組織は URL パス /<organizationId>/... で判別） |
 | `apps/console` | 管理者・オペレーター向けコンソール SPA（Vite + TanStack Router） | Firebase Hosting（console.miraiyohou.com） |
-| `apps/consultant` | 相談員向け SPA（Vite + TanStack Router） | Firebase Hosting（consultant.miraiyohou.com） |
+| `apps/consultant` | 占い師向け SPA（Vite + TanStack Router） | Firebase Hosting（consultant.miraiyohou.com） |
 | `apps/api` | API サーバー（Hono + DDD 4層） + batch worker | Cloud Run（api.miraiyohou.com）+ Cloud Run Job（batch worker） |
 | `packages/api-client` | OpenAPI（openapi.yaml）+ Orval 生成の React Query hooks | - |
 | `packages/console-core` | console / consultant 共有の認証・API クライアント・組織ルーティング等のロジック | - |
@@ -42,7 +42,7 @@ pnpm dev              # 全サービスを同時起動
 pnpm dev:api          # API サーバー (http://localhost:3000)
 pnpm dev:user         # 顧客向け SPA (http://localhost:3010)
 pnpm dev:console      # 管理コンソール SPA (http://localhost:3020)
-pnpm dev:consultant   # 相談員向け SPA (http://localhost:3030)
+pnpm dev:consultant   # 占い師向け SPA (http://localhost:3030)
 ```
 
 各アプリの環境変数は `apps/*/.env.example` を参照して `.env.local`（api）/ `.env`（user, console, consultant）を用意してください。

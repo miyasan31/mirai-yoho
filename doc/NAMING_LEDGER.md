@@ -1,8 +1,10 @@
 # 命名台帳 — Firestore / Domain / API
 
 > Version 2.0 | 2026-06-26（2026-07-12 追記: §6.5 更新 / **2026-07-14 改訂: `organization-` プレフィックス全廃。§6.3-B の混在許容方針を撤回。詳細は §0** / **2026-07-15 改訂: Firebase Auth uid の正準名を `authUid` に統一。§3.5 の `uid` 維持合意を撤回。詳細は §0.1** / **2026-07-15 改訂: `accounts.role` → `accounts.roleId` にリネームし `consultant` ロールを廃止。詳細は §3.5** / **2026-07-15 改訂: `accounts.authUid` → `accounts.accountId` にリネーム。accounts 集約主識別子命名を他集約 (consultantId / roleId / userId) に揃える。§0.1 の accounts 側 authUid 採用を撤回。詳細は §0.2**）  
-> 対象: 策定時点の全11コレクション + 横断命名ルール（その後 `organization-roles`（現 `roles`）/`users`/`user-zoom-credentials`/`user-coupons`/`coupons` が追加され現行15コレクション。詳細は §6.5）  
+> 対象: 策定時点の全11コレクション + 横断命名ルール（その後 `organization-roles`（現 `roles`）/`users`/`user-zoom-credentials`/`user-coupons`/`coupons`/`policy-revisions`/`policy-agreements` が追加され現行17コレクション。詳細は §6.5・§3.12）  
 > 目的: 永続化・ドメイン・API の名称を整理し、今後の実装・リネームの基準とする
+
+> **呼称について（2026-07-28）**: 日本語の職種呼称は PR #137 で「相談員」→「**占い師**」に変更された。英語・コード上の識別子（`Consultant` / `consultantId` / `consultantMemo` など）は**変更しない**方針のため、本台帳の識別子は現行のままで正しい。日付入りの改訂記録（§0 系・§3.5 など）に残る「相談員」は当時の表記としてそのまま残す。
 
 ---
 
@@ -561,7 +563,54 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 **補足（`breakoutRooms[]` の要素・2026-07-28 更新）**  
 ルームの粒度を相談員単位から**予約単位**に変更したことに伴い、要素のプロパティを `{ bookingId, consultantId, roomName, customerEmail }` に変更した。旧形式の `participantEmails[]`（1 相談員のルームに当日の顧客が相乗り）は廃止。`roomName` は `{相談員名} {開始}-{終了}`（JST・32 文字以内）で自動生成する。
 
-**根拠**: `firestore-zoom-daily-session-repository.ts`, `create-booking-use-case.ts`, `domain/booking/booking.ts`
+**根拠**: `firestore-zoom-session-repository.ts`, `create-booking-use-case.ts`, `domain/booking/booking.ts`
+
+---
+
+### 3.12 `policy-revisions` / `policy-agreements`（2026-07-28 収録）
+
+台帳の集約時点（2026-06-26）に存在しなかったポリシー機能のコレクション。命名は §1.2（時刻・日付）・§1.5（Doc ID・真偽値）の規則に沿っており、リネームは不要。
+
+#### `policy-revisions`
+
+**Doc ID**: `revisionId`（単体）
+
+| プロパティ | Firestore | Domain | API | 判定 |
+|---|---|---|---|---|
+| 改訂 ID | `revisionId` | `revisionId` | `revisionId` | 維持 |
+| 組織 ID | `organizationId` | 同名 | — | 維持 |
+| 種別 | `type` | `PolicyType` | `type` | `terms` / `cancellation_policy` / `privacy_policy` |
+| バージョン | `version` | 同名 | 同名 | 表示用の版名（例 `2026-08-01`）。`type` × `version` で一意 |
+| タイトル | `title` | 同名 | 同名 | 維持 |
+| 本文 | `body` | 同名 | 同名 | markdown |
+| ステータス | `status` | `PolicyRevisionStatus` | 同名 | `draft` / `published` / `archived`。`published` は type ごとに最大 1 件 |
+| 適用開始 | `effectiveFrom` | 同名 | 同名 | `*At` ではなく `From`。区間の開始を表す例外として許容 |
+| 公開/アーカイブ日時 | `publishedAt`, `archivedAt` | 同名 | 同名 | 維持（§1.2 の `*At`） |
+| 作成者 | `createdBy` | 同名 | 同名 | Firebase Auth uid または `seed` |
+| 作成/更新 | `createdAt`, `updatedAt` | 同名 | 同名 | 維持 |
+
+> `effectiveFrom` だけは §1.2 の 4 分類（`*At` / `startsAt`・`endsAt` / `*Date` / `*Time`）に当てはまらない。終了を持たない片側開区間で `endsAt` の対がないため、`effectiveAt` ではなく `effectiveFrom` を維持する。
+
+#### `policy-agreements`
+
+**Doc ID**: `agreementId`（単体）
+
+| プロパティ | Firestore | Domain | API | 判定 |
+|---|---|---|---|---|
+| 同意 ID | `agreementId` | 同名 | — | 維持 |
+| 組織 ID | `organizationId` | 同名 | — | 維持 |
+| 種別 | `type` | `PolicyType` | `type` | `policy-revisions` と同じ |
+| 主体種別 | `subjectType` | `PolicySubjectType` | — | `user` / `customer` / `consultant` |
+| 主体 ID | `subjectId` | 同名 | — | user / customer なら `userId`、consultant なら `consultantId` |
+| 改訂 ID | `revisionId` | 同名 | 同名 | `policy-revisions` への参照 |
+| バージョン | `version` | 同名 | 同名 | 同意時点の版名を非正規化 |
+| 同意経路 | `agreedVia` | `PolicyAgreementVia` | — | `booking` / `reagreement_modal` / `registration` |
+| 予約 ID | `bookingId` | 同名 | — | 予約起因の同意のみ。それ以外は `null` |
+| 同意日時 | `agreedAt` | 同名 | 同名 | 維持（§1.2 の `*At`） |
+
+**関連**: 予約側は `bookings.agreedTermsVersion` / `agreedCancellationPolicyVersion` / `agreedAt` に版名をスナップショットする（§3.1 では未収録。`Booking` 集約のコードを参照）。
+
+**根拠**: `firestore-policy-revision-repository.ts`, `firestore-policy-agreement-repository.ts`, `domain/policy/`, `openapi.yaml`, `firestore.rules`
 
 ---
 
@@ -808,6 +857,8 @@ export const FIRESTORE_COLLECTIONS = {
 | `booking.zoomUrl` | `joinUrl` | 一致（`domain/booking/booking.ts`） |
 
 **未収録の新規コレクション**（台帳の集約時点になかった機能）: `roles`（§0 リネーム前は `organization-roles`）, `users`, `user-zoom-credentials`, `user-coupons`, `coupons`（クーポンマスタ。`user-coupons` とは別集約）（`apps/api/src/infrastructure/firestore/firestore-collections.ts`）。命名は他コレクションの規則（kebab-case、camelCase キー）と整合しているため追加監査は不要だが、台帳本文（§3.x）には未反映。
+
+> **追記（2026-07-28）**: さらに `policy-revisions` / `policy-agreements` が追加され、現行は **17 コレクション**。この 2 つは §3.12 に収録した。
 
 #### 第2回監査結論
 

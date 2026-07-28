@@ -1,6 +1,6 @@
 ---
 name: new-script
-description: scripts/ 配下に seed / migration / 管理スクリプト（Firestore 直接操作）を scaffold する
+description: apps/api/scripts/ 配下に seed / migration / 管理スクリプト（Firestore 直接操作）を scaffold する
 user_invocable: true
 args: "<script_name> [purpose]"
 ---
@@ -16,9 +16,9 @@ args: "<script_name> [purpose]"
 
 ## 作成するファイル
 
-### `scripts/<script-name>.ts`
+### `apps/api/scripts/<script-name>.ts`
 
-既存スクリプト（`scripts/seed-slots.ts`, `scripts/delete-slots.ts`, `scripts/create-organization.ts`, `scripts/migrate-organization-accounts.ts`）のパターンに従う。
+スクリプトは `apps/api/scripts/` 配下に置く（リポジトリルートの `scripts/` はデプロイ用シェルとマニュアル生成ツール専用）。既存スクリプト（`apps/api/scripts/seed-slots.ts`, `delete-slots.ts`, `create-organization.ts`, `seed-initial-policies.ts`, `migrate-accounts.ts`）のパターンに従う。
 
 Firestore admin の初期化方法は **2 パターン**ある:
 
@@ -85,23 +85,23 @@ main().catch((error) => {
 ## 書き分けの指針
 
 - **複数ドキュメントを書く** → `db.batch()` で `batch.set` / `batch.delete` を積み、最後に `await batch.commit()`
-- **全削除など件数が多い** → `BATCH_SIZE = 400` でループしながら `collection.limit(BATCH_SIZE + 1).get()` → batch.commit を繰り返す（`scripts/delete-slots.ts` 参照）
-- **既存コレクションの構造変換** → `migrate-organization-accounts.ts` のように LEGACY → NEW で `BATCH_DOC_SIZE = 200` 単位でループ
-- **Auth と組み合わせる** → `getAuth(app)` を使い、`auth.getUserByEmail` / `auth.createUser` / `auth.generatePasswordResetLink` を併用（`create-organization.ts` 参照）
+- **全削除など件数が多い** → `BATCH_SIZE = 400` でループしながら `collection.limit(BATCH_SIZE + 1).get()` → batch.commit を繰り返す（`apps/api/scripts/delete-slots.ts` 参照）
+- **既存コレクションの構造変換** → `migrate-drop-organization-prefix.ts` のように LEGACY → NEW で `BATCH_DOC_SIZE = 200` 単位でループ。`--dry-run` / `--delete-source` フラグを持たせ、冪等にする
+- **Auth と組み合わせる** → `getAuth(app)` を使い、`auth.getUserByEmail` / `auth.createUser` / `auth.generatePasswordResetLink` を併用（`apps/api/scripts/create-organization.ts` 参照）
 
-## package.json への登録（任意）
+## Makefile への登録（任意）
 
-何度も実行する想定なら `package.json` の `scripts` に追加する:
+何度も実行する想定なら、ルートの `Makefile` にターゲットを追加する（このリポジトリは `package.json` の `scripts` ではなく Makefile で運用スクリプトを叩く）。`ENV_FILE` と `:dev` / `:prod` サフィックスの流儀は既存ターゲットに合わせる。
 
-```json
-{
-  "scripts": {
-    "delete:slots": "tsx --env-file=.env.local scripts/delete-slots.ts"
-  }
-}
+```make
+# Usage: make delete-slots [ENV=<local|dev|prod>]
+delete-slots:
+	@test "$(ENV)" = "local" || test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be one of local, dev, prod" && exit 1)
+	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
+	pnpm dlx tsx --env-file=$(ENV_FILE) apps/api/scripts/delete-slots.ts
 ```
 
-一度きりの migration スクリプトなら登録不要。
+`.PHONY` への追加（`<name>` と `<name>\:dev` / `<name>\:prod`）も忘れないこと。一度きりの migration スクリプトなら登録不要で、`pnpm dlx tsx --env-file=.env.dev apps/api/scripts/<name>.ts` を README や PR 本文に書けばよい。
 
 ## ルール
 

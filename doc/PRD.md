@@ -2,6 +2,18 @@
 
 > Version 0.5 | 2026-03-22 | Draft（未決事項 0 件）
 
+> **注記（2026-07-28 追記）**: 本書が前提とする以下の要件は、その後の実装で **廃止・変更済み**。現行仕様は `doc/DDD_DESIGN.md` を参照すること。
+>
+> | 本書の記述 | 現行 |
+> |---|---|
+> | サービス名「Arc - みらい予報」 | **「あなたのみらい予報」**（運営: 一般社団法人JKK）。オンライン**鑑定**サービス |
+> | 「相談員」 | **「占い師」**（コード上の識別子は `Consultant` のまま） |
+> | 顧客はアカウント登録不要（完全匿名） | **会員登録（Firebase 匿名認証 + Google 連携）と Zoom 連携が予約の必須条件**（`DDD_DESIGN.md` §2.1） |
+> | 決済はカード仮決済のみ | カード（後日課金）に加え **PayPay 即時決済**（`DDD_DESIGN.md` §8.4） |
+> | §9 画面要件（全 22 画面） | 画面構成は大幅に変化。現行は各 SPA の `src/routes/` を参照 |
+> | §3.7 メール通知一覧（7 種） | 3 種（占い師向け予約確定・キャンセル、管理者向けバッチ完了）は未実装、相談リマインダーが追加 |
+> | §4.1 Firebase Auth カスタムクレームで 3 ロール | Firestore `accounts.roleId` 参照 + 組織ごとのカスタムロール |
+>
 > **注記（2026-07-13）**: 本書は策定当時（Next.js + API Route 構成、Stripe PaymentIntent 手動 capture、Firebase Auth カスタムクレーム認可）の要件記録であり、その後 API サーバーは Hono + Cloud Run（ルートは `[organizationId]` ではなく `:organizationId` 形式）へ移行し、決済フローは PaymentIntent 手動 capture から SetupIntent（与信登録）→ オフセッション課金へ、決済用語も「仮決済/authorized・本決済/capture」から「登録/setup・課金/charge」へ、認可方式も Firebase カスタムクレームから Firestore `organization-accounts` 参照へ、Firestore コレクション名も `clients`→`customers`・`admins`（廃止、`organization-accounts` に統合）へと変更されている。現行の正確な仕様は `doc/DDD_DESIGN.md`（ドメイン設計・ユビキタス言語）、`doc/NAMING_LEDGER.md`（命名・コレクション監査）、`doc/system-setup-and-organization.md`（認可方式）を参照すること。本書は要件定義の経緯・意図を残すための記録として保持する。
 
 ---

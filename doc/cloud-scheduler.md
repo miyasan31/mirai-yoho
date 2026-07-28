@@ -1,6 +1,10 @@
 # Cloud Scheduler バッチ運用
 
-Cloud Scheduler は API（Cloud Run service `api`）と同じ GCP project で実行しますが、実行先は API ではありません。Scheduler は OAuth で共有 Cloud Run Job を起動し、組織 ID を execution override として渡します。このため Scheduler 専用サービスアカウントには、override 付き Job 実行だけを許可するカスタム IAM ロールを付与します。Web API の `batch/*` は Firebase の `admin` / `operator` によるオンデマンド実行専用です。
+Cloud Scheduler は API（Cloud Run service `api`）と同じ GCP project で実行しますが、実行先は API ではありません。Scheduler は OAuth で共有 Cloud Run Job を起動し、組織 ID を execution override として渡します。このため Scheduler 専用サービスアカウントには、override 付き Job 実行だけを許可するカスタム IAM ロールを付与します。
+
+Web API の `batch/*` は Scheduler からは呼ばれず、Firebase の `admin` / `operator` によるオンデマンド実行が主用途です。ただし実装（`apps/api/src/presentation/organizations/batch-routes.ts` の `authorizeBatchExecution`）は Cloud Scheduler の OIDC トークンも引き続き受け付けます（Cloud Run Job へ移行する前の経路が残っているため）。
+
+> Scheduler は **dev / prod 両方**に作られます。`common/batch` は環境で分岐せず `organization_ids` を素直に for_each するため、`.tfvars` に組織 ID がある環境にはジョブが並びます。`doc/ROADMAP.md` / `doc/PRD.md` の「Cloud Scheduler は prod のみ有効」という記述は策定当時のもので、現行とは異なります。
 
 | ジョブ | スケジュール | 対象 API |
 | --- | --- | --- |
@@ -26,15 +30,21 @@ make init ENV=dev
 
 ### Worker イメージを用意して通常 apply する
 
-`worker_image` は Cloud Run Job で実行するコンテナイメージです。Terraform の必須変数であり、`.tfvars` には含めません。`plan` または `apply` の前に、push 済みのイメージ URI を `TF_VAR_worker_image` で渡してください。未指定の場合、Terraform は入力待ちになり、値を与えずに終了すると `No value for required variable` になります。
+`worker_image`（Cloud Run Job のイメージ）と `api_image`（Cloud Run service のイメージ）は Terraform の必須変数で、`.tfvars` には含めません。**`make plan` / `make apply` は HEAD のコミット SHA から両方を自動導出して export する**ため、通常運用では手で渡す必要はありません（`infra/terraform/gcp/Makefile`）。
 
 ```bash
 cd infra/terraform/gcp
-export IMAGE_TAG="$(git rev-parse HEAD)"
-export TF_VAR_worker_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:$IMAGE_TAG"
 make plan ENV=dev
 make apply ENV=dev
 ```
+
+別の SHA のイメージを指定したい場合は `SHA=` を渡すか、`TF_VAR_api_image` / `TF_VAR_worker_image` を事前に export します（Makefile は `?=` なので export した値が優先されます）。
+
+```bash
+make apply ENV=dev SHA=<git-sha>
+```
+
+`make` を経由せず `terraform` を直接叩く場合は、`TF_VAR_api_image` と `TF_VAR_worker_image` の**両方**を export しないと `No value for required variable` になります。URI は `make print-api-image ENV=dev` / `make print-worker-image ENV=dev` で確認できます。
 
 ### 初回ブートストラップ
 
@@ -42,8 +52,10 @@ Cloud Run Job のイメージと Artifact Registry は相互に依存するた�
 
 ```bash
 # 1. Artifact Registry だけを作成する
+#    make を経由しないため、必須変数を両方 export する（この時点では実在しなくてよい）
 cd infra/terraform/gcp
 export TF_VAR_worker_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:bootstrap"
+export TF_VAR_api_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/api/api:bootstrap"
 terraform -chdir=dev apply -var-file=".tfvars" \
   -target=module.artifact_registry.google_artifact_registry_repository.batch_worker
 
@@ -52,12 +64,11 @@ cd ../../..
 export IMAGE_TAG="$(git rev-parse HEAD)"
 gcloud builds submit \
   --project="mirai-yoho-dev" \
-  --config=cloudbuild.worker.yaml \
+  --config=apps/api/cloudbuild.worker.yaml \
   --substitutions="_IMAGE=asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:$IMAGE_TAG"
 
-# 3. push したイメージを指定して、全リソースを適用する
+# 3. 全リソースを適用する（make が HEAD の SHA からイメージ URI を導出する）
 cd infra/terraform/gcp
-export TF_VAR_worker_image="asia-northeast1-docker.pkg.dev/mirai-yoho-dev/batch-worker/worker:$IMAGE_TAG"
 make plan ENV=dev
 make apply ENV=dev
 ```
