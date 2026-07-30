@@ -56,11 +56,12 @@ create-organization:
 	pnpm dlx tsx --env-file=$(ENV_FILE) apps/api/scripts/create-organization.ts $(ORGANIZATION_ID) "$(ORGANIZATION_NAME)" $(ADMIN_EMAIL) "$(ADMIN_NAME)"
 
 # Usage: make seed-local ADMIN=<email|uid> [CONSULTANT=<email|uid>] [APP_USER=<email|uid>]
-#          [ORGANIZATION_ID=<id>] [ORGANIZATION_NAME=<name>] [CONSULTANT_NAME=<name>]
-#          [DAYS=<n>] [CONSULTANTS=<n>] [CUSTOMERS=<n>]
+#          [ORGANIZATION_ID=<id>] [ORGANIZATION_NAME=<name>] [CONSULTANT_NAME=<name>] [DAYS=<n>]
 # Example: make seed-local ADMIN=you@example.com
-# ローカルの Firestore エミュレーター（pnpm emulator）に組織・ロール・アカウント・占い師・
-# 料金プラン・空き枠・会員・顧客・予約・決済・クーポン・文書（ポリシー）を一括投入する。
+# ローカルの Firestore エミュレーター（pnpm emulator）に、デモとして見せられる組織一式
+# （組織・ロール・アカウント・占い師・料金プラン・空き枠・会員・顧客・予約・決済・
+# 評価・鑑定書・クーポン・文書）を一括投入する。件数は固定で、各画面が必要とする状態を
+# 1 件ずつ用意している。
 # ENV=local 固定（エミュレーター以外には流せない）。
 # ADMIN / CONSULTANT / APP_USER には dev プロジェクトに実在する Auth ユーザーを指定する。
 # （user アプリ側の変数名を APP_USER にしているのは、USER がシェルの環境変数と衝突するため）
@@ -74,9 +75,7 @@ seed-local:
 		$(if $(ORGANIZATION_ID),--organization-id "$(ORGANIZATION_ID)",) \
 		$(if $(ORGANIZATION_NAME),--organization-name "$(ORGANIZATION_NAME)",) \
 		$(if $(CONSULTANT_NAME),--consultant-name "$(CONSULTANT_NAME)",) \
-		$(if $(DAYS),--days "$(DAYS)",) \
-		$(if $(CONSULTANTS),--consultants "$(CONSULTANTS)",) \
-		$(if $(CUSTOMERS),--customers "$(CUSTOMERS)",)
+		$(if $(DAYS),--days "$(DAYS)",)
 
 # Usage: make create-default-roles ORGANIZATION_ID=<organizationId> [ENV=<local|dev|prod>]
 # Usage: make create-default-roles:dev ORGANIZATION_ID=<id>

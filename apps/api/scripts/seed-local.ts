@@ -1,30 +1,33 @@
 /**
- * ローカルの Firestore エミュレーターに開発用のシードデータを一括投入する。
+ * ローカルの Firestore エミュレーターにデモ組織のデータを一括投入する。
  *
- * 投入するもの:
- *   - organizations / settings（営業時間 05:00-04:00 + 例外日、ステータス 3 種、料金 5,000-20,000 円、会社情報）
- *   - roles（admin / operator）/ accounts（管理者 = 自分、招待中のオペレーター）
- *   - consultants（自分 + ダミー。1 人は非稼働）
- *   - price-plans（占い師ごとに 30 / 60 / 90 分）
- *   - slots（翌日から N 日分、10:00-17:00 の 15 分枠）
- *   - users / customers（apps/user の会員と顧客）
- *   - bookings / payments（確定・完了・キャンセル・仮予約の 4 状態 + 精算書用の先月分）
- *   - booking-ratings（完了済み予約への評価。console の占い師詳細で平均点・分布を確認できる）
- *   - appraisal-reports（鑑定書。発行済み 1 通 + 下書き 1 通）
- *   - coupons / user-coupons（初回登録特典 3 枚・90 日 / 誕生日 1 枚・30 日）
- *   - policy-revisions（利用者向け 3 種 + 占い師向け 2 種 × 旧版 / 現行の 2 版）
+ * 投入するデータは「デモとしてお客様に見せられる / 操作マニュアルの素材にできる」ことを基準に
+ * 組み立てている。件数を増やすことではなく、各画面が必要とする状態を 1 つずつ満たすことを狙う:
+ *
+ *   - organizations / settings（営業時間・定休日・臨時休業、ステータス 3 段階、料金範囲、会社情報）
+ *   - roles / accounts（システムロール 2 種 + カスタムロール 1 種、稼働中と招待中のアカウント）
+ *   - consultants（稼働 3 名 + 休止 1 名。ステータスと得意分野をばらす）
+ *   - price-plans（占い師ごとに 30 / 60 / 90 分。アーカイブ済みも 1 件）
+ *   - slots（今日から N 日分。占い師ごとに担当時間帯が違う。定休日・臨時休業日は作らない）
+ *   - users / customers（apps/user の会員と顧客。顧客メモ付き）
+ *   - bookings / payments（今日 / 過去 / 未来 / 先月。4 ステータス + 課金待ち + 課金済みを網羅）
+ *   - booking-ratings（5 / 4 / 3 / 2 点。未評価の完了予約も残す）
+ *   - appraisal-reports（発行済み 2 通 + 下書き 1 通）
+ *   - coupons / user-coupons（有効 2 種 + アーカイブ 1 種。未使用 / 使用済み / 期限切れ）
+ *   - policy-revisions（5 種 × 3 版: アーカイブ / 公開中 / 下書き）
  *
  * Firebase Auth はエミュレートしないため、--admin / --consultant / --user には
  * **dev プロジェクトに実在する** Auth ユーザーのメールアドレスか UID を渡す。
  * このスクリプトは Auth を読むだけで、ユーザーの作成・変更は一切しない。
  *
- * 同じ引数で何度実行しても同じドキュメントを上書きするだけ（冪等）。
+ * 実行のたびに対象組織のドキュメントを削除してから投入し直すため、前回の残骸が
+ * デモやマニュアルのスクリーンショットに混ざることはない（何度実行しても同じ状態になる）。
  *
  * Usage:
  *   pnpm dlx tsx --tsconfig apps/api/tsconfig.json --env-file=apps/api/.env.local apps/api/scripts/seed-local.ts \
  *     --admin <email|uid> [--consultant <email|uid>] [--user <email|uid>] \
- *     [--organization-id miraiyohou] [--organization-name ローカル組織] \
- *     [--consultant-name 占い師] [--days 7] [--consultants 4] [--customers 4]
+ *     [--organization-id miraiyohou] [--organization-name みらい予報] \
+ *     [--consultant-name 桜庭 静香] [--days 7]
  *
  * Example:
  *   make seed-local ADMIN=you@example.com
@@ -51,7 +54,7 @@ import { ConsultantProfile } from "../src/domain/consultant/consultant-profile";
 import { Coupon } from "../src/domain/coupon/coupon";
 import { Customer } from "../src/domain/customer/customer";
 import { Money } from "../src/domain/payment/money";
-import { Payment } from "../src/domain/payment/payment";
+import { type ChargeMethod, Payment } from "../src/domain/payment/payment";
 import { PaymentStatus } from "../src/domain/payment/payment-status";
 import { PaymentStrategy } from "../src/domain/payment/payment-strategy";
 import { PricePlan } from "../src/domain/price-plan/price-plan";
@@ -81,58 +84,49 @@ import { FirestoreUserRepository } from "../src/infrastructure/firestore/firesto
 import { seedPolicies } from "./lib/seed-policies";
 
 const DEFAULT_ORGANIZATION_ID = "miraiyohou";
-const DEFAULT_ORGANIZATION_NAME = "ローカル組織";
-const DEFAULT_CONSULTANT_NAME = "ローカル占い師";
+const DEFAULT_ORGANIZATION_NAME = "みらい予報";
+/** ログインに使う占い師の表示名。--consultant-name で差し替えられる */
+const DEFAULT_CONSULTANT_NAME = "桜庭 静香";
 const DEFAULT_DAYS = 7;
-// 自分 + ダミー 3 人（稼働 2 / 非稼働 1）が既定
-const DEFAULT_CONSULTANT_COUNT = 4;
-const DEFAULT_CUSTOMER_COUNT = 4;
 
-const SLOT_OPEN_HOUR = 10;
-const SLOT_CLOSE_HOUR = 17;
 const SLOT_UNIT_MINUTES = 15;
 const SLOT_UNIT_MS = SLOT_UNIT_MINUTES * 60 * 1000;
 const BUFFER_SLOT_COUNT = 1;
 const TAX_RATE = 0.1;
 const DAY_MS = 24 * 60 * 60 * 1000;
-// 文書は 2 版入れる（旧版 = archived、現行 = published）。
-// 施行日が未来だと findLatestPublished が空になり予約フローの同意チェックが通らないため、
-// どちらも過去日にする（seed-initial-policies.ts の既定日とは別）
-const OLD_POLICY_VERSION = "2025-07-01";
-const POLICY_VERSION = "2026-01-01";
-const OLD_POLICY_EFFECTIVE_FROM = `${OLD_POLICY_VERSION}T00:00:00+09:00`;
-const POLICY_EFFECTIVE_FROM = `${POLICY_VERSION}T00:00:00+09:00`;
+const HOUR_MS = 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
 
-// 営業時間は毎日 05:00-04:00（翌日）。営業日は 05:00 起点なので 1 日ぶんに近い枠になる
-const BUSINESS_HOURS_START_TIME = "05:00";
-const BUSINESS_HOURS_END_TIME = "04:00";
-// 例外日（休業）は実行日の 3 日後
-const BUSINESS_HOURS_EXCEPTION_DAY_OFFSET = 3;
-// 料金設定の下限・上限（画面の表記は 20,000 〜 5,000 だが、domain は min <= max）
+// 文書は 3 版入れる（アーカイブ / 公開中 / 下書き）。
+// 施行日が未来だと findLatestPublished が空になり予約フローの同意チェックが通らないため、
+// アーカイブと公開中はどちらも過去日にする（seed-initial-policies.ts の既定日とは別）
+const ARCHIVED_POLICY_VERSION = "2025-07-01";
+const POLICY_VERSION = "2026-01-01";
+const DRAFT_POLICY_VERSION = "2026-10-01";
+const ARCHIVED_POLICY_EFFECTIVE_FROM = `${ARCHIVED_POLICY_VERSION}T00:00:00+09:00`;
+const POLICY_EFFECTIVE_FROM = `${POLICY_VERSION}T00:00:00+09:00`;
+const DRAFT_POLICY_EFFECTIVE_FROM = `${DRAFT_POLICY_VERSION}T00:00:00+09:00`;
+const POLICY_CREATED_BY = "運営事務局";
+
+// 営業時間。曜日ごとの差と定休日を入れて、設定画面が一目で読めるようにする
+const WEEKDAY_BUSINESS_HOURS = { startTime: "11:00", endTime: "22:00" };
+const WEEKEND_BUSINESS_HOURS = { startTime: "10:00", endTime: "20:00" };
+/** 定休日（火曜） */
+const CLOSED_DAY_OF_WEEK = 2;
+/** 臨時休業（実行日からの日数）。定休日と重なる場合は 1 日後ろにずらす */
+const TEMPORARY_CLOSURE_DAY_OFFSET = 3;
+// 料金設定の下限・上限。占い師が作れる税込金額の範囲
 const PRICE_PLAN_RANGE = { minTotalJPY: 5000, maxTotalJPY: 20000 };
 
-// Low を既定にする。domain が statusId "standard" の存在を必須にしているため、
-// Low に "standard" を割り当てる（DEFAULT_CONSULTANT_STATUS_ID）
-const STATUS_ID_HIGH = "high";
-const STATUS_ID_MIDDLE = "middle";
-const STATUS_ID_LOW = DEFAULT_CONSULTANT_STATUS_ID;
-// 料率は精算書のシステム利用料に使う。3 段階すべてを確認できるよう 40/35/30 を割り当てる
+// ステータスは精算書のシステム利用料率に効く。上位ほど料率が低い設計にして 3 段階を確認できるようにする。
+// domain が statusId "standard" の存在を必須にしているため、標準に DEFAULT_CONSULTANT_STATUS_ID を割り当てる
+const STATUS_ID_STANDARD = DEFAULT_CONSULTANT_STATUS_ID;
+const STATUS_ID_SILVER = "silver";
+const STATUS_ID_GOLD = "gold";
 const CONSULTANT_STATUSES = [
-  {
-    statusId: STATUS_ID_HIGH,
-    name: "ステータス Hight",
-    settlementRatePercent: 40,
-  },
-  {
-    statusId: STATUS_ID_MIDDLE,
-    name: "ステータス Middle",
-    settlementRatePercent: 35,
-  },
-  {
-    statusId: STATUS_ID_LOW,
-    name: "ステータス Low",
-    settlementRatePercent: 30,
-  },
+  { statusId: STATUS_ID_STANDARD, name: "標準", settlementRatePercent: 30 },
+  { statusId: STATUS_ID_SILVER, name: "シルバー", settlementRatePercent: 25 },
+  { statusId: STATUS_ID_GOLD, name: "ゴールド", settlementRatePercent: 20 },
 ];
 
 // 精算書の宛先と、事務所を住所として利用する占い師の発行者住所に使う
@@ -150,8 +144,6 @@ interface SeedArgs {
   user: string;
   consultantName: string;
   days: number;
-  consultantCount: number;
-  customerCount: number;
 }
 
 function parsePositiveInt(
@@ -192,16 +184,6 @@ function parseArgs(argv: string[]): SeedArgs {
     user: args.user?.trim() || admin,
     consultantName: args["consultant-name"]?.trim() || DEFAULT_CONSULTANT_NAME,
     days: parsePositiveInt(args.days, DEFAULT_DAYS, "--days"),
-    consultantCount: parsePositiveInt(
-      args.consultants,
-      DEFAULT_CONSULTANT_COUNT,
-      "--consultants",
-    ),
-    customerCount: parsePositiveInt(
-      args.customers,
-      DEFAULT_CUSTOMER_COUNT,
-      "--customers",
-    ),
   };
 }
 
@@ -229,39 +211,192 @@ async function resolveAuthUid(identity: string): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
-// シードの素材（占い師 / 料金プラン / 顧客）
+// 日付ユーティリティ
 // ---------------------------------------------------------------------------
+
+function toDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** 今日を 0 とした相対日の指定時刻を返す */
+function at(dayOffset: number, hour: number, minute = 0): Date {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  date.setDate(date.getDate() + dayOffset);
+  date.setHours(hour, minute, 0, 0);
+  return date;
+}
+
+/**
+ * 先月の指定日・指定時刻を返す。
+ * 精算書画面の既定が「先月」なので、実行日に関わらず必ず対象月に入るようにする。
+ * 2 月でも存在するよう day は 28 以下で呼ぶこと。
+ */
+function inPreviousMonth(day: number, hour: number): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() - 1, day, hour, 0, 0, 0);
+}
+
+/** 臨時休業日。定休日と重なると休みが 1 日に見えてしまうので後ろにずらす */
+function resolveTemporaryClosureDate(): Date {
+  const date = at(TEMPORARY_CLOSURE_DAY_OFFSET, 0);
+  return date.getDay() === CLOSED_DAY_OF_WEEK
+    ? at(TEMPORARY_CLOSURE_DAY_OFFSET + 1, 0)
+    : date;
+}
+
+const TEMPORARY_CLOSURE_DAY = toDateString(resolveTemporaryClosureDate());
+
+function isClosedDate(date: Date): boolean {
+  return (
+    date.getDay() === CLOSED_DAY_OF_WEEK ||
+    toDateString(date) === TEMPORARY_CLOSURE_DAY
+  );
+}
+
+/**
+ * 指定日以降で最初の営業日の指定時刻を返す。
+ * 実行日によって未来の予約が定休日・臨時休業日に落ちるのを避ける
+ * （過去の予約は当時の営業日なので調整しない）。
+ */
+function atOpenDay(minDayOffset: number, hour: number, minute = 0): Date {
+  for (
+    let dayOffset = minDayOffset;
+    dayOffset < minDayOffset + 7;
+    dayOffset++
+  ) {
+    if (!isClosedDate(at(dayOffset, 0))) {
+      return at(dayOffset, hour, minute);
+    }
+  }
+  throw new Error("7 日以内に営業日が見つかりません（営業時間の設定を確認）");
+}
+
+/** Zoom URL / Stripe ID のダミー値を決定的に作るための簡易ハッシュ */
+function hashCode(value: string): number {
+  let hash = 0;
+  for (let index = 0; index < value.length; index++) {
+    hash = (hash << 5) - hash + value.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+// ---------------------------------------------------------------------------
+// 占い師 / 料金プラン
+// ---------------------------------------------------------------------------
+
+interface PricePlanSeed {
+  pricePlanId: string;
+  name: string;
+  totalJPY: number;
+  durationMinutes: SupportedDurationMinutes;
+  isArchived?: boolean;
+}
+
+/** 担当時間帯。営業時間の内側に収まるように定義する */
+interface ShiftWindow {
+  startHour: number;
+  endHour: number;
+}
 
 interface ConsultantSeed {
   consultantId: string;
   name: string;
   bio: string;
   specialties: string[];
+  phone: string;
   statusId: string;
   isActive: boolean;
+  shift: ShiftWindow;
+  pricePlans: PricePlanSeed[];
 }
 
-const DUMMY_CONSULTANTS = [
+interface ConsultantTemplate {
+  key: string;
+  name: string;
+  bio: string;
+  specialties: string[];
+  phone: string;
+  statusId: string;
+  isActive: boolean;
+  shift: ShiftWindow;
+  plans: Array<Omit<PricePlanSeed, "pricePlanId">>;
+}
+
+/**
+ * 1 人目はログイン用（Auth の UID をそのまま consultantId に使う）。
+ * 2 人目以降は Auth に存在しない UID なのでログインはできず、一覧・予約の表示確認用。
+ * 担当時間帯は営業時間（平日 11:00-22:00 / 土日 10:00-20:00）の共通部分に収める。
+ */
+const CONSULTANT_TEMPLATES: ConsultantTemplate[] = [
   {
+    key: "own",
+    name: DEFAULT_CONSULTANT_NAME,
+    bio: "タロットと西洋占星術を組み合わせ、恋愛・仕事の岐路にあるご相談を承ります。鑑定歴 12 年。結論を急がず、いま踏み出せる一歩まで一緒に整理します。",
+    specialties: ["恋愛", "仕事", "タロット", "西洋占星術"],
+    phone: "090-3412-8867",
+    statusId: STATUS_ID_GOLD,
+    isActive: true,
+    shift: { startHour: 13, endHour: 19 },
+    plans: [
+      { name: "はじめての鑑定 30分", totalJPY: 6000, durationMinutes: 30 },
+      { name: "じっくり相談 60分", totalJPY: 11000, durationMinutes: 60 },
+      { name: "本格鑑定 90分", totalJPY: 15000, durationMinutes: 90 },
+      // アーカイブ済みプラン。料金プラン画面の「状態」列と復元操作の確認用
+      {
+        name: "モニター鑑定 30分",
+        totalJPY: 5000,
+        durationMinutes: 30,
+        isArchived: true,
+      },
+    ],
+  },
+  {
+    key: "hoshino",
     name: "星野 みちる",
-    bio: "西洋占星術とタロットで、恋愛と対人関係のご相談を中心に承ります。",
+    bio: "西洋占星術とタロットで、恋愛と対人関係のご相談を中心に承ります。相手の気持ちや距離の取り方を、具体的な行動に落とし込んでお伝えします。",
     specialties: ["恋愛", "対人関係", "タロット"],
-    statusId: STATUS_ID_HIGH,
+    phone: "080-2255-4109",
+    statusId: STATUS_ID_SILVER,
     isActive: true,
+    shift: { startHour: 11, endHour: 15 },
+    plans: [
+      { name: "お試し鑑定 30分", totalJPY: 5000, durationMinutes: 30 },
+      { name: "恋愛相談 60分", totalJPY: 9000, durationMinutes: 60 },
+      { name: "総合鑑定 90分", totalJPY: 13000, durationMinutes: 90 },
+    ],
   },
   {
+    key: "tsukishiro",
     name: "月城 あかり",
-    bio: "四柱推命をベースに、仕事とキャリアの転機を読み解きます。",
+    bio: "四柱推命をベースに、仕事とキャリアの転機を読み解きます。転職・独立・職場の相性など、判断材料が欲しい場面のご相談を得意としています。",
     specialties: ["仕事", "キャリア", "四柱推命"],
-    statusId: STATUS_ID_MIDDLE,
+    phone: "070-6688-3021",
+    statusId: STATUS_ID_STANDARD,
     isActive: true,
+    shift: { startHour: 17, endHour: 20 },
+    plans: [
+      { name: "キャリア相談 30分", totalJPY: 5500, durationMinutes: 30 },
+      { name: "転機を読む 60分", totalJPY: 10000, durationMinutes: 60 },
+    ],
   },
   {
+    key: "hyuga",
     name: "日向 そら",
-    bio: "現在は活動を休止しています（非稼働の表示確認用）。",
-    specialties: ["家族"],
-    statusId: STATUS_ID_LOW,
+    bio: "家族・子育てのご相談を中心に承ってきました。現在は活動を休止しているため、予約サイトには掲載されません。",
+    specialties: ["家族", "子育て"],
+    phone: "090-7734-5512",
+    statusId: STATUS_ID_STANDARD,
     isActive: false,
+    shift: { startHour: 13, endHour: 17 },
+    plans: [
+      { name: "はじめての鑑定 30分", totalJPY: 5000, durationMinutes: 30 },
+      { name: "じっくり相談 60分", totalJPY: 9000, durationMinutes: 60 },
+    ],
   },
 ];
 
@@ -269,62 +404,45 @@ function buildConsultantSeeds(
   args: SeedArgs,
   consultantUid: string,
 ): ConsultantSeed[] {
-  const seeds: ConsultantSeed[] = [
-    {
-      consultantId: consultantUid,
-      name: args.consultantName,
-      bio: "ログイン確認用の占い師です。consultant アプリにこの UID でログインできます。",
-      specialties: ["恋愛", "仕事"],
-      statusId: STATUS_ID_LOW,
-      isActive: true,
-    },
-  ];
+  return CONSULTANT_TEMPLATES.map((template, index) => {
+    const consultantId = index === 0 ? consultantUid : `demo-${template.key}`;
+    return {
+      consultantId,
+      name: index === 0 ? args.consultantName : template.name,
+      bio: template.bio,
+      specialties: template.specialties,
+      phone: template.phone,
+      statusId: template.statusId,
+      isActive: template.isActive,
+      shift: template.shift,
+      pricePlans: template.plans.map((plan, planIndex) => ({
+        ...plan,
+        pricePlanId: `${args.organizationId}_${consultantId}_plan-${planIndex + 1}`,
+      })),
+    };
+  });
+}
 
-  for (let index = 0; index < args.consultantCount - 1; index++) {
-    const dummy = DUMMY_CONSULTANTS[index % DUMMY_CONSULTANTS.length];
-    seeds.push({ consultantId: `seed-consultant-${index + 2}`, ...dummy });
+/** シナリオから料金プランを引く。相談時間で指定して、並び順の変更に影響されないようにする */
+function planOf(
+  consultant: ConsultantSeed,
+  durationMinutes: SupportedDurationMinutes,
+): PricePlanSeed {
+  const plan = consultant.pricePlans.find(
+    (candidate) =>
+      candidate.durationMinutes === durationMinutes && !candidate.isArchived,
+  );
+  if (!plan) {
+    throw new Error(
+      `${consultant.name} に ${durationMinutes} 分のプランがありません`,
+    );
   }
-
-  return seeds;
+  return plan;
 }
 
-interface PricePlanSeed {
-  pricePlanId: string;
-  name: string;
-  totalJPY: number;
-  durationMinutes: SupportedDurationMinutes;
-}
-
-const PRICE_PLAN_TEMPLATES: Array<{
-  suffix: string;
-  name: string;
-  totalJPY: number;
-  durationMinutes: SupportedDurationMinutes;
-}> = [
-  { suffix: "30", name: "お試し 30 分", totalJPY: 5000, durationMinutes: 30 },
-  { suffix: "60", name: "じっくり 60 分", totalJPY: 9000, durationMinutes: 60 },
-  {
-    suffix: "90",
-    name: "スペシャル 90 分",
-    totalJPY: 13000,
-    durationMinutes: 90,
-  },
-];
-
-function buildPricePlanSeeds(
-  organizationId: string,
-  consultantId: string,
-  index: number,
-): PricePlanSeed[] {
-  // 占い師ごとに金額をずらして、一覧の見え方に差を出す
-  const priceOffset = index * 1000;
-  return PRICE_PLAN_TEMPLATES.map((template) => ({
-    pricePlanId: `${organizationId}_${consultantId}_plan-${template.suffix}`,
-    name: template.name,
-    totalJPY: template.totalJPY + priceOffset,
-    durationMinutes: template.durationMinutes,
-  }));
-}
+// ---------------------------------------------------------------------------
+// 会員 / 顧客
+// ---------------------------------------------------------------------------
 
 interface CustomerSeed {
   customerId: string;
@@ -333,42 +451,124 @@ interface CustomerSeed {
   email: string;
   phone: string;
   birthDate: string;
+  /** console の顧客管理「メモ」列。運用の申し送りを想定 */
+  note?: string;
 }
 
-const DUMMY_CUSTOMER_PROFILES = [
-  { name: "佐藤 陽菜", birthDate: "1992-04-18" },
-  { name: "田中 一郎", birthDate: "1985-11-03" },
-  { name: "鈴木 美咲", birthDate: "1998-07-25" },
-  { name: "高橋 健", birthDate: "1979-01-09" },
+interface CustomerTemplate {
+  key: string;
+  name: string;
+  email: string;
+  phone: string;
+  birthDate: string;
+  note?: string;
+}
+
+/** 1 人目はログイン用（Auth の UID をそのまま userId に使う） */
+const CUSTOMER_TEMPLATES: CustomerTemplate[] = [
+  {
+    key: "yui",
+    name: "山本 結衣",
+    email: "yui.yamamoto@example.com",
+    phone: "090-1188-4520",
+    birthDate: "1993-05-15",
+    note: "リピーター。平日夜の枠を希望されることが多い。",
+  },
+  {
+    key: "hina",
+    name: "佐藤 陽菜",
+    email: "hina.sato@example.com",
+    phone: "080-4471-9032",
+    birthDate: "1992-04-18",
+    note: "初回はクーポン利用。次回は 60 分プランを検討中とのこと。",
+  },
+  {
+    key: "ichiro",
+    name: "田中 一郎",
+    email: "ichiro.tanaka@example.com",
+    phone: "070-2093-6614",
+    birthDate: "1985-11-03",
+  },
+  {
+    key: "misaki",
+    name: "鈴木 美咲",
+    email: "misaki.suzuki@example.com",
+    phone: "090-5527-1348",
+    birthDate: "1998-07-25",
+    note: "開始時刻に遅れがち。前日にリマインドを送る運用にしている。",
+  },
 ];
 
 function buildCustomerSeeds(args: SeedArgs, userUid: string): CustomerSeed[] {
-  const seeds: CustomerSeed[] = [
-    {
-      customerId: `${args.organizationId}_customer-1`,
-      userId: userUid,
-      name: "ローカル利用者",
-      email: "local-user@example.com",
-      phone: "090-1111-2222",
-      birthDate: "1990-05-15",
-    },
-  ];
+  return CUSTOMER_TEMPLATES.map((template, index) => ({
+    customerId: `${args.organizationId}_customer-${template.key}`,
+    userId: index === 0 ? userUid : `demo-user-${template.key}`,
+    name: template.name,
+    email: template.email,
+    phone: template.phone,
+    birthDate: template.birthDate,
+    note: template.note,
+  }));
+}
 
-  for (let index = 0; index < args.customerCount - 1; index++) {
-    const profile =
-      DUMMY_CUSTOMER_PROFILES[index % DUMMY_CUSTOMER_PROFILES.length];
-    const suffix = index + 2;
-    seeds.push({
-      customerId: `${args.organizationId}_customer-${suffix}`,
-      userId: `seed-user-${suffix}`,
-      name: profile.name,
-      email: `customer${suffix}@example.com`,
-      phone: `090-0000-${String(1000 + suffix).slice(-4)}`,
-      birthDate: profile.birthDate,
-    });
+// ---------------------------------------------------------------------------
+// 既存データの掃除
+// ---------------------------------------------------------------------------
+
+/**
+ * 対象組織のドキュメントを消してから投入し直す。
+ *
+ * 上書きだけだと、前回のシードで作った占い師・顧客・予約が孤児として残り、
+ * デモやマニュアルのスクリーンショットに混ざってしまう。エミュレーター専用の
+ * スクリプトなので、対象組織に限って毎回まっさらにする。
+ *
+ * users / user-zoom-credentials は組織に紐づかず、消すと Zoom 連携をやり直すことに
+ * なるため対象外（どちらも管理画面には出ないので残っていても影響しない）。
+ */
+const PURGE_TARGET_COLLECTIONS = [
+  FIRESTORE_COLLECTIONS.bookings,
+  FIRESTORE_COLLECTIONS.bookingRatings,
+  FIRESTORE_COLLECTIONS.payments,
+  FIRESTORE_COLLECTIONS.slots,
+  FIRESTORE_COLLECTIONS.customers,
+  FIRESTORE_COLLECTIONS.consultants,
+  FIRESTORE_COLLECTIONS.pricePlans,
+  FIRESTORE_COLLECTIONS.accounts,
+  FIRESTORE_COLLECTIONS.roles,
+  FIRESTORE_COLLECTIONS.coupons,
+  FIRESTORE_COLLECTIONS.userCoupons,
+  FIRESTORE_COLLECTIONS.policyRevisions,
+  FIRESTORE_COLLECTIONS.policyAgreements,
+  FIRESTORE_COLLECTIONS.appraisalReports,
+  FIRESTORE_COLLECTIONS.zoomSessions,
+];
+
+const PURGE_BATCH_SIZE = 400;
+
+async function purgeOrganization(organizationId: string): Promise<number> {
+  let deleted = 0;
+
+  for (const collection of PURGE_TARGET_COLLECTIONS) {
+    const snapshot = await db
+      .collection(collection)
+      .where("organizationId", "==", organizationId)
+      .get();
+
+    for (
+      let index = 0;
+      index < snapshot.docs.length;
+      index += PURGE_BATCH_SIZE
+    ) {
+      const batch = db.batch();
+      for (const doc of snapshot.docs.slice(index, index + PURGE_BATCH_SIZE)) {
+        batch.delete(doc.ref);
+      }
+      await batch.commit();
+    }
+    deleted += snapshot.size;
   }
 
-  return seeds;
+  return deleted;
 }
 
 // ---------------------------------------------------------------------------
@@ -389,38 +589,37 @@ async function seedOrganization(args: SeedArgs): Promise<void> {
 
   const settings = Settings.createDefault(args.organizationId);
   settings.updateBusinessHours(buildBusinessHours());
-  settings.updateConsultantStatuses(CONSULTANT_STATUSES, STATUS_ID_LOW);
+  settings.updateConsultantStatuses(CONSULTANT_STATUSES, STATUS_ID_STANDARD);
   settings.updatePricePlanRange(PRICE_PLAN_RANGE);
   settings.updateCompanyInfo(COMPANY_INFO);
   await new FirestoreSettingsRepository().save(settings);
 }
 
-/** 毎日 05:00-04:00 稼働。例外日として実行日の 3 日後を休業にする */
+/** 平日 11:00-22:00 / 土日 10:00-20:00、火曜定休 + 臨時休業 1 日 */
 function buildBusinessHours(): BusinessHoursProps {
-  const weekly = Array.from({ length: 7 }, (_, dayOfWeek) => ({
-    dayOfWeek,
-    isClosed: false,
-    timeWindows: [
-      {
-        startTime: BUSINESS_HOURS_START_TIME,
-        endTime: BUSINESS_HOURS_END_TIME,
-      },
-    ],
-  }));
-
-  const exceptionDate = new Date();
-  exceptionDate.setDate(
-    exceptionDate.getDate() + BUSINESS_HOURS_EXCEPTION_DAY_OFFSET,
-  );
-  const exceptionDay = toDateString(exceptionDate);
+  const weekly = Array.from({ length: 7 }, (_, dayOfWeek) => {
+    if (dayOfWeek === CLOSED_DAY_OF_WEEK) {
+      return { dayOfWeek, isClosed: true, timeWindows: [] };
+    }
+    const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+    return {
+      dayOfWeek,
+      isClosed: false,
+      timeWindows: [
+        isWeekend
+          ? { ...WEEKEND_BUSINESS_HOURS }
+          : { ...WEEKDAY_BUSINESS_HOURS },
+      ],
+    };
+  });
 
   return {
     weekly,
     includePublicHolidays: true,
     exceptions: [
       {
-        startDate: exceptionDay,
-        endDate: exceptionDay,
+        startDate: TEMPORARY_CLOSURE_DAY,
+        endDate: TEMPORARY_CLOSURE_DAY,
         isClosed: true,
         timeWindows: [],
       },
@@ -428,13 +627,32 @@ function buildBusinessHours(): BusinessHoursProps {
   };
 }
 
-async function seedRoles(organizationId: string): Promise<void> {
-  const roles = [
+/** 権限を絞ったカスタムロール。権限管理画面に編集・削除できる行を 1 つ用意する */
+const VIEWER_ROLE_ID = "viewer";
+
+function buildRoles(organizationId: string): Role[] {
+  return [
     Role.createSystemAdmin(organizationId),
     Role.createSystemOperator(organizationId),
+    Role.create({
+      organizationId,
+      roleId: VIEWER_ROLE_ID,
+      name: "閲覧のみ",
+      description: "予約・決済・顧客の閲覧だけを許可する制限ロール",
+      permissions: [
+        "console.dashboard.read",
+        "console.bookings.read",
+        "console.payments.read",
+        "console.customers.read",
+        "console.consultants.read",
+      ],
+      isSystem: false,
+    }),
   ];
+}
 
-  for (const role of roles) {
+async function seedRoles(organizationId: string): Promise<void> {
+  for (const role of buildRoles(organizationId)) {
     await db
       .collection(FIRESTORE_COLLECTIONS.roles)
       .doc(getRoleDocId(organizationId, role.getRoleId()))
@@ -443,6 +661,8 @@ async function seedRoles(organizationId: string): Promise<void> {
         roleId: role.getRoleId(),
         name: role.getName(),
         description: role.getDescription(),
+        // システムロールの権限はコード側が持つので、保存が要るのはカスタムロールだけ
+        ...(role.getIsSystem() ? {} : { permissions: role.getPermissions() }),
         isSystem: role.getIsSystem(),
         createdAt: role.getCreatedAt(),
         updatedAt: role.getUpdatedAt(),
@@ -460,14 +680,14 @@ async function seedAccounts(
       accountId: adminUid,
       roleId: "admin",
       status: "active",
-      name: "ローカル管理者",
+      name: "大石 直樹",
     },
     // 招待中の行を 1 件作り、アカウント管理画面のステータス表示を確認できるようにする
     {
-      accountId: "seed-operator",
+      accountId: "demo-account-operator",
       roleId: "operator",
       status: "invited",
-      name: "ローカルオペレーター",
+      name: "中村 咲",
     },
   ];
 
@@ -502,7 +722,7 @@ async function seedConsultants(
         seed.name,
         seed.bio,
         seed.specialties,
-        "090-0000-0000",
+        seed.phone,
       ),
       statusId: seed.statusId,
     });
@@ -516,28 +736,32 @@ async function seedConsultants(
 async function seedPricePlans(
   organizationId: string,
   seeds: ConsultantSeed[],
-): Promise<number> {
+): Promise<{ active: number; archived: number }> {
   const repository = new FirestorePricePlanRepository();
-  let count = 0;
+  let active = 0;
+  let archived = 0;
 
-  for (const [index, seed] of seeds.entries()) {
-    for (const plan of buildPricePlanSeeds(
-      organizationId,
-      seed.consultantId,
-      index,
-    )) {
-      await repository.save(
-        PricePlan.create({
-          organizationId,
-          consultantId: seed.consultantId,
-          ...plan,
-        }),
-      );
-      count += 1;
+  for (const seed of seeds) {
+    for (const plan of seed.pricePlans) {
+      const pricePlan = PricePlan.create({
+        organizationId,
+        consultantId: seed.consultantId,
+        pricePlanId: plan.pricePlanId,
+        name: plan.name,
+        totalJPY: plan.totalJPY,
+        durationMinutes: plan.durationMinutes,
+      });
+      if (plan.isArchived) {
+        pricePlan.archive();
+        archived += 1;
+      } else {
+        active += 1;
+      }
+      await repository.save(pricePlan);
     }
   }
 
-  return count;
+  return { active, archived };
 }
 
 /** 再実行で重複しないように、開始時刻から決定的な ID を振る（本番は UUID） */
@@ -549,16 +773,22 @@ function toSlotId(
   return `${organizationId}_${consultantId}_${startsAt.toISOString()}`;
 }
 
-function createSlotStartTimes(days: number): Date[] {
+/**
+ * 占い師の担当時間帯ぶんの開始時刻を today..today+days-1 で作る。
+ * 定休日・臨時休業日と、過ぎてしまった時刻は作らない
+ * （営業時間外・過去の枠は予約サイトの候補に出ないため、あっても意味がない）
+ */
+function createSlotStartTimes(shift: ShiftWindow, days: number): Date[] {
   const startTimes: Date[] = [];
-  const today = new Date();
+  const now = Date.now();
 
-  for (let dayOffset = 1; dayOffset <= days; dayOffset++) {
-    for (let hour = SLOT_OPEN_HOUR; hour < SLOT_CLOSE_HOUR; hour++) {
+  for (let dayOffset = 0; dayOffset < days; dayOffset++) {
+    if (isClosedDate(at(dayOffset, 0))) continue;
+
+    for (let hour = shift.startHour; hour < shift.endHour; hour++) {
       for (let minute = 0; minute < 60; minute += SLOT_UNIT_MINUTES) {
-        const startsAt = new Date(today);
-        startsAt.setDate(startsAt.getDate() + dayOffset);
-        startsAt.setHours(hour, minute, 0, 0);
+        const startsAt = at(dayOffset, hour, minute);
+        if (startsAt.getTime() <= now) continue;
         startTimes.push(startsAt);
       }
     }
@@ -573,11 +803,10 @@ async function seedSlots(
   days: number,
 ): Promise<number> {
   const repository = new FirestoreSlotRepository();
-  const startTimes = createSlotStartTimes(days);
   let count = 0;
 
   for (const seed of seeds.filter((candidate) => candidate.isActive)) {
-    for (const startsAt of startTimes) {
+    for (const startsAt of createSlotStartTimes(seed.shift, days)) {
       const endsAt = new Date(startsAt.getTime() + SLOT_UNIT_MS);
       await repository.save(
         Slot.create({
@@ -619,7 +848,7 @@ async function seedUsersAndCustomers(
     );
 
     await customerRepository.save(
-      Customer.create({
+      Customer.reconstruct({
         organizationId,
         customerId: seed.customerId,
         userId: seed.userId,
@@ -627,6 +856,9 @@ async function seedUsersAndCustomers(
         email: seed.email,
         phone: seed.phone,
         birthDate: seed.birthDate,
+        note: seed.note,
+        createdAt: now,
+        updatedAt: now,
       }),
     );
   }
@@ -636,12 +868,15 @@ async function seedUsersAndCustomers(
 // クーポン
 // ---------------------------------------------------------------------------
 
-const WELCOME_COUPON_NAME = "初回登録特典クーポン";
+const WELCOME_COUPON_NAME = "新規会員登録クーポン";
+const WELCOME_COUPON_AMOUNT_JPY = 1000;
 const WELCOME_COUPON_BATCH_SIZE = 3;
 const WELCOME_COUPON_EXPIRES_IN_DAYS = 90;
-const BIRTHDAY_COUPON_NAME = "誕生日クーポン";
+const BIRTHDAY_COUPON_NAME = "お誕生日クーポン";
+const BIRTHDAY_COUPON_AMOUNT_JPY = 2000;
 const BIRTHDAY_COUPON_BATCH_SIZE = 1;
 const BIRTHDAY_COUPON_EXPIRES_IN_DAYS = 30;
+const ARCHIVED_COUPON_NAME = "春の新生活応援クーポン";
 
 interface SeededCoupons {
   redeemedUserCouponId: string;
@@ -662,7 +897,7 @@ async function seedCoupons(
     couponId: `${organizationId}_coupon-welcome`,
     type: "welcome",
     name: WELCOME_COUPON_NAME,
-    amountJPY: 1000,
+    amountJPY: WELCOME_COUPON_AMOUNT_JPY,
     batchSize: WELCOME_COUPON_BATCH_SIZE,
     expiresInDays: WELCOME_COUPON_EXPIRES_IN_DAYS,
   });
@@ -671,15 +906,28 @@ async function seedCoupons(
     couponId: `${organizationId}_coupon-birthday`,
     type: "birthday",
     name: BIRTHDAY_COUPON_NAME,
-    amountJPY: 2000,
+    amountJPY: BIRTHDAY_COUPON_AMOUNT_JPY,
     batchSize: BIRTHDAY_COUPON_BATCH_SIZE,
     expiresInDays: BIRTHDAY_COUPON_EXPIRES_IN_DAYS,
   });
+  // 終了したキャンペーン。クーポン管理画面の「状態」列と復元操作の確認用。
+  // 同じ種別で有効なクーポンは 1 つまでなので、アーカイブ済みとして入れる
+  const archived = Coupon.create({
+    organizationId,
+    couponId: `${organizationId}_coupon-spring-campaign`,
+    type: "welcome",
+    name: ARCHIVED_COUPON_NAME,
+    amountJPY: 1500,
+    batchSize: 1,
+    expiresInDays: 60,
+  });
+  archived.archive();
 
   await couponRepository.save(welcome);
   await couponRepository.save(birthday);
+  await couponRepository.save(archived);
 
-  // 初回登録特典は 1 回の取得で batchSize 枚もらえる。1 枚は後段の予約で使用済みにするので、
+  // 新規会員登録クーポンは 1 回の取得で batchSize 枚もらえる。1 枚は後段の予約で使用済みにするので、
   // 残りを未使用として発行する
   for (let index = 0; index < WELCOME_COUPON_BATCH_SIZE - 1; index++) {
     await userCouponRepository.save(
@@ -757,236 +1005,244 @@ async function seedRedeemedUserCoupon(params: {
 
 type SeedBookingStatus = "pending" | "confirmed" | "completed" | "cancelled";
 
-interface BookingScenarioBase {
+interface BookingScenario {
   consultant: ConsultantSeed;
   customer: CustomerSeed;
   pricePlan: PricePlanSeed;
+  startsAt: Date;
   status: SeedBookingStatus;
-  withMemo?: boolean;
+  /** 予約時の相談内容。占い師の予約詳細・鑑定メモ画面に出る */
+  consultationContent: string;
+  /** 鑑定メモ。未指定なら未入力（ホームの「メモ未入力」件数に効く） */
+  memo?: string;
+  /** 占い師が Zoom に入室済みか。未指定なら completed のみ入室済み */
+  joined?: boolean;
+  /** カード登録済みか。未指定なら仮予約以外は登録済み */
+  hasPaymentMethod?: boolean;
+  /** 課金済みのときの課金経路。未指定なら自動（バッチ） */
+  chargeMethod?: ChargeMethod;
   withCoupon?: boolean;
-  /** 完了済み予約に付ける評価。console の占い師詳細で確認する */
+  /** 完了済み予約への評価。console の占い師詳細で平均点と分布を確認する */
   rating?: { score: number; comment?: string };
   /** 鑑定書。未指定なら未作成。published のみ apps/user から見える */
   appraisalReport?: AppraisalReportStatus;
+  /** 同意した版。未指定なら現行版。旧版にするとポリシー更新後の予約として警告が出る */
+  agreedPolicyVersion?: string;
 }
 
 /**
- * 開始日時は「今日からの相対日数」か「絶対日時」のどちらかで指定する。
- * 精算書は既定で先月を集計するため、対象月を固定したいシナリオは startsAt を使う
+ * 予約シナリオ。件数を増やすのではなく、各画面が必要とする状態を 1 件ずつ用意する。
+ *
+ * - 今日: 占い師ホームの「次の予約」「今日の予約一覧」「メモ未入力」と console ホームの ToDo
+ * - 過去: 評価の分布、鑑定書、課金待ち（要対応決済 / 課金ボタン）
+ * - 未来: 24 時間以内の未処理予約。実行時刻によらず 1 件は入るよう今日の夕方と翌営業日に置く
+ * - 先月: 精算書の明細（charged だけが計上され、cancelled は除外されることを確認できる）
  */
-type BookingScenario = BookingScenarioBase &
-  (
-    | {
-        /** 今日からの日数。負値は過去 */
-        dayOffset: number;
-        hour: number;
-      }
-    | { startsAt: Date }
-  );
-
-function toBookingStartsAt(dayOffset: number, hour: number): Date {
-  const startsAt = new Date();
-  startsAt.setDate(startsAt.getDate() + dayOffset);
-  startsAt.setHours(hour, 0, 0, 0);
-  return startsAt;
-}
-
-function resolveScenarioStartsAt(scenario: BookingScenario): Date {
-  return "startsAt" in scenario
-    ? scenario.startsAt
-    : toBookingStartsAt(scenario.dayOffset, scenario.hour);
-}
-
-/**
- * 先月の指定日・指定時刻を返す。
- * 精算書画面の既定が「先月」なので、実行日に関わらず必ず対象月に入るようにする。
- * 2 月でも存在するよう day は 28 以下で呼ぶこと。
- */
-function toPreviousMonthStartsAt(day: number, hour: number): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth() - 1, day, hour, 0, 0, 0);
-}
-
 function buildBookingScenarios(
-  organizationId: string,
   consultants: ConsultantSeed[],
   customers: CustomerSeed[],
 ): BookingScenario[] {
-  const plansOf = (consultant: ConsultantSeed) =>
-    buildPricePlanSeeds(
-      organizationId,
-      consultant.consultantId,
-      consultants.indexOf(consultant),
-    );
+  const [sakuraba, hoshino, tsukishiro] = consultants;
+  const [yui, hina, ichiro, misaki] = customers;
 
-  const activeConsultants = consultants.filter(
-    (candidate) => candidate.isActive,
-  );
-  const own = activeConsultants[0];
-  const ownPlans = plansOf(own);
-  const customerAt = (index: number) => customers[index % customers.length];
-
-  const scenarios: BookingScenario[] = [
-    // 会員が「未評価」バッジと評価導線を確認するための完了済み予約（あえて評価を付けない）
+  return [
+    // --- 今日 ---------------------------------------------------------------
     {
-      consultant: own,
-      customer: customerAt(0),
-      pricePlan: ownPlans[1],
-      dayOffset: -7,
-      hour: 14,
+      consultant: sakuraba,
+      customer: yui,
+      pricePlan: planOf(sakuraba, 60),
+      startsAt: at(0, 13),
       status: "completed",
-      withMemo: true,
+      consultationContent:
+        "転職するか、いまの職場で続けるかを迷っています。判断の目安になる時期を知りたいです。",
+      memo: "転職を検討中。9 月以降に動きが出やすい配置。焦らず情報収集を続けるよう助言。次回は結果報告の予定。",
       withCoupon: true,
-      appraisalReport: "published",
-    },
-    // 会員が「評価済み」バッジと読み取り専用表示を確認するための評価済み予約
-    {
-      consultant: own,
-      customer: customerAt(0),
-      pricePlan: ownPlans[0],
-      dayOffset: -14,
-      hour: 10,
-      status: "completed",
-      withMemo: true,
       rating: {
         score: 5,
         comment:
           "とても丁寧に話を聞いていただき、気持ちが軽くなりました。また相談したいです。",
       },
+      appraisalReport: "published",
     },
-    // console の占い師詳細で平均点とスコア分布が散らばって見えるようにする
     {
-      consultant: own,
-      customer: customerAt(1),
-      pricePlan: ownPlans[0],
-      dayOffset: -10,
-      hour: 16,
+      consultant: sakuraba,
+      customer: hina,
+      pricePlan: planOf(sakuraba, 30),
+      startsAt: at(0, 15),
       status: "completed",
-      rating: { score: 4, comment: "的確なアドバイスをいただけました。" },
+      consultationContent:
+        "職場の人間関係で悩んでいます。距離の取り方を相談したいです。",
+      // メモをあえて入れず、「メモ未入力」の件数と入力導線を確認できるようにする
+      chargeMethod: "manual",
     },
     {
-      consultant: own,
-      customer: customerAt(2),
-      pricePlan: ownPlans[1],
-      dayOffset: -5,
-      hour: 13,
-      status: "completed",
-      // 低評価もダッシュボード上で確認できるようにコメントなしで 1 件入れる
-      rating: { score: 2 },
-    },
-    {
-      consultant: own,
-      customer: customerAt(1),
-      pricePlan: ownPlans[0],
-      dayOffset: -3,
-      hour: 11,
-      status: "cancelled",
-    },
-    // 鑑定書の下書き。apps/user には出ず、占い師の予約一覧でだけ「下書き」になる。
-    // completed にしないのは、月初に実行したときこの予約が先月分に入って
-    // 精算書の借受金を動かしてしまうため。鑑定書の発行条件は status ではなく
-    // 「endsAt を過ぎている / 未キャンセル」なので confirmed のままでも作成できる
-    {
-      consultant: own,
-      customer: customerAt(0),
-      pricePlan: ownPlans[0],
-      dayOffset: -1,
-      hour: 10,
+      consultant: sakuraba,
+      customer: ichiro,
+      pricePlan: planOf(sakuraba, 60),
+      startsAt: at(0, 17),
       status: "confirmed",
-      withMemo: true,
+      consultationContent:
+        "独立を考えています。準備を始めるのに適した時期を知りたいです。",
+      joined: false,
+    },
+    {
+      consultant: sakuraba,
+      customer: misaki,
+      pricePlan: planOf(sakuraba, 30),
+      startsAt: at(0, 18, 30),
+      status: "pending",
+      consultationContent: "来年の運勢を全体的に見ていただきたいです。",
+    },
+
+    // --- 過去 ---------------------------------------------------------------
+    {
+      // 開始済みの確定予約 + カード登録済み = 課金待ち。console の「要対応決済」と課金ボタンの確認用
+      consultant: sakuraba,
+      customer: yui,
+      pricePlan: planOf(sakuraba, 60),
+      startsAt: at(-1, 15),
+      status: "confirmed",
+      consultationContent:
+        "パートナーとの今後について、来年までの流れを見ていただきたいです。",
+      memo: "関係性は安定期。相手の仕事が落ち着く春以降に大きな話を進めるのが良いと伝えた。",
+      joined: true,
       appraisalReport: "draft",
     },
     {
-      consultant: own,
-      customer: customerAt(0),
-      pricePlan: ownPlans[0],
-      dayOffset: 1,
-      hour: 11,
-      status: "confirmed",
+      consultant: sakuraba,
+      customer: yui,
+      pricePlan: planOf(sakuraba, 30),
+      startsAt: at(-4, 14),
+      status: "cancelled",
+      consultationContent: "急な予定変更のため、日程を改めて取り直します。",
     },
     {
-      consultant: own,
-      customer: customerAt(2),
-      pricePlan: ownPlans[2],
-      dayOffset: 2,
-      hour: 15,
-      status: "pending",
+      consultant: sakuraba,
+      customer: ichiro,
+      pricePlan: planOf(sakuraba, 90),
+      startsAt: at(-6, 16),
+      status: "completed",
+      consultationContent:
+        "家族の進路について相談したいことがあります。時間を長めに取りたいです。",
+      memo: "ご家族の進学について。本人の意思を尊重する方向で整理。来月あらためて相談予定。",
+      rating: { score: 4, comment: "的確なアドバイスをいただけました。" },
+    },
+    {
+      consultant: sakuraba,
+      customer: misaki,
+      pricePlan: planOf(sakuraba, 60),
+      startsAt: at(-9, 13),
+      status: "completed",
+      consultationContent: "金運と、貯蓄の始めどきについて知りたいです。",
+      memo: "金銭面の相談。固定費の見直しから着手する方向で合意。",
+      chargeMethod: "manual",
+      // コメントなしの低評価も入れて、評価の分布とコメント有無の表示を確認できるようにする
+      rating: { score: 2 },
+    },
+    {
+      // 未評価のまま残す完了予約。apps/user の「未評価」バッジと評価導線の確認用
+      consultant: sakuraba,
+      customer: yui,
+      pricePlan: planOf(sakuraba, 30),
+      startsAt: at(-13, 15),
+      status: "completed",
+      consultationContent:
+        "新しい習い事を始めようか迷っています。向き不向きを見ていただきたいです。",
+      memo: "新しい習い事について。まずは体験から始める方向で助言。",
+      appraisalReport: "published",
+    },
+
+    // --- 未来 ---------------------------------------------------------------
+    {
+      consultant: sakuraba,
+      customer: yui,
+      pricePlan: planOf(sakuraba, 60),
+      startsAt: atOpenDay(1, 14),
+      status: "confirmed",
+      consultationContent:
+        "前回の鑑定のあとの状況を報告しつつ、次の一手を相談したいです。",
+      // 旧版の規約に同意した予約。占い師側に「ポリシー更新後の予約です」の注意が出る
+      agreedPolicyVersion: ARCHIVED_POLICY_VERSION,
+    },
+
+    // --- 先月（精算書の明細） -------------------------------------------------
+    {
+      consultant: sakuraba,
+      customer: hina,
+      pricePlan: planOf(sakuraba, 60),
+      startsAt: inPreviousMonth(5, 13),
+      status: "completed",
+      consultationContent: "仕事の人間関係について相談したいです。",
+      memo: "職場での立ち回りについて整理。無理に距離を詰めない方針で合意。",
+    },
+    {
+      consultant: sakuraba,
+      customer: ichiro,
+      pricePlan: planOf(sakuraba, 90),
+      startsAt: inPreviousMonth(12, 16),
+      status: "completed",
+      consultationContent: "今年後半の全体運を長めに見ていただきたいです。",
+      memo: "下半期の流れを通しで鑑定。秋口の判断が要になると伝えた。",
+      chargeMethod: "manual",
+    },
+    {
+      consultant: sakuraba,
+      customer: misaki,
+      pricePlan: planOf(sakuraba, 30),
+      startsAt: inPreviousMonth(19, 14),
+      status: "completed",
+      consultationContent: "引っ越しの時期について相談したいです。",
+      memo: "引っ越し時期の相談。年内なら 11 月が動きやすいと助言。",
+    },
+    {
+      // 同じ先月でも精算対象外（キャンセル）
+      consultant: sakuraba,
+      customer: yui,
+      pricePlan: planOf(sakuraba, 60),
+      startsAt: inPreviousMonth(22, 15),
+      status: "cancelled",
+      consultationContent: "体調不良のためキャンセルしました。",
+    },
+
+    // --- 他の占い師 ---------------------------------------------------------
+    {
+      consultant: hoshino,
+      customer: hina,
+      pricePlan: planOf(hoshino, 60),
+      startsAt: atOpenDay(2, 11),
+      status: "confirmed",
+      consultationContent:
+        "片思いの相手との距離の縮め方について相談したいです。",
+    },
+    {
+      consultant: hoshino,
+      customer: ichiro,
+      pricePlan: planOf(hoshino, 30),
+      startsAt: at(-5, 12),
+      status: "completed",
+      consultationContent: "職場の後輩との接し方に悩んでいます。",
+      memo: "後輩との関係について。まずは聞く姿勢を意識する方向で助言。",
+      rating: { score: 5, comment: "話しやすく、あっという間の 30 分でした。" },
+    },
+    {
+      consultant: tsukishiro,
+      customer: misaki,
+      pricePlan: planOf(tsukishiro, 60),
+      startsAt: atOpenDay(5, 18),
+      status: "confirmed",
+      consultationContent: "資格取得と転職のタイミングを相談したいです。",
+    },
+    {
+      consultant: tsukishiro,
+      customer: yui,
+      pricePlan: planOf(tsukishiro, 30),
+      startsAt: at(-7, 19),
+      status: "completed",
+      consultationContent: "部署異動の希望を出すか迷っています。",
+      memo: "異動希望について。年度末の面談で切り出す方向で整理。",
+      rating: { score: 3, comment: "落ち着いて相談できました。" },
     },
   ];
-
-  // 精算書（先月分）の明細用。既定の対象月が「先月」なので実行日に依存しない日付で固定する。
-  // completed = charged だけが借受金に計上され、cancelled と confirmed は除外されることを確認できる
-  scenarios.push(
-    {
-      consultant: own,
-      customer: customerAt(0),
-      pricePlan: ownPlans[0],
-      startsAt: toPreviousMonthStartsAt(5, 11),
-      status: "completed",
-      withMemo: true,
-    },
-    {
-      consultant: own,
-      customer: customerAt(1),
-      pricePlan: ownPlans[1],
-      startsAt: toPreviousMonthStartsAt(12, 14),
-      status: "completed",
-      withMemo: true,
-    },
-    {
-      consultant: own,
-      customer: customerAt(2),
-      pricePlan: ownPlans[2],
-      startsAt: toPreviousMonthStartsAt(19, 16),
-      status: "completed",
-      withMemo: true,
-    },
-    // 以下 2 件は同じ先月でも精算対象外（キャンセル / 未課金）
-    {
-      consultant: own,
-      customer: customerAt(3),
-      pricePlan: ownPlans[0],
-      startsAt: toPreviousMonthStartsAt(22, 13),
-      status: "cancelled",
-    },
-    {
-      consultant: own,
-      customer: customerAt(0),
-      pricePlan: ownPlans[1],
-      startsAt: toPreviousMonthStartsAt(26, 10),
-      status: "confirmed",
-    },
-  );
-
-  for (const [index, consultant] of activeConsultants.slice(1).entries()) {
-    const plans = plansOf(consultant);
-    scenarios.push(
-      {
-        consultant,
-        customer: customerAt(index + 1),
-        pricePlan: plans[1],
-        // 営業時間の例外日（休業）と重ならないよう 4 日後以降にする
-        dayOffset: BUSINESS_HOURS_EXCEPTION_DAY_OFFSET + 1 + index,
-        hour: 13,
-        status: "confirmed",
-      },
-      {
-        consultant,
-        customer: customerAt(index + 2),
-        pricePlan: plans[0],
-        dayOffset: -(index + 2),
-        hour: 16,
-        status: "completed",
-        withMemo: true,
-        rating: {
-          score: 3 + (index % 3),
-          comment: "落ち着いて相談できました。",
-        },
-      },
-    );
-  }
-
-  return scenarios;
 }
 
 /**
@@ -1043,21 +1299,27 @@ function toPaymentStatus(status: SeedBookingStatus): string {
   return "setup_pending";
 }
 
-function toDateString(date: Date): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+/**
+ * Stripe の ID 群。課金済みなら PaymentIntent と課金経路まで埋めて、
+ * 決済管理の「課金実行」列が「-」のままにならないようにする。
+ * カード未登録（仮予約）だけ PaymentMethod を持たせず、課金できない状態を再現する。
+ */
+function buildStripeFields(scenario: BookingScenario, bookingId: string) {
+  const suffix = hashCode(bookingId);
+  const paymentStatus = toPaymentStatus(scenario.status);
+  const hasPaymentMethod =
+    scenario.hasPaymentMethod ?? paymentStatus !== "setup_pending";
 
-/** Zoom URL / Stripe ID のダミー値を決定的に作るための簡易ハッシュ */
-function hashCode(value: string): number {
-  let hash = 0;
-  for (let index = 0; index < value.length; index++) {
-    hash = (hash << 5) - hash + value.charCodeAt(index);
-    hash |= 0;
-  }
-  return Math.abs(hash);
+  return {
+    stripeSetupIntentId: `seti_demo_${suffix}`,
+    stripePaymentMethodId: hasPaymentMethod ? `pm_demo_${suffix}` : undefined,
+    stripePaymentIntentId:
+      paymentStatus === "charged" ? `pi_demo_${suffix}` : undefined,
+    chargeMethod:
+      paymentStatus === "charged"
+        ? (scenario.chargeMethod ?? "batch")
+        : undefined,
+  };
 }
 
 async function seedBooking(
@@ -1065,9 +1327,9 @@ async function seedBooking(
   scenario: BookingScenario,
   coupons: SeededCoupons,
 ): Promise<string> {
-  const startsAt = resolveScenarioStartsAt(scenario);
+  const { startsAt } = scenario;
   const endsAt = new Date(
-    startsAt.getTime() + scenario.pricePlan.durationMinutes * 60 * 1000,
+    startsAt.getTime() + scenario.pricePlan.durationMinutes * MINUTE_MS,
   );
   // 再実行で重複しないように決定的な ID にする（本番は UUID）
   const bookingId = `${organizationId}_${scenario.consultant.consultantId}_${startsAt.toISOString()}`;
@@ -1084,6 +1346,8 @@ async function seedBooking(
   const totalJPY = scenario.pricePlan.totalJPY;
   const discountJPY = scenario.withCoupon ? coupons.welcomeAmountJPY : 0;
   const discountedTotalJPY = Math.max(0, totalJPY - discountJPY);
+  const agreedVersion = scenario.agreedPolicyVersion ?? POLICY_VERSION;
+  const joined = scenario.joined ?? scenario.status === "completed";
 
   const booking = Booking.reconstruct({
     organizationId,
@@ -1103,18 +1367,16 @@ async function seedBooking(
         : ZoomUrl.reconstruct(
             `https://example.zoom.us/j/${hashCode(bookingId)}`,
           ),
-    consultantJoinedAt:
-      scenario.status === "completed" ? new Date(startsAt) : undefined,
-    consultantMemo: scenario.withMemo
+    consultantJoinedAt: joined ? new Date(startsAt) : undefined,
+    consultantMemo: scenario.memo
       ? ConsultantMemo.reconstruct({
           customerName: scenario.customer.name,
           birthDate: scenario.customer.birthDate,
           appraisalDate: toDateString(startsAt),
-          freeMemo: "ローカル確認用のメモです。鑑定結果の記録が表示されます。",
+          freeMemo: scenario.memo,
         })
       : ConsultantMemo.empty(),
-    consultationContent:
-      "ローカル確認用の相談内容です。今後のキャリアについて相談したいです。",
+    consultationContent: scenario.consultationContent,
     pricePlanId: scenario.pricePlan.pricePlanId,
     pricePlanName: scenario.pricePlan.name,
     pricePlanTotalJPY: totalJPY,
@@ -1123,8 +1385,8 @@ async function seedBooking(
       : undefined,
     couponDiscountJPY: scenario.withCoupon ? discountJPY : undefined,
     discountedTotalJPY: scenario.withCoupon ? discountedTotalJPY : undefined,
-    agreedTermsVersion: POLICY_VERSION,
-    agreedCancellationPolicyVersion: POLICY_VERSION,
+    agreedTermsVersion: agreedVersion,
+    agreedCancellationPolicyVersion: agreedVersion,
     agreedAt: new Date(startsAt.getTime() - DAY_MS),
     createdAt: new Date(startsAt.getTime() - 3 * DAY_MS),
     updatedAt: new Date(startsAt.getTime() - DAY_MS),
@@ -1141,20 +1403,14 @@ async function seedBooking(
       money: Money.fromTaxIncluded(discountedTotalJPY, TAX_RATE),
       status: PaymentStatus.reconstruct(toPaymentStatus(scenario.status)),
       paymentStrategy: PaymentStrategy.reconstruct("deferred"),
-      stripeSetupIntentId: `seti_seed_${hashCode(bookingId)}`,
+      ...buildStripeFields(scenario, bookingId),
       createdAt: new Date(startsAt.getTime() - 3 * DAY_MS),
       updatedAt: new Date(startsAt.getTime() - DAY_MS),
     }),
   );
 
   if (scenario.rating) {
-    await seedBookingRating({
-      organizationId,
-      bookingId,
-      scenario,
-      startsAt,
-      endsAt,
-    });
+    await seedBookingRating({ organizationId, bookingId, scenario, endsAt });
   }
 
   return bookingId;
@@ -1171,10 +1427,9 @@ async function seedBookingRating(params: {
   organizationId: string;
   bookingId: string;
   scenario: BookingScenario;
-  startsAt: Date;
   endsAt: Date;
 }): Promise<void> {
-  const { organizationId, bookingId, scenario, startsAt, endsAt } = params;
+  const { organizationId, bookingId, scenario, endsAt } = params;
   if (!scenario.rating) return;
 
   await db
@@ -1190,9 +1445,9 @@ async function seedBookingRating(params: {
       customerId: scenario.customer.customerId,
       score: scenario.rating.score,
       comment: scenario.rating.comment,
-      consultedAt: startsAt,
+      consultedAt: scenario.startsAt,
       // 鑑定終了の 1 時間後に評価したことにする
-      ratedAt: new Date(endsAt.getTime() + 60 * 60 * 1000),
+      ratedAt: new Date(endsAt.getTime() + HOUR_MS),
     }),
   );
 }
@@ -1200,6 +1455,38 @@ async function seedBookingRating(params: {
 // ---------------------------------------------------------------------------
 // 鑑定書
 // ---------------------------------------------------------------------------
+
+/** 鑑定書の本文。相談内容に沿った文面にして、そのまま読める鑑定書にする */
+const APPRAISAL_REPORT_CONTENTS: Record<
+  AppraisalReportStatus,
+  {
+    theme: string;
+    currentSituation: string;
+    result: string;
+    luckyAction: string;
+    summary: string;
+  }
+> = {
+  published: {
+    theme: "今後のキャリアと転職のタイミングについて",
+    currentSituation:
+      "現職に留まるか転職するかで迷われている時期です。周囲との比較で焦りが出やすい配置が出ており、判断を急ぐほど選択肢が狭く見えやすくなっています。",
+    result:
+      "秋以降に流れが大きく変わります。特に 10 月から 12 月にかけて新しい縁がつながりやすく、この時期の行動が来年の土台になります。それまでは条件を絞り込みすぎず、情報を集める期間としてお使いください。",
+    luckyAction:
+      "朝の散歩を習慣にし、月に一度は行ったことのない場所に足を運んでください。人からの紹介が動きのきっかけになります。",
+    summary:
+      "焦らず準備を進めることが、そのまま次の機会につながります。秋の変化に備えて、いまは足場を固める時期です。",
+  },
+  draft: {
+    theme: "パートナーとの今後について",
+    currentSituation:
+      "（下書き）関係は安定していますが、お互いに仕事の負荷が重なりやすい時期です。",
+    result: "（下書き）春以降に落ち着きが出る見込みです。ここから清書します。",
+    luckyAction: "",
+    summary: "",
+  },
+};
 
 async function seedAppraisalReport(
   organizationId: string,
@@ -1209,11 +1496,15 @@ async function seedAppraisalReport(
   const status = scenario.appraisalReport;
   if (!status) return;
 
-  const startsAt = resolveScenarioStartsAt(scenario);
-  // 鑑定の翌日に書き上げた想定
-  const writtenAt = new Date(startsAt.getTime() + DAY_MS);
+  const { startsAt } = scenario;
+  // 鑑定終了の 2 時間後に書き上げた想定
+  const writtenAt = new Date(
+    startsAt.getTime() +
+      scenario.pricePlan.durationMinutes * MINUTE_MS +
+      2 * HOUR_MS,
+  );
   const appraisalDate = toDateString(startsAt);
-  const isPublished = status === "published";
+  const content = APPRAISAL_REPORT_CONTENTS[status];
 
   await new FirestoreAppraisalReportRepository().save(
     AppraisalReport.reconstruct({
@@ -1228,21 +1519,10 @@ async function seedAppraisalReport(
         customerName: scenario.customer.name,
         birthDate: scenario.customer.birthDate,
         appraisalDate,
-        theme: "今後のキャリアと転職のタイミングについて",
-        currentSituation:
-          "現在は現職に留まるか転職するかで迷われている時期です。周囲との比較で焦りが出やすい配置が出ています。",
-        result: isPublished
-          ? "秋以降に流れが大きく変わります。特に 10 月から 12 月にかけて新しい縁がつながりやすく、この時期の行動が来年の土台になります。"
-          : "（下書き）秋以降に流れが変わる見込みです。ここから清書します。",
-        luckyAction: isPublished
-          ? "朝の散歩を習慣にし、月に一度は行ったことのない場所に足を運んでください。"
-          : "",
-        summary: isPublished
-          ? "焦らず準備を進めることが、そのまま次の機会につながります。"
-          : "",
+        ...content,
       }),
       status,
-      publishedAt: isPublished ? writtenAt : null,
+      publishedAt: status === "published" ? writtenAt : null,
       createdAt: writtenAt,
       updatedAt: writtenAt,
     }),
@@ -1273,11 +1553,15 @@ async function main() {
   const consultants = buildConsultantSeeds(args, consultantUid);
   const customers = buildCustomerSeeds(args, userUid);
 
+  const purgedCount = await purgeOrganization(args.organizationId);
   await seedOrganization(args);
   await seedRoles(args.organizationId);
   await seedAccounts(args.organizationId, adminUid);
   await seedConsultants(args.organizationId, consultants);
-  const pricePlanCount = await seedPricePlans(args.organizationId, consultants);
+  const pricePlanCounts = await seedPricePlans(
+    args.organizationId,
+    consultants,
+  );
   const slotCount = await seedSlots(
     args.organizationId,
     consultants,
@@ -1286,39 +1570,38 @@ async function main() {
   await seedUsersAndCustomers(args.organizationId, customers);
   const coupons = await seedCoupons(args.organizationId, userUid);
 
-  const scenarios = buildBookingScenarios(
-    args.organizationId,
-    consultants,
-    customers,
-  );
+  const scenarios = buildBookingScenarios(consultants, customers);
   const bookingIds: string[] = [];
   for (const scenario of scenarios) {
     const bookingId = await seedBooking(args.organizationId, scenario, coupons);
     bookingIds.push(bookingId);
     await seedAppraisalReport(args.organizationId, scenario, bookingId);
   }
-  const publishedReportCount = scenarios.filter(
-    (scenario) => scenario.appraisalReport === "published",
-  ).length;
-  const draftReportCount = scenarios.filter(
-    (scenario) => scenario.appraisalReport === "draft",
-  ).length;
 
-  const ratedScenarioCount = scenarios.filter(
-    (scenario) => scenario.rating,
-  ).length;
+  const count = (predicate: (scenario: BookingScenario) => boolean) =>
+    scenarios.filter(predicate).length;
+  const publishedReportCount = count(
+    (scenario) => scenario.appraisalReport === "published",
+  );
+  const draftReportCount = count(
+    (scenario) => scenario.appraisalReport === "draft",
+  );
+  const ratedCount = count((scenario) => Boolean(scenario.rating));
+  const todayString = toDateString(new Date());
+  const todayBookingCount = count(
+    (scenario) => toDateString(scenario.startsAt) === todayString,
+  );
 
   const couponScenarioIndex = scenarios.findIndex(
     (scenario) => scenario.withCoupon,
   );
   if (couponScenarioIndex >= 0) {
-    const scenario = scenarios[couponScenarioIndex];
     await seedRedeemedUserCoupon({
       organizationId: args.organizationId,
       userId: userUid,
       coupons,
       bookingId: bookingIds[couponScenarioIndex],
-      redeemedAt: resolveScenarioStartsAt(scenario),
+      redeemedAt: scenarios[couponScenarioIndex].startsAt,
     });
   }
 
@@ -1326,8 +1609,8 @@ async function main() {
     organizationIds: [args.organizationId],
     versions: [
       {
-        version: OLD_POLICY_VERSION,
-        effectiveFrom: new Date(OLD_POLICY_EFFECTIVE_FROM),
+        version: ARCHIVED_POLICY_VERSION,
+        effectiveFrom: new Date(ARCHIVED_POLICY_EFFECTIVE_FROM),
         status: "archived",
         archivedAt: new Date(POLICY_EFFECTIVE_FROM),
         note: `※ この版は旧版です（${POLICY_VERSION} 版に置き換えられました）。`,
@@ -1337,8 +1620,14 @@ async function main() {
         effectiveFrom: new Date(POLICY_EFFECTIVE_FROM),
         status: "published",
       },
+      {
+        version: DRAFT_POLICY_VERSION,
+        effectiveFrom: new Date(DRAFT_POLICY_EFFECTIVE_FROM),
+        status: "draft",
+        note: `※ この版は下書きです（${DRAFT_POLICY_VERSION} 施行予定）。`,
+      },
     ],
-    createdBy: "seed-local",
+    createdBy: POLICY_CREATED_BY,
     // 改版履歴を作るので、同じ version が無ければ作る
     skipMode: "version-exists",
   });
@@ -1346,35 +1635,43 @@ async function main() {
     (result) => result.action === "created",
   ).length;
 
-  console.log("シードデータを投入しました");
+  const activeConsultantCount = consultants.filter(
+    (consultant) => consultant.isActive,
+  ).length;
+
+  console.log("デモデータを投入しました");
+  console.log(
+    `  purged: ${purgedCount} 件（投入前に対象組織のドキュメントを削除）`,
+  );
   console.log(`  organizationId: ${args.organizationId}`);
   console.log(`  organizationName: ${args.organizationName}`);
   console.log(`  adminUid: ${adminUid}`);
   console.log(`  consultantUid: ${consultantUid}`);
   console.log(`  userUid: ${userUid}`);
-  const activeConsultantCount = consultants.filter(
-    (consultant) => consultant.isActive,
-  ).length;
   console.log(
-    `  consultants: ${consultants.length}（稼働 ${activeConsultantCount} / 非稼働 ${consultants.length - activeConsultantCount}）`,
+    `  consultants: ${consultants.length}（稼働 ${activeConsultantCount} / 休止 ${consultants.length - activeConsultantCount}）`,
   );
-  console.log(`  pricePlans: ${pricePlanCount}`);
-  console.log(`  slots: ${slotCount}（翌日から ${args.days} 日分）`);
+  console.log(
+    `  pricePlans: ${pricePlanCounts.active + pricePlanCounts.archived}（有効 ${pricePlanCounts.active} / アーカイブ ${pricePlanCounts.archived}）`,
+  );
+  console.log(
+    `  slots: ${slotCount}（今日から ${args.days} 日分。火曜定休と ${TEMPORARY_CLOSURE_DAY} の臨時休業を除く）`,
+  );
   console.log(`  customers: ${customers.length}`);
   console.log(
-    `  bookings: ${bookingIds.length}（確定 / 完了 / キャンセル / 仮予約）`,
+    `  bookings: ${bookingIds.length}（確定 / 完了 / キャンセル / 仮予約。うち今日が ${todayBookingCount} 件）`,
   );
   console.log(
-    `  bookingRatings: ${ratedScenarioCount}（完了済み予約への評価。未評価の完了済み予約も 1 件残している）`,
+    `  bookingRatings: ${ratedCount}（5 / 4 / 3 / 2 点。未評価の完了予約も 1 件残している）`,
   );
   console.log(
     `  appraisalReports: ${publishedReportCount + draftReportCount}（発行済み ${publishedReportCount} / 下書き ${draftReportCount}）`,
   );
   console.log(
-    `  userCoupons: ${WELCOME_COUPON_BATCH_SIZE + BIRTHDAY_COUPON_BATCH_SIZE}（初回登録特典 ${WELCOME_COUPON_BATCH_SIZE} 枚: 未使用 ${WELCOME_COUPON_BATCH_SIZE - 1} / 使用済み 1、誕生日 ${BIRTHDAY_COUPON_BATCH_SIZE} 枚: 期限切れ）`,
+    `  userCoupons: ${WELCOME_COUPON_BATCH_SIZE + BIRTHDAY_COUPON_BATCH_SIZE}（${WELCOME_COUPON_NAME} ${WELCOME_COUPON_BATCH_SIZE} 枚: 未使用 ${WELCOME_COUPON_BATCH_SIZE - 1} / 使用済み 1、${BIRTHDAY_COUPON_NAME} ${BIRTHDAY_COUPON_BATCH_SIZE} 枚: 期限切れ）`,
   );
   console.log(
-    `  policyRevisions: ${createdPolicies} 件作成、${policyResults.length - createdPolicies} 件は既存のまま（5 種 × 2 版: ${OLD_POLICY_VERSION} 旧版 / ${POLICY_VERSION} 現行）`,
+    `  policyRevisions: ${createdPolicies} 件作成、${policyResults.length - createdPolicies} 件は既存のまま（5 種 × 3 版: ${ARCHIVED_POLICY_VERSION} アーカイブ / ${POLICY_VERSION} 公開中 / ${DRAFT_POLICY_VERSION} 下書き）`,
   );
   console.log("");
   console.log("次の URL で確認できます:");
@@ -1384,6 +1681,6 @@ async function main() {
 }
 
 main().catch((error) => {
-  console.error("シードデータの投入に失敗しました:", error.message ?? error);
+  console.error("デモデータの投入に失敗しました:", error.message ?? error);
   process.exit(1);
 });
