@@ -98,16 +98,22 @@ export default function ConsoleSettingsPage() {
         variant="line"
       >
         <Tabs.List mb="4">
+          <Tabs.Trigger value="company-info">会社情報</Tabs.Trigger>
           <Tabs.Trigger value="business-hours" disabled={isLoading}>
             営業時間
           </Tabs.Trigger>
-          <Tabs.Trigger value="consultant-statuses">ステータス</Tabs.Trigger>
           <Tabs.Trigger value="price" disabled={isLoading}>
             料金
           </Tabs.Trigger>
-          <Tabs.Trigger value="company-info">会社情報</Tabs.Trigger>
+          <Tabs.Trigger value="consultant-statuses">ステータス</Tabs.Trigger>
           <Tabs.Indicator />
         </Tabs.List>
+        <Tabs.Content value="company-info">
+          <CompanyInfoSettingsTab
+            organizationId={organizationId ?? undefined}
+            isReadOnly={isReadOnly}
+          />
+        </Tabs.Content>
         <Tabs.Content value="business-hours">
           {initialized && (
             <BusinessHoursSettingsTab
@@ -119,12 +125,6 @@ export default function ConsoleSettingsPage() {
               onBusinessHoursSaved={setBusinessHours}
             />
           )}
-        </Tabs.Content>
-        <Tabs.Content value="consultant-statuses">
-          <ConsultantStatusesSettingsTab
-            organizationId={organizationId ?? undefined}
-            isReadOnly={!canManageConsultantStatuses}
-          />
         </Tabs.Content>
         <Tabs.Content value="price">
           {initialized && (
@@ -138,10 +138,10 @@ export default function ConsoleSettingsPage() {
             />
           )}
         </Tabs.Content>
-        <Tabs.Content value="company-info">
-          <CompanyInfoSettingsTab
+        <Tabs.Content value="consultant-statuses">
+          <ConsultantStatusesSettingsTab
             organizationId={organizationId ?? undefined}
-            isReadOnly={isReadOnly}
+            isReadOnly={!canManageConsultantStatuses}
           />
         </Tabs.Content>
       </Tabs.Root>
