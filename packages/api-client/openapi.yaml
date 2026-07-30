@@ -1067,6 +1067,76 @@ paths:
         "200":
           description: OK
 
+  /organizations/{organizationId}/console/settings/company-info:
+    get:
+      operationId: getConsoleCompanyInfo
+      summary: 会社情報取得（管理者・オペレーター）
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyInfoSettings"
+    patch:
+      operationId: updateConsoleCompanyInfo
+      summary: 会社情報更新（管理者のみ）
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CompanyInfo"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CompanyInfoSettings"
+
+  /organizations/{organizationId}/consultant/settlement-statement:
+    get:
+      operationId: getConsultantSettlementStatement
+      summary: 精算書取得（占い師）
+      tags: [consultant]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - name: month
+          in: query
+          required: true
+          description: 対象月（YYYY-MM）
+          schema:
+            type: string
+            pattern: "^\\d{4}-\\d{2}$"
+        - name: uses-office-address
+          in: query
+          required: false
+          description: 事務所を住所として利用するか（500円を控除する）
+          schema:
+            type: string
+            enum: ["true", "false"]
+            default: "false"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SettlementStatement"
+
   /organizations/{organizationId}/console/bookings:
     get:
       operationId: getConsoleBookings
@@ -2379,6 +2449,20 @@ components:
         name:
           type: string
 
+    ConsultantStatusSetting:
+      type: object
+      required: [statusId, name, settlementRatePercent]
+      properties:
+        statusId:
+          type: string
+        name:
+          type: string
+        settlementRatePercent:
+          type: integer
+          minimum: 0
+          maximum: 100
+          description: 精算時に借受金へ乗じるシステム利用料の料率（%）
+
     ConsultantStatusSettings:
       type: object
       required: [consultantStatuses, defaultConsultantStatusId]
@@ -2388,9 +2472,118 @@ components:
           minItems: 1
           maxItems: 5
           items:
-            $ref: "#/components/schemas/ConsultantStatus"
+            $ref: "#/components/schemas/ConsultantStatusSetting"
         defaultConsultantStatusId:
           type: string
+
+    CompanyInfo:
+      type: object
+      required: [companyName, address, officeAddress]
+      properties:
+        companyName:
+          type: string
+          description: 精算書の宛先として記載する運営会社名
+        address:
+          type: string
+          description: 運営会社の所在地
+        officeAddress:
+          type: string
+          description: 事務所を住所として利用する占い師の住所として記載する事務所所在地
+
+    CompanyInfoSettings:
+      type: object
+      required: [companyInfo]
+      properties:
+        companyInfo:
+          $ref: "#/components/schemas/CompanyInfo"
+
+    SettlementStatementItem:
+      type: object
+      required:
+        [bookingId, startsAt, endsAt, customerName, pricePlanName, amountJPY]
+      properties:
+        bookingId:
+          type: string
+        startsAt:
+          type: string
+          format: date-time
+        endsAt:
+          type: string
+          format: date-time
+        customerName:
+          type: string
+          nullable: true
+        pricePlanName:
+          type: string
+          nullable: true
+        amountJPY:
+          type: integer
+
+    SettlementStatement:
+      type: object
+      required:
+        [
+          month,
+          issuedAt,
+          issuedTo,
+          issuer,
+          consultantStatusName,
+          usesOfficeAddress,
+          items,
+          grossJPY,
+          systemFeeRatePercent,
+          systemFeeJPY,
+          systemFeeTaxJPY,
+          officeFeeJPY,
+          settlementAmountJPY,
+        ]
+      properties:
+        month:
+          type: string
+          description: 対象月（YYYY-MM）
+        issuedAt:
+          type: string
+          format: date-time
+        issuedTo:
+          type: object
+          required: [companyName, address]
+          properties:
+            companyName:
+              type: string
+            address:
+              type: string
+        issuer:
+          type: object
+          required: [name, address]
+          properties:
+            name:
+              type: string
+            address:
+              type: string
+              nullable: true
+              description: 事務所を住所として利用する場合のみ運営の事務所所在地が入る
+        consultantStatusName:
+          type: string
+          nullable: true
+        usesOfficeAddress:
+          type: boolean
+        items:
+          type: array
+          items:
+            $ref: "#/components/schemas/SettlementStatementItem"
+        grossJPY:
+          type: integer
+          description: 借受金合計（税込）
+        systemFeeRatePercent:
+          type: integer
+        systemFeeJPY:
+          type: integer
+        systemFeeTaxJPY:
+          type: integer
+        officeFeeJPY:
+          type: integer
+        settlementAmountJPY:
+          type: integer
 
     AvatarUploadUrlResponse:
       type: object

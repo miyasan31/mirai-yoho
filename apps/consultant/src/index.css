@@ -88,3 +88,38 @@
 .dark .rbc-current-time-indicator {
   background-color: #2b74e1;
 }
+
+/* 精算書の印刷（ブラウザの「PDFとして保存」）用。
+   data-print-area を持つ要素だけを残し、サイドバーや操作パネルを隠す */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  [data-print-area],
+  [data-print-area] * {
+    visibility: visible;
+  }
+
+  [data-print-area] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    border: none;
+    box-shadow: none;
+    background: #fff;
+    color: #000;
+  }
+
+  [data-print-hidden] {
+    display: none;
+  }
+
+  @page {
+    size: A4;
+    margin: 15mm;
+  }
+}

@@ -1,6 +1,7 @@
 import { BusinessHours } from "@mirai-yoho/shared/business-hours";
 import type { Timestamp } from "firebase-admin/firestore";
-import type { ConsultantStatusProps } from "@/domain/settings/consultant-status";
+import { CompanyInfo } from "@/domain/settings/company-info";
+import type { ConsultantStatusInput } from "@/domain/settings/consultant-status";
 import { PricePlanRange } from "@/domain/settings/price-plan-range";
 import { Settings } from "@/domain/settings/settings";
 import type { ISettingsRepository } from "@/domain/settings/settings-repository";
@@ -12,9 +13,10 @@ const COLLECTION = FIRESTORE_COLLECTIONS.settings;
 interface SettingsDoc {
   organizationId: string;
   businessHours?: ReturnType<BusinessHours["toJSON"]>;
-  consultantStatuses?: ConsultantStatusProps[];
+  consultantStatuses?: ConsultantStatusInput[];
   defaultConsultantStatusId?: string;
   pricePlanRange?: ReturnType<PricePlanRange["toJSON"]>;
+  companyInfo?: ReturnType<CompanyInfo["toJSON"]>;
   createdAt?: Timestamp | Date;
   updatedAt?: Timestamp | Date;
 }
@@ -33,6 +35,7 @@ function toDomain(doc: SettingsDoc): Settings {
     defaultConsultantStatusId: doc.defaultConsultantStatusId,
     pricePlanRange:
       doc.pricePlanRange ?? PricePlanRange.createDefault().toJSON(),
+    companyInfo: doc.companyInfo ?? CompanyInfo.createDefault().toJSON(),
     createdAt: toDate(doc.createdAt),
     updatedAt: toDate(doc.updatedAt),
   });
@@ -45,6 +48,7 @@ function toFirestore(settings: Settings): SettingsDoc {
     consultantStatuses: settings.getConsultantStatuses(),
     defaultConsultantStatusId: settings.getDefaultConsultantStatusId(),
     pricePlanRange: settings.getPricePlanRange().toJSON(),
+    companyInfo: settings.getCompanyInfo().toJSON(),
     createdAt: settings.getCreatedAt(),
     updatedAt: settings.getUpdatedAt(),
   };

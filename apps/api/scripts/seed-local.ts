@@ -2,13 +2,13 @@
  * ローカルの Firestore エミュレーターに開発用のシードデータを一括投入する。
  *
  * 投入するもの:
- *   - organizations / settings（営業時間 05:00-04:00 + 例外日、ステータス 3 種、料金 5,000-20,000 円）
+ *   - organizations / settings（営業時間 05:00-04:00 + 例外日、ステータス 3 種、料金 5,000-20,000 円、会社情報）
  *   - roles（admin / operator）/ accounts（管理者 = 自分、招待中のオペレーター）
  *   - consultants（自分 + ダミー。1 人は非稼働）
  *   - price-plans（占い師ごとに 30 / 60 / 90 分）
  *   - slots（翌日から N 日分、10:00-17:00 の 15 分枠）
  *   - users / customers（apps/user の会員と顧客）
- *   - bookings / payments（確定・完了・キャンセル・仮予約の 4 状態）
+ *   - bookings / payments（確定・完了・キャンセル・仮予約の 4 状態 + 精算書用の先月分）
  *   - coupons / user-coupons（初回登録特典 3 枚・90 日 / 誕生日 1 枚・30 日）
  *   - policy-revisions（利用者向け 3 種 + 占い師向け 2 種 × 旧版 / 現行の 2 版）
  *
@@ -106,11 +106,31 @@ const PRICE_PLAN_RANGE = { minTotalJPY: 5000, maxTotalJPY: 20000 };
 const STATUS_ID_HIGH = "high";
 const STATUS_ID_MIDDLE = "middle";
 const STATUS_ID_LOW = DEFAULT_CONSULTANT_STATUS_ID;
+// 料率は精算書のシステム利用料に使う。3 段階すべてを確認できるよう 40/35/30 を割り当てる
 const CONSULTANT_STATUSES = [
-  { statusId: STATUS_ID_HIGH, name: "ステータス Hight" },
-  { statusId: STATUS_ID_MIDDLE, name: "ステータス Middle" },
-  { statusId: STATUS_ID_LOW, name: "ステータス Low" },
+  {
+    statusId: STATUS_ID_HIGH,
+    name: "ステータス Hight",
+    settlementRatePercent: 40,
+  },
+  {
+    statusId: STATUS_ID_MIDDLE,
+    name: "ステータス Middle",
+    settlementRatePercent: 35,
+  },
+  {
+    statusId: STATUS_ID_LOW,
+    name: "ステータス Low",
+    settlementRatePercent: 30,
+  },
 ];
+
+// 精算書の宛先と、事務所を住所として利用する占い師の発行者住所に使う
+const COMPANY_INFO = {
+  companyName: "みらい予報株式会社",
+  address: "〒473-0901 愛知県豊田市御幸本町2丁目205-8",
+  officeAddress: "〒473-0901 愛知県豊田市御幸本町2丁目205-8",
+};
 
 interface SeedArgs {
   organizationId: string;
@@ -361,6 +381,7 @@ async function seedOrganization(args: SeedArgs): Promise<void> {
   settings.updateBusinessHours(buildBusinessHours());
   settings.updateConsultantStatuses(CONSULTANT_STATUSES, STATUS_ID_LOW);
   settings.updatePricePlanRange(PRICE_PLAN_RANGE);
+  settings.updateCompanyInfo(COMPANY_INFO);
   await new FirestoreSettingsRepository().save(settings);
 }
 
@@ -726,23 +747,50 @@ async function seedRedeemedUserCoupon(params: {
 
 type SeedBookingStatus = "pending" | "confirmed" | "completed" | "cancelled";
 
-interface BookingScenario {
+interface BookingScenarioBase {
   consultant: ConsultantSeed;
   customer: CustomerSeed;
   pricePlan: PricePlanSeed;
-  /** 今日からの日数。負値は過去 */
-  dayOffset: number;
-  hour: number;
   status: SeedBookingStatus;
   withMemo?: boolean;
   withCoupon?: boolean;
 }
+
+/**
+ * 開始日時は「今日からの相対日数」か「絶対日時」のどちらかで指定する。
+ * 精算書は既定で先月を集計するため、対象月を固定したいシナリオは startsAt を使う
+ */
+type BookingScenario = BookingScenarioBase &
+  (
+    | {
+        /** 今日からの日数。負値は過去 */
+        dayOffset: number;
+        hour: number;
+      }
+    | { startsAt: Date }
+  );
 
 function toBookingStartsAt(dayOffset: number, hour: number): Date {
   const startsAt = new Date();
   startsAt.setDate(startsAt.getDate() + dayOffset);
   startsAt.setHours(hour, 0, 0, 0);
   return startsAt;
+}
+
+function resolveScenarioStartsAt(scenario: BookingScenario): Date {
+  return "startsAt" in scenario
+    ? scenario.startsAt
+    : toBookingStartsAt(scenario.dayOffset, scenario.hour);
+}
+
+/**
+ * 先月の指定日・指定時刻を返す。
+ * 精算書画面の既定が「先月」なので、実行日に関わらず必ず対象月に入るようにする。
+ * 2 月でも存在するよう day は 28 以下で呼ぶこと。
+ */
+function toPreviousMonthStartsAt(day: number, hour: number): Date {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth() - 1, day, hour, 0, 0, 0);
 }
 
 function buildBookingScenarios(
@@ -800,6 +848,50 @@ function buildBookingScenarios(
       status: "pending",
     },
   ];
+
+  // 精算書（先月分）の明細用。既定の対象月が「先月」なので実行日に依存しない日付で固定する。
+  // completed = charged だけが借受金に計上され、cancelled と confirmed は除外されることを確認できる
+  scenarios.push(
+    {
+      consultant: own,
+      customer: customerAt(0),
+      pricePlan: ownPlans[0],
+      startsAt: toPreviousMonthStartsAt(5, 11),
+      status: "completed",
+      withMemo: true,
+    },
+    {
+      consultant: own,
+      customer: customerAt(1),
+      pricePlan: ownPlans[1],
+      startsAt: toPreviousMonthStartsAt(12, 14),
+      status: "completed",
+      withMemo: true,
+    },
+    {
+      consultant: own,
+      customer: customerAt(2),
+      pricePlan: ownPlans[2],
+      startsAt: toPreviousMonthStartsAt(19, 16),
+      status: "completed",
+      withMemo: true,
+    },
+    // 以下 2 件は同じ先月でも精算対象外（キャンセル / 未課金）
+    {
+      consultant: own,
+      customer: customerAt(3),
+      pricePlan: ownPlans[0],
+      startsAt: toPreviousMonthStartsAt(22, 13),
+      status: "cancelled",
+    },
+    {
+      consultant: own,
+      customer: customerAt(0),
+      pricePlan: ownPlans[1],
+      startsAt: toPreviousMonthStartsAt(26, 10),
+      status: "confirmed",
+    },
+  );
 
   for (const [index, consultant] of activeConsultants.slice(1).entries()) {
     const plans = plansOf(consultant);
@@ -904,7 +996,7 @@ async function seedBooking(
   scenario: BookingScenario,
   coupons: SeededCoupons,
 ): Promise<string> {
-  const startsAt = toBookingStartsAt(scenario.dayOffset, scenario.hour);
+  const startsAt = resolveScenarioStartsAt(scenario);
   const endsAt = new Date(
     startsAt.getTime() + scenario.pricePlan.durationMinutes * 60 * 1000,
   );
@@ -1046,7 +1138,7 @@ async function main() {
       userId: userUid,
       coupons,
       bookingId: bookingIds[couponScenarioIndex],
-      redeemedAt: toBookingStartsAt(scenario.dayOffset, scenario.hour),
+      redeemedAt: resolveScenarioStartsAt(scenario),
     });
   }
 

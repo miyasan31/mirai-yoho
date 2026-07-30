@@ -3,6 +3,7 @@ import {
   getGetConsoleAccountsQueryKey,
   getGetConsoleBookingSettingsQueryKey,
   getGetConsoleBookingsQueryKey,
+  getGetConsoleCompanyInfoQueryKey,
   getGetConsoleConsultantStatusesQueryKey,
   getGetConsoleConsultantsQueryKey,
   getGetConsoleCouponsQueryKey,
@@ -118,6 +119,11 @@ export const invalidateAfter = {
         queryKey: getGetPublicSettingsQueryKey(organizationId),
       }),
     ]),
+
+  companyInfoMutation: (qc: QueryClient, organizationId: string) =>
+    qc.invalidateQueries({
+      queryKey: getGetConsoleCompanyInfoQueryKey(organizationId),
+    }),
 
   consultantStatusesMutation: (qc: QueryClient, organizationId: string) =>
     Promise.all([

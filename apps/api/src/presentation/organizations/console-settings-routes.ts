@@ -1,16 +1,30 @@
 import { Hono } from "hono";
-import type { ConsultantStatusProps } from "@/domain/settings/consultant-status";
+import * as v from "valibot";
+import {
+  type ConsultantStatusProps,
+  DEFAULT_SETTLEMENT_RATE_PERCENT,
+} from "@/domain/settings/consultant-status";
 import { Settings } from "@/domain/settings/settings";
 import { requirePermission } from "@/infrastructure/auth/require-permission";
 import { verifyAccountAuth } from "@/infrastructure/auth/verify-auth";
 import {
   createSettingsRepository,
   createUpdateBookingSettingsUseCase,
+  createUpdateCompanyInfoUseCase,
   createUpdateConsultantStatusesUseCase,
 } from "@/infrastructure/container";
 import { toConsultantStatusesResponse } from "./consultant-status";
 import { getRoute, jsonError, noStoreJson, patchRoute } from "./route-handler";
-import { toBookingSettingsResponse } from "./settings-response";
+import {
+  toBookingSettingsResponse,
+  toCompanyInfoResponse,
+} from "./settings-response";
+
+const companyInfoSchema = v.object({
+  companyName: v.string(),
+  address: v.string(),
+  officeAddress: v.string(),
+});
 
 function parseConsultantStatusesBody(
   body: unknown,
@@ -28,12 +42,24 @@ function parseConsultantStatusesBody(
   }
   const statuses = payload.consultantStatuses.map((status) => {
     if (!status || typeof status !== "object") {
-      return { statusId: "", name: "" };
+      return {
+        statusId: "",
+        name: "",
+        settlementRatePercent: DEFAULT_SETTLEMENT_RATE_PERCENT,
+      };
     }
-    const source = status as { statusId?: unknown; name?: unknown };
+    const source = status as {
+      statusId?: unknown;
+      name?: unknown;
+      settlementRatePercent?: unknown;
+    };
     return {
       statusId: typeof source.statusId === "string" ? source.statusId : "",
       name: typeof source.name === "string" ? source.name : "",
+      settlementRatePercent:
+        typeof source.settlementRatePercent === "number"
+          ? source.settlementRatePercent
+          : DEFAULT_SETTLEMENT_RATE_PERCENT,
     };
   });
   return {
@@ -92,6 +118,40 @@ consoleSettingsRoutes.patch(
       defaultStatusId: parsed.defaultStatusId,
     });
     return Response.json(toConsultantStatusesResponse(settings));
+  }),
+);
+
+consoleSettingsRoutes.get(
+  "/console/settings/company-info",
+  getRoute(async ({ organizationId, request }) => {
+    const authUser = await verifyAccountAuth(request);
+    requirePermission(authUser, organizationId, "console.settings.read");
+    const settings =
+      await createSettingsRepository().findByOrganizationId(organizationId);
+    const resolvedSettings = settings ?? Settings.createDefault(organizationId);
+    return noStoreJson(toCompanyInfoResponse(resolvedSettings));
+  }),
+);
+
+consoleSettingsRoutes.patch(
+  "/console/settings/company-info",
+  patchRoute(async ({ organizationId, request }) => {
+    const authUser = await verifyAccountAuth(request);
+    requirePermission(authUser, organizationId, "console.settings.manage");
+    const body = await request.json();
+    const parsed = v.safeParse(companyInfoSchema, body);
+    if (!parsed.success) {
+      return jsonError(
+        400,
+        "VALIDATION_ERROR",
+        "companyName, address and officeAddress are required",
+      );
+    }
+    const settings = await createUpdateCompanyInfoUseCase().execute({
+      organizationId,
+      companyInfo: parsed.output,
+    });
+    return Response.json(toCompanyInfoResponse(settings));
   }),
 );
 

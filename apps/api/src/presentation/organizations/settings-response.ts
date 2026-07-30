@@ -6,3 +6,9 @@ export function toBookingSettingsResponse(settings: Settings) {
     pricePlanRange: settings.getPricePlanRange().toJSON(),
   };
 }
+
+export function toCompanyInfoResponse(settings: Settings) {
+  return {
+    companyInfo: settings.getCompanyInfo().toJSON(),
+  };
+}

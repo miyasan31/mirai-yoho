@@ -37,7 +37,9 @@ import { ArchivePricePlanUseCase } from "@/application/price-plan/archive-price-
 import { CreatePricePlanUseCase } from "@/application/price-plan/create-price-plan-use-case";
 import { UpdatePricePlanUseCase } from "@/application/price-plan/update-price-plan-use-case";
 import { UpdateBookingSettingsUseCase } from "@/application/settings/update-booking-settings-use-case";
+import { UpdateCompanyInfoUseCase } from "@/application/settings/update-company-info-use-case";
 import { UpdateConsultantStatusesUseCase } from "@/application/settings/update-consultant-statuses-use-case";
+import { GetConsultantSettlementStatementUseCase } from "@/application/settlement/get-consultant-settlement-statement-use-case";
 import type { IZoomService } from "@/application/shared/zoom-service";
 import type { IUserZoomOAuthService } from "@/application/shared/zoom-user-oauth-service";
 import { CreateSlotUseCase } from "@/application/slot/create-slot-use-case";
@@ -181,6 +183,20 @@ export function createUpdateConsultantStatusesUseCase() {
   return new UpdateConsultantStatusesUseCase(
     new FirestoreSettingsRepository(),
     new FirestoreConsultantRepository(),
+  );
+}
+
+export function createUpdateCompanyInfoUseCase() {
+  return new UpdateCompanyInfoUseCase(new FirestoreSettingsRepository());
+}
+
+export function createGetConsultantSettlementStatementUseCase() {
+  return new GetConsultantSettlementStatementUseCase(
+    new FirestoreBookingRepository(),
+    new FirestorePaymentRepository(),
+    new FirestoreConsultantRepository(),
+    new FirestoreSettingsRepository(),
+    new FirestoreCustomerRepository(),
   );
 }
 

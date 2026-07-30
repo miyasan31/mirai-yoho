@@ -11,6 +11,7 @@ import { consoleSettingsRoutes } from "./console-settings-routes";
 import { consultantBookingRoutes } from "./consultant-booking-routes";
 import { consultantPolicyRoutes } from "./consultant-policy-routes";
 import { consultantProfileRoutes } from "./consultant-profile-routes";
+import { consultantSettlementRoutes } from "./consultant-settlement-routes";
 import { customerBookingRoutes } from "./customer-bookings";
 import { customerCouponRoutes } from "./customer-coupon-routes";
 import { customerPolicyRoutes } from "./customer-policy-routes";
@@ -32,6 +33,7 @@ export function createOrganizationRoutes(): Hono {
   routes.route("/:organizationId", consultantBookingRoutes);
   routes.route("/:organizationId", pricePlanRoutes);
   routes.route("/:organizationId", consultantProfileRoutes);
+  routes.route("/:organizationId", consultantSettlementRoutes);
   routes.route("/:organizationId", consoleListingRoutes);
   routes.route("/:organizationId", consoleConsultantRoutes);
   routes.route("/:organizationId", consoleSettingsRoutes);
