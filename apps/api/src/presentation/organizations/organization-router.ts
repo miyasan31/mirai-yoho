@@ -9,6 +9,7 @@ import { consoleListingRoutes } from "./console-listing-routes";
 import { consolePolicyRoutes } from "./console-policy-routes";
 import { consoleRoleRoutes } from "./console-role-routes";
 import { consoleSettingsRoutes } from "./console-settings-routes";
+import { consultantAppraisalReportRoutes } from "./consultant-appraisal-report-routes";
 import { consultantBookingRoutes } from "./consultant-booking-routes";
 import { consultantPolicyRoutes } from "./consultant-policy-routes";
 import { consultantProfileRoutes } from "./consultant-profile-routes";
@@ -32,6 +33,7 @@ export function createOrganizationRoutes(): Hono {
   routes.route("/:organizationId", slotRoutes);
   routes.route("/:organizationId", batchRoutes);
   routes.route("/:organizationId", consultantBookingRoutes);
+  routes.route("/:organizationId", consultantAppraisalReportRoutes);
   routes.route("/:organizationId", pricePlanRoutes);
   routes.route("/:organizationId", consultantProfileRoutes);
   routes.route("/:organizationId", consultantSettlementRoutes);

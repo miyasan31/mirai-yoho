@@ -150,5 +150,16 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    match /appraisal-reports/{reportId} {
+      // 顧客向けの配信は API 経由（発行済みのみ）に委ね、Firestore への直読は
+      // 組織 admin と担当占い師にのみ許容する（bookings と同じ方針）。
+      allow read: if isOrganizationAdmin(resource.data.organizationId)
+        || (
+          isOrganizationConsultant(resource.data.organizationId)
+          && resource.data.consultantId == request.auth.uid
+        );
+      allow write: if false;
+    }
+
   }
 }

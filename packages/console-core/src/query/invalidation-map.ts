@@ -17,6 +17,8 @@ import {
   getGetPolicyRevisionDiffQueryKey,
 } from "@mirai-yoho/api-client/api/console/console";
 import {
+  getGetConsultantAppraisalReportQueryKey,
+  getGetConsultantAppraisalReportsQueryKey,
   getGetConsultantBookingsQueryKey,
   getGetConsultantProfileQueryKey,
   getGetConsultantsQueryKey,
@@ -26,6 +28,7 @@ import {
   getGetAvailableCouponsQueryKey,
   getGetCustomerCouponsQueryKey,
   getGetCustomerPolicyAgreementStatusQueryKey,
+  getGetMyAppraisalReportsQueryKey,
   getGetMyBookingRatingQueryKey,
   getGetMyBookingsQueryKey,
 } from "@mirai-yoho/api-client/api/customer/customer";
@@ -195,6 +198,21 @@ export const invalidateAfter = {
     qc.invalidateQueries({
       queryKey: getGetConsultantBookingsQueryKey(organizationId),
     }),
+
+  appraisalReportMutation: (qc: QueryClient, organizationId: string) =>
+    Promise.all([
+      qc.invalidateQueries({
+        queryKey: getGetConsultantAppraisalReportsQueryKey(organizationId),
+      }),
+      // 詳細クエリは bookingId をキー末尾に持つため prefix で一括
+      qc.invalidateQueries({
+        queryKey: getGetConsultantAppraisalReportQueryKey(
+          organizationId,
+          "",
+        ).slice(0, -1),
+      }),
+      qc.invalidateQueries({ queryKey: getGetMyAppraisalReportsQueryKey() }),
+    ]),
 
   policyRevisionMutation: (
     qc: QueryClient,

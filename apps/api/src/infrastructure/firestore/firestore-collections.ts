@@ -17,4 +17,5 @@ export const FIRESTORE_COLLECTIONS = {
   coupons: "coupons",
   policyRevisions: "policy-revisions",
   policyAgreements: "policy-agreements",
+  appraisalReports: "appraisal-reports",
 } as const;

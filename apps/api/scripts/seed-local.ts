@@ -10,6 +10,7 @@
  *   - users / customers（apps/user の会員と顧客）
  *   - bookings / payments（確定・完了・キャンセル・仮予約の 4 状態 + 精算書用の先月分）
  *   - booking-ratings（完了済み予約への評価。console の占い師詳細で平均点・分布を確認できる）
+ *   - appraisal-reports（鑑定書。発行済み 1 通 + 下書き 1 通）
  *   - coupons / user-coupons（初回登録特典 3 枚・90 日 / 誕生日 1 枚・30 日）
  *   - policy-revisions（利用者向け 3 種 + 占い師向け 2 種 × 旧版 / 現行の 2 版）
  *
@@ -33,6 +34,11 @@ import type { BusinessHoursProps } from "@mirai-yoho/shared/business-hours";
 import type { SupportedDurationMinutes } from "@mirai-yoho/shared/slot-availability";
 import { getAuth } from "firebase-admin/auth";
 import { Timestamp } from "firebase-admin/firestore";
+import {
+  AppraisalReport,
+  type AppraisalReportStatus,
+} from "../src/domain/appraisal-report/appraisal-report";
+import { AppraisalReportContent } from "../src/domain/appraisal-report/appraisal-report-content";
 import { Role } from "../src/domain/authorization/role";
 import { Booking } from "../src/domain/booking/booking";
 import { BookingStatus } from "../src/domain/booking/booking-status";
@@ -57,6 +63,7 @@ import { BirthDate } from "../src/domain/user/birth-date";
 import { User } from "../src/domain/user/user";
 import { UserCoupon } from "../src/domain/user-coupon/user-coupon";
 import { getAccountDocId } from "../src/infrastructure/firestore/firestore-account-repository";
+import { FirestoreAppraisalReportRepository } from "../src/infrastructure/firestore/firestore-appraisal-report-repository";
 import { FirestoreBookingRatingRepository } from "../src/infrastructure/firestore/firestore-booking-rating-repository";
 import { FirestoreBookingRepository } from "../src/infrastructure/firestore/firestore-booking-repository";
 import { app, db } from "../src/infrastructure/firestore/firestore-client";
@@ -759,6 +766,8 @@ interface BookingScenarioBase {
   withCoupon?: boolean;
   /** 完了済み予約に付ける評価。console の占い師詳細で確認する */
   rating?: { score: number; comment?: string };
+  /** 鑑定書。未指定なら未作成。published のみ apps/user から見える */
+  appraisalReport?: AppraisalReportStatus;
 }
 
 /**
@@ -828,6 +837,7 @@ function buildBookingScenarios(
       status: "completed",
       withMemo: true,
       withCoupon: true,
+      appraisalReport: "published",
     },
     // 会員が「評価済み」バッジと読み取り専用表示を確認するための評価済み予約
     {
@@ -871,6 +881,20 @@ function buildBookingScenarios(
       dayOffset: -3,
       hour: 11,
       status: "cancelled",
+    },
+    // 鑑定書の下書き。apps/user には出ず、占い師の予約一覧でだけ「下書き」になる。
+    // completed にしないのは、月初に実行したときこの予約が先月分に入って
+    // 精算書の借受金を動かしてしまうため。鑑定書の発行条件は status ではなく
+    // 「endsAt を過ぎている / 未キャンセル」なので confirmed のままでも作成できる
+    {
+      consultant: own,
+      customer: customerAt(0),
+      pricePlan: ownPlans[0],
+      dayOffset: -1,
+      hour: 10,
+      status: "confirmed",
+      withMemo: true,
+      appraisalReport: "draft",
     },
     {
       consultant: own,
@@ -1174,6 +1198,58 @@ async function seedBookingRating(params: {
 }
 
 // ---------------------------------------------------------------------------
+// 鑑定書
+// ---------------------------------------------------------------------------
+
+async function seedAppraisalReport(
+  organizationId: string,
+  scenario: BookingScenario,
+  bookingId: string,
+): Promise<void> {
+  const status = scenario.appraisalReport;
+  if (!status) return;
+
+  const startsAt = resolveScenarioStartsAt(scenario);
+  // 鑑定の翌日に書き上げた想定
+  const writtenAt = new Date(startsAt.getTime() + DAY_MS);
+  const appraisalDate = toDateString(startsAt);
+  const isPublished = status === "published";
+
+  await new FirestoreAppraisalReportRepository().save(
+    AppraisalReport.reconstruct({
+      // 再実行で重複しないように決定的な ID にする（本番は UUID）
+      reportId: `${bookingId}_report`,
+      organizationId,
+      bookingId,
+      consultantId: scenario.consultant.consultantId,
+      customerId: scenario.customer.customerId,
+      content: AppraisalReportContent.reconstruct({
+        title: `${appraisalDate} の鑑定書`,
+        customerName: scenario.customer.name,
+        birthDate: scenario.customer.birthDate,
+        appraisalDate,
+        theme: "今後のキャリアと転職のタイミングについて",
+        currentSituation:
+          "現在は現職に留まるか転職するかで迷われている時期です。周囲との比較で焦りが出やすい配置が出ています。",
+        result: isPublished
+          ? "秋以降に流れが大きく変わります。特に 10 月から 12 月にかけて新しい縁がつながりやすく、この時期の行動が来年の土台になります。"
+          : "（下書き）秋以降に流れが変わる見込みです。ここから清書します。",
+        luckyAction: isPublished
+          ? "朝の散歩を習慣にし、月に一度は行ったことのない場所に足を運んでください。"
+          : "",
+        summary: isPublished
+          ? "焦らず準備を進めることが、そのまま次の機会につながります。"
+          : "",
+      }),
+      status,
+      publishedAt: isPublished ? writtenAt : null,
+      createdAt: writtenAt,
+      updatedAt: writtenAt,
+    }),
+  );
+}
+
+// ---------------------------------------------------------------------------
 // main
 // ---------------------------------------------------------------------------
 
@@ -1217,8 +1293,16 @@ async function main() {
   );
   const bookingIds: string[] = [];
   for (const scenario of scenarios) {
-    bookingIds.push(await seedBooking(args.organizationId, scenario, coupons));
+    const bookingId = await seedBooking(args.organizationId, scenario, coupons);
+    bookingIds.push(bookingId);
+    await seedAppraisalReport(args.organizationId, scenario, bookingId);
   }
+  const publishedReportCount = scenarios.filter(
+    (scenario) => scenario.appraisalReport === "published",
+  ).length;
+  const draftReportCount = scenarios.filter(
+    (scenario) => scenario.appraisalReport === "draft",
+  ).length;
 
   const ratedScenarioCount = scenarios.filter(
     (scenario) => scenario.rating,
@@ -1282,6 +1366,9 @@ async function main() {
   );
   console.log(
     `  bookingRatings: ${ratedScenarioCount}（完了済み予約への評価。未評価の完了済み予約も 1 件残している）`,
+  );
+  console.log(
+    `  appraisalReports: ${publishedReportCount + draftReportCount}（発行済み ${publishedReportCount} / 下書き ${draftReportCount}）`,
   );
   console.log(
     `  userCoupons: ${WELCOME_COUPON_BATCH_SIZE + BIRTHDAY_COUPON_BATCH_SIZE}（初回登録特典 ${WELCOME_COUPON_BATCH_SIZE} 枚: 未使用 ${WELCOME_COUPON_BATCH_SIZE - 1} / 使用済み 1、誕生日 ${BIRTHDAY_COUPON_BATCH_SIZE} 枚: 期限切れ）`,
