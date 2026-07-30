@@ -44,6 +44,9 @@ vi.mock("styled-system/recipes", () => ({
   button: Object.assign(() => ({}), {
     splitVariantProps: (props: Record<string, unknown>) => [{}, props],
   }),
+  input: Object.assign(() => ({}), {
+    splitVariantProps: (props: Record<string, unknown>) => [{}, props],
+  }),
 }));
 
 vi.mock("@mirai-yoho/ui/components/ui/text", () => ({
@@ -66,6 +69,10 @@ vi.mock("@mirai-yoho/ui/components/ui/button", () => ({
       {children}
     </button>
   ),
+}));
+
+vi.mock("@mirai-yoho/ui/components/ui/input", () => ({
+  Input: (props: Record<string, unknown>) => <input {...props} />,
 }));
 
 vi.mock("@mirai-yoho/ui/components/ui/skeleton", () => ({
@@ -279,5 +286,67 @@ describe("SettlementStatementPage", () => {
     render(<SettlementStatementPage />);
 
     expect(screen.getByTestId("skeleton")).toBeInTheDocument();
+  });
+
+  it("disables the PDF save button when the issuer name is cleared", () => {
+    mockUseConsultantSettlementStatement.mockReturnValue({
+      data: { data: OFFICE_STATEMENT },
+      isLoading: false,
+    });
+
+    render(<SettlementStatementPage />);
+    fireEvent.click(screen.getByRole("checkbox"));
+
+    const nameInput = screen.getByLabelText("発行者名") as HTMLInputElement;
+    expect(nameInput.value).toBe("山田花子");
+    expect(
+      screen.getByRole("button", { name: /PDFとして保存/ }),
+    ).not.toBeDisabled();
+
+    fireEvent.change(nameInput, { target: { value: "" } });
+
+    expect(
+      screen.getByRole("button", { name: /PDFとして保存/ }),
+    ).toBeDisabled();
+  });
+
+  it("disables the PDF save button when the address is empty and the office address checkbox is unchecked", () => {
+    mockUseConsultantSettlementStatement.mockReturnValue({
+      data: { data: STATEMENT },
+      isLoading: false,
+    });
+
+    render(<SettlementStatementPage />);
+
+    expect(
+      screen.getByRole("button", { name: /PDFとして保存/ }),
+    ).toBeDisabled();
+
+    const addressInput = screen.getByLabelText("住所") as HTMLInputElement;
+    fireEvent.change(addressInput, { target: { value: "東京都新宿区1-1-1" } });
+
+    expect(
+      screen.getByRole("button", { name: /PDFとして保存/ }),
+    ).not.toBeDisabled();
+  });
+
+  it("does not require the address input once the office address checkbox is checked", () => {
+    mockUseConsultantSettlementStatement.mockReturnValue({
+      data: { data: STATEMENT },
+      isLoading: false,
+    });
+
+    render(<SettlementStatementPage />);
+    mockUseConsultantSettlementStatement.mockReturnValue({
+      data: { data: OFFICE_STATEMENT },
+      isLoading: false,
+    });
+    fireEvent.click(screen.getByRole("checkbox"));
+
+    const addressInput = screen.getByLabelText("住所") as HTMLInputElement;
+    expect(addressInput).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /PDFとして保存/ }),
+    ).not.toBeDisabled();
   });
 });

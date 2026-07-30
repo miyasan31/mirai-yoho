@@ -1,11 +1,12 @@
 import { createListCollection } from "@ark-ui/react/select";
 import { Button } from "@mirai-yoho/ui/components/ui/button";
 import * as Checkbox from "@mirai-yoho/ui/components/ui/checkbox";
+import { Input } from "@mirai-yoho/ui/components/ui/input";
 import * as Select from "@mirai-yoho/ui/components/ui/select";
 import { Skeleton } from "@mirai-yoho/ui/components/ui/skeleton";
 import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { Printer } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { styled } from "styled-system/jsx";
 import { useConsultantSettlementStatement } from "@/hooks/use-consultant-settlement-statement";
 import { SettlementStatementDocument } from "./settlement-statement-document";
@@ -32,6 +33,8 @@ export default function SettlementStatementPage() {
   const monthOptions = useMemo(() => buildMonthOptions(new Date()), []);
   const [month, setMonth] = useState(monthOptions[0]);
   const [usesOfficeAddress, setUsesOfficeAddress] = useState(false);
+  const [issuerName, setIssuerName] = useState("");
+  const [issuerAddress, setIssuerAddress] = useState("");
 
   const monthCollection = useMemo(
     () =>
@@ -49,6 +52,27 @@ export default function SettlementStatementPage() {
     "uses-office-address": usesOfficeAddress ? "true" : "false",
   });
   const statement = data?.data;
+
+  useEffect(() => {
+    if (!statement) return;
+    setIssuerName((current) => current || statement.issuer.name);
+  }, [statement]);
+
+  const trimmedIssuerName = issuerName.trim();
+  const trimmedIssuerAddress = issuerAddress.trim();
+  const isIssuerInputValid =
+    trimmedIssuerName.length > 0 &&
+    (usesOfficeAddress || trimmedIssuerAddress.length > 0);
+
+  const documentStatement = statement && {
+    ...statement,
+    issuer: {
+      name: trimmedIssuerName,
+      address: usesOfficeAddress
+        ? statement.issuer.address
+        : trimmedIssuerAddress || null,
+    },
+  };
 
   return (
     <styled.div>
@@ -100,6 +124,35 @@ export default function SettlementStatementPage() {
           </Select.Root>
         </styled.div>
 
+        <styled.div minW="200px">
+          <Text textStyle="sm" mb="1">
+            発行者名
+          </Text>
+          <Input
+            value={issuerName}
+            onChange={(event) => setIssuerName(event.target.value)}
+            placeholder="発行者名を入力"
+            aria-label="発行者名"
+          />
+        </styled.div>
+
+        <styled.div minW="240px">
+          <Text textStyle="sm" mb="1">
+            住所
+          </Text>
+          <Input
+            value={
+              usesOfficeAddress
+                ? (statement?.issuer.address ?? "")
+                : issuerAddress
+            }
+            onChange={(event) => setIssuerAddress(event.target.value)}
+            placeholder="住所を入力"
+            aria-label="住所"
+            disabled={usesOfficeAddress}
+          />
+        </styled.div>
+
         <Checkbox.Root
           checked={usesOfficeAddress}
           onCheckedChange={(details) =>
@@ -117,7 +170,7 @@ export default function SettlementStatementPage() {
         <Button
           type="button"
           onClick={() => window.print()}
-          disabled={isLoading || !statement}
+          disabled={isLoading || !statement || !isIssuerInputValid}
           ml="auto"
         >
           <Printer size={16} />
@@ -133,10 +186,10 @@ export default function SettlementStatementPage() {
         </Text>
       </styled.div>
 
-      {isLoading || !statement ? (
+      {isLoading || !documentStatement ? (
         <Skeleton h="480px" borderRadius="l2" />
       ) : (
-        <SettlementStatementDocument statement={statement} />
+        <SettlementStatementDocument statement={documentStatement} />
       )}
     </styled.div>
   );
