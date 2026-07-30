@@ -10,7 +10,7 @@ export interface BookableOrganization {
 export const BOOKABLE_ORGANIZATIONS: readonly BookableOrganization[] = [
   {
     organizationId: "miraiyohou",
-    name: "テスト予報",
+    name: "みらい予報",
     description: "占い師を選んで予約する",
   },
 ];
