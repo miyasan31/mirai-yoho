@@ -55,21 +55,28 @@ create-organization:
 	@test -n "$(ADMIN_EMAIL)" || (echo "Error: ADMIN_EMAIL is required. Usage: make create-organization ORGANIZATION_ID=<id> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email> [ADMIN_NAME=<name>]" && exit 1)
 	pnpm dlx tsx --env-file=$(ENV_FILE) apps/api/scripts/create-organization.ts $(ORGANIZATION_ID) "$(ORGANIZATION_NAME)" $(ADMIN_EMAIL) "$(ADMIN_NAME)"
 
-# Usage: make seed-local ADMIN=<email|uid> [CONSULTANT=<email|uid>] [ORGANIZATION_ID=<id>] [DAYS=<n>]
+# Usage: make seed-local ADMIN=<email|uid> [CONSULTANT=<email|uid>] [APP_USER=<email|uid>]
+#          [ORGANIZATION_ID=<id>] [ORGANIZATION_NAME=<name>] [CONSULTANT_NAME=<name>]
+#          [DAYS=<n>] [CONSULTANTS=<n>] [CUSTOMERS=<n>]
 # Example: make seed-local ADMIN=you@example.com
-# ローカルの Firestore エミュレーター（pnpm emulator）に組織・ロール・管理者・占い師・
-# 料金プラン・空き枠を一括投入する。ENV=local 固定（エミュレーター以外には流せない）。
-# ADMIN / CONSULTANT には dev プロジェクトに実在する Auth ユーザーを指定する。
+# ローカルの Firestore エミュレーター（pnpm emulator）に組織・ロール・アカウント・占い師・
+# 料金プラン・空き枠・会員・顧客・予約・決済・クーポン・文書（ポリシー）を一括投入する。
+# ENV=local 固定（エミュレーター以外には流せない）。
+# ADMIN / CONSULTANT / APP_USER には dev プロジェクトに実在する Auth ユーザーを指定する。
+# （user アプリ側の変数名を APP_USER にしているのは、USER がシェルの環境変数と衝突するため）
 seed-local:
 	@test -f "apps/api/.env.local" || (echo "Error: apps/api/.env.local not found" && exit 1)
 	@test -n "$(ADMIN)" || (echo "Error: ADMIN is required. Usage: make seed-local ADMIN=<email|uid>" && exit 1)
 	pnpm dlx tsx --tsconfig apps/api/tsconfig.json --env-file=apps/api/.env.local apps/api/scripts/seed-local.ts \
 		--admin "$(ADMIN)" \
 		$(if $(CONSULTANT),--consultant "$(CONSULTANT)",) \
+		$(if $(APP_USER),--user "$(APP_USER)",) \
 		$(if $(ORGANIZATION_ID),--organization-id "$(ORGANIZATION_ID)",) \
 		$(if $(ORGANIZATION_NAME),--organization-name "$(ORGANIZATION_NAME)",) \
 		$(if $(CONSULTANT_NAME),--consultant-name "$(CONSULTANT_NAME)",) \
-		$(if $(DAYS),--days "$(DAYS)",)
+		$(if $(DAYS),--days "$(DAYS)",) \
+		$(if $(CONSULTANTS),--consultants "$(CONSULTANTS)",) \
+		$(if $(CUSTOMERS),--customers "$(CUSTOMERS)",)
 
 # Usage: make create-default-roles ORGANIZATION_ID=<organizationId> [ENV=<local|dev|prod>]
 # Usage: make create-default-roles:dev ORGANIZATION_ID=<id>
