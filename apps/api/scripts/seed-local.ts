@@ -106,11 +106,31 @@ const PRICE_PLAN_RANGE = { minTotalJPY: 5000, maxTotalJPY: 20000 };
 const STATUS_ID_HIGH = "high";
 const STATUS_ID_MIDDLE = "middle";
 const STATUS_ID_LOW = DEFAULT_CONSULTANT_STATUS_ID;
+// 料率は精算書のシステム利用料に使う。3 段階すべてを確認できるよう 40/35/30 を割り当てる
 const CONSULTANT_STATUSES = [
-  { statusId: STATUS_ID_HIGH, name: "ステータス Hight" },
-  { statusId: STATUS_ID_MIDDLE, name: "ステータス Middle" },
-  { statusId: STATUS_ID_LOW, name: "ステータス Low" },
+  {
+    statusId: STATUS_ID_HIGH,
+    name: "ステータス Hight",
+    settlementRatePercent: 40,
+  },
+  {
+    statusId: STATUS_ID_MIDDLE,
+    name: "ステータス Middle",
+    settlementRatePercent: 35,
+  },
+  {
+    statusId: STATUS_ID_LOW,
+    name: "ステータス Low",
+    settlementRatePercent: 30,
+  },
 ];
+
+// 精算書の宛先と、事務所を住所として利用する占い師の発行者住所に使う
+const COMPANY_INFO = {
+  companyName: "みらい予報株式会社",
+  address: "東京都渋谷区神宮前1-1-1 みらいビル 5F",
+  officeAddress: "東京都渋谷区神宮前1-1-1 みらいビル 3F",
+};
 
 interface SeedArgs {
   organizationId: string;
@@ -361,6 +381,7 @@ async function seedOrganization(args: SeedArgs): Promise<void> {
   settings.updateBusinessHours(buildBusinessHours());
   settings.updateConsultantStatuses(CONSULTANT_STATUSES, STATUS_ID_LOW);
   settings.updatePricePlanRange(PRICE_PLAN_RANGE);
+  settings.updateCompanyInfo(COMPANY_INFO);
   await new FirestoreSettingsRepository().save(settings);
 }
 
