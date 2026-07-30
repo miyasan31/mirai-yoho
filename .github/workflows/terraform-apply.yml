@@ -27,8 +27,7 @@ jobs:
       fail-fast: false
       max-parallel: 2
       matrix:
-        # prod は WIF プール/プロバイダ未整備のため一旦無効化。整備後に戻す。
-        environment: [dev] # [dev, prod]
+        environment: [dev, prod]
     # prod 環境に required reviewers を設定しておくと、この leg のみ承認待ちになる。
     # dev leg は並行して即実行される。
     environment: ${{ matrix.environment }}

@@ -238,7 +238,7 @@ Secret の詳しい運用・確認方法は [Secret Manager 運用手順](secret
 - `deploy-hosting.yml` … SPA（user / console / consultant）をビルドして Firebase Hosting にデプロイ
 - `deploy-batch-worker.yml` … Worker イメージをビルド・push し、Cloud Run Job を更新（`gcloud run jobs update`）。Terraform apply は別ワークフロー `terraform-apply.yml`（`main` push 時、`infra/terraform/**` 変更時）が担当
 
-> `terraform-apply.yml` は現状 **dev のみ有効**です（prod は WIF プール / プロバイダ未整備のため matrix から外してあります）。prod のインフラ変更は、整備が終わるまで手元から `make apply ENV=prod` で適用してください。
+> `terraform-plan.yml` / `terraform-apply.yml` は dev / prod の両方を matrix で回します。prod leg は GitHub Environment `prod` に required reviewers を設定しておくと承認待ちになり、dev leg だけが先に進みます。
 
 #### 手元からデプロイする（GitHub Actions を使わない場合）
 
