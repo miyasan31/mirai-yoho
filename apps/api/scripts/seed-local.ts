@@ -99,13 +99,13 @@ const MINUTE_MS = 60 * 1000;
 
 // 文書は 3 版入れる（アーカイブ / 公開中 / 下書き）。
 // 施行日が未来だと findLatestPublished が空になり予約フローの同意チェックが通らないため、
-// アーカイブと公開中はどちらも過去日にする（seed-initial-policies.ts の既定日とは別）
+// アーカイブと公開中はどちらも過去日にする。下書きは公開時に施行日を決めるので持たせない
+// （新規組織を作る create-organization.ts も下書きで投入する）
 const ARCHIVED_POLICY_VERSION = "2025-07-01";
 const POLICY_VERSION = "2026-01-01";
 const DRAFT_POLICY_VERSION = "2026-10-01";
 const ARCHIVED_POLICY_EFFECTIVE_FROM = `${ARCHIVED_POLICY_VERSION}T00:00:00+09:00`;
 const POLICY_EFFECTIVE_FROM = `${POLICY_VERSION}T00:00:00+09:00`;
-const DRAFT_POLICY_EFFECTIVE_FROM = `${DRAFT_POLICY_VERSION}T00:00:00+09:00`;
 const POLICY_CREATED_BY = "運営事務局";
 
 // 営業時間。曜日ごとの差と定休日を入れて、設定画面が一目で読めるようにする
@@ -1621,8 +1621,8 @@ async function main() {
         status: "published",
       },
       {
+        // 下書きは施行日を持たない（console で公開するときに決める）
         version: DRAFT_POLICY_VERSION,
-        effectiveFrom: new Date(DRAFT_POLICY_EFFECTIVE_FROM),
         status: "draft",
         note: `※ この版は下書きです（${DRAFT_POLICY_VERSION} 施行予定）。`,
       },

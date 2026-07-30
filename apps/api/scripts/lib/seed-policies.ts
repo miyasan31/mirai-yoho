@@ -1,6 +1,6 @@
 /**
  * 初期の PolicyRevision（利用者向け 3 種 + 占い師向け 2 種）を投入する共通処理。
- * seed-initial-policies.ts と seed-local.ts の両方から使う。
+ * create-organization.ts と seed-local.ts の両方から使う。
  *
  * 本文は apps/api/scripts/seed-data/policy-*-initial.md から読む（差し替え可能）。
  * 既に同じ組織・同じ type の revision がある場合は何もしない。
@@ -68,9 +68,20 @@ async function readSeedMarkdown(fileName: string): Promise<string> {
   );
 }
 
+/**
+ * 本文ファイルが全種類読めるか先に確かめる。組織作成のように後戻りできない書き込みの
+ * 前に呼び、cwd 違いで「組織だけ作られてポリシーが無い」状態になるのを防ぐ。
+ */
+export async function assertPolicySeedDataReadable(): Promise<void> {
+  for (const input of POLICY_INPUTS) {
+    await readSeedMarkdown(input.fileName);
+  }
+}
+
 export interface PolicyVersionInput {
   version: string;
-  effectiveFrom: Date;
+  /** draft は施行日を持たない（公開時にコンソールで決める）ため省略できる */
+  effectiveFrom?: Date;
   status: PolicyRevisionStatus;
   /** 本文の冒頭に足す注記。旧版・下書きを画面上で見分けられるようにする */
   note?: string;
@@ -148,9 +159,20 @@ export async function seedPolicies(
         }
 
         const revisionId = crypto.randomUUID();
-        const effectiveFrom = Timestamp.fromDate(versionInput.effectiveFrom);
+        const isDraft = versionInput.status === "draft";
+
+        if (!isDraft && !versionInput.effectiveFrom) {
+          throw new Error(
+            `effectiveFrom is required for ${versionInput.status} revision (${input.type} / ${versionInput.version})`,
+          );
+        }
+
+        // draft は PolicyRevision.create と同じ形（施行日・公開日なし、監査は実行時刻）で書く
+        const effectiveFrom = versionInput.effectiveFrom
+          ? Timestamp.fromDate(versionInput.effectiveFrom)
+          : null;
         const archivedAt =
-          versionInput.status === "archived"
+          versionInput.status === "archived" && versionInput.effectiveFrom
             ? Timestamp.fromDate(
                 versionInput.archivedAt ?? versionInput.effectiveFrom,
               )
@@ -167,12 +189,12 @@ export async function seedPolicies(
             title: input.title,
             body: toBody(baseBody, versionInput.note),
             status: versionInput.status,
-            effectiveFrom,
-            publishedAt: versionInput.status === "draft" ? null : effectiveFrom,
+            effectiveFrom: isDraft ? null : effectiveFrom,
+            publishedAt: isDraft ? null : effectiveFrom,
             archivedAt,
             createdBy: params.createdBy,
-            createdAt: effectiveFrom,
-            updatedAt: versionInput.status === "draft" ? now : effectiveFrom,
+            createdAt: isDraft ? now : effectiveFrom,
+            updatedAt: isDraft ? now : effectiveFrom,
           });
 
         results.push({

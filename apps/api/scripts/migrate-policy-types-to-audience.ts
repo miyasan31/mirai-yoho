@@ -11,7 +11,8 @@ import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore
  *
  * 分離前の 3 種別はいずれも利用者向けの文面だったため、すべて `user_*` に寄せる。
  * 占い師向けの `consultant_terms` / `consultant_privacy_policy` は本スクリプトでは
- * 作成せず、seed-initial-policies.ts か console の文書管理から新規に起版する。
+ * 作成せず、console の文書管理から新規に起版する（新規組織ぶんは
+ * create-organization.ts が下書きで作る）。
  *
  * policy-agreements は subjectType を問わず一律にリネームする。占い師が旧・共通版に
  * 同意した記録も「その改訂に同意した」という事実は変わらないため、改訂側のリネームと
@@ -27,8 +28,7 @@ import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore
  *   1. ドライラン: pnpm dlx tsx --env-file=.env.dev apps/api/scripts/migrate-policy-types-to-audience.ts --dry-run
  *   2. 本実行:     pnpm dlx tsx --env-file=.env.dev apps/api/scripts/migrate-policy-types-to-audience.ts
  *   3. 新コード（user_* / consultant_* を要求する API / SPA）をデプロイ
- *   4. 占い師向け初期版を起版:
- *        pnpm dlx tsx --env-file=.env.dev apps/api/scripts/seed-initial-policies.ts
+ *   4. 占い師向け初期版を console の文書管理から起版して公開する
  */
 
 const BATCH_DOC_SIZE = 200;

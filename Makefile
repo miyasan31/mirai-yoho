@@ -42,18 +42,21 @@ auth-adc-organization-operator:
 	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make auth-adc-organization-operator PROJECT=<project>" && exit 1)
 	gcloud auth application-default login --impersonate-service-account=organization-operator@$(PROJECT).iam.gserviceaccount.com
 
-# Usage: make create-organization ORGANIZATION_ID=<organizationId> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email> [ADMIN_NAME=<name>] [ENV=<local|dev|prod>]
-# Usage: make create-organization:dev ORGANIZATION_ID=<id> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email> [ADMIN_NAME=<name>]
-# Usage: make create-organization:prod ORGANIZATION_ID=<id> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email> [ADMIN_NAME=<name>]
+# Usage: make create-organization ORGANIZATION_ID=<organizationId> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email> [ADMIN_NAME=<name>] [POLICY_VERSION=<version>] [ENV=<local|dev|prod>]
+# Usage: make create-organization:dev ORGANIZATION_ID=<id> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email> [ADMIN_NAME=<name>] [POLICY_VERSION=<version>]
+# Usage: make create-organization:prod ORGANIZATION_ID=<id> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email> [ADMIN_NAME=<name>] [POLICY_VERSION=<version>]
 # Example: make create-organization ORGANIZATION_ID=org-1 ORGANIZATION_NAME="Org 1" ADMIN_EMAIL=admin@example.com ADMIN_NAME="山田 太郎" ENV=prod
 # ADMIN_NAME は任意。省略すると accounts.name が未設定になり、管理画面で後から設定する。
+# 組織・初期管理者・初期設定に加えて、初期ポリシー 5 種を draft で作る（公開は console から）。
+# POLICY_VERSION は任意。省略するとポリシーの版名は実行日（JST）の YYYY-MM-DD になる。
 create-organization:
 	@test "$(ENV)" = "local" || test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be one of local, dev, prod" && exit 1)
 	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
 	@test -n "$(ORGANIZATION_ID)" || (echo "Error: ORGANIZATION_ID is required. Usage: make create-organization ORGANIZATION_ID=<id> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email> [ADMIN_NAME=<name>]" && exit 1)
 	@test -n "$(ORGANIZATION_NAME)" || (echo "Error: ORGANIZATION_NAME is required. Usage: make create-organization ORGANIZATION_ID=<id> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email> [ADMIN_NAME=<name>]" && exit 1)
 	@test -n "$(ADMIN_EMAIL)" || (echo "Error: ADMIN_EMAIL is required. Usage: make create-organization ORGANIZATION_ID=<id> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email> [ADMIN_NAME=<name>]" && exit 1)
-	pnpm dlx tsx --env-file=$(ENV_FILE) apps/api/scripts/create-organization.ts $(ORGANIZATION_ID) "$(ORGANIZATION_NAME)" $(ADMIN_EMAIL) "$(ADMIN_NAME)"
+	pnpm dlx tsx --tsconfig apps/api/tsconfig.json --env-file=$(ENV_FILE) apps/api/scripts/create-organization.ts $(ORGANIZATION_ID) "$(ORGANIZATION_NAME)" $(ADMIN_EMAIL) "$(ADMIN_NAME)" \
+		$(if $(POLICY_VERSION),--policy-version "$(POLICY_VERSION)",)
 
 # Usage: make seed-local ADMIN=<email|uid> [CONSULTANT=<email|uid>] [APP_USER=<email|uid>]
 #          [ORGANIZATION_ID=<id>] [ORGANIZATION_NAME=<name>] [CONSULTANT_NAME=<name>] [DAYS=<n>]
@@ -85,7 +88,7 @@ create-default-roles:
 	@test "$(ENV)" = "local" || test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be one of local, dev, prod" && exit 1)
 	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
 	@test -n "$(ORGANIZATION_ID)" || (echo "Error: ORGANIZATION_ID is required. Usage: make create-default-roles ORGANIZATION_ID=<id>" && exit 1)
-	pnpm dlx tsx --env-file=$(ENV_FILE) apps/api/scripts/create-default-roles.ts $(ORGANIZATION_ID)
+	pnpm dlx tsx --tsconfig apps/api/tsconfig.json --env-file=$(ENV_FILE) apps/api/scripts/create-default-roles.ts $(ORGANIZATION_ID)
 
 # Usage: make seed-slots ORGANIZATION_ID=<organizationId> CONSULTANT_ID=<consultantId> [ENV=<local|dev|prod>]
 # Usage: make seed-slots:dev ORGANIZATION_ID=<id> CONSULTANT_ID=<id>
@@ -96,7 +99,7 @@ seed-slots:
 	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
 	@test -n "$(ORGANIZATION_ID)" || (echo "Error: ORGANIZATION_ID is required. Usage: make seed-slots ORGANIZATION_ID=<id> CONSULTANT_ID=<id>" && exit 1)
 	@test -n "$(CONSULTANT_ID)" || (echo "Error: CONSULTANT_ID is required. Usage: make seed-slots ORGANIZATION_ID=<id> CONSULTANT_ID=<id>" && exit 1)
-	pnpm dlx tsx --env-file=$(ENV_FILE) apps/api/scripts/seed-slots.ts $(ORGANIZATION_ID) $(CONSULTANT_ID)
+	pnpm dlx tsx --tsconfig apps/api/tsconfig.json --env-file=$(ENV_FILE) apps/api/scripts/seed-slots.ts $(ORGANIZATION_ID) $(CONSULTANT_ID)
 
 # Usage: make delete-slots [ENV=<local|dev|prod>]
 # Usage: make delete-slots:dev
@@ -104,7 +107,7 @@ seed-slots:
 delete-slots:
 	@test "$(ENV)" = "local" || test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be one of local, dev, prod" && exit 1)
 	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
-	pnpm dlx tsx --env-file=$(ENV_FILE) apps/api/scripts/delete-slots.ts
+	pnpm dlx tsx --tsconfig apps/api/tsconfig.json --env-file=$(ENV_FILE) apps/api/scripts/delete-slots.ts
 
 # ============================================================
 # Secret Manager セットアップ（Cloud Run API / batch worker）
@@ -238,10 +241,10 @@ auth-adc-organization-operator\:prod:
 	$(MAKE) auth-adc-organization-operator PROJECT=$(PROJECT_PROD)
 
 create-organization\:dev:
-	$(MAKE) create-organization ENV=dev ORGANIZATION_ID=$(ORGANIZATION_ID) ORGANIZATION_NAME="$(ORGANIZATION_NAME)" ADMIN_EMAIL=$(ADMIN_EMAIL)
+	$(MAKE) create-organization ENV=dev ORGANIZATION_ID=$(ORGANIZATION_ID) ORGANIZATION_NAME="$(ORGANIZATION_NAME)" ADMIN_EMAIL=$(ADMIN_EMAIL) ADMIN_NAME="$(ADMIN_NAME)" POLICY_VERSION="$(POLICY_VERSION)"
 
 create-organization\:prod:
-	$(MAKE) create-organization ENV=prod ORGANIZATION_ID=$(ORGANIZATION_ID) ORGANIZATION_NAME="$(ORGANIZATION_NAME)" ADMIN_EMAIL=$(ADMIN_EMAIL)
+	$(MAKE) create-organization ENV=prod ORGANIZATION_ID=$(ORGANIZATION_ID) ORGANIZATION_NAME="$(ORGANIZATION_NAME)" ADMIN_EMAIL=$(ADMIN_EMAIL) ADMIN_NAME="$(ADMIN_NAME)" POLICY_VERSION="$(POLICY_VERSION)"
 
 create-default-roles\:dev:
 	$(MAKE) create-default-roles ENV=dev ORGANIZATION_ID=$(ORGANIZATION_ID)
