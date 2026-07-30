@@ -45,9 +45,11 @@ const STATUS_COLOR: Record<
 };
 
 const DEFAULT_TITLE: Record<PolicyType, string> = {
-  terms: "利用規約",
-  cancellation_policy: "キャンセルポリシー",
-  privacy_policy: "プライバシーポリシー",
+  user_terms: "利用規約",
+  user_cancellation_policy: "キャンセルポリシー",
+  user_privacy_policy: "プライバシーポリシー",
+  consultant_terms: "占い師利用規約",
+  consultant_privacy_policy: "占い師プライバシーポリシー",
 };
 
 function formatDate(iso: string | null): string {

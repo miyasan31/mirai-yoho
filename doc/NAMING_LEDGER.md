@@ -608,7 +608,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 |---|---|---|---|---|
 | 改訂 ID | `revisionId` | `revisionId` | `revisionId` | 維持 |
 | 組織 ID | `organizationId` | 同名 | — | 維持 |
-| 種別 | `type` | `PolicyType` | `type` | `terms` / `cancellation_policy` / `privacy_policy` |
+| 種別 | `type` | `PolicyType` | `type` | `user_terms` / `user_cancellation_policy` / `user_privacy_policy` / `consultant_terms` / `consultant_privacy_policy`（下記参照） |
 | バージョン | `version` | 同名 | 同名 | 表示用の版名（例 `2026-08-01`）。`type` × `version` で一意 |
 | タイトル | `title` | 同名 | 同名 | 維持 |
 | 本文 | `body` | 同名 | 同名 | markdown |
@@ -620,6 +620,8 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 
 > `effectiveFrom` だけは §1.2 の 4 分類（`*At` / `startsAt`・`endsAt` / `*Date` / `*Time`）に当てはまらない。終了を持たない片側開区間で `endsAt` の対がないため、`effectiveAt` ではなく `effectiveFrom` を維持する。
 
+> **`type` の読者区分プレフィックス（2026-07-30 改訂）**: 利用者向けと占い師向けで利用規約・プライバシーポリシーの文面と改版サイクルを分離したため、`type` は `<audience>_<document>` の形を取る。`audience` は `user` / `consultant`（`PolicyAudience`）で、`policyAudienceOf()` が `type` から導出する。キャンセルポリシーは利用者向けのみ（`user_cancellation_policy`）で、占い師向けの対はない。旧値（`terms` / `cancellation_policy` / `privacy_policy`）はすべて利用者向けの文面だったため `user_*` にリネームした（`apps/api/scripts/migrate-policy-types-to-audience.ts`）。
+
 #### `policy-agreements`
 
 **Doc ID**: `agreementId`（単体）
@@ -629,7 +631,7 @@ pricePlanRange: { minTotalJPY, maxTotalJPY }
 | 同意 ID | `agreementId` | 同名 | — | 維持 |
 | 組織 ID | `organizationId` | 同名 | — | 維持 |
 | 種別 | `type` | `PolicyType` | `type` | `policy-revisions` と同じ |
-| 主体種別 | `subjectType` | `PolicySubjectType` | — | `user` / `customer` / `consultant` |
+| 主体種別 | `subjectType` | `PolicySubjectType` | — | `user` / `customer` / `consultant`。`policyAudienceForSubjectType()` で読者区分に対応づけ、`type` の区分と一致しない同意は `PolicyAgreement.create()` が弾く |
 | 主体 ID | `subjectId` | 同名 | — | user / customer なら `userId`、consultant なら `consultantId` |
 | 改訂 ID | `revisionId` | 同名 | 同名 | `policy-revisions` への参照 |
 | バージョン | `version` | 同名 | 同名 | 同意時点の版名を非正規化 |

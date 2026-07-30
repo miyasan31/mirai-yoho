@@ -4,7 +4,7 @@ import { PolicyRevision } from "@/domain/policy/policy-revision";
 const baseProps = {
   revisionId: "rev-1",
   organizationId: "org-1",
-  type: "terms" as const,
+  type: "user_terms" as const,
   version: "2026-08-01",
   title: "利用規約",
   body: "# 利用規約\n\n本文",

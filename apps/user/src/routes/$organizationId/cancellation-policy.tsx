@@ -12,7 +12,7 @@ function CancellationPolicyRoute() {
   return (
     <PolicyPage
       organizationId={organizationId}
-      type="cancellation_policy"
+      type="user_cancellation_policy"
       headingLabel="キャンセルポリシー"
     />
   );

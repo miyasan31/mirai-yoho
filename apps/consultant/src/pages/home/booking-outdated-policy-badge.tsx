@@ -1,7 +1,10 @@
 import { Badge } from "@mirai-yoho/ui/components/ui/badge";
 import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
 import { TriangleAlert } from "lucide-react";
-import { useBookingOutdatedPolicy } from "./use-booking-outdated-policy";
+import {
+  type OutdatedPolicyType,
+  useBookingOutdatedPolicy,
+} from "./use-booking-outdated-policy";
 
 interface BookingOutdatedPolicyBadgeProps {
   organizationId: string;
@@ -12,9 +15,9 @@ interface BookingOutdatedPolicyBadgeProps {
   };
 }
 
-const TYPE_LABEL: Record<"terms" | "cancellation_policy", string> = {
-  terms: "利用規約",
-  cancellation_policy: "キャンセルポリシー",
+const TYPE_LABEL: Record<OutdatedPolicyType, string> = {
+  user_terms: "利用規約",
+  user_cancellation_policy: "キャンセルポリシー",
 };
 
 /**

@@ -85,8 +85,17 @@
 
 | 概念 | 集約 | 説明 |
 |---|---|---|
-| ポリシー改訂 | `PolicyRevision` | 1 つの本文バージョン。`type`（`terms` / `cancellation_policy` / `privacy_policy`）× `version` で一意。`draft → published → archived` と遷移し、`published` は type ごとに最大 1 件 |
+| ポリシー改訂 | `PolicyRevision` | 1 つの本文バージョン。`type` × `version` で一意。`draft → published → archived` と遷移し、`published` は type ごとに最大 1 件 |
 | 同意証跡 | `PolicyAgreement` | 誰が・いつ・どの改訂に同意したかの記録。`subjectType`（`customer` / `consultant`）× `subjectId` × `revisionId`。予約起因の同意は `bookingId` を持つ |
+
+`type`（`PolicyType`）は読者区分（`PolicyAudience`）をプレフィックスに持つ。
+
+| 読者区分 | `type` | 同意を求める主体 |
+|---|---|---|
+| `user` | `user_terms` / `user_cancellation_policy` / `user_privacy_policy` | `subjectType` = `user` / `customer` |
+| `consultant` | `consultant_terms` / `consultant_privacy_policy` | `subjectType` = `consultant` |
+
+読者区分をまたぐ同意（占い師が `user_terms` に同意する等）は `PolicyAgreement.create()` が `POLICY_AUDIENCE_MISMATCH` で弾く。`GetPolicyAgreementStatusUseCase` も主体の読者区分に属する type だけを返すため、再同意ゲートに相手側の文書が混ざらない。
 
 同意の取り方はサーバとクライアントで役割が分かれる。
 
@@ -364,7 +373,7 @@ apps/api/src/
        agreedTermsRevisionId / agreedCancellationPolicyRevisionId / agreedAt /
        guardianName? / guardianConsentedAt?（18歳未満のとき必須）
 
-1. resolvePublishedRevision() × 2          ← terms / cancellation_policy の revisionId が
+1. resolvePublishedRevision() × 2          ← user_terms / user_cancellation_policy の revisionId が
    その組織の公開中の改訂かを検証（§2.2）
 2. BirthDate.isMinor(customerBirthDate) なら guardianName / guardianConsentedAt を必須化
    ← 欠けていれば 400 GUARDIAN_CONSENT_REQUIRED

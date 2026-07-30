@@ -527,7 +527,7 @@ const config: AppConfig = {
           id: "policies",
           title: "文書管理",
           overview:
-            "この組織で現在有効な利用規約・キャンセルポリシー・プライバシーポリシーを閲覧します。改版はこの画面からは行いません。",
+            "この組織で現在有効な占い師向けの利用規約とプライバシーポリシーを閲覧します。改版はこの画面からは行いません。",
           route: "/{orgId}/policies",
           requiresAuth: true,
           waitForSelector: '[role="tab"]',
@@ -537,7 +537,7 @@ const config: AppConfig = {
               selector: '[role="tab"]',
               title: "文書タブ",
               description:
-                "利用規約・キャンセルポリシー・プライバシーポリシーを切り替えます。",
+                "占い師向け利用規約と占い師向けプライバシーポリシーを切り替えます。ユーザー向けの規約類は予約サイト側に掲載されます。",
             },
             {
               n: 2,

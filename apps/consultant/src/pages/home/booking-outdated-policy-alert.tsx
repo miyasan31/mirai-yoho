@@ -1,7 +1,10 @@
 import { Alert } from "@mirai-yoho/ui/components/ui/alert";
 import { TriangleAlert } from "lucide-react";
 import { styled } from "styled-system/jsx";
-import { useBookingOutdatedPolicy } from "./use-booking-outdated-policy";
+import {
+  type OutdatedPolicyType,
+  useBookingOutdatedPolicy,
+} from "./use-booking-outdated-policy";
 
 interface BookingOutdatedPolicyAlertProps {
   organizationId: string;
@@ -12,9 +15,9 @@ interface BookingOutdatedPolicyAlertProps {
   };
 }
 
-const TYPE_LABEL: Record<"terms" | "cancellation_policy", string> = {
-  terms: "利用規約",
-  cancellation_policy: "キャンセルポリシー",
+const TYPE_LABEL: Record<OutdatedPolicyType, string> = {
+  user_terms: "利用規約",
+  user_cancellation_policy: "キャンセルポリシー",
 };
 
 /**

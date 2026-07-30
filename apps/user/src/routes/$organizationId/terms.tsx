@@ -12,7 +12,7 @@ function TermsRoute() {
   return (
     <PolicyPage
       organizationId={organizationId}
-      type="terms"
+      type="user_terms"
       headingLabel="利用規約"
     />
   );

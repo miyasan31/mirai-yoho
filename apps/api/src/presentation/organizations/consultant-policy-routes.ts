@@ -8,10 +8,10 @@ import {
 } from "@/infrastructure/container";
 import { getRoute, jsonError, noStoreJson, postRoute } from "./route-handler";
 
+// 占い師が同意できるのは占い師向けポリシーのみ
 const policyTypeSchema = v.picklist([
-  "terms",
-  "cancellation_policy",
-  "privacy_policy",
+  "consultant_terms",
+  "consultant_privacy_policy",
 ]);
 
 const agreeBodySchema = v.object({

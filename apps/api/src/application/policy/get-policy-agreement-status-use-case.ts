@@ -4,9 +4,13 @@ import type {
   PolicyAgreementVia,
   PolicySubjectType,
 } from "@/domain/policy/policy-agreement";
+import { policyAudienceForSubjectType } from "@/domain/policy/policy-agreement";
 import type { IPolicyAgreementRepository } from "@/domain/policy/policy-agreement-repository";
 import type { IPolicyRevisionRepository } from "@/domain/policy/policy-revision-repository";
-import { POLICY_TYPES, type PolicyType } from "@/domain/policy/policy-type";
+import {
+  POLICY_TYPES_BY_AUDIENCE,
+  type PolicyType,
+} from "@/domain/policy/policy-type";
 
 export interface GetPolicyAgreementStatusInput {
   organizationId: string;
@@ -43,8 +47,11 @@ export class GetPolicyAgreementStatusUseCase {
     input: GetPolicyAgreementStatusInput,
   ): Promise<PolicyAgreementStatusOutput> {
     const at = input.at ?? new Date();
+    // 同意を求める種別は主体の読者区分で決まる（利用者に占い師向け規約は出さない）
+    const targetTypes =
+      POLICY_TYPES_BY_AUDIENCE[policyAudienceForSubjectType(input.subjectType)];
     const entries: PolicyAgreementStatusEntry[] = await Promise.all(
-      POLICY_TYPES.map(async (type) => {
+      targetTypes.map(async (type) => {
         const [revision, agreement] = await Promise.all([
           this.policyRevisionRepository.findLatestPublished(
             input.organizationId,

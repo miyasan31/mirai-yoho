@@ -19,9 +19,11 @@ import {
 } from "./route-handler";
 
 const policyTypeSchema = v.picklist([
-  "terms",
-  "cancellation_policy",
-  "privacy_policy",
+  "user_terms",
+  "user_cancellation_policy",
+  "user_privacy_policy",
+  "consultant_terms",
+  "consultant_privacy_policy",
 ]);
 
 const createDraftBodySchema = v.object({
