@@ -1,7 +1,6 @@
 import { valibotResolver } from "@hookform/resolvers/valibot";
 import {
-  getGetMyBookingRatingQueryOptions,
-  useGetMyBookingRating,
+  useGetMyBookingRatingSuspense,
   useSubmitMyBookingRating,
 } from "@mirai-yoho/api-client/api/customer/customer";
 import type { MyBookingRatingDetail } from "@mirai-yoho/api-client/schemas";
@@ -17,8 +16,10 @@ import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, CircleX, Star } from "lucide-react";
+import { Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { styled } from "styled-system/jsx";
+import { useCustomerAuth } from "@/hooks/use-customer-auth";
 import { pageHead } from "@/lib/head";
 import { formatDateTime, formatDateTimeRange } from "../-booking-format";
 import {
@@ -27,11 +28,11 @@ import {
   ratingFormSchema,
 } from "../-rating-form-schema";
 
+// loader は使わない。ルート解決時に走るため、親の mypage/route.tsx が Firebase Auth の
+// セッションを復元し終える前にトークンなしでリクエストしてしまい 401 になる。
+// mypage 配下の他ページと同様、認証ゲートを通ったあとにコンポーネント内で取得する。
 export const Route = createFileRoute("/mypage/bookings/$bookingId/rating")({
   head: () => pageHead("鑑定の評価"),
-  loader: ({ context: { queryClient }, params: { bookingId } }) =>
-    queryClient.ensureQueryData(getGetMyBookingRatingQueryOptions(bookingId)),
-  pendingComponent: RatingPagePending,
   errorComponent: RatingPageError,
   component: RatingPage,
 });
@@ -59,13 +60,13 @@ function RatingPageLayout({ children }: { children: React.ReactNode }) {
   );
 }
 
-function RatingPagePending() {
+function RatingSkeleton() {
   return (
-    <RatingPageLayout>
+    <>
       <Skeleton height="6" width="60%" />
       <SkeletonText noOfLines={3} />
       <Skeleton height="10" width="40%" />
-    </RatingPageLayout>
+    </>
   );
 }
 
@@ -82,23 +83,39 @@ function RatingPageError() {
 }
 
 function RatingPage() {
-  const { bookingId } = Route.useParams();
-  const { data } = useGetMyBookingRating(bookingId);
-  const detail = data?.data;
-
-  if (!detail) {
-    return <RatingPagePending />;
-  }
+  const { isSignedUp } = useCustomerAuth();
 
   return (
     <RatingPageLayout>
+      {isSignedUp ? (
+        <Suspense fallback={<RatingSkeleton />}>
+          <RatingContent />
+        </Suspense>
+      ) : (
+        <EmptyState
+          icon={Star}
+          message="対象の予約が見つかりません"
+          hint="予約一覧からもう一度お試しください"
+        />
+      )}
+    </RatingPageLayout>
+  );
+}
+
+function RatingContent() {
+  const { bookingId } = Route.useParams();
+  const { data } = useGetMyBookingRatingSuspense(bookingId);
+  const detail = data.data;
+
+  return (
+    <>
       <BookingSummary detail={detail} />
       {detail.ratable ? (
         <RatingForm bookingId={bookingId} detail={detail} />
       ) : (
         <RatingUnavailable detail={detail} />
       )}
-    </RatingPageLayout>
+    </>
   );
 }
 

@@ -171,6 +171,7 @@ paths:
       description: |
         未評価の場合も 200 + rating: null を返す。custom-fetch が 404 を /404 へ
         リダイレクトするため、「まだ評価していない」を状態として扱えるようにするため。
+        他人の予約・存在しない予約は 404（エラーレスポンスは他のエンドポイントと同様スキーマに書かない）。
       tags: [customer]
       security:
         - bearerAuth: []
@@ -183,11 +184,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MyBookingRatingDetail"
-        "404":
-          description: 予約が見つからない（他人の予約を含む）
     post:
       operationId: submitMyBookingRating
       summary: 予約の評価を送信（提出後は編集不可）
+      description: |
+        評価済み / 鑑定未終了 / 受付期間外は 409、他人の予約・存在しない予約は 404 を返す
+        （エラーレスポンスは他のエンドポイントと同様スキーマに書かない）。
       tags: [customer]
       security:
         - bearerAuth: []
@@ -206,10 +208,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/MyBookingRating"
-        "404":
-          description: 予約が見つからない（他人の予約を含む）
-        "409":
-          description: 評価済み / 鑑定未終了 / 受付期間外
   /organizations/{organizationId}/customers/me/bookings:
     get:
       operationId: getCustomerBookings
@@ -1017,8 +1015,6 @@ paths:
                 properties:
                   consultant:
                     $ref: "#/components/schemas/ConsultantDetail"
-        "404":
-          description: 相談員が見つからない
     patch:
       operationId: updateConsoleConsultant
       summary: 相談員更新
@@ -1096,8 +1092,6 @@ paths:
                       $ref: "#/components/schemas/ConsultantRating"
                   pagination:
                     $ref: "#/components/schemas/PaginationMeta"
-        "404":
-          description: 相談員が見つからない
 
   /organizations/{organizationId}/console/settings/booking:
     get:
