@@ -57,6 +57,12 @@ packages/api-client/src/generated/
 ## Local git worktrees
 .worktrees/
 
+## Firebase emulator の永続データ (pnpm emulator でエクスポート・インポートされる)
+.emulator-data/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log
+
 ## Terraform state and environment configuration
 infra/terraform/gcp/**/.terraform/
 infra/terraform/gcp/**/terraform.tfstate
