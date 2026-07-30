@@ -80,14 +80,14 @@ make seed-local ADMIN=you@example.com
 | --- | --- | --- |
 | `ADMIN` | （必須） | console にログインする Auth ユーザーのメールアドレスまたは UID |
 | `CONSULTANT` | `ADMIN` と同じ | consultant にログインする Auth ユーザー |
-| `ORGANIZATION_ID` | `local-org` | 組織 ID（各 SPA の URL パスに使う） |
+| `ORGANIZATION_ID` | `miraiyohou` | 組織 ID（各 SPA の URL パスに使う） |
 | `ORGANIZATION_NAME` | `ローカル組織` | 組織名 |
 | `CONSULTANT_NAME` | `ローカル占い師` | 占い師の表示名 |
 | `DAYS` | `7` | 空き枠を作る日数 |
 
 - Auth はエミュレートしないため、`ADMIN` / `CONSULTANT` には **dev プロジェクトに実在する** Auth ユーザーを指定します。スクリプトは Auth を読むだけで、ユーザーの作成・変更は一切しません（メールで見つからない場合は UID を直接渡してください）
 - `FIRESTORE_EMULATOR_HOST` が未設定だと実行を拒否するので、dev / 本番に流れる心配はありません
-- 利用規約・キャンセルポリシーも必要なら、続けて `pnpm dlx tsx --tsconfig apps/api/tsconfig.json --env-file=apps/api/.env.local apps/api/scripts/seed-initial-policies.ts --only-org local-org` を実行してください
+- 利用規約・キャンセルポリシーも必要なら、続けて `pnpm dlx tsx --tsconfig apps/api/tsconfig.json --env-file=apps/api/.env.local apps/api/scripts/seed-initial-policies.ts --only-org miraiyohou` を実行してください
 
 ## よく使うコマンド
 

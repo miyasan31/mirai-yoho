@@ -18,7 +18,7 @@
  * Usage:
  *   pnpm dlx tsx --env-file=apps/api/.env.local apps/api/scripts/seed-local.ts \
  *     --admin <email|uid> [--consultant <email|uid>] \
- *     [--organization-id local-org] [--organization-name ローカル組織] \
+ *     [--organization-id miraiyohou] [--organization-name ローカル組織] \
  *     [--consultant-name 占い師] [--days 7]
  *
  * Example:
@@ -44,7 +44,7 @@ import { getRoleDocId } from "../src/infrastructure/firestore/firestore-role-rep
 import { FirestoreSettingsRepository } from "../src/infrastructure/firestore/firestore-settings-repository";
 import { FirestoreSlotRepository } from "../src/infrastructure/firestore/firestore-slot-repository";
 
-const DEFAULT_ORGANIZATION_ID = "local-org";
+const DEFAULT_ORGANIZATION_ID = "miraiyohou";
 const DEFAULT_ORGANIZATION_NAME = "ローカル組織";
 const DEFAULT_CONSULTANT_NAME = "ローカル占い師";
 const DEFAULT_DAYS = 7;
@@ -316,7 +316,7 @@ async function main() {
   console.log("");
   console.log("利用規約・キャンセルポリシーも必要なら以下を実行してください:");
   console.log(
-    "  pnpm dlx tsx --env-file=apps/api/.env.local apps/api/scripts/seed-initial-policies.ts --only-org " +
+    "  pnpm dlx tsx --tsconfig apps/api/tsconfig.json --env-file=apps/api/.env.local apps/api/scripts/seed-initial-policies.ts --only-org " +
       args.organizationId,
   );
 }
