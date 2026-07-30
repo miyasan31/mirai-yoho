@@ -2,63 +2,120 @@
  * ローカルの Firestore エミュレーターに開発用のシードデータを一括投入する。
  *
  * 投入するもの:
- *   - organizations / settings（既定の相談者ステータス・営業時間・料金レンジ）
- *   - roles（admin / operator のシステムロール）
- *   - accounts（console にログインする管理者）
- *   - consultants（consultant にログインする占い師）
- *   - price-plans（30 / 60 / 90 分の 3 プラン）
+ *   - organizations / settings（相談者ステータス 3 種）
+ *   - roles（admin / operator）/ accounts（管理者 = 自分、招待中のオペレーター）
+ *   - consultants（自分 + ダミー。1 人は非稼働）
+ *   - price-plans（占い師ごとに 30 / 60 / 90 分）
  *   - slots（翌日から N 日分、10:00-17:00 の 15 分枠）
+ *   - users / customers（apps/user の会員と顧客）
+ *   - bookings / payments（確定・完了・キャンセル・仮予約の 4 状態）
+ *   - coupons / user-coupons（未使用・使用済み・期限切れ）
+ *   - policy-revisions（利用者向け 3 種 + 占い師向け 2 種）
  *
- * Firebase Auth はエミュレートしないため、admin / consultant には
+ * Firebase Auth はエミュレートしないため、--admin / --consultant / --user には
  * **dev プロジェクトに実在する** Auth ユーザーのメールアドレスか UID を渡す。
  * このスクリプトは Auth を読むだけで、ユーザーの作成・変更は一切しない。
  *
- * 同じ引数で何度実行しても同じドキュメントを上書きするだけ（slot も含めて冪等）。
+ * 同じ引数で何度実行しても同じドキュメントを上書きするだけ（冪等）。
  *
  * Usage:
- *   pnpm dlx tsx --env-file=apps/api/.env.local apps/api/scripts/seed-local.ts \
- *     --admin <email|uid> [--consultant <email|uid>] \
+ *   pnpm dlx tsx --tsconfig apps/api/tsconfig.json --env-file=apps/api/.env.local apps/api/scripts/seed-local.ts \
+ *     --admin <email|uid> [--consultant <email|uid>] [--user <email|uid>] \
  *     [--organization-id miraiyohou] [--organization-name ローカル組織] \
- *     [--consultant-name 占い師] [--days 7]
+ *     [--consultant-name 占い師] [--days 7] [--consultants 4] [--customers 4]
  *
  * Example:
  *   make seed-local ADMIN=you@example.com
  */
 
+import type { SupportedDurationMinutes } from "@mirai-yoho/shared/slot-availability";
 import { getAuth } from "firebase-admin/auth";
 import { Timestamp } from "firebase-admin/firestore";
 import { Role } from "../src/domain/authorization/role";
+import { Booking } from "../src/domain/booking/booking";
+import { BookingStatus } from "../src/domain/booking/booking-status";
+import { CancelDeadline } from "../src/domain/booking/cancel-deadline";
+import { ConsultantMemo } from "../src/domain/booking/consultant-memo";
+import { ZoomUrl } from "../src/domain/booking/zoom-url";
 import { Consultant } from "../src/domain/consultant/consultant";
 import { ConsultantProfile } from "../src/domain/consultant/consultant-profile";
+import { Coupon } from "../src/domain/coupon/coupon";
+import { Customer } from "../src/domain/customer/customer";
+import { Money } from "../src/domain/payment/money";
+import { Payment } from "../src/domain/payment/payment";
+import { PaymentStatus } from "../src/domain/payment/payment-status";
+import { PaymentStrategy } from "../src/domain/payment/payment-strategy";
 import { PricePlan } from "../src/domain/price-plan/price-plan";
-import { DEFAULT_CONSULTANT_STATUS_ID } from "../src/domain/settings/consultant-status";
 import { Settings } from "../src/domain/settings/settings";
 import { Slot } from "../src/domain/slot/slot";
 import { TimeRange } from "../src/domain/slot/time-range";
+import { BirthDate } from "../src/domain/user/birth-date";
+import { User } from "../src/domain/user/user";
+import { UserCoupon } from "../src/domain/user-coupon/user-coupon";
 import { getAccountDocId } from "../src/infrastructure/firestore/firestore-account-repository";
+import { FirestoreBookingRepository } from "../src/infrastructure/firestore/firestore-booking-repository";
 import { app, db } from "../src/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore-collections";
 import { FirestoreConsultantRepository } from "../src/infrastructure/firestore/firestore-consultant-repository";
+import { FirestoreCouponRepository } from "../src/infrastructure/firestore/firestore-coupon-repository";
+import { FirestoreCustomerRepository } from "../src/infrastructure/firestore/firestore-customer-repository";
+import { FirestorePaymentRepository } from "../src/infrastructure/firestore/firestore-payment-repository";
 import { FirestorePricePlanRepository } from "../src/infrastructure/firestore/firestore-price-plan-repository";
 import { getRoleDocId } from "../src/infrastructure/firestore/firestore-role-repository";
 import { FirestoreSettingsRepository } from "../src/infrastructure/firestore/firestore-settings-repository";
 import { FirestoreSlotRepository } from "../src/infrastructure/firestore/firestore-slot-repository";
+import { FirestoreUserCouponRepository } from "../src/infrastructure/firestore/firestore-user-coupon-repository";
+import { FirestoreUserRepository } from "../src/infrastructure/firestore/firestore-user-repository";
+import { seedPolicies } from "./lib/seed-policies";
 
 const DEFAULT_ORGANIZATION_ID = "miraiyohou";
 const DEFAULT_ORGANIZATION_NAME = "ローカル組織";
 const DEFAULT_CONSULTANT_NAME = "ローカル占い師";
 const DEFAULT_DAYS = 7;
+// 自分 + ダミー 3 人（稼働 2 / 非稼働 1）が既定
+const DEFAULT_CONSULTANT_COUNT = 4;
+const DEFAULT_CUSTOMER_COUNT = 4;
+
 const SLOT_OPEN_HOUR = 10;
 const SLOT_CLOSE_HOUR = 17;
 const SLOT_UNIT_MINUTES = 15;
+const SLOT_UNIT_MS = SLOT_UNIT_MINUTES * 60 * 1000;
+const BUFFER_SLOT_COUNT = 1;
+const TAX_RATE = 0.1;
+const DAY_MS = 24 * 60 * 60 * 1000;
+// 施行日が未来だと findLatestPublished が空になり、予約フローの同意チェックが通らない。
+// ローカルでは常に施行済みになるよう過去日を使う（seed-initial-policies.ts の既定とは別）
+const POLICY_VERSION = "2026-01-01";
+const POLICY_EFFECTIVE_FROM = `${POLICY_VERSION}T00:00:00+09:00`;
+
+const CONSULTANT_STATUSES = [
+  { statusId: "standard", name: "標準" },
+  { statusId: "veteran", name: "ベテラン" },
+  { statusId: "rookie", name: "新人" },
+];
 
 interface SeedArgs {
   organizationId: string;
   organizationName: string;
   admin: string;
   consultant: string;
+  user: string;
   consultantName: string;
   days: number;
+  consultantCount: number;
+  customerCount: number;
+}
+
+function parsePositiveInt(
+  value: string | undefined,
+  fallback: number,
+  label: string,
+): number {
+  const parsed = Number(value ?? fallback);
+  if (!Number.isInteger(parsed) || parsed < 1) {
+    throw new Error(`${label} は 1 以上の整数で指定してください`);
+  }
+  return parsed;
 }
 
 function parseArgs(argv: string[]): SeedArgs {
@@ -78,19 +135,25 @@ function parseArgs(argv: string[]): SeedArgs {
     );
   }
 
-  const days = Number(args.days ?? DEFAULT_DAYS);
-  if (!Number.isInteger(days) || days < 1) {
-    throw new Error("--days は 1 以上の整数で指定してください");
-  }
-
   return {
     organizationId: args["organization-id"]?.trim() || DEFAULT_ORGANIZATION_ID,
     organizationName:
       args["organization-name"]?.trim() || DEFAULT_ORGANIZATION_NAME,
     admin,
     consultant: args.consultant?.trim() || admin,
+    user: args.user?.trim() || admin,
     consultantName: args["consultant-name"]?.trim() || DEFAULT_CONSULTANT_NAME,
-    days,
+    days: parsePositiveInt(args.days, DEFAULT_DAYS, "--days"),
+    consultantCount: parsePositiveInt(
+      args.consultants,
+      DEFAULT_CONSULTANT_COUNT,
+      "--consultants",
+    ),
+    customerCount: parsePositiveInt(
+      args.customers,
+      DEFAULT_CUSTOMER_COUNT,
+      "--customers",
+    ),
   };
 }
 
@@ -117,6 +180,153 @@ async function resolveAuthUid(identity: string): Promise<string> {
   return userRecord.uid;
 }
 
+// ---------------------------------------------------------------------------
+// シードの素材（占い師 / 料金プラン / 顧客）
+// ---------------------------------------------------------------------------
+
+interface ConsultantSeed {
+  consultantId: string;
+  name: string;
+  bio: string;
+  specialties: string[];
+  statusId: string;
+  isActive: boolean;
+}
+
+const DUMMY_CONSULTANTS = [
+  {
+    name: "星野 みちる",
+    bio: "西洋占星術とタロットで、恋愛と対人関係のご相談を中心に承ります。",
+    specialties: ["恋愛", "対人関係", "タロット"],
+    statusId: "veteran",
+    isActive: true,
+  },
+  {
+    name: "月城 あかり",
+    bio: "四柱推命をベースに、仕事とキャリアの転機を読み解きます。",
+    specialties: ["仕事", "キャリア", "四柱推命"],
+    statusId: "rookie",
+    isActive: true,
+  },
+  {
+    name: "日向 そら",
+    bio: "現在は活動を休止しています（非稼働の表示確認用）。",
+    specialties: ["家族"],
+    statusId: "standard",
+    isActive: false,
+  },
+];
+
+function buildConsultantSeeds(
+  args: SeedArgs,
+  consultantUid: string,
+): ConsultantSeed[] {
+  const seeds: ConsultantSeed[] = [
+    {
+      consultantId: consultantUid,
+      name: args.consultantName,
+      bio: "ログイン確認用の占い師です。consultant アプリにこの UID でログインできます。",
+      specialties: ["恋愛", "仕事"],
+      statusId: "standard",
+      isActive: true,
+    },
+  ];
+
+  for (let index = 0; index < args.consultantCount - 1; index++) {
+    const dummy = DUMMY_CONSULTANTS[index % DUMMY_CONSULTANTS.length];
+    seeds.push({ consultantId: `seed-consultant-${index + 2}`, ...dummy });
+  }
+
+  return seeds;
+}
+
+interface PricePlanSeed {
+  pricePlanId: string;
+  name: string;
+  totalJPY: number;
+  durationMinutes: SupportedDurationMinutes;
+}
+
+const PRICE_PLAN_TEMPLATES: Array<{
+  suffix: string;
+  name: string;
+  totalJPY: number;
+  durationMinutes: SupportedDurationMinutes;
+}> = [
+  { suffix: "30", name: "お試し 30 分", totalJPY: 5000, durationMinutes: 30 },
+  { suffix: "60", name: "じっくり 60 分", totalJPY: 9000, durationMinutes: 60 },
+  {
+    suffix: "90",
+    name: "スペシャル 90 分",
+    totalJPY: 13000,
+    durationMinutes: 90,
+  },
+];
+
+function buildPricePlanSeeds(
+  organizationId: string,
+  consultantId: string,
+  index: number,
+): PricePlanSeed[] {
+  // 占い師ごとに金額をずらして、一覧の見え方に差を出す
+  const priceOffset = index * 1000;
+  return PRICE_PLAN_TEMPLATES.map((template) => ({
+    pricePlanId: `${organizationId}_${consultantId}_plan-${template.suffix}`,
+    name: template.name,
+    totalJPY: template.totalJPY + priceOffset,
+    durationMinutes: template.durationMinutes,
+  }));
+}
+
+interface CustomerSeed {
+  customerId: string;
+  userId: string;
+  name: string;
+  email: string;
+  phone: string;
+  birthDate: string;
+}
+
+const DUMMY_CUSTOMER_PROFILES = [
+  { name: "佐藤 陽菜", birthDate: "1992-04-18" },
+  { name: "田中 一郎", birthDate: "1985-11-03" },
+  { name: "鈴木 美咲", birthDate: "1998-07-25" },
+  { name: "高橋 健", birthDate: "1979-01-09" },
+];
+
+function buildCustomerSeeds(args: SeedArgs, userUid: string): CustomerSeed[] {
+  const seeds: CustomerSeed[] = [
+    {
+      customerId: `${args.organizationId}_customer-1`,
+      userId: userUid,
+      name: "ローカル利用者",
+      email: "local-user@example.com",
+      phone: "090-1111-2222",
+      birthDate: "1990-05-15",
+    },
+  ];
+
+  for (let index = 0; index < args.customerCount - 1; index++) {
+    const profile =
+      DUMMY_CUSTOMER_PROFILES[index % DUMMY_CUSTOMER_PROFILES.length];
+    const suffix = index + 2;
+    seeds.push({
+      customerId: `${args.organizationId}_customer-${suffix}`,
+      userId: `seed-user-${suffix}`,
+      name: profile.name,
+      email: `customer${suffix}@example.com`,
+      phone: `090-0000-${String(1000 + suffix).slice(-4)}`,
+      birthDate: profile.birthDate,
+    });
+  }
+
+  return seeds;
+}
+
+// ---------------------------------------------------------------------------
+// 組織 / ロール / アカウント
+// ---------------------------------------------------------------------------
+
 async function seedOrganization(args: SeedArgs): Promise<void> {
   const now = Timestamp.now();
   await db
@@ -129,9 +339,9 @@ async function seedOrganization(args: SeedArgs): Promise<void> {
       updatedAt: now,
     });
 
-  await new FirestoreSettingsRepository().save(
-    Settings.createDefault(args.organizationId),
-  );
+  const settings = Settings.createDefault(args.organizationId);
+  settings.updateConsultantStatuses(CONSULTANT_STATUSES, "standard");
+  await new FirestoreSettingsRepository().save(settings);
 }
 
 async function seedRoles(organizationId: string): Promise<void> {
@@ -156,76 +366,103 @@ async function seedRoles(organizationId: string): Promise<void> {
   }
 }
 
-async function seedAdminAccount(
+async function seedAccounts(
   organizationId: string,
   adminUid: string,
 ): Promise<void> {
   const now = Timestamp.now();
-  await db
-    .collection(FIRESTORE_COLLECTIONS.accounts)
-    .doc(getAccountDocId(organizationId, adminUid))
-    .set({
-      organizationId,
+  const accounts = [
+    {
       accountId: adminUid,
       roleId: "admin",
       status: "active",
       name: "ローカル管理者",
-      createdAt: now,
-      updatedAt: now,
-    });
+    },
+    // 招待中の行を 1 件作り、アカウント管理画面のステータス表示を確認できるようにする
+    {
+      accountId: "seed-operator",
+      roleId: "operator",
+      status: "invited",
+      name: "ローカルオペレーター",
+    },
+  ];
+
+  for (const account of accounts) {
+    await db
+      .collection(FIRESTORE_COLLECTIONS.accounts)
+      .doc(getAccountDocId(organizationId, account.accountId))
+      .set({
+        organizationId,
+        ...account,
+        createdAt: now,
+        updatedAt: now,
+      });
+  }
 }
 
-async function seedConsultant(
-  args: SeedArgs,
-  consultantUid: string,
+// ---------------------------------------------------------------------------
+// 占い師 / 料金プラン / 空き枠
+// ---------------------------------------------------------------------------
+
+async function seedConsultants(
+  organizationId: string,
+  seeds: ConsultantSeed[],
 ): Promise<void> {
-  await new FirestoreConsultantRepository().save(
-    Consultant.create({
-      organizationId: args.organizationId,
-      consultantId: consultantUid,
+  const repository = new FirestoreConsultantRepository();
+
+  for (const seed of seeds) {
+    const consultant = Consultant.create({
+      organizationId,
+      consultantId: seed.consultantId,
       profile: ConsultantProfile.create(
-        args.consultantName,
-        "ローカル開発用のダミープロフィールです。",
-        ["恋愛", "仕事"],
+        seed.name,
+        seed.bio,
+        seed.specialties,
         "090-0000-0000",
       ),
-      statusId: DEFAULT_CONSULTANT_STATUS_ID,
-    }),
-  );
+      statusId: seed.statusId,
+    });
+    if (!seed.isActive) {
+      consultant.deactivate();
+    }
+    await repository.save(consultant);
+  }
 }
-
-const PRICE_PLAN_SEEDS = [
-  { suffix: "30", name: "お試し 30 分", totalJPY: 5000, durationMinutes: 30 },
-  { suffix: "60", name: "じっくり 60 分", totalJPY: 9000, durationMinutes: 60 },
-  {
-    suffix: "90",
-    name: "スペシャル 90 分",
-    totalJPY: 13000,
-    durationMinutes: 90,
-  },
-] as const;
 
 async function seedPricePlans(
   organizationId: string,
-  consultantUid: string,
+  seeds: ConsultantSeed[],
 ): Promise<number> {
   const repository = new FirestorePricePlanRepository();
+  let count = 0;
 
-  for (const seed of PRICE_PLAN_SEEDS) {
-    await repository.save(
-      PricePlan.create({
-        organizationId,
-        consultantId: consultantUid,
-        // 再実行で重複しないように決定的な ID にする（本番は UUID）
-        pricePlanId: `${organizationId}_${consultantUid}_plan-${seed.suffix}`,
-        name: seed.name,
-        totalJPY: seed.totalJPY,
-        durationMinutes: seed.durationMinutes,
-      }),
-    );
+  for (const [index, seed] of seeds.entries()) {
+    for (const plan of buildPricePlanSeeds(
+      organizationId,
+      seed.consultantId,
+      index,
+    )) {
+      await repository.save(
+        PricePlan.create({
+          organizationId,
+          consultantId: seed.consultantId,
+          ...plan,
+        }),
+      );
+      count += 1;
+    }
   }
 
-  return PRICE_PLAN_SEEDS.length;
+  return count;
+}
+
+/** 再実行で重複しないように、開始時刻から決定的な ID を振る（本番は UUID） */
+function toSlotId(
+  organizationId: string,
+  consultantId: string,
+  startsAt: Date,
+): string {
+  return `${organizationId}_${consultantId}_${startsAt.toISOString()}`;
 }
 
 function createSlotStartTimes(days: number): Date[] {
@@ -248,29 +485,444 @@ function createSlotStartTimes(days: number): Date[] {
 
 async function seedSlots(
   organizationId: string,
-  consultantUid: string,
+  seeds: ConsultantSeed[],
   days: number,
 ): Promise<number> {
   const repository = new FirestoreSlotRepository();
   const startTimes = createSlotStartTimes(days);
+  let count = 0;
 
-  for (const startsAt of startTimes) {
-    const endsAt = new Date(startsAt);
-    endsAt.setMinutes(endsAt.getMinutes() + SLOT_UNIT_MINUTES);
+  for (const seed of seeds.filter((candidate) => candidate.isActive)) {
+    for (const startsAt of startTimes) {
+      const endsAt = new Date(startsAt.getTime() + SLOT_UNIT_MS);
+      await repository.save(
+        Slot.create({
+          organizationId,
+          slotId: toSlotId(organizationId, seed.consultantId, startsAt),
+          consultantId: seed.consultantId,
+          timeRange: TimeRange.create(startsAt, endsAt),
+        }),
+      );
+      count += 1;
+    }
+  }
 
-    await repository.save(
-      Slot.create({
+  return count;
+}
+
+// ---------------------------------------------------------------------------
+// 会員 / 顧客
+// ---------------------------------------------------------------------------
+
+async function seedUsersAndCustomers(
+  organizationId: string,
+  seeds: CustomerSeed[],
+): Promise<void> {
+  const userRepository = new FirestoreUserRepository();
+  const customerRepository = new FirestoreCustomerRepository();
+  const now = new Date();
+
+  for (const seed of seeds) {
+    await userRepository.save(
+      User.createAnonymous({
+        userId: seed.userId,
+        authUid: seed.userId,
+        displayName: seed.name,
+        primaryEmail: seed.email,
+        phoneNumber: seed.phone,
+        birthDate: BirthDate.create(seed.birthDate, now),
+      }),
+    );
+
+    await customerRepository.save(
+      Customer.create({
         organizationId,
-        // 再実行で重複しないように開始時刻から決定的な ID にする（本番は UUID）
-        slotId: `${organizationId}_${consultantUid}_${startsAt.toISOString()}`,
-        consultantId: consultantUid,
-        timeRange: TimeRange.create(startsAt, endsAt),
+        customerId: seed.customerId,
+        userId: seed.userId,
+        name: seed.name,
+        email: seed.email,
+        phone: seed.phone,
+        birthDate: seed.birthDate,
       }),
     );
   }
-
-  return startTimes.length;
 }
+
+// ---------------------------------------------------------------------------
+// クーポン
+// ---------------------------------------------------------------------------
+
+const WELCOME_COUPON_NAME = "新規登録クーポン";
+
+interface SeededCoupons {
+  redeemedUserCouponId: string;
+  welcomeCouponId: string;
+  welcomeAmountJPY: number;
+}
+
+async function seedCoupons(
+  organizationId: string,
+  userId: string,
+): Promise<SeededCoupons> {
+  const couponRepository = new FirestoreCouponRepository();
+  const userCouponRepository = new FirestoreUserCouponRepository();
+  const now = new Date();
+
+  const welcome = Coupon.create({
+    organizationId,
+    couponId: `${organizationId}_coupon-welcome`,
+    type: "welcome",
+    name: WELCOME_COUPON_NAME,
+    amountJPY: 1000,
+    batchSize: 1,
+    expiresInDays: 30,
+  });
+  const birthday = Coupon.create({
+    organizationId,
+    couponId: `${organizationId}_coupon-birthday`,
+    type: "birthday",
+    name: "お誕生日クーポン",
+    amountJPY: 2000,
+    batchSize: 1,
+    expiresInDays: 60,
+  });
+
+  await couponRepository.save(welcome);
+  await couponRepository.save(birthday);
+
+  // 未使用（有効）
+  await userCouponRepository.save(
+    UserCoupon.reconstruct({
+      userCouponId: `${organizationId}_${userId}_welcome-unused`,
+      userId,
+      couponId: welcome.getCouponId(),
+      organizationId,
+      amountJPY: welcome.getAmountJPY(),
+      couponName: welcome.getName(),
+      type: "welcome",
+      receivedAt: now,
+      expiresAt: new Date(now.getTime() + 30 * DAY_MS),
+    }),
+  );
+
+  // 期限切れ
+  await userCouponRepository.save(
+    UserCoupon.reconstruct({
+      userCouponId: `${organizationId}_${userId}_birthday-expired`,
+      userId,
+      couponId: birthday.getCouponId(),
+      organizationId,
+      amountJPY: birthday.getAmountJPY(),
+      couponName: birthday.getName(),
+      type: "birthday",
+      receivedAt: new Date(now.getTime() - 90 * DAY_MS),
+      expiresAt: new Date(now.getTime() - 30 * DAY_MS),
+    }),
+  );
+
+  // 使用済みは予約 ID が要るので、予約を作ってから書き込む
+  return {
+    redeemedUserCouponId: `${organizationId}_${userId}_welcome-redeemed`,
+    welcomeCouponId: welcome.getCouponId(),
+    welcomeAmountJPY: welcome.getAmountJPY(),
+  };
+}
+
+async function seedRedeemedUserCoupon(params: {
+  organizationId: string;
+  userId: string;
+  coupons: SeededCoupons;
+  bookingId: string;
+  redeemedAt: Date;
+}): Promise<void> {
+  await new FirestoreUserCouponRepository().save(
+    UserCoupon.reconstruct({
+      userCouponId: params.coupons.redeemedUserCouponId,
+      userId: params.userId,
+      couponId: params.coupons.welcomeCouponId,
+      organizationId: params.organizationId,
+      amountJPY: params.coupons.welcomeAmountJPY,
+      couponName: WELCOME_COUPON_NAME,
+      type: "welcome",
+      receivedAt: new Date(params.redeemedAt.getTime() - 10 * DAY_MS),
+      expiresAt: new Date(params.redeemedAt.getTime() + 20 * DAY_MS),
+      redeemedAt: params.redeemedAt,
+      redeemedBookingId: params.bookingId,
+    }),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// 予約 / 決済
+// ---------------------------------------------------------------------------
+
+type SeedBookingStatus = "pending" | "confirmed" | "completed" | "cancelled";
+
+interface BookingScenario {
+  consultant: ConsultantSeed;
+  customer: CustomerSeed;
+  pricePlan: PricePlanSeed;
+  /** 今日からの日数。負値は過去 */
+  dayOffset: number;
+  hour: number;
+  status: SeedBookingStatus;
+  withMemo?: boolean;
+  withCoupon?: boolean;
+}
+
+function toBookingStartsAt(dayOffset: number, hour: number): Date {
+  const startsAt = new Date();
+  startsAt.setDate(startsAt.getDate() + dayOffset);
+  startsAt.setHours(hour, 0, 0, 0);
+  return startsAt;
+}
+
+function buildBookingScenarios(
+  organizationId: string,
+  consultants: ConsultantSeed[],
+  customers: CustomerSeed[],
+): BookingScenario[] {
+  const plansOf = (consultant: ConsultantSeed) =>
+    buildPricePlanSeeds(
+      organizationId,
+      consultant.consultantId,
+      consultants.indexOf(consultant),
+    );
+
+  const activeConsultants = consultants.filter(
+    (candidate) => candidate.isActive,
+  );
+  const own = activeConsultants[0];
+  const ownPlans = plansOf(own);
+  const customerAt = (index: number) => customers[index % customers.length];
+
+  const scenarios: BookingScenario[] = [
+    {
+      consultant: own,
+      customer: customerAt(0),
+      pricePlan: ownPlans[1],
+      dayOffset: -7,
+      hour: 14,
+      status: "completed",
+      withMemo: true,
+      withCoupon: true,
+    },
+    {
+      consultant: own,
+      customer: customerAt(1),
+      pricePlan: ownPlans[0],
+      dayOffset: -3,
+      hour: 11,
+      status: "cancelled",
+    },
+    {
+      consultant: own,
+      customer: customerAt(0),
+      pricePlan: ownPlans[0],
+      dayOffset: 1,
+      hour: 11,
+      status: "confirmed",
+    },
+    {
+      consultant: own,
+      customer: customerAt(2),
+      pricePlan: ownPlans[2],
+      dayOffset: 2,
+      hour: 15,
+      status: "pending",
+    },
+  ];
+
+  for (const [index, consultant] of activeConsultants.slice(1).entries()) {
+    const plans = plansOf(consultant);
+    scenarios.push(
+      {
+        consultant,
+        customer: customerAt(index + 1),
+        pricePlan: plans[1],
+        dayOffset: 2 + index,
+        hour: 13,
+        status: "confirmed",
+      },
+      {
+        consultant,
+        customer: customerAt(index + 2),
+        pricePlan: plans[0],
+        dayOffset: -(index + 2),
+        hour: 16,
+        status: "completed",
+        withMemo: true,
+      },
+    );
+  }
+
+  return scenarios;
+}
+
+/**
+ * 予約が占有する枠（利用枠 + 後続のバッファ枠）を予約済みにする。
+ * キャンセル済みの予約では空きに戻す。過去の枠は seedSlots が作らないのでここで作る。
+ */
+async function occupySlots(params: {
+  organizationId: string;
+  consultantId: string;
+  startsAt: Date;
+  durationMinutes: number;
+  bookingId: string;
+  release: boolean;
+}): Promise<{ usageSlotIds: string[]; bufferSlotIds: string[] }> {
+  const repository = new FirestoreSlotRepository();
+  const usageCount = params.durationMinutes / SLOT_UNIT_MINUTES;
+  const usageSlotIds: string[] = [];
+  const bufferSlotIds: string[] = [];
+
+  for (let index = 0; index < usageCount + BUFFER_SLOT_COUNT; index++) {
+    const startsAt = new Date(params.startsAt.getTime() + index * SLOT_UNIT_MS);
+    const endsAt = new Date(startsAt.getTime() + SLOT_UNIT_MS);
+    const slotId = toSlotId(
+      params.organizationId,
+      params.consultantId,
+      startsAt,
+    );
+
+    await repository.save(
+      Slot.reconstruct({
+        organizationId: params.organizationId,
+        slotId,
+        consultantId: params.consultantId,
+        timeRange: TimeRange.reconstruct(startsAt, endsAt),
+        bookingId: params.release ? undefined : params.bookingId,
+        isAvailable: params.release,
+      }),
+    );
+
+    if (index < usageCount) {
+      usageSlotIds.push(slotId);
+    } else {
+      bufferSlotIds.push(slotId);
+    }
+  }
+
+  return { usageSlotIds, bufferSlotIds };
+}
+
+function toPaymentStatus(status: SeedBookingStatus): string {
+  if (status === "completed") return "charged";
+  if (status === "cancelled") return "cancelled";
+  if (status === "confirmed") return "setup_complete";
+  return "setup_pending";
+}
+
+function toDateString(date: Date): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** Zoom URL / Stripe ID のダミー値を決定的に作るための簡易ハッシュ */
+function hashCode(value: string): number {
+  let hash = 0;
+  for (let index = 0; index < value.length; index++) {
+    hash = (hash << 5) - hash + value.charCodeAt(index);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+async function seedBooking(
+  organizationId: string,
+  scenario: BookingScenario,
+  coupons: SeededCoupons,
+): Promise<string> {
+  const startsAt = toBookingStartsAt(scenario.dayOffset, scenario.hour);
+  const endsAt = new Date(
+    startsAt.getTime() + scenario.pricePlan.durationMinutes * 60 * 1000,
+  );
+  // 再実行で重複しないように決定的な ID にする（本番は UUID）
+  const bookingId = `${organizationId}_${scenario.consultant.consultantId}_${startsAt.toISOString()}`;
+
+  const { usageSlotIds, bufferSlotIds } = await occupySlots({
+    organizationId,
+    consultantId: scenario.consultant.consultantId,
+    startsAt,
+    durationMinutes: scenario.pricePlan.durationMinutes,
+    bookingId,
+    release: scenario.status === "cancelled",
+  });
+
+  const totalJPY = scenario.pricePlan.totalJPY;
+  const discountJPY = scenario.withCoupon ? coupons.welcomeAmountJPY : 0;
+  const discountedTotalJPY = Math.max(0, totalJPY - discountJPY);
+
+  const booking = Booking.reconstruct({
+    organizationId,
+    bookingId,
+    customerId: scenario.customer.customerId,
+    consultantId: scenario.consultant.consultantId,
+    usageSlotIds,
+    bufferSlotIds,
+    startsAt,
+    endsAt,
+    durationMinutes: scenario.pricePlan.durationMinutes,
+    status: BookingStatus.reconstruct(scenario.status),
+    cancelDeadlineAt: CancelDeadline.create(startsAt),
+    joinUrl:
+      scenario.status === "pending"
+        ? undefined
+        : ZoomUrl.reconstruct(
+            `https://example.zoom.us/j/${hashCode(bookingId)}`,
+          ),
+    consultantJoinedAt:
+      scenario.status === "completed" ? new Date(startsAt) : undefined,
+    consultantMemo: scenario.withMemo
+      ? ConsultantMemo.reconstruct({
+          customerName: scenario.customer.name,
+          birthDate: scenario.customer.birthDate,
+          appraisalDate: toDateString(startsAt),
+          freeMemo: "ローカル確認用のメモです。鑑定結果の記録が表示されます。",
+        })
+      : ConsultantMemo.empty(),
+    consultationContent:
+      "ローカル確認用の相談内容です。今後のキャリアについて相談したいです。",
+    pricePlanId: scenario.pricePlan.pricePlanId,
+    pricePlanName: scenario.pricePlan.name,
+    pricePlanTotalJPY: totalJPY,
+    appliedUserCouponId: scenario.withCoupon
+      ? coupons.redeemedUserCouponId
+      : undefined,
+    couponDiscountJPY: scenario.withCoupon ? discountJPY : undefined,
+    discountedTotalJPY: scenario.withCoupon ? discountedTotalJPY : undefined,
+    agreedTermsVersion: POLICY_VERSION,
+    agreedCancellationPolicyVersion: POLICY_VERSION,
+    agreedAt: new Date(startsAt.getTime() - DAY_MS),
+    createdAt: new Date(startsAt.getTime() - 3 * DAY_MS),
+    updatedAt: new Date(startsAt.getTime() - DAY_MS),
+  });
+
+  await new FirestoreBookingRepository().save(booking);
+
+  await new FirestorePaymentRepository().save(
+    Payment.reconstruct({
+      organizationId,
+      paymentId: `${bookingId}_payment`,
+      bookingId,
+      customerId: scenario.customer.customerId,
+      money: Money.fromTaxIncluded(discountedTotalJPY, TAX_RATE),
+      status: PaymentStatus.reconstruct(toPaymentStatus(scenario.status)),
+      paymentStrategy: PaymentStrategy.reconstruct("deferred"),
+      stripeSetupIntentId: `seti_seed_${hashCode(bookingId)}`,
+      createdAt: new Date(startsAt.getTime() - 3 * DAY_MS),
+      updatedAt: new Date(startsAt.getTime() - DAY_MS),
+    }),
+  );
+
+  return bookingId;
+}
+
+// ---------------------------------------------------------------------------
+// main
+// ---------------------------------------------------------------------------
 
 async function main() {
   if (!process.env.FIRESTORE_EMULATOR_HOST) {
@@ -286,39 +938,86 @@ async function main() {
     args.consultant === args.admin
       ? adminUid
       : await resolveAuthUid(args.consultant);
+  const userUid =
+    args.user === args.admin ? adminUid : await resolveAuthUid(args.user);
+
+  const consultants = buildConsultantSeeds(args, consultantUid);
+  const customers = buildCustomerSeeds(args, userUid);
 
   await seedOrganization(args);
   await seedRoles(args.organizationId);
-  await seedAdminAccount(args.organizationId, adminUid);
-  await seedConsultant(args, consultantUid);
-  const pricePlanCount = await seedPricePlans(
-    args.organizationId,
-    consultantUid,
-  );
+  await seedAccounts(args.organizationId, adminUid);
+  await seedConsultants(args.organizationId, consultants);
+  const pricePlanCount = await seedPricePlans(args.organizationId, consultants);
   const slotCount = await seedSlots(
     args.organizationId,
-    consultantUid,
+    consultants,
     args.days,
   );
+  await seedUsersAndCustomers(args.organizationId, customers);
+  const coupons = await seedCoupons(args.organizationId, userUid);
+
+  const scenarios = buildBookingScenarios(
+    args.organizationId,
+    consultants,
+    customers,
+  );
+  const bookingIds: string[] = [];
+  for (const scenario of scenarios) {
+    bookingIds.push(await seedBooking(args.organizationId, scenario, coupons));
+  }
+
+  const couponScenarioIndex = scenarios.findIndex(
+    (scenario) => scenario.withCoupon,
+  );
+  if (couponScenarioIndex >= 0) {
+    const scenario = scenarios[couponScenarioIndex];
+    await seedRedeemedUserCoupon({
+      organizationId: args.organizationId,
+      userId: userUid,
+      coupons,
+      bookingId: bookingIds[couponScenarioIndex],
+      redeemedAt: toBookingStartsAt(scenario.dayOffset, scenario.hour),
+    });
+  }
+
+  const policyResults = await seedPolicies({
+    organizationIds: [args.organizationId],
+    version: POLICY_VERSION,
+    effectiveFrom: new Date(POLICY_EFFECTIVE_FROM),
+    createdBy: "seed-local",
+  });
+  const createdPolicies = policyResults.filter(
+    (result) => result.action === "created",
+  ).length;
 
   console.log("シードデータを投入しました");
   console.log(`  organizationId: ${args.organizationId}`);
   console.log(`  organizationName: ${args.organizationName}`);
   console.log(`  adminUid: ${adminUid}`);
   console.log(`  consultantUid: ${consultantUid}`);
+  console.log(`  userUid: ${userUid}`);
+  const activeConsultantCount = consultants.filter(
+    (consultant) => consultant.isActive,
+  ).length;
+  console.log(
+    `  consultants: ${consultants.length}（稼働 ${activeConsultantCount} / 非稼働 ${consultants.length - activeConsultantCount}）`,
+  );
   console.log(`  pricePlans: ${pricePlanCount}`);
   console.log(`  slots: ${slotCount}（翌日から ${args.days} 日分）`);
+  console.log(`  customers: ${customers.length}`);
+  console.log(
+    `  bookings: ${bookingIds.length}（確定 / 完了 / キャンセル / 仮予約）`,
+  );
+  console.log("  userCoupons: 3（未使用 / 使用済み / 期限切れ）");
+  console.log(
+    `  policyRevisions: ${createdPolicies} 件作成、${policyResults.length - createdPolicies} 件は既存のまま`,
+  );
   console.log("");
   console.log("次の URL で確認できます:");
   console.log(`  console: http://localhost:3020/${args.organizationId}`);
   console.log(`  consultant: http://localhost:3030/${args.organizationId}`);
   console.log(`  user: http://localhost:3010/${args.organizationId}`);
-  console.log("");
-  console.log("利用規約・キャンセルポリシーも必要なら以下を実行してください:");
-  console.log(
-    "  pnpm dlx tsx --tsconfig apps/api/tsconfig.json --env-file=apps/api/.env.local apps/api/scripts/seed-initial-policies.ts --only-org " +
-      args.organizationId,
-  );
 }
 
 main().catch((error) => {

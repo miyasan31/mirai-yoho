@@ -72,20 +72,35 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
 make seed-local ADMIN=you@example.com
 ```
 
-組織・ロール・管理者アカウント・占い師・料金プラン（30 / 60 / 90 分）・空き枠（翌日から 7 日分、10:00-17:00 の 15 分枠）をまとめて投入します。同じ引数なら何度実行しても同じドキュメントを上書きするだけです（冪等）。
+一通りの画面が埋まる状態をまとめて投入します。同じ引数なら何度実行しても同じドキュメントを上書きするだけです（冪等）。
+
+| コレクション | 投入内容 |
+| --- | --- |
+| `organizations` / `settings` | 組織 1 件。相談者ステータスは 標準 / ベテラン / 新人 の 3 種 |
+| `roles` / `accounts` | admin・operator ロール、管理者（あなた）と招待中のオペレーター |
+| `consultants` | 4 人（1 人目 = あなたの UID、残りはダミー。うち 1 人は非稼働） |
+| `price-plans` | 占い師ごとに 30 / 60 / 90 分の 3 プラン（占い師ごとに金額をずらす） |
+| `slots` | 稼働中の占い師ごとに、翌日から 7 日分・10:00-17:00 の 15 分枠 |
+| `users` / `customers` | 会員 4 人（1 人目 = あなたの UID）と、対応する顧客 |
+| `bookings` / `payments` | 確定・完了・キャンセル・仮予約の 4 状態。過去分は鑑定メモ付き |
+| `coupons` / `user-coupons` | 新規登録・お誕生日クーポンと、未使用 / 使用済み / 期限切れの 3 枚 |
+| `policy-revisions` | 利用者向け 3 種 + 占い師向け 2 種（文書管理画面で確認できる） |
 
 | 変数 | 既定値 | 説明 |
 | --- | --- | --- |
 | `ADMIN` | （必須） | console にログインする Auth ユーザーのメールアドレスまたは UID |
 | `CONSULTANT` | `ADMIN` と同じ | consultant にログインする Auth ユーザー |
+| `APP_USER` | `ADMIN` と同じ | user アプリにログインする Auth ユーザー（クーポン・予約の持ち主）。`USER` はシェルの環境変数と衝突するためこの名前 |
 | `ORGANIZATION_ID` | `miraiyohou` | 組織 ID（各 SPA の URL パスに使う） |
 | `ORGANIZATION_NAME` | `ローカル組織` | 組織名 |
-| `CONSULTANT_NAME` | `ローカル占い師` | 占い師の表示名 |
+| `CONSULTANT_NAME` | `ローカル占い師` | あなたの占い師の表示名 |
 | `DAYS` | `7` | 空き枠を作る日数 |
+| `CONSULTANTS` | `4` | 占い師の人数（1 人目はあなた。4 人目が非稼働） |
+| `CUSTOMERS` | `4` | 会員・顧客の人数（1 人目はあなた） |
 
-- Auth はエミュレートしないため、`ADMIN` / `CONSULTANT` には **dev プロジェクトに実在する** Auth ユーザーを指定します。スクリプトは Auth を読むだけで、ユーザーの作成・変更は一切しません（メールで見つからない場合は UID を直接渡してください）
+- Auth はエミュレートしないため、`ADMIN` / `CONSULTANT` / `APP_USER` には **dev プロジェクトに実在する** Auth ユーザーを指定します。スクリプトは Auth を読むだけで、ユーザーの作成・変更は一切しません（メールで見つからない場合は UID を直接渡してください）。ダミーの占い師・会員は Auth に存在しない UID なのでログインはできません（一覧や予約の表示確認用）
 - `FIRESTORE_EMULATOR_HOST` が未設定だと実行を拒否するので、dev / 本番に流れる心配はありません
-- 利用規約・キャンセルポリシーも必要なら、続けて `pnpm dlx tsx --tsconfig apps/api/tsconfig.json --env-file=apps/api/.env.local apps/api/scripts/seed-initial-policies.ts --only-org miraiyohou` を実行してください
+- 文書（利用規約・キャンセルポリシー・プライバシーポリシー）の本文は `apps/api/scripts/seed-data/policy-*-initial.md` から読みます。既に同じ種別の revision がある組織はスキップされます（`seed-initial-policies.ts` と同じ処理を共有）
 
 ## よく使うコマンド
 
