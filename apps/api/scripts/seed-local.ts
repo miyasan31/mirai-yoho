@@ -128,8 +128,8 @@ const CONSULTANT_STATUSES = [
 // 精算書の宛先と、事務所を住所として利用する占い師の発行者住所に使う
 const COMPANY_INFO = {
   companyName: "みらい予報株式会社",
-  address: "東京都渋谷区神宮前1-1-1 みらいビル 5F",
-  officeAddress: "東京都渋谷区神宮前1-1-1 みらいビル 3F",
+  address: "〒473-0901 愛知県豊田市御幸本町2丁目205-8",
+  officeAddress: "〒473-0901 愛知県豊田市御幸本町2丁目205-8",
 };
 
 interface SeedArgs {

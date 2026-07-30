@@ -105,6 +105,7 @@ export default function SettlementStatementPage() {
           onCheckedChange={(details) =>
             setUsesOfficeAddress(details.checked === true)
           }
+          mb="2"
         >
           <Checkbox.Control>
             <Checkbox.Indicator />
