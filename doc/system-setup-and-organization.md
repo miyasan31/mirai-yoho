@@ -2,7 +2,7 @@
 
 このドキュメントは、あなたのみらい予報をローカルで起動し、Firebase / GCP 上の環境を用意して、最初の組織を利用可能にするまでの運用手順です。
 
-> 対象環境は `dev`（`mirai-yoho-dev`）と `prod`（`mirai-yoho-prod`）です。開発・検証は必ず `dev` で行い、本番の Secret、Firestore、Firebase Auth を開発環境と共有しません。
+> 対象環境は `dev`（`mirai-yoho-dev`）と `prod`（`mirai-yoho`）です。開発・検証は必ず `dev` で行い、本番の Secret、Firestore、Firebase Auth を開発環境と共有しません。
 
 ## 全体像
 
@@ -75,7 +75,7 @@ cp apps/consultant/.env.example apps/consultant/.env
 
 - API（`pnpm dev:api`）: `tsx watch --env-file-if-exists=.env --env-file-if-exists=.env.local` で `apps/api/.env` / `apps/api/.env.local` を読みます。通常はローカル値を `.env.local` に置きます。
 - SPA（`pnpm dev:user` など）: Vite が `apps/<app>/.env*` の `VITE_*` を読み込み、ビルド時に埋め込みます。
-- Make コマンド: 多くのターゲットは `<command>:dev` / `<command>:prod` で環境を切り替えられます（例: `make setup-secrets-from-env:dev`）。`.env.dev` / `.env.prod` を自動で読み、`PROJECT` も `mirai-yoho-dev` / `mirai-yoho-prod` に固定されます。
+- Make コマンド: 多くのターゲットは `<command>:dev` / `<command>:prod` で環境を切り替えられます（例: `make setup-secrets-from-env:dev`）。`.env.dev` / `.env.prod` を自動で読み、`PROJECT` も `mirai-yoho-dev` / `mirai-yoho` に固定されます。
 - 従来どおり `ENV=<local|dev|prod>` や `PROJECT=...` を明示する書き方も使えます。
 - `.env.dev` / `.env.prod` はアプリ起動時には自動読み込みされません。必要な場合は Make 経由で使います。
 
@@ -164,7 +164,7 @@ make init ENV=dev
 dev と prod の remote state は、それぞれ別の GCS bucket で管理します。
 
 - dev: `mirai-yoho-dev-terraform-state`
-- prod: `mirai-yoho-prod-terraform-state`
+- prod: `mirai-yoho-terraform-state`
 
 `dev` と `prod` はそれぞれ独立した Terraform root です。`ENV=dev` と `ENV=prod` を切り替える時は、それぞれ一度 `make init ENV=<env>` を実行してください。
 

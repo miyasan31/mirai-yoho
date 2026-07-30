@@ -10,8 +10,8 @@ ifeq ($(ENV),dev)
   PROJECT_ID := mirai-yoho-dev
   STATE_BUCKET := mirai-yoho-dev-terraform-state
 else ifeq ($(ENV),prod)
-  PROJECT_ID := mirai-yoho-prod
-  STATE_BUCKET := mirai-yoho-prod-terraform-state
+  PROJECT_ID := mirai-yoho
+  STATE_BUCKET := mirai-yoho-terraform-state
 else
   $(error ENV must be dev or prod)
 endif

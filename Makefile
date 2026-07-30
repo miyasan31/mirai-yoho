@@ -23,13 +23,13 @@
 ENV ?= local
 ENV_FILE = .env.$(ENV)
 PROJECT_DEV = mirai-yoho-dev
-PROJECT_PROD = mirai-yoho-prod
+PROJECT_PROD = mirai-yoho
 
 # ============================================================
 # Scripts（引数が必要なコマンド）
 # ============================================================
 
-# Usage: make auth-adc-organization-operator PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
+# Usage: make auth-adc-organization-operator PROJECT=<mirai-yoho-dev|mirai-yoho>
 # Usage: make auth-adc-organization-operator:dev
 # Usage: make auth-adc-organization-operator:prod
 # Example: make auth-adc-organization-operator PROJECT=mirai-yoho-dev
@@ -114,38 +114,38 @@ SECRET_KEYS = \
 	LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL \
 	INVOICE_REGISTRATION_NUMBER
 
-# Usage: make setup-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>
+# Usage: make setup-secrets PROJECT=<mirai-yoho-dev|mirai-yoho>
 # Usage: make setup-secrets:dev
 # Usage: make setup-secrets:prod
 # Example: make setup-secrets PROJECT=mirai-yoho-dev
 setup-secrets:
-	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-secrets PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-secrets PROJECT=<mirai-yoho-dev|mirai-yoho>" && exit 1)
 	@for secret in $(SECRET_KEYS); do \
 		echo "Enter value for $$secret (end with Ctrl-D):"; \
 		gcloud secrets versions add $$secret --project $(PROJECT) --data-file=-; \
 	done
 
-# Usage: make setup-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<OPENAI_API_KEY>
+# Usage: make setup-secret PROJECT=<mirai-yoho-dev|mirai-yoho> KEY=<OPENAI_API_KEY>
 # Usage: make setup-secret:dev KEY=<SECRET_KEY>
 # Usage: make setup-secret:prod KEY=<SECRET_KEY>
 # Example: make setup-secret PROJECT=mirai-yoho-dev KEY=OPENAI_API_KEY
 setup-secret:
-	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>" && exit 1)
-	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make setup-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>" && exit 1)
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-secret PROJECT=<mirai-yoho-dev|mirai-yoho> KEY=<SECRET_KEY>" && exit 1)
+	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make setup-secret PROJECT=<mirai-yoho-dev|mirai-yoho> KEY=<SECRET_KEY>" && exit 1)
 	@echo "Enter value for $(KEY) (end with Ctrl-D):"
 	gcloud secrets versions add $(KEY) --project $(PROJECT) --data-file=-
 
 # .env ファイルから Secret Manager へ全シークレット（$(SECRET_KEYS)）を一括投入する。
 # API サーバー / batch worker が参照するシークレットはすべてこの集合の共有リソースなので、
 # これ 1 本で両方まかなえる（IAM のアクセス範囲は terraform 側で個別にスコープする）。
-# Usage: make setup-secrets-from-env PROJECT=<mirai-yoho-dev|mirai-yoho-prod> [ENV=<local|dev|prod>]
+# Usage: make setup-secrets-from-env PROJECT=<mirai-yoho-dev|mirai-yoho> [ENV=<local|dev|prod>]
 # Usage: make setup-secrets-from-env:dev
 # Usage: make setup-secrets-from-env:prod
 # Required environment variables: SECRET_KEYS と同名の env を $(ENV_FILE) にすべて設定
 setup-secrets-from-env:
 	@test "$(ENV)" = "local" || test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be one of local, dev, prod" && exit 1)
 	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
-	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-secrets-from-env PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-secrets-from-env PROJECT=<mirai-yoho-dev|mirai-yoho>" && exit 1)
 	@set -a; . "$(ENV_FILE)"; set +a; \
 	for secret in $(SECRET_KEYS); do \
 		value="$$(printenv $$secret)"; \
@@ -157,16 +157,16 @@ setup-secrets-from-env:
 		echo "Added new version for $$secret"; \
 	done
 
-# Usage: make setup-secrets-from-env-fish PROJECT=<mirai-yoho-dev|mirai-yoho-prod> [ENV=<local|dev|prod>]
+# Usage: make setup-secrets-from-env-fish PROJECT=<mirai-yoho-dev|mirai-yoho> [ENV=<local|dev|prod>]
 # Usage: make setup-secrets-from-env-fish:dev
 # Usage: make setup-secrets-from-env-fish:prod
 setup-secrets-from-env-fish:
 	@test "$(ENV)" = "local" || test "$(ENV)" = "dev" || test "$(ENV)" = "prod" || (echo "Error: ENV must be one of local, dev, prod" && exit 1)
 	@test -f "$(ENV_FILE)" || (echo "Error: $(ENV_FILE) not found" && exit 1)
-	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-secrets-from-env-fish PROJECT=<mirai-yoho-dev|mirai-yoho-prod>" && exit 1)
+	@test -n "$(PROJECT)" || (echo "Error: PROJECT is required. Usage: make setup-secrets-from-env-fish PROJECT=<mirai-yoho-dev|mirai-yoho>" && exit 1)
 	PROJECT="$(PROJECT)" ENV_FILE="$(ENV_FILE)" SECRET_KEYS="$(SECRET_KEYS)" fish apps/api/scripts/setup-secrets-from-env.fish
 
-# Usage: make describe-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>
+# Usage: make describe-secret PROJECT=<mirai-yoho-dev|mirai-yoho> KEY=<SECRET_KEY>
 # Usage: make describe-secret:dev KEY=<SECRET_KEY>
 # Usage: make describe-secret:prod KEY=<SECRET_KEY>
 describe-secret:
@@ -174,7 +174,7 @@ describe-secret:
 	@test -n "$(KEY)" || (echo "Error: KEY is required. Usage: make describe-secret PROJECT=<project> KEY=<SECRET_KEY>" && exit 1)
 	gcloud secrets describe $(KEY) --project $(PROJECT)
 
-# Usage: make access-secret PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY[@version]>
+# Usage: make access-secret PROJECT=<mirai-yoho-dev|mirai-yoho> KEY=<SECRET_KEY[@version]>
 # Usage: make access-secret:dev KEY=<SECRET_KEY[@version]>
 # Usage: make access-secret:prod KEY=<SECRET_KEY[@version]>
 # KEY は SECRET_KEY（latest）または SECRET_KEY@<version> を指定する
@@ -185,7 +185,7 @@ access-secret:
 	case "$$name" in *@*) version="$${name#*@}"; name="$${name%@*}";; esac; \
 	gcloud secrets versions access "$$version" --secret "$$name" --project $(PROJECT)
 
-# Usage: make check-secret-value PROJECT=<mirai-yoho-dev|mirai-yoho-prod> KEY=<SECRET_KEY>
+# Usage: make check-secret-value PROJECT=<mirai-yoho-dev|mirai-yoho> KEY=<SECRET_KEY>
 # Usage: make check-secret-value:dev KEY=<SECRET_KEY>
 # Usage: make check-secret-value:prod KEY=<SECRET_KEY>
 # 値は表示せず、空かどうかのみ確認する

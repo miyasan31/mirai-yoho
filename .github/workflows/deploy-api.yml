@@ -17,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}
     env:
-      PROJECT_ID: mirai-yoho-${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}
+      PROJECT_ID: ${{ github.ref_name == 'release/dev' && 'mirai-yoho-dev' || 'mirai-yoho' }}
       ENV_ALIAS: ${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}
       REGION: asia-northeast1
       SERVICE: api
@@ -27,7 +27,7 @@ jobs:
       - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-actions/providers/github
-          service_account: github-deployer@mirai-yoho-${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}.iam.gserviceaccount.com
+          service_account: github-deployer@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
       - uses: google-github-actions/setup-gcloud@v2
       # Cloud Run が参照する Secret Manager シークレットに有効な latest バージョン（値）が
       # 存在するか事前検証する。値未投入のシークレットがあると `gcloud run services update` が

@@ -92,7 +92,7 @@
 
 1. **`CONSOLE_APP_URL` シークレット作成 + 値投入**:
    ```bash
-   PROJECT_ID=mirai-yoho-dev  # or mirai-yoho-prod
+   PROJECT_ID=mirai-yoho-dev  # or mirai-yoho
    VALUE=https://dev.console.miraiyohou.com  # or https://console.miraiyohou.com
    gcloud secrets create CONSOLE_APP_URL --project=$PROJECT_ID --replication-policy=automatic
    printf '%s' "$VALUE" | gcloud secrets versions add CONSOLE_APP_URL --project=$PROJECT_ID --data-file=-
@@ -129,7 +129,7 @@
      # prod
      cd ../prod
      terraform state rm 'module.firebase.google_secret_manager_secret.app_hosting["ADMIN_APP_URL"]'
-     gcloud secrets delete ADMIN_APP_URL --project=mirai-yoho-prod
+     gcloud secrets delete ADMIN_APP_URL --project=mirai-yoho
      ```
    - Cloud Run api / batch worker の env spec からも `ADMIN_APP_URL` は既に消えている。
 

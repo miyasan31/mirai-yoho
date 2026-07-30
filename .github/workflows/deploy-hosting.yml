@@ -18,7 +18,7 @@ jobs:
     environment: ${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}
     env:
       DEPLOY_ENV: ${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}
-      PROJECT_ID: mirai-yoho-${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}
+      PROJECT_ID: ${{ github.ref_name == 'release/dev' && 'mirai-yoho-dev' || 'mirai-yoho' }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: ./.github/actions/ci-setup
@@ -47,7 +47,7 @@ jobs:
       - uses: google-github-actions/auth@v2
         with:
           workload_identity_provider: projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-actions/providers/github
-          service_account: github-deployer@mirai-yoho-${{ github.ref_name == 'release/dev' && 'dev' || 'prod' }}.iam.gserviceaccount.com
+          service_account: github-deployer@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
       - name: Deploy to Firebase Hosting
         run: |
           pnpm dlx firebase-tools deploy \

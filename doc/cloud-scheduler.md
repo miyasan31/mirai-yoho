@@ -16,7 +16,7 @@ Web API の `batch/*` は Scheduler からは呼ばれず、Firebase の `admin`
 
 GCS state bucket は Terraform の管理外です。最初に作成し、Terraform を実行するユーザーに読み書き権限を付与してください。backend は Terraform variables を参照できないため、state bucket は backend 設定ファイルで渡します。
 
-以下は開発環境の例です。本番環境では `ENV=prod`、`mirai-yoho-prod` に読み替えてください。
+以下は開発環境の例です。本番環境では `ENV=prod`、`mirai-yoho` に読み替えてください。
 
 ```bash
 cd infra/terraform/gcp
@@ -86,7 +86,7 @@ Cloud Run Job は次で即時実行できます。`--wait` を付けると完了
 ```bash
 gcloud run jobs execute batch-consultation-reminders \
   --location=asia-northeast1 \
-  --project=mirai-yoho-prod \
+  --project=mirai-yoho \
   --args=consultation-reminders,--organization-id,org-1 \
   --wait
 ```
