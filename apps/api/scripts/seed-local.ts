@@ -2,14 +2,14 @@
  * ローカルの Firestore エミュレーターに開発用のシードデータを一括投入する。
  *
  * 投入するもの:
- *   - organizations / settings（相談者ステータス 3 種）
+ *   - organizations / settings（営業時間 05:00-04:00 + 例外日、ステータス 3 種、料金 5,000-20,000 円）
  *   - roles（admin / operator）/ accounts（管理者 = 自分、招待中のオペレーター）
  *   - consultants（自分 + ダミー。1 人は非稼働）
  *   - price-plans（占い師ごとに 30 / 60 / 90 分）
  *   - slots（翌日から N 日分、10:00-17:00 の 15 分枠）
  *   - users / customers（apps/user の会員と顧客）
  *   - bookings / payments（確定・完了・キャンセル・仮予約の 4 状態）
- *   - coupons / user-coupons（未使用・使用済み・期限切れ）
+ *   - coupons / user-coupons（初回登録特典 3 枚・90 日 / 誕生日 1 枚・30 日）
  *   - policy-revisions（利用者向け 3 種 + 占い師向け 2 種 × 旧版 / 現行の 2 版）
  *
  * Firebase Auth はエミュレートしないため、--admin / --consultant / --user には
@@ -28,6 +28,7 @@
  *   make seed-local ADMIN=you@example.com
  */
 
+import type { BusinessHoursProps } from "@mirai-yoho/shared/business-hours";
 import type { SupportedDurationMinutes } from "@mirai-yoho/shared/slot-availability";
 import { getAuth } from "firebase-admin/auth";
 import { Timestamp } from "firebase-admin/firestore";
@@ -46,6 +47,7 @@ import { Payment } from "../src/domain/payment/payment";
 import { PaymentStatus } from "../src/domain/payment/payment-status";
 import { PaymentStrategy } from "../src/domain/payment/payment-strategy";
 import { PricePlan } from "../src/domain/price-plan/price-plan";
+import { DEFAULT_CONSULTANT_STATUS_ID } from "../src/domain/settings/consultant-status";
 import { Settings } from "../src/domain/settings/settings";
 import { Slot } from "../src/domain/slot/slot";
 import { TimeRange } from "../src/domain/slot/time-range";
@@ -91,10 +93,23 @@ const POLICY_VERSION = "2026-01-01";
 const OLD_POLICY_EFFECTIVE_FROM = `${OLD_POLICY_VERSION}T00:00:00+09:00`;
 const POLICY_EFFECTIVE_FROM = `${POLICY_VERSION}T00:00:00+09:00`;
 
+// 営業時間は毎日 05:00-04:00（翌日）。営業日は 05:00 起点なので 1 日ぶんに近い枠になる
+const BUSINESS_HOURS_START_TIME = "05:00";
+const BUSINESS_HOURS_END_TIME = "04:00";
+// 例外日（休業）は実行日の 3 日後
+const BUSINESS_HOURS_EXCEPTION_DAY_OFFSET = 3;
+// 料金設定の下限・上限（画面の表記は 20,000 〜 5,000 だが、domain は min <= max）
+const PRICE_PLAN_RANGE = { minTotalJPY: 5000, maxTotalJPY: 20000 };
+
+// Low を既定にする。domain が statusId "standard" の存在を必須にしているため、
+// Low に "standard" を割り当てる（DEFAULT_CONSULTANT_STATUS_ID）
+const STATUS_ID_HIGH = "high";
+const STATUS_ID_MIDDLE = "middle";
+const STATUS_ID_LOW = DEFAULT_CONSULTANT_STATUS_ID;
 const CONSULTANT_STATUSES = [
-  { statusId: "standard", name: "標準" },
-  { statusId: "veteran", name: "ベテラン" },
-  { statusId: "rookie", name: "新人" },
+  { statusId: STATUS_ID_HIGH, name: "ステータス Hight" },
+  { statusId: STATUS_ID_MIDDLE, name: "ステータス Middle" },
+  { statusId: STATUS_ID_LOW, name: "ステータス Low" },
 ];
 
 interface SeedArgs {
@@ -201,21 +216,21 @@ const DUMMY_CONSULTANTS = [
     name: "星野 みちる",
     bio: "西洋占星術とタロットで、恋愛と対人関係のご相談を中心に承ります。",
     specialties: ["恋愛", "対人関係", "タロット"],
-    statusId: "veteran",
+    statusId: STATUS_ID_HIGH,
     isActive: true,
   },
   {
     name: "月城 あかり",
     bio: "四柱推命をベースに、仕事とキャリアの転機を読み解きます。",
     specialties: ["仕事", "キャリア", "四柱推命"],
-    statusId: "rookie",
+    statusId: STATUS_ID_MIDDLE,
     isActive: true,
   },
   {
     name: "日向 そら",
     bio: "現在は活動を休止しています（非稼働の表示確認用）。",
     specialties: ["家族"],
-    statusId: "standard",
+    statusId: STATUS_ID_LOW,
     isActive: false,
   },
 ];
@@ -230,7 +245,7 @@ function buildConsultantSeeds(
       name: args.consultantName,
       bio: "ログイン確認用の占い師です。consultant アプリにこの UID でログインできます。",
       specialties: ["恋愛", "仕事"],
-      statusId: "standard",
+      statusId: STATUS_ID_LOW,
       isActive: true,
     },
   ];
@@ -343,8 +358,43 @@ async function seedOrganization(args: SeedArgs): Promise<void> {
     });
 
   const settings = Settings.createDefault(args.organizationId);
-  settings.updateConsultantStatuses(CONSULTANT_STATUSES, "standard");
+  settings.updateBusinessHours(buildBusinessHours());
+  settings.updateConsultantStatuses(CONSULTANT_STATUSES, STATUS_ID_LOW);
+  settings.updatePricePlanRange(PRICE_PLAN_RANGE);
   await new FirestoreSettingsRepository().save(settings);
+}
+
+/** 毎日 05:00-04:00 稼働。例外日として実行日の 3 日後を休業にする */
+function buildBusinessHours(): BusinessHoursProps {
+  const weekly = Array.from({ length: 7 }, (_, dayOfWeek) => ({
+    dayOfWeek,
+    isClosed: false,
+    timeWindows: [
+      {
+        startTime: BUSINESS_HOURS_START_TIME,
+        endTime: BUSINESS_HOURS_END_TIME,
+      },
+    ],
+  }));
+
+  const exceptionDate = new Date();
+  exceptionDate.setDate(
+    exceptionDate.getDate() + BUSINESS_HOURS_EXCEPTION_DAY_OFFSET,
+  );
+  const exceptionDay = toDateString(exceptionDate);
+
+  return {
+    weekly,
+    includePublicHolidays: true,
+    exceptions: [
+      {
+        startDate: exceptionDay,
+        endDate: exceptionDay,
+        isClosed: true,
+        timeWindows: [],
+      },
+    ],
+  };
 }
 
 async function seedRoles(organizationId: string): Promise<void> {
@@ -555,7 +605,12 @@ async function seedUsersAndCustomers(
 // クーポン
 // ---------------------------------------------------------------------------
 
-const WELCOME_COUPON_NAME = "新規登録クーポン";
+const WELCOME_COUPON_NAME = "初回登録特典クーポン";
+const WELCOME_COUPON_BATCH_SIZE = 3;
+const WELCOME_COUPON_EXPIRES_IN_DAYS = 90;
+const BIRTHDAY_COUPON_NAME = "誕生日クーポン";
+const BIRTHDAY_COUPON_BATCH_SIZE = 1;
+const BIRTHDAY_COUPON_EXPIRES_IN_DAYS = 30;
 
 interface SeededCoupons {
   redeemedUserCouponId: string;
@@ -577,38 +632,43 @@ async function seedCoupons(
     type: "welcome",
     name: WELCOME_COUPON_NAME,
     amountJPY: 1000,
-    batchSize: 1,
-    expiresInDays: 30,
+    batchSize: WELCOME_COUPON_BATCH_SIZE,
+    expiresInDays: WELCOME_COUPON_EXPIRES_IN_DAYS,
   });
   const birthday = Coupon.create({
     organizationId,
     couponId: `${organizationId}_coupon-birthday`,
     type: "birthday",
-    name: "お誕生日クーポン",
+    name: BIRTHDAY_COUPON_NAME,
     amountJPY: 2000,
-    batchSize: 1,
-    expiresInDays: 60,
+    batchSize: BIRTHDAY_COUPON_BATCH_SIZE,
+    expiresInDays: BIRTHDAY_COUPON_EXPIRES_IN_DAYS,
   });
 
   await couponRepository.save(welcome);
   await couponRepository.save(birthday);
 
-  // 未使用（有効）
-  await userCouponRepository.save(
-    UserCoupon.reconstruct({
-      userCouponId: `${organizationId}_${userId}_welcome-unused`,
-      userId,
-      couponId: welcome.getCouponId(),
-      organizationId,
-      amountJPY: welcome.getAmountJPY(),
-      couponName: welcome.getName(),
-      type: "welcome",
-      receivedAt: now,
-      expiresAt: new Date(now.getTime() + 30 * DAY_MS),
-    }),
-  );
+  // 初回登録特典は 1 回の取得で batchSize 枚もらえる。1 枚は後段の予約で使用済みにするので、
+  // 残りを未使用として発行する
+  for (let index = 0; index < WELCOME_COUPON_BATCH_SIZE - 1; index++) {
+    await userCouponRepository.save(
+      UserCoupon.reconstruct({
+        userCouponId: `${organizationId}_${userId}_welcome-unused-${index + 1}`,
+        userId,
+        couponId: welcome.getCouponId(),
+        organizationId,
+        amountJPY: welcome.getAmountJPY(),
+        couponName: welcome.getName(),
+        type: "welcome",
+        receivedAt: now,
+        expiresAt: new Date(
+          now.getTime() + WELCOME_COUPON_EXPIRES_IN_DAYS * DAY_MS,
+        ),
+      }),
+    );
+  }
 
-  // 期限切れ
+  // 期限切れ（誕生日クーポンは 1 枚・30 日）
   await userCouponRepository.save(
     UserCoupon.reconstruct({
       userCouponId: `${organizationId}_${userId}_birthday-expired`,
@@ -618,7 +678,9 @@ async function seedCoupons(
       amountJPY: birthday.getAmountJPY(),
       couponName: birthday.getName(),
       type: "birthday",
-      receivedAt: new Date(now.getTime() - 90 * DAY_MS),
+      receivedAt: new Date(
+        now.getTime() - (BIRTHDAY_COUPON_EXPIRES_IN_DAYS + 30) * DAY_MS,
+      ),
       expiresAt: new Date(now.getTime() - 30 * DAY_MS),
     }),
   );
@@ -648,7 +710,10 @@ async function seedRedeemedUserCoupon(params: {
       couponName: WELCOME_COUPON_NAME,
       type: "welcome",
       receivedAt: new Date(params.redeemedAt.getTime() - 10 * DAY_MS),
-      expiresAt: new Date(params.redeemedAt.getTime() + 20 * DAY_MS),
+      expiresAt: new Date(
+        params.redeemedAt.getTime() +
+          (WELCOME_COUPON_EXPIRES_IN_DAYS - 10) * DAY_MS,
+      ),
       redeemedAt: params.redeemedAt,
       redeemedBookingId: params.bookingId,
     }),
@@ -743,7 +808,8 @@ function buildBookingScenarios(
         consultant,
         customer: customerAt(index + 1),
         pricePlan: plans[1],
-        dayOffset: 2 + index,
+        // 営業時間の例外日（休業）と重ならないよう 4 日後以降にする
+        dayOffset: BUSINESS_HOURS_EXCEPTION_DAY_OFFSET + 1 + index,
         hour: 13,
         status: "confirmed",
       },
@@ -1026,7 +1092,9 @@ async function main() {
   console.log(
     `  bookings: ${bookingIds.length}（確定 / 完了 / キャンセル / 仮予約）`,
   );
-  console.log("  userCoupons: 3（未使用 / 使用済み / 期限切れ）");
+  console.log(
+    `  userCoupons: ${WELCOME_COUPON_BATCH_SIZE + BIRTHDAY_COUPON_BATCH_SIZE}（初回登録特典 ${WELCOME_COUPON_BATCH_SIZE} 枚: 未使用 ${WELCOME_COUPON_BATCH_SIZE - 1} / 使用済み 1、誕生日 ${BIRTHDAY_COUPON_BATCH_SIZE} 枚: 期限切れ）`,
+  );
   console.log(
     `  policyRevisions: ${createdPolicies} 件作成、${policyResults.length - createdPolicies} 件は既存のまま（5 種 × 2 版: ${OLD_POLICY_VERSION} 旧版 / ${POLICY_VERSION} 現行）`,
   );
