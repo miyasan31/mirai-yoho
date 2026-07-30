@@ -12,7 +12,7 @@ function PrivacyRoute() {
   return (
     <PolicyPage
       organizationId={organizationId}
-      type="privacy_policy"
+      type="user_privacy_policy"
       headingLabel="プライバシーポリシー"
     />
   );

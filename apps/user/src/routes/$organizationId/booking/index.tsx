@@ -99,12 +99,12 @@ function BookingPageInner() {
 
   const [selectedUserCouponId, setSelectedUserCouponId] = useState<string>("");
 
-  const termsQuery = useGetLatestPublishedPolicy(organizationId, "terms", {
+  const termsQuery = useGetLatestPublishedPolicy(organizationId, "user_terms", {
     query: { enabled: Boolean(organizationId) },
   });
   const cancellationPolicyQuery = useGetLatestPublishedPolicy(
     organizationId,
-    "cancellation_policy",
+    "user_cancellation_policy",
     { query: { enabled: Boolean(organizationId) } },
   );
   const termsRevision = termsQuery.data?.data?.revision ?? null;

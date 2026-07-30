@@ -4,7 +4,7 @@ import { PolicyAgreement } from "@/domain/policy/policy-agreement";
 const baseProps = {
   agreementId: "agr-1",
   organizationId: "org-1",
-  type: "terms" as const,
+  type: "user_terms" as const,
   subjectType: "customer" as const,
   subjectId: "customer-1",
   revisionId: "rev-1",
@@ -47,5 +47,28 @@ describe("PolicyAgreement", () => {
     expect(() =>
       PolicyAgreement.create({ ...baseProps, subjectId: "" }),
     ).toThrow(DomainError);
+  });
+
+  it("占い師が利用者向けポリシーに同意しようとすると DomainError", () => {
+    expect(() =>
+      PolicyAgreement.create({ ...baseProps, subjectType: "consultant" }),
+    ).toThrow(DomainError);
+  });
+
+  it("顧客が占い師向けポリシーに同意しようとすると DomainError", () => {
+    expect(() =>
+      PolicyAgreement.create({ ...baseProps, type: "consultant_terms" }),
+    ).toThrow(DomainError);
+  });
+
+  it("占い師は占い師向けポリシーに同意できる", () => {
+    const agreement = PolicyAgreement.create({
+      ...baseProps,
+      type: "consultant_terms",
+      subjectType: "consultant",
+      subjectId: "consultant-1",
+    });
+    expect(agreement.getType()).toBe("consultant_terms");
+    expect(agreement.getSubjectType()).toBe("consultant");
   });
 });

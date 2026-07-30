@@ -821,7 +821,7 @@ const config: AppConfig = {
           id: "policies",
           title: "文書管理",
           overview:
-            "利用規約・キャンセルポリシー・プライバシーポリシーを版管理します。下書きの作成から公開までをこの画面で行います。",
+            "規約類をユーザー向け・占い師向けに分けて版管理します。下書きの作成から公開までをこの画面で行います。",
           route: "/{orgId}/policies",
           requiresAuth: true,
           waitForSelector: '[role="tab"]',
@@ -829,31 +829,39 @@ const config: AppConfig = {
             {
               n: 1,
               selector: '[role="tab"]',
-              title: "文書タブ",
-              description: "編集対象の文書を切り替えます。",
+              title: "読者区分タブ",
+              description:
+                "ユーザー向けと占い師向けを切り替えます。区分を切り替えると、その下に文書タブが並びます。",
             },
             {
               n: 2,
+              selector: `${OPEN_TAB_PANEL} [role="tab"]`,
+              title: "文書タブ",
+              description:
+                "選んだ読者区分の中で編集対象の文書を切り替えます。ユーザー向けは利用規約・キャンセルポリシー・プライバシーポリシー、占い師向けは利用規約・プライバシーポリシーです。",
+            },
+            {
+              n: 3,
               selector: `${OPEN_TAB_PANEL} button:has-text("新しい改版を作成")`,
               title: "新しい改版を作成",
               description:
                 "現在の内容を引き継いだ下書きを作成します。作成しただけでは公開されません。",
             },
             {
-              n: 3,
+              n: 4,
               selector: `${OPEN_TAB_PANEL} table thead tr`,
               title: "改版一覧",
               description:
                 "版番号・タイトル・状態・効力発生日・公開日を表示します。",
             },
             {
-              n: 4,
+              n: 5,
               selector: `${OPEN_TAB_PANEL} button:has-text("差分")`,
               title: "差分",
               description: "前の版との変更箇所を並べて確認します。",
             },
             {
-              n: 5,
+              n: 6,
               selector: `${OPEN_TAB_PANEL} button:has-text("公開")`,
               title: "公開",
               description:
@@ -865,13 +873,13 @@ const config: AppConfig = {
               target: "consultant",
               screen: "ホーム",
               effect:
-                "公開すると再同意カードが出て、同意するまで占い師は予約枠を追加できなくなります。",
+                "占い師向けの文書を公開すると再同意カードが出て、同意するまで占い師は予約枠を追加できなくなります。ユーザー向けの文書の公開では再同意を求めません。",
             },
             {
               target: "user",
               screen: "利用規約",
               effect:
-                "効力発生日を迎えた版が規約ページの本文として表示されます。",
+                "ユーザー向け利用規約の効力発生日を迎えた版が規約ページの本文として表示されます。",
             },
             {
               target: "user",
@@ -882,16 +890,16 @@ const config: AppConfig = {
         },
         {
           id: "policies-cancellation-policy",
-          title: "キャンセルポリシー",
+          title: "キャンセルポリシー（ユーザー向け）",
           overview:
-            "キャンセルポリシーの改版を管理します。利用規約と同じ手順で下書きを作り、公開すると予約時の同意対象になります。",
-          route: "/{orgId}/policies?tab=cancellation_policy",
+            "ユーザー向けキャンセルポリシーの改版を管理します。利用規約と同じ手順で下書きを作り、公開すると予約時の同意対象になります。",
+          route: "/{orgId}/policies?tab=user_cancellation_policy",
           requiresAuth: true,
           waitForSelector: OPEN_TAB_PANEL,
           annotations: [
             {
               n: 1,
-              selector: '[role="tab"][data-state="active"]',
+              selector: `${OPEN_TAB_PANEL} [role="tab"][data-state="active"]`,
               title: "選択中のタブ",
               description:
                 "キャンセルポリシーの改版だけを表示している状態です。",
@@ -921,16 +929,16 @@ const config: AppConfig = {
         },
         {
           id: "policies-privacy-policy",
-          title: "プライバシーポリシー",
+          title: "プライバシーポリシー（ユーザー向け）",
           overview:
-            "プライバシーポリシーの改版を管理します。公開すると予約サイトのプライバシーポリシーページが差し替わります。",
-          route: "/{orgId}/policies?tab=privacy_policy",
+            "ユーザー向けプライバシーポリシーの改版を管理します。公開すると予約サイトのプライバシーポリシーページが差し替わります。",
+          route: "/{orgId}/policies?tab=user_privacy_policy",
           requiresAuth: true,
           waitForSelector: OPEN_TAB_PANEL,
           annotations: [
             {
               n: 1,
-              selector: '[role="tab"][data-state="active"]',
+              selector: `${OPEN_TAB_PANEL} [role="tab"][data-state="active"]`,
               title: "選択中のタブ",
               description:
                 "プライバシーポリシーの改版だけを表示している状態です。",
@@ -954,6 +962,89 @@ const config: AppConfig = {
               target: "user",
               screen: "プライバシーポリシー",
               effect: "公開版がプライバシーポリシーのページに表示されます。",
+            },
+          ],
+        },
+        {
+          id: "policies-consultant-terms",
+          title: "利用規約（占い師向け）",
+          overview:
+            "占い師向け利用規約の改版を管理します。ユーザー向けとは別の文書として版管理し、公開すると占い師に再同意を求めます。",
+          route: "/{orgId}/policies?tab=consultant_terms",
+          requiresAuth: true,
+          waitForSelector: OPEN_TAB_PANEL,
+          annotations: [
+            {
+              n: 1,
+              selector: `${OPEN_TAB_PANEL} [role="tab"][data-state="active"]`,
+              title: "選択中のタブ",
+              description:
+                "占い師向け利用規約の改版だけを表示している状態です。",
+            },
+            {
+              n: 2,
+              selector: `${OPEN_TAB_PANEL} button:has-text("新しい改版を作成")`,
+              title: "新しい改版を作成",
+              description: "現在の内容を引き継いだ下書きを作成します。",
+            },
+            {
+              n: 3,
+              selector: `${OPEN_TAB_PANEL} table thead tr`,
+              title: "改版一覧",
+              description:
+                "版番号・タイトル・状態・効力発生日・公開日を表示します。",
+            },
+          ],
+          relations: [
+            {
+              target: "consultant",
+              screen: "ホーム",
+              effect:
+                "公開すると再同意カードが出て、同意するまで占い師は予約枠を追加できなくなります。",
+            },
+            {
+              target: "consultant",
+              screen: "文書管理",
+              effect: "公開版が占い師向け利用規約のタブに表示されます。",
+            },
+          ],
+        },
+        {
+          id: "policies-consultant-privacy-policy",
+          title: "プライバシーポリシー（占い師向け）",
+          overview:
+            "占い師向けプライバシーポリシーの改版を管理します。占い師本人の個人情報の取扱いを定める文書で、ユーザー向けとは別に版管理します。",
+          route: "/{orgId}/policies?tab=consultant_privacy_policy",
+          requiresAuth: true,
+          waitForSelector: OPEN_TAB_PANEL,
+          annotations: [
+            {
+              n: 1,
+              selector: `${OPEN_TAB_PANEL} [role="tab"][data-state="active"]`,
+              title: "選択中のタブ",
+              description:
+                "占い師向けプライバシーポリシーの改版だけを表示している状態です。",
+            },
+            {
+              n: 2,
+              selector: `${OPEN_TAB_PANEL} button:has-text("新しい改版を作成")`,
+              title: "新しい改版を作成",
+              description: "現在の内容を引き継いだ下書きを作成します。",
+            },
+            {
+              n: 3,
+              selector: `${OPEN_TAB_PANEL} table thead tr`,
+              title: "改版一覧",
+              description:
+                "版番号・タイトル・状態・効力発生日・公開日を表示します。",
+            },
+          ],
+          relations: [
+            {
+              target: "consultant",
+              screen: "文書管理",
+              effect:
+                "公開版が占い師向けプライバシーポリシーのタブに表示されます。",
             },
           ],
         },
@@ -1042,13 +1133,13 @@ const config: AppConfig = {
               target: "consultant",
               screen: "予約枠管理",
               effect:
-                "占い師が再同意するまで、新しい予約枠を追加できない状態になります。",
+                "占い師向けの文書を公開した場合、占い師が再同意するまで新しい予約枠を追加できない状態になります。",
             },
             {
               target: "user",
               screen: "予約情報入力",
               effect:
-                "効力発生日以降の予約は、新しい版への同意を求められるようになります。",
+                "ユーザー向け利用規約・キャンセルポリシーを公開した場合、効力発生日以降の予約は新しい版への同意を求められるようになります。",
             },
           ],
         },

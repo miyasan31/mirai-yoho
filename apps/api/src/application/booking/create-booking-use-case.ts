@@ -184,12 +184,12 @@ export class CreateBookingUseCase {
 
     const termsRevision = await this.resolvePublishedRevision(
       input.organizationId,
-      "terms",
+      "user_terms",
       input.agreedTermsRevisionId,
     );
     const cancellationRevision = await this.resolvePublishedRevision(
       input.organizationId,
-      "cancellation_policy",
+      "user_cancellation_policy",
       input.agreedCancellationPolicyRevisionId,
     );
 

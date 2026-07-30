@@ -23,9 +23,11 @@ interface ReagreementNoticeProps {
 }
 
 const TYPE_LABEL: Record<PolicyType, string> = {
-  terms: "利用規約",
-  cancellation_policy: "キャンセルポリシー",
-  privacy_policy: "プライバシーポリシー",
+  user_terms: "利用者向け利用規約",
+  user_cancellation_policy: "キャンセルポリシー",
+  user_privacy_policy: "利用者向けプライバシーポリシー",
+  consultant_terms: "占い師向け利用規約",
+  consultant_privacy_policy: "占い師向けプライバシーポリシー",
 };
 
 /**

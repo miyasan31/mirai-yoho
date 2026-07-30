@@ -13,21 +13,50 @@ import { useAuth } from "@/hooks/use-auth";
 import { useConsolePolicyRevisions } from "@/hooks/use-console-policies";
 import { PolicyRevisionsPanel } from "./_components/policy-revisions-panel";
 
-type PoliciesTab = PolicyType;
+type PolicyAudience = "user" | "consultant";
 
-function isPoliciesTab(value: string | null): value is PoliciesTab {
-  return (
-    value === "terms" ||
-    value === "cancellation_policy" ||
-    value === "privacy_policy"
-  );
+const AUDIENCE_GROUPS: Array<{
+  audience: PolicyAudience;
+  label: string;
+  types: Array<{ type: PolicyType; label: string }>;
+}> = [
+  {
+    audience: "user",
+    label: "ユーザー向け",
+    types: [
+      { type: "user_terms", label: "利用規約" },
+      { type: "user_cancellation_policy", label: "キャンセルポリシー" },
+      { type: "user_privacy_policy", label: "プライバシーポリシー" },
+    ],
+  },
+  {
+    audience: "consultant",
+    label: "占い師向け",
+    types: [
+      { type: "consultant_terms", label: "利用規約" },
+      { type: "consultant_privacy_policy", label: "プライバシーポリシー" },
+    ],
+  },
+];
+
+const DEFAULT_TYPE: PolicyType = "user_terms";
+
+const ALL_TYPES: readonly PolicyType[] = AUDIENCE_GROUPS.flatMap((group) =>
+  group.types.map((entry) => entry.type),
+);
+
+function isPolicyType(value: string | null): value is PolicyType {
+  return value !== null && ALL_TYPES.includes(value as PolicyType);
 }
 
-const TAB_LABEL: Record<PoliciesTab, string> = {
-  terms: "利用規約",
-  cancellation_policy: "キャンセルポリシー",
-  privacy_policy: "プライバシーポリシー",
-};
+function audienceOf(type: PolicyType): PolicyAudience {
+  return type.startsWith("consultant_") ? "consultant" : "user";
+}
+
+function defaultTypeOf(audience: PolicyAudience): PolicyType {
+  const group = AUDIENCE_GROUPS.find((g) => g.audience === audience);
+  return group ? group.types[0].type : DEFAULT_TYPE;
+}
 
 export default function ConsolePoliciesPage() {
   const { organizationId } = useOrganizationRouting();
@@ -39,13 +68,16 @@ export default function ConsolePoliciesPage() {
   const canManage = hasPermission("console.policies.manage");
   const canRead = hasPermission("console.policies.read");
 
-  const [currentTab, setCurrentTab] = useState<PoliciesTab>("terms");
+  // 種別（tab search param）を単一の真実とし、読者区分はそこから導出する
+  const [currentType, setCurrentType] = useState<PolicyType>(DEFAULT_TYPE);
   useEffect(() => {
-    setCurrentTab(isPoliciesTab(tabQueryValue) ? tabQueryValue : "terms");
+    setCurrentType(isPolicyType(tabQueryValue) ? tabQueryValue : DEFAULT_TYPE);
   }, [tabQueryValue]);
 
-  const changeTab = (tab: PoliciesTab) => {
-    setCurrentTab(tab);
+  const currentAudience = audienceOf(currentType);
+
+  const changeType = (tab: PolicyType) => {
+    setCurrentType(tab);
     void navigate({
       to: ".",
       search: (previous: Record<string, unknown>) => ({ ...previous, tab }),
@@ -82,7 +114,7 @@ export default function ConsolePoliciesPage() {
           文書管理
         </Text>
         <Text textStyle="sm" color="fg.muted">
-          組織ごとの利用規約・キャンセルポリシー・プライバシーポリシーを版管理します。ドラフトの作成・編集・公開、前版との差分表示が可能です。
+          組織ごとの規約類を、ユーザー向け・占い師向けに分けて版管理します。ドラフトの作成・編集・公開、前版との差分表示が可能です。
         </Text>
         {!canManage && (
           <Text textStyle="sm" color="fg.muted" mt="2">
@@ -91,44 +123,53 @@ export default function ConsolePoliciesPage() {
           </Text>
         )}
       </styled.div>
+
       <Tabs.Root
-        value={currentTab}
+        value={currentAudience}
         onValueChange={({ value }) => {
-          if (isPoliciesTab(value)) changeTab(value);
+          const audience = value as PolicyAudience;
+          if (audience === currentAudience) return;
+          changeType(defaultTypeOf(audience));
         }}
-        variant="line"
+        variant="enclosed"
       >
         <Tabs.List mb="4">
-          <Tabs.Trigger value="terms">{TAB_LABEL.terms}</Tabs.Trigger>
-          <Tabs.Trigger value="cancellation_policy">
-            {TAB_LABEL.cancellation_policy}
-          </Tabs.Trigger>
-          <Tabs.Trigger value="privacy_policy">
-            {TAB_LABEL.privacy_policy}
-          </Tabs.Trigger>
+          {AUDIENCE_GROUPS.map((group) => (
+            <Tabs.Trigger key={group.audience} value={group.audience}>
+              {group.label}
+            </Tabs.Trigger>
+          ))}
           <Tabs.Indicator />
         </Tabs.List>
-        <Tabs.Content value="terms">
-          <PoliciesTabContent
-            type="terms"
-            canManage={canManage}
-            onInvalidate={invalidate}
-          />
-        </Tabs.Content>
-        <Tabs.Content value="cancellation_policy">
-          <PoliciesTabContent
-            type="cancellation_policy"
-            canManage={canManage}
-            onInvalidate={invalidate}
-          />
-        </Tabs.Content>
-        <Tabs.Content value="privacy_policy">
-          <PoliciesTabContent
-            type="privacy_policy"
-            canManage={canManage}
-            onInvalidate={invalidate}
-          />
-        </Tabs.Content>
+        {AUDIENCE_GROUPS.map((group) => (
+          <Tabs.Content key={group.audience} value={group.audience}>
+            <Tabs.Root
+              value={currentType}
+              onValueChange={({ value }) => {
+                if (isPolicyType(value)) changeType(value);
+              }}
+              variant="line"
+            >
+              <Tabs.List mb="4">
+                {group.types.map((entry) => (
+                  <Tabs.Trigger key={entry.type} value={entry.type}>
+                    {entry.label}
+                  </Tabs.Trigger>
+                ))}
+                <Tabs.Indicator />
+              </Tabs.List>
+              {group.types.map((entry) => (
+                <Tabs.Content key={entry.type} value={entry.type}>
+                  <PoliciesTabContent
+                    type={entry.type}
+                    canManage={canManage}
+                    onInvalidate={invalidate}
+                  />
+                </Tabs.Content>
+              ))}
+            </Tabs.Root>
+          </Tabs.Content>
+        ))}
       </Tabs.Root>
     </styled.div>
   );

@@ -1,6 +1,8 @@
 import { DomainError } from "@mirai-yoho/shared/domain-error";
 import {
+  type PolicyAudience,
   type PolicyType,
+  policyAudienceOf,
   validatePolicyType,
 } from "@/domain/policy/policy-type";
 import { AggregateRoot } from "@/domain/shared/aggregate-root";
@@ -42,6 +44,28 @@ function validateAgreementVia(value: string): PolicyAgreementVia {
     );
   }
   return value as PolicyAgreementVia;
+}
+
+/**
+ * 主体種別が読むべきポリシーの読者区分。`user` / `customer` はいずれも
+ * 顧客側の主体を指すため利用者向けポリシーに対応する。
+ */
+export function policyAudienceForSubjectType(
+  subjectType: PolicySubjectType,
+): PolicyAudience {
+  return subjectType === "consultant" ? "consultant" : "user";
+}
+
+function validateAudienceMatch(
+  type: PolicyType,
+  subjectType: PolicySubjectType,
+): void {
+  if (policyAudienceOf(type) !== policyAudienceForSubjectType(subjectType)) {
+    throw new DomainError(
+      "POLICY_AUDIENCE_MISMATCH",
+      `Policy type ${type} cannot be agreed by subject type ${subjectType}`,
+    );
+  }
 }
 
 function validateRequiredString(value: string, field: string): string {
@@ -95,11 +119,14 @@ export class PolicyAgreement extends AggregateRoot {
   }
 
   static create(props: PolicyAgreementCreateProps): PolicyAgreement {
+    const type = validatePolicyType(props.type);
+    const subjectType = validateSubjectType(props.subjectType);
+    validateAudienceMatch(type, subjectType);
     return new PolicyAgreement(
       validateRequiredString(props.agreementId, "agreementId"),
       validateRequiredString(props.organizationId, "organizationId"),
-      validatePolicyType(props.type),
-      validateSubjectType(props.subjectType),
+      type,
+      subjectType,
       validateRequiredString(props.subjectId, "subjectId"),
       validateRequiredString(props.revisionId, "revisionId"),
       validateRequiredString(props.version, "version"),

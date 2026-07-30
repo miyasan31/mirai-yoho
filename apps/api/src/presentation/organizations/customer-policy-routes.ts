@@ -9,10 +9,11 @@ import {
 } from "@/infrastructure/container";
 import { getRoute, jsonError, noStoreJson, postRoute } from "./route-handler";
 
+// 顧客が同意できるのは利用者向けポリシーのみ
 const policyTypeSchema = v.picklist([
-  "terms",
-  "cancellation_policy",
-  "privacy_policy",
+  "user_terms",
+  "user_cancellation_policy",
+  "user_privacy_policy",
 ]);
 
 const agreeBodySchema = v.object({

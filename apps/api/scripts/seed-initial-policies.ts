@@ -1,5 +1,5 @@
 /**
- * 各組織に初期の PolicyRevision（terms / cancellation_policy）を投入する scaffold。
+ * 各組織に初期の PolicyRevision（ユーザー向け 3 種 / 占い師向け 2 種）を投入する scaffold。
  *
  * 既に policy-revisions を持つ組織はスキップされる。initial markdown は
  * apps/api/scripts/seed-data/policy-*-initial.md から読む（差し替え可能）。
@@ -43,26 +43,41 @@ function parseArgs(argv: string[]): ParsedArgs {
 }
 
 interface PolicySeedInput {
-  type: "terms" | "cancellation_policy" | "privacy_policy";
+  type:
+    | "user_terms"
+    | "user_cancellation_policy"
+    | "user_privacy_policy"
+    | "consultant_terms"
+    | "consultant_privacy_policy";
   title: string;
   fileName: string;
 }
 
 const POLICY_INPUTS: PolicySeedInput[] = [
   {
-    type: "terms",
+    type: "user_terms",
     title: "利用規約",
-    fileName: "policy-terms-initial.md",
+    fileName: "policy-user-terms-initial.md",
   },
   {
-    type: "cancellation_policy",
+    type: "user_cancellation_policy",
     title: "キャンセルポリシー",
-    fileName: "policy-cancellation-policy-initial.md",
+    fileName: "policy-user-cancellation-policy-initial.md",
   },
   {
-    type: "privacy_policy",
+    type: "user_privacy_policy",
     title: "プライバシーポリシー",
-    fileName: "policy-privacy-policy-initial.md",
+    fileName: "policy-user-privacy-policy-initial.md",
+  },
+  {
+    type: "consultant_terms",
+    title: "占い師利用規約",
+    fileName: "policy-consultant-terms-initial.md",
+  },
+  {
+    type: "consultant_privacy_policy",
+    title: "占い師プライバシーポリシー",
+    fileName: "policy-consultant-privacy-policy-initial.md",
   },
 ];
 

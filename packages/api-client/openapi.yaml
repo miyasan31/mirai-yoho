@@ -1746,6 +1746,7 @@ paths:
     get:
       operationId: getCustomerPolicyAgreementStatus
       summary: 現在ログイン中の顧客の各ポリシー同意状況を取得
+      description: entries には利用者向けポリシー（`user_*`）のみが含まれる。
       tags: [customer]
       security:
         - bearerAuth: []
@@ -1763,6 +1764,7 @@ paths:
     post:
       operationId: recordCustomerPolicyAgreement
       summary: ポリシー再同意モーダル等から同意を記録
+      description: items の type に指定できるのは利用者向けポリシー（`user_*`）のみ。
       tags: [customer]
       security:
         - bearerAuth: []
@@ -1792,6 +1794,7 @@ paths:
     get:
       operationId: getConsultantPolicyAgreementStatus
       summary: 現在ログイン中の相談員の各ポリシー同意状況を取得
+      description: entries には占い師向けポリシー（`consultant_*`）のみが含まれる。
       tags: [consultant]
       security:
         - bearerAuth: []
@@ -1809,6 +1812,7 @@ paths:
     post:
       operationId: recordConsultantPolicyAgreement
       summary: 相談員のポリシー同意を記録
+      description: items の type に指定できるのは占い師向けポリシー（`consultant_*`）のみ。
       tags: [consultant]
       security:
         - bearerAuth: []
@@ -2822,10 +2826,10 @@ components:
           description: 適用する UserCoupon の ID（1枚のみ、任意）
         agreedTermsRevisionId:
           type: string
-          description: '同意した利用規約 (policy_revisions/{revisionId}) の ID。/organizations/{orgId}/policies/terms/latest から取得したもの'
+          description: '同意した利用者向け利用規約 (policy_revisions/{revisionId}) の ID。/organizations/{orgId}/policies/user_terms/latest から取得したもの'
         agreedCancellationPolicyRevisionId:
           type: string
-          description: '同意したキャンセルポリシー (policy_revisions/{revisionId}) の ID'
+          description: '同意した利用者向けキャンセルポリシー (policy_revisions/{revisionId}) の ID。/organizations/{orgId}/policies/user_cancellation_policy/latest から取得したもの'
         agreedAt:
           type: string
           format: date-time
@@ -3093,7 +3097,20 @@ components:
 
     PolicyType:
       type: string
-      enum: [terms, cancellation_policy, privacy_policy]
+      description: |
+        ポリシー種別。読者区分（`user_` / `consultant_`）をプレフィックスに持ち、
+        利用者向けと占い師向けの利用規約・プライバシーポリシーは独立して版管理される。
+        キャンセルポリシーは利用者向けのみ。
+      enum:
+        - user_terms
+        - user_cancellation_policy
+        - user_privacy_policy
+        - consultant_terms
+        - consultant_privacy_policy
+
+    PolicyAudience:
+      type: string
+      enum: [user, consultant]
 
     PolicyRevisionStatus:
       type: string

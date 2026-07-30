@@ -10,14 +10,16 @@ import { useState } from "react";
 import { styled } from "styled-system/jsx";
 
 const TABS: Array<{ type: PolicyType; label: string }> = [
-  { type: "terms", label: "利用規約" },
-  { type: "cancellation_policy", label: "キャンセルポリシー" },
-  { type: "privacy_policy", label: "プライバシーポリシー" },
+  { type: "consultant_terms", label: "占い師向け利用規約" },
+  {
+    type: "consultant_privacy_policy",
+    label: "占い師向けプライバシーポリシー",
+  },
 ];
 
 export default function ConsultantPoliciesPage() {
   const { organizationId } = useOrganizationRouting();
-  const [currentTab, setCurrentTab] = useState<PolicyType>("terms");
+  const [currentTab, setCurrentTab] = useState<PolicyType>("consultant_terms");
 
   if (!organizationId) {
     return (
@@ -36,7 +38,7 @@ export default function ConsultantPoliciesPage() {
           文書管理
         </Text>
         <Text textStyle="sm" color="fg.muted">
-          この組織で現在有効な利用規約、キャンセルポリシー、プライバシーポリシーを閲覧できます。改版は
+          この組織で現在有効な占い師向けの利用規約とプライバシーポリシーを閲覧できます。改版は
           console から行います。
         </Text>
       </styled.div>

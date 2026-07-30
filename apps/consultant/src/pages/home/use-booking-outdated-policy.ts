@@ -6,9 +6,12 @@ interface BookingLike {
   agreedCancellationPolicyVersion?: string | null;
 }
 
+/** 予約時に顧客が同意するのは利用者向けポリシーのため、比較対象は user_* に限る */
+export type OutdatedPolicyType = "user_terms" | "user_cancellation_policy";
+
 interface OutdatedPolicyStatus {
   isOutdated: boolean;
-  outdatedTypes: Array<"terms" | "cancellation_policy">;
+  outdatedTypes: OutdatedPolicyType[];
   latestTermsVersion: string | null;
   latestCancellationPolicyVersion: string | null;
 }
@@ -27,12 +30,12 @@ export function useBookingOutdatedPolicy(
   organizationId: string,
   booking: BookingLike | null,
 ): OutdatedPolicyStatus {
-  const termsQuery = useGetLatestPublishedPolicy(organizationId, "terms", {
+  const termsQuery = useGetLatestPublishedPolicy(organizationId, "user_terms", {
     query: { enabled: Boolean(organizationId) },
   });
   const cancellationPolicyQuery = useGetLatestPublishedPolicy(
     organizationId,
-    "cancellation_policy",
+    "user_cancellation_policy",
     { query: { enabled: Boolean(organizationId) } },
   );
 
@@ -40,10 +43,10 @@ export function useBookingOutdatedPolicy(
   const latestCancellationPolicy =
     cancellationPolicyQuery.data?.data?.revision ?? null;
 
-  const outdatedTypes: Array<"terms" | "cancellation_policy"> = [];
+  const outdatedTypes: OutdatedPolicyType[] = [];
   if (booking?.agreedTermsVersion && latestTerms) {
     if (booking.agreedTermsVersion !== latestTerms.version) {
-      outdatedTypes.push("terms");
+      outdatedTypes.push("user_terms");
     }
   }
   if (booking?.agreedCancellationPolicyVersion && latestCancellationPolicy) {
@@ -51,7 +54,7 @@ export function useBookingOutdatedPolicy(
       booking.agreedCancellationPolicyVersion !==
       latestCancellationPolicy.version
     ) {
-      outdatedTypes.push("cancellation_policy");
+      outdatedTypes.push("user_cancellation_policy");
     }
   }
 
