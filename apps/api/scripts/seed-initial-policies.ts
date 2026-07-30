@@ -68,9 +68,16 @@ async function main() {
 
   const results = await seedPolicies({
     organizationIds,
-    version: parsed.version,
-    effectiveFrom: parsed.effectiveFrom,
+    versions: [
+      {
+        version: parsed.version,
+        effectiveFrom: parsed.effectiveFrom,
+        status: "published",
+      },
+    ],
     createdBy: parsed.createdBy,
+    // 初期投入なので、その種別の revision が既にあれば触らない
+    skipMode: "type-exists",
   });
 
   console.log("Seed 完了:");

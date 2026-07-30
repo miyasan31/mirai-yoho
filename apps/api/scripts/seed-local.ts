@@ -10,7 +10,7 @@
  *   - users / customers（apps/user の会員と顧客）
  *   - bookings / payments（確定・完了・キャンセル・仮予約の 4 状態）
  *   - coupons / user-coupons（未使用・使用済み・期限切れ）
- *   - policy-revisions（利用者向け 3 種 + 占い師向け 2 種）
+ *   - policy-revisions（利用者向け 3 種 + 占い師向け 2 種 × 旧版 / 現行の 2 版）
  *
  * Firebase Auth はエミュレートしないため、--admin / --consultant / --user には
  * **dev プロジェクトに実在する** Auth ユーザーのメールアドレスか UID を渡す。
@@ -83,9 +83,12 @@ const SLOT_UNIT_MS = SLOT_UNIT_MINUTES * 60 * 1000;
 const BUFFER_SLOT_COUNT = 1;
 const TAX_RATE = 0.1;
 const DAY_MS = 24 * 60 * 60 * 1000;
-// 施行日が未来だと findLatestPublished が空になり、予約フローの同意チェックが通らない。
-// ローカルでは常に施行済みになるよう過去日を使う（seed-initial-policies.ts の既定とは別）
+// 文書は 2 版入れる（旧版 = archived、現行 = published）。
+// 施行日が未来だと findLatestPublished が空になり予約フローの同意チェックが通らないため、
+// どちらも過去日にする（seed-initial-policies.ts の既定日とは別）
+const OLD_POLICY_VERSION = "2025-07-01";
 const POLICY_VERSION = "2026-01-01";
+const OLD_POLICY_EFFECTIVE_FROM = `${OLD_POLICY_VERSION}T00:00:00+09:00`;
 const POLICY_EFFECTIVE_FROM = `${POLICY_VERSION}T00:00:00+09:00`;
 
 const CONSULTANT_STATUSES = [
@@ -983,9 +986,23 @@ async function main() {
 
   const policyResults = await seedPolicies({
     organizationIds: [args.organizationId],
-    version: POLICY_VERSION,
-    effectiveFrom: new Date(POLICY_EFFECTIVE_FROM),
+    versions: [
+      {
+        version: OLD_POLICY_VERSION,
+        effectiveFrom: new Date(OLD_POLICY_EFFECTIVE_FROM),
+        status: "archived",
+        archivedAt: new Date(POLICY_EFFECTIVE_FROM),
+        note: `※ この版は旧版です（${POLICY_VERSION} 版に置き換えられました）。`,
+      },
+      {
+        version: POLICY_VERSION,
+        effectiveFrom: new Date(POLICY_EFFECTIVE_FROM),
+        status: "published",
+      },
+    ],
     createdBy: "seed-local",
+    // 改版履歴を作るので、同じ version が無ければ作る
+    skipMode: "version-exists",
   });
   const createdPolicies = policyResults.filter(
     (result) => result.action === "created",
@@ -1011,7 +1028,7 @@ async function main() {
   );
   console.log("  userCoupons: 3（未使用 / 使用済み / 期限切れ）");
   console.log(
-    `  policyRevisions: ${createdPolicies} 件作成、${policyResults.length - createdPolicies} 件は既存のまま`,
+    `  policyRevisions: ${createdPolicies} 件作成、${policyResults.length - createdPolicies} 件は既存のまま（5 種 × 2 版: ${OLD_POLICY_VERSION} 旧版 / ${POLICY_VERSION} 現行）`,
   );
   console.log("");
   console.log("次の URL で確認できます:");

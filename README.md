@@ -84,7 +84,7 @@ make seed-local ADMIN=you@example.com
 | `users` / `customers` | 会員 4 人（1 人目 = あなたの UID）と、対応する顧客 |
 | `bookings` / `payments` | 確定・完了・キャンセル・仮予約の 4 状態。過去分は鑑定メモ付き |
 | `coupons` / `user-coupons` | 新規登録・お誕生日クーポンと、未使用 / 使用済み / 期限切れの 3 枚 |
-| `policy-revisions` | 利用者向け 3 種 + 占い師向け 2 種（文書管理画面で確認できる） |
+| `policy-revisions` | 利用者向け 3 種 + 占い師向け 2 種 × 2 版（旧版 = 非公開 / 現行 = 公開）。文書管理の改版履歴が確認できる |
 
 | 変数 | 既定値 | 説明 |
 | --- | --- | --- |
@@ -100,7 +100,8 @@ make seed-local ADMIN=you@example.com
 
 - Auth はエミュレートしないため、`ADMIN` / `CONSULTANT` / `APP_USER` には **dev プロジェクトに実在する** Auth ユーザーを指定します。スクリプトは Auth を読むだけで、ユーザーの作成・変更は一切しません（メールで見つからない場合は UID を直接渡してください）。ダミーの占い師・会員は Auth に存在しない UID なのでログインはできません（一覧や予約の表示確認用）
 - `FIRESTORE_EMULATOR_HOST` が未設定だと実行を拒否するので、dev / 本番に流れる心配はありません
-- 文書（利用規約・キャンセルポリシー・プライバシーポリシー）の本文は `apps/api/scripts/seed-data/policy-*-initial.md` から読みます。既に同じ種別の revision がある組織はスキップされます（`seed-initial-policies.ts` と同じ処理を共有）
+- 文書（利用規約・キャンセルポリシー・プライバシーポリシー）の本文は `apps/api/scripts/seed-data/policy-*-initial.md` から読みます。各種別につき旧版（`2025-07-01`・非公開）と現行（`2026-01-01`・公開）の 2 版を入れるので、文書管理の改版履歴と差分を確認できます。旧版は本文の冒頭に旧版である旨の注記が入ります
+- 施行日はどちらも過去日です。未来日にすると `findLatestPublished` が空になり、予約フローの規約同意チェックが通りません（`seed-initial-policies.ts` の既定 `2026-08-01` とは別扱い）
 
 ## よく使うコマンド
 

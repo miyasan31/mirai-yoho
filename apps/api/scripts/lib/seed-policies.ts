@@ -9,6 +9,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { Timestamp } from "firebase-admin/firestore";
+import type { PolicyRevisionStatus } from "../../src/domain/policy/policy-revision";
 import type { PolicyType } from "../../src/domain/policy/policy-type";
 import { db } from "../../src/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "../../src/infrastructure/firestore/firestore-collections";
@@ -67,73 +68,121 @@ async function readSeedMarkdown(fileName: string): Promise<string> {
   );
 }
 
-export interface SeedPoliciesParams {
-  organizationIds: string[];
+export interface PolicyVersionInput {
   version: string;
   effectiveFrom: Date;
+  status: PolicyRevisionStatus;
+  /** 本文の冒頭に足す注記。旧版・下書きを画面上で見分けられるようにする */
+  note?: string;
+  /** status が archived のときの archivedAt（未指定なら effectiveFrom を使う） */
+  archivedAt?: Date;
+}
+
+export interface SeedPoliciesParams {
+  organizationIds: string[];
+  /** 古い版から順に並べる */
+  versions: PolicyVersionInput[];
   createdBy: string;
+  /**
+   * - "type-exists": その種別の revision が 1 件でもあれば何もしない（初期投入向け）
+   * - "version-exists": 同じ version が無ければ作る（改版履歴を作るローカルシード向け）
+   */
+  skipMode: "type-exists" | "version-exists";
 }
 
 export interface SeedPolicyResult {
   organizationId: string;
   type: PolicyType;
+  version: string;
   action: "created" | "skipped";
   revisionId?: string;
+}
+
+function toBody(baseBody: string, note?: string): string {
+  return note ? `> ${note}\n\n${baseBody}` : baseBody;
+}
+
+async function hasRevision(
+  organizationId: string,
+  type: PolicyType,
+  version?: string,
+): Promise<boolean> {
+  let query = db
+    .collection(FIRESTORE_COLLECTIONS.policyRevisions)
+    .where("organizationId", "==", organizationId)
+    .where("type", "==", type);
+  if (version) {
+    query = query.where("version", "==", version);
+  }
+  const snapshot = await query.limit(1).get();
+  return !snapshot.empty;
 }
 
 export async function seedPolicies(
   params: SeedPoliciesParams,
 ): Promise<SeedPolicyResult[]> {
   const now = Timestamp.now();
-  const effectiveFromTs = Timestamp.fromDate(params.effectiveFrom);
   const results: SeedPolicyResult[] = [];
 
   for (const organizationId of params.organizationIds) {
     for (const input of POLICY_INPUTS) {
-      const existing = await db
-        .collection(FIRESTORE_COLLECTIONS.policyRevisions)
-        .where("organizationId", "==", organizationId)
-        .where("type", "==", input.type)
-        .limit(1)
-        .get();
+      const baseBody = await readSeedMarkdown(input.fileName);
 
-      if (!existing.empty) {
+      for (const versionInput of params.versions) {
+        const skip = await hasRevision(
+          organizationId,
+          input.type,
+          params.skipMode === "version-exists"
+            ? versionInput.version
+            : undefined,
+        );
+
+        if (skip) {
+          results.push({
+            organizationId,
+            type: input.type,
+            version: versionInput.version,
+            action: "skipped",
+          });
+          continue;
+        }
+
+        const revisionId = crypto.randomUUID();
+        const effectiveFrom = Timestamp.fromDate(versionInput.effectiveFrom);
+        const archivedAt =
+          versionInput.status === "archived"
+            ? Timestamp.fromDate(
+                versionInput.archivedAt ?? versionInput.effectiveFrom,
+              )
+            : null;
+
+        await db
+          .collection(FIRESTORE_COLLECTIONS.policyRevisions)
+          .doc(revisionId)
+          .set({
+            revisionId,
+            organizationId,
+            type: input.type,
+            version: versionInput.version,
+            title: input.title,
+            body: toBody(baseBody, versionInput.note),
+            status: versionInput.status,
+            effectiveFrom,
+            publishedAt: versionInput.status === "draft" ? null : effectiveFrom,
+            archivedAt,
+            createdBy: params.createdBy,
+            createdAt: effectiveFrom,
+            updatedAt: versionInput.status === "draft" ? now : effectiveFrom,
+          });
+
         results.push({
           organizationId,
           type: input.type,
-          action: "skipped",
-        });
-        continue;
-      }
-
-      const body = await readSeedMarkdown(input.fileName);
-      const revisionId = crypto.randomUUID();
-
-      await db
-        .collection(FIRESTORE_COLLECTIONS.policyRevisions)
-        .doc(revisionId)
-        .set({
+          version: versionInput.version,
+          action: "created",
           revisionId,
-          organizationId,
-          type: input.type,
-          version: params.version,
-          title: input.title,
-          body,
-          status: "published",
-          effectiveFrom: effectiveFromTs,
-          publishedAt: now,
-          archivedAt: null,
-          createdBy: params.createdBy,
-          createdAt: now,
-          updatedAt: now,
         });
-
-      results.push({
-        organizationId,
-        type: input.type,
-        action: "created",
-        revisionId,
-      });
+      }
     }
   }
 
