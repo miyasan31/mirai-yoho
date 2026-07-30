@@ -22,6 +22,11 @@ function toMonthLabel(value: string): string {
   return `${year}年${Number(month)}月`;
 }
 
+/** OS のファイル名として使えない文字を取り除く */
+function sanitizeForFileName(value: string): string {
+  return value.replace(/[\\/:*?"<>|]/g, "").trim();
+}
+
 /** 直近 12 ヶ月分の選択肢を新しい順に返す。既定は締めの済んだ先月 */
 function buildMonthOptions(now: Date): string[] {
   return Array.from({ length: SELECTABLE_MONTH_COUNT }, (_, index) =>
@@ -169,7 +174,14 @@ export default function SettlementStatementPage() {
 
         <Button
           type="button"
-          onClick={() => window.print()}
+          onClick={() => {
+            const originalTitle = document.title;
+            document.title = sanitizeForFileName(
+              `${toMonthLabel(month)}分_${trimmedIssuerName}`,
+            );
+            window.print();
+            document.title = originalTitle;
+          }}
           disabled={isLoading || !statement || !isIssuerInputValid}
           ml="auto"
         >

@@ -349,4 +349,28 @@ describe("SettlementStatementPage", () => {
       screen.getByRole("button", { name: /PDFとして保存/ }),
     ).not.toBeDisabled();
   });
+
+  it("sets the document title to the target month and issuer name while printing, then restores it", () => {
+    vi.setSystemTime(new Date("2026-07-20T00:00:00.000Z"));
+    mockUseConsultantSettlementStatement.mockReturnValue({
+      data: { data: STATEMENT },
+      isLoading: false,
+    });
+    document.title = "precheck-title";
+    let titleDuringPrint = "";
+    const printSpy = vi.spyOn(window, "print").mockImplementation(() => {
+      titleDuringPrint = document.title;
+    });
+
+    render(<SettlementStatementPage />);
+    const addressInput = screen.getByLabelText("住所") as HTMLInputElement;
+    fireEvent.change(addressInput, { target: { value: "東京都新宿区1-1-1" } });
+    fireEvent.click(screen.getByRole("button", { name: /PDFとして保存/ }));
+
+    expect(titleDuringPrint).toBe("2026年6月分_山田花子");
+    expect(document.title).toBe("precheck-title");
+
+    printSpy.mockRestore();
+    vi.useRealTimers();
+  });
 });
