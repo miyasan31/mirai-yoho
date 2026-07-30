@@ -70,7 +70,7 @@ firebase apphosting:backends:delete mirai-yoho --project mirai-yoho-dev
 
 ### 3. prod でも 1〜2 を繰り返す
 
-`mirai-yoho-prod` について同様に実施する（CI の terraform-plan は現状 dev のみ）。
+`mirai-yoho` について同様に実施する（CI の terraform-plan は現状 dev のみ）。
 
 ### 4. 後片付け
 

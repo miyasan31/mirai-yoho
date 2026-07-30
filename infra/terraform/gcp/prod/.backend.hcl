@@ -1,1 +1,1 @@
-bucket = "mirai-yoho-prod-terraform-state"
+bucket = "mirai-yoho-terraform-state"

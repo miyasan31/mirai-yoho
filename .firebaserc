@@ -1,7 +1,7 @@
 {
   "projects": {
     "dev": "mirai-yoho-dev",
-    "prod": "mirai-yoho-prod"
+    "prod": "mirai-yoho"
   },
   "targets": {
     "mirai-yoho-dev": {
@@ -11,11 +11,11 @@
         "consultant": ["mirai-yoho-dev-consultant"]
       }
     },
-    "mirai-yoho-prod": {
+    "mirai-yoho": {
       "hosting": {
-        "user": ["mirai-yoho-prod-user"],
-        "console": ["mirai-yoho-prod-console"],
-        "consultant": ["mirai-yoho-prod-consultant"]
+        "user": ["mirai-yoho-user"],
+        "console": ["mirai-yoho-console"],
+        "consultant": ["mirai-yoho-consultant"]
       }
     }
   }

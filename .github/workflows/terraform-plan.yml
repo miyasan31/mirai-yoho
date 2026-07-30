@@ -28,7 +28,7 @@ jobs:
         environment: [dev] # [dev, prod]
     env:
       DEPLOY_ENV: ${{ matrix.environment }}
-      PROJECT_ID: mirai-yoho-${{ matrix.environment }}
+      PROJECT_ID: ${{ matrix.environment == 'dev' && 'mirai-yoho-dev' || 'mirai-yoho' }}
       REGION: asia-northeast1
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
