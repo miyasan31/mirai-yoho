@@ -160,14 +160,54 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: bookingId
-          in: path
-          required: true
-          schema:
-            type: string
+        - $ref: "#/components/parameters/BookingIdParam"
       responses:
         "204":
           description: No Content
+  /customer/me/bookings/{bookingId}/rating:
+    get:
+      operationId: getMyBookingRating
+      summary: 予約の評価と評価可否を取得
+      description: |
+        未評価の場合も 200 + rating: null を返す。custom-fetch が 404 を /404 へ
+        リダイレクトするため、「まだ評価していない」を状態として扱えるようにするため。
+        他人の予約・存在しない予約は 404（エラーレスポンスは他のエンドポイントと同様スキーマに書かない）。
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/BookingIdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyBookingRatingDetail"
+    post:
+      operationId: submitMyBookingRating
+      summary: 予約の評価を送信（提出後は編集不可）
+      description: |
+        評価済み / 鑑定未終了 / 受付期間外は 409、他人の予約・存在しない予約は 404 を返す
+        （エラーレスポンスは他のエンドポイントと同様スキーマに書かない）。
+      tags: [customer]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/BookingIdParam"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MyBookingRatingInput"
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MyBookingRating"
   /organizations/{organizationId}/customers/me/bookings:
     get:
       operationId: getCustomerBookings
@@ -955,6 +995,26 @@ paths:
                     type: string
 
   /organizations/{organizationId}/console/consultants/{id}:
+    get:
+      operationId: getConsoleConsultant
+      summary: 相談員単体取得（管理者・オペレーター）
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/IdParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [consultant]
+                properties:
+                  consultant:
+                    $ref: "#/components/schemas/ConsultantDetail"
     patch:
       operationId: updateConsoleConsultant
       summary: 相談員更新
@@ -998,6 +1058,40 @@ paths:
       responses:
         "200":
           description: OK
+
+  /organizations/{organizationId}/console/consultants/{id}/ratings:
+    get:
+      operationId: getConsoleConsultantRatings
+      summary: 相談員の評価一覧と集計（運営のみ。相談員本人には公開しない）
+      tags: [console]
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: "#/components/parameters/OrganizationIdParam"
+        - $ref: "#/components/parameters/IdParam"
+        - $ref: "#/components/parameters/PageParam"
+        - $ref: "#/components/parameters/PageSizeParam"
+        - $ref: "#/components/parameters/SortByParam"
+        - $ref: "#/components/parameters/SortOrderParam"
+      responses:
+        "200":
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [consultantId, summary, ratings, pagination]
+                properties:
+                  consultantId:
+                    type: string
+                  summary:
+                    $ref: "#/components/schemas/ConsultantRatingSummary"
+                  ratings:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/ConsultantRating"
+                  pagination:
+                    $ref: "#/components/schemas/PaginationMeta"
 
   /organizations/{organizationId}/console/settings/booking:
     get:
@@ -2139,6 +2233,7 @@ components:
           durationMinutes,
           cancelDeadlineAt,
           consultantId,
+          isRated,
         ]
       properties:
         bookingId:
@@ -2183,6 +2278,116 @@ components:
         discountedTotalJPY:
           type: integer
           nullable: true
+        isRated:
+          type: boolean
+          description: 会員がこの鑑定を評価済みかどうか
+        ratableUntil:
+          type: string
+          format: date-time
+          nullable: true
+          description: |
+            評価の受付期限（鑑定終了の30日後）。評価対象になり得ない予約（pending / cancelled）は null。
+            「30日」という業務定数をクライアントに持たせないため、判定済みフラグではなく期限を返す。
+    MyBookingRating:
+      type: object
+      required: [bookingId, score, ratedAt]
+      properties:
+        bookingId:
+          type: string
+        score:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          nullable: true
+        ratedAt:
+          type: string
+          format: date-time
+    MyBookingRatingInput:
+      type: object
+      required: [score]
+      properties:
+        score:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          maxLength: 1000
+    MyBookingRatingDetail:
+      type: object
+      required: [booking, ratable]
+      properties:
+        booking:
+          $ref: "#/components/schemas/MyBooking"
+        rating:
+          allOf:
+            - $ref: "#/components/schemas/MyBookingRating"
+          nullable: true
+        ratable:
+          type: boolean
+        ratableReasonCode:
+          type: string
+          nullable: true
+          enum:
+            [
+              BOOKING_NOT_RATABLE,
+              BOOKING_NOT_FINISHED,
+              RATING_WINDOW_EXPIRED,
+              RATING_ALREADY_SUBMITTED,
+            ]
+        ratableReason:
+          type: string
+          nullable: true
+        ratableUntil:
+          type: string
+          format: date-time
+          nullable: true
+    ConsultantRating:
+      type: object
+      required: [bookingId, score, consultedAt, ratedAt]
+      properties:
+        bookingId:
+          type: string
+        score:
+          type: integer
+          minimum: 1
+          maximum: 5
+        comment:
+          type: string
+          nullable: true
+        consultedAt:
+          type: string
+          format: date-time
+          description: 鑑定日時
+        ratedAt:
+          type: string
+          format: date-time
+          description: 評価の投稿日時
+    ConsultantRatingSummary:
+      type: object
+      required: [count, averageScore, distribution]
+      properties:
+        count:
+          type: integer
+        averageScore:
+          type: number
+          nullable: true
+          description: 小数第2位で丸めた平均。評価0件のときは null
+        distribution:
+          type: array
+          description: 常に 1〜5 の 5 要素
+          items:
+            type: object
+            required: [score, count]
+            properties:
+              score:
+                type: integer
+                minimum: 1
+                maximum: 5
+              count:
+                type: integer
     AuthMe:
       type: object
       required: [authUid, accounts, consultants]

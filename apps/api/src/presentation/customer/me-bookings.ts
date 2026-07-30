@@ -7,6 +7,7 @@ import {
   createListCustomerBookingsUseCase,
   createUserRepository,
 } from "@/infrastructure/container";
+import { toMyBookingResponse } from "@/presentation/customer/my-booking-response";
 import { withNoStore } from "../cache-control";
 
 function jsonError(statusCode: number, code: string, message: string) {
@@ -51,26 +52,7 @@ export async function GET(request: Request) {
         (a, b) =>
           b.booking.getStartsAt().getTime() - a.booking.getStartsAt().getTime(),
       )
-      .map(({ booking, consultantName, organizationName }) => ({
-        bookingId: booking.getBookingId(),
-        organizationId: booking.getOrganizationId(),
-        organizationName,
-        status: booking.getStatus().getValue(),
-        startsAt: booking.getStartsAt().toISOString(),
-        endsAt: booking.getEndsAt().toISOString(),
-        durationMinutes: booking.getDurationMinutes(),
-        cancelDeadlineAt: booking
-          .getCancelDeadlineAt()
-          .getValue()
-          .toISOString(),
-        consultantId: booking.getConsultantId(),
-        consultantName,
-        joinUrl: booking.getJoinUrl()?.getValue() ?? null,
-        pricePlanName: booking.getPricePlanName() ?? null,
-        pricePlanTotalJPY: booking.getPricePlanTotalJPY() ?? null,
-        couponDiscountJPY: booking.getCouponDiscountJPY() ?? null,
-        discountedTotalJPY: booking.getDiscountedTotalJPY() ?? null,
-      }));
+      .map(toMyBookingResponse);
     return withNoStore(Response.json({ bookings }));
   } catch (error) {
     return handleError(error);

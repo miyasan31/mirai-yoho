@@ -10,17 +10,17 @@ import { Text } from "@mirai-yoho/ui/components/ui/text";
 import { toaster } from "@mirai-yoho/ui/components/ui/toast";
 import { Tooltip } from "@mirai-yoho/ui/components/ui/tooltip";
 import { useQueryClient } from "@tanstack/react-query";
-import { createFileRoute } from "@tanstack/react-router";
-import { format, parseISO } from "date-fns";
-import { ja } from "date-fns/locale";
-import { CalendarX, CircleX, Video } from "lucide-react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { CalendarX, CircleX, Star, Video } from "lucide-react";
 import { Suspense, useState } from "react";
 import { styled } from "styled-system/jsx";
 import { useCustomerAuth } from "@/hooks/use-customer-auth";
 import { useSuspenseMyBookings } from "@/hooks/use-my-bookings";
 import { pageHead } from "@/lib/head";
+import { formatDateTimeRange, formatYen } from "./-booking-format";
+import { getRatingBadge } from "./-rating-eligibility";
 
-export const Route = createFileRoute("/mypage/bookings")({
+export const Route = createFileRoute("/mypage/bookings/")({
   head: () => pageHead("予約履歴"),
   errorComponent: MyBookingsError,
   component: MypageBookingsPage,
@@ -39,22 +39,6 @@ const STATUS_COLOR: Record<MyBooking["status"], string> = {
   completed: "gray",
   cancelled: "red",
 };
-
-function formatDateTime(iso: string): string {
-  return format(parseISO(iso), "yyyy/MM/dd (E) HH:mm", { locale: ja });
-}
-
-function formatTime(iso: string): string {
-  return format(parseISO(iso), "HH:mm", { locale: ja });
-}
-
-function formatDateTimeRange(startIso: string, endIso: string): string {
-  return `${formatDateTime(startIso)}〜${formatTime(endIso)}`;
-}
-
-function formatYen(value: number): string {
-  return `¥${value.toLocaleString("ja-JP")}`;
-}
 
 function BookingCardSkeleton() {
   return (
@@ -192,6 +176,7 @@ function BookingCard({ booking }: { booking: MyBooking }) {
     cancelDeadlineMs > now;
   const showJoinButton = booking.status === "confirmed" && !!booking.joinUrl;
   const isEnded = endsAtMs <= now;
+  const ratingBadge = getRatingBadge(booking, now);
   const canJoinNow = !isEnded && startsAtMs - now < 30 * 60 * 1000;
   const joinDisabledReason = isEnded
     ? "終了しました"
@@ -215,6 +200,14 @@ function BookingCard({ booking }: { booking: MyBooking }) {
         <Badge colorPalette={STATUS_COLOR[booking.status]}>
           {STATUS_LABEL[booking.status]}
         </Badge>
+        {ratingBadge === "unrated" && (
+          <Badge colorPalette="amber">未評価</Badge>
+        )}
+        {ratingBadge === "rated" && (
+          <Badge colorPalette="gray" variant="subtle">
+            評価済み
+          </Badge>
+        )}
       </styled.div>
 
       {booking.consultantName && (
@@ -281,6 +274,18 @@ function BookingCard({ booking }: { booking: MyBooking }) {
             bookingId={booking.bookingId}
             organizationId={booking.organizationId}
           />
+        )}
+        {/* 評価済みならリンク自体を出さない（提出後は編集不可） */}
+        {ratingBadge === "unrated" && (
+          <Button asChild variant="outline" colorPalette="amber" size="sm">
+            <Link
+              to="/mypage/bookings/$bookingId/rating"
+              params={{ bookingId: booking.bookingId }}
+            >
+              <Star size={16} />
+              占い師を評価する
+            </Link>
+          </Button>
         )}
       </styled.div>
     </styled.li>

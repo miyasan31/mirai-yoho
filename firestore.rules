@@ -103,6 +103,15 @@ service cloud.firestore {
       allow write: if isOrganizationAdmin(request.resource.data.organizationId);
     }
 
+    // 会員が鑑定後に付ける占い師の評価。Doc ID = bookingId（1予約1評価）。
+    // 運営（admin / operator）だけが閲覧でき、占い師本人には見せない。
+    // 占い師は accounts に doc を持たないため isOrganizationAdmin は常に false になる。
+    // 書き込みは API（Admin SDK）経由のみ。提出後の編集・削除も不可。
+    match /booking-ratings/{bookingId} {
+      allow read: if isOrganizationAdmin(resource.data.organizationId);
+      allow write: if false;
+    }
+
     match /payments/{paymentId} {
       allow read: if isOrganizationAdmin(resource.data.organizationId);
       allow write: if false;

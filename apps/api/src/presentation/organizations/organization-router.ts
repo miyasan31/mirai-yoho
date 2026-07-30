@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { batchRoutes } from "./batch-routes";
 import { bookingRoutes } from "./booking-routes";
 import { consoleAccountRoutes } from "./console-account-routes";
+import { consoleConsultantRatingRoutes } from "./console-consultant-rating-routes";
 import { consoleConsultantRoutes } from "./console-consultant-routes";
 import { consoleCouponRoutes } from "./console-coupon-routes";
 import { consoleListingRoutes } from "./console-listing-routes";
@@ -36,6 +37,7 @@ export function createOrganizationRoutes(): Hono {
   routes.route("/:organizationId", consultantSettlementRoutes);
   routes.route("/:organizationId", consoleListingRoutes);
   routes.route("/:organizationId", consoleConsultantRoutes);
+  routes.route("/:organizationId", consoleConsultantRatingRoutes);
   routes.route("/:organizationId", consoleSettingsRoutes);
   routes.route("/:organizationId", consoleAccountRoutes);
   routes.route("/:organizationId", consoleRoleRoutes);

@@ -1,5 +1,6 @@
 export const FIRESTORE_COLLECTIONS = {
   bookings: "bookings",
+  bookingRatings: "booking-ratings",
   customers: "customers",
   pricePlans: "price-plans",
   consultants: "consultants",

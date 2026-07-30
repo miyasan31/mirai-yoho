@@ -4,6 +4,7 @@ import {
   getGetConsoleBookingSettingsQueryKey,
   getGetConsoleBookingsQueryKey,
   getGetConsoleCompanyInfoQueryKey,
+  getGetConsoleConsultantRatingsQueryKey,
   getGetConsoleConsultantStatusesQueryKey,
   getGetConsoleConsultantsQueryKey,
   getGetConsoleCouponsQueryKey,
@@ -25,6 +26,7 @@ import {
   getGetAvailableCouponsQueryKey,
   getGetCustomerCouponsQueryKey,
   getGetCustomerPolicyAgreementStatusQueryKey,
+  getGetMyBookingRatingQueryKey,
   getGetMyBookingsQueryKey,
 } from "@mirai-yoho/api-client/api/customer/customer";
 import { getGetLatestPublishedPolicyQueryKey } from "@mirai-yoho/api-client/api/public/public";
@@ -59,6 +61,30 @@ export const invalidateAfter = {
 
   bookingCancel: (qc: QueryClient, organizationId: string) =>
     invalidateAfter.bookingCreate(qc, organizationId),
+
+  /**
+   * 会員が鑑定を評価したとき。
+   * 占い師側（getGetConsultants* / getGetConsultantProfile*）は評価を持たないので含めない。
+   */
+  bookingRatingSubmit: (
+    qc: QueryClient,
+    organizationId: string,
+    consultantId: string,
+    bookingId: string,
+  ) =>
+    Promise.all([
+      // MyBooking.isRated が変わるので一覧を再取得 → 未評価バッジが消える
+      qc.invalidateQueries({ queryKey: getGetMyBookingsQueryKey() }),
+      qc.invalidateQueries({
+        queryKey: getGetMyBookingRatingQueryKey(bookingId),
+      }),
+      qc.invalidateQueries({
+        queryKey: getGetConsoleConsultantRatingsQueryKey(
+          organizationId,
+          consultantId,
+        ),
+      }),
+    ]),
 
   slotMutation: (qc: QueryClient, organizationId: string) =>
     Promise.all([

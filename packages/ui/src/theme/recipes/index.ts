@@ -11,6 +11,7 @@ import { input } from "./input";
 import { menu } from "./menu";
 import { pagination } from "./pagination";
 import { radioGroup } from "./radio-group";
+import { ratingGroup } from "./rating-group";
 import { select } from "./select";
 import { skeleton } from "./skeleton";
 import { spinner } from "./spinner";
@@ -41,6 +42,7 @@ export const slotRecipes = {
   dialog,
   field,
   radioGroup,
+  ratingGroup,
   select,
   tooltip,
   table,

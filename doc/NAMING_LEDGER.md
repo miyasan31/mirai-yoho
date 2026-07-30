@@ -200,6 +200,12 @@
 | 9 | `slots` | `slots` | フィールドリネーム | `slotId` |
 | 10 | ~~`user-preferences`~~ | **廃止** | 削除 | — |
 | 11 | `zoom-daily-sessions` | `zoom-sessions` | **リネーム** | `{organizationId}_{sessionDate}` |
+| 12 | （新規） | `booking-ratings` | **新規** | `bookingId` |
+
+> `booking-ratings` の Doc ID は §1.5「エンティティ ID 単体を原則」の例外。Booking と 1:1（1予約1評価）で、
+> 提出後の編集・削除も不可という仕様のため、他集約の ID を Doc ID にすることで Firestore が一意性を構造的に保証する。
+> 加えて `db.getAll(...refs)` で N 件を一括取得でき、`where documentId() in [...]` の 30 件制限を回避できる
+> （マイページの未評価バッジで必須）。
 
 ---
 

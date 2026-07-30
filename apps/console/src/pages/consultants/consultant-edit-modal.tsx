@@ -13,10 +13,10 @@ export default function ConsoleConsultantEditModalPage() {
 
   const closeModal = useCallback(() => {
     void navigate({
-      to: "/$organizationId/consultants",
-      params: { organizationId },
+      to: "/$organizationId/consultants/$id",
+      params: { organizationId, id: consultantId },
     });
-  }, [navigate, organizationId]);
+  }, [navigate, organizationId, consultantId]);
 
   return (
     <Dialog.Root

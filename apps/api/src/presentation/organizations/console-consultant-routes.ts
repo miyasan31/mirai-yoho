@@ -1,6 +1,7 @@
 import crypto from "node:crypto";
 import { Hono } from "hono";
 import { AppError } from "@/application/shared/app-error";
+import type { Consultant } from "@/domain/consultant/consultant";
 import { Settings } from "@/domain/settings/settings";
 import {
   requirePermission,
@@ -43,6 +44,30 @@ import {
 
 export const consoleConsultantRoutes = new Hono();
 
+function toConsultantDetailResponse(params: {
+  consultant: Consultant;
+  settings: Settings;
+  email: string;
+}) {
+  const { consultant, settings, email } = params;
+  const profile = consultant.getProfile();
+  return {
+    consultantId: consultant.getConsultantId(),
+    email,
+    name: profile.getDisplayName(),
+    bio: profile.getBio(),
+    phone: profile.getPhone(),
+    imageUrl: profile.getImageUrl(),
+    specialties: [...profile.getSpecialties()],
+    status: toConsultantStatusResponse(
+      resolveConsultantStatus(settings, consultant.getStatusId()),
+    ),
+    isActive: consultant.getIsActive(),
+    createdAt: consultant.getCreatedAt().toISOString(),
+    updatedAt: consultant.getUpdatedAt().toISOString(),
+  };
+}
+
 consoleConsultantRoutes.get(
   "/console/consultants",
   getRoute(async ({ organizationId, request, requestUrl }) => {
@@ -62,24 +87,13 @@ consoleConsultantRoutes.get(
       consultants.map((consultant) => consultant.getConsultantId()),
     );
 
-    const consultantsWithEmail = consultants.map((c) => {
-      const userRecord = userByAuthUid.get(c.getConsultantId()) ?? null;
-      return {
-        consultantId: c.getConsultantId(),
-        email: userRecord?.email ?? "",
-        name: c.getProfile().getDisplayName(),
-        bio: c.getProfile().getBio(),
-        phone: c.getProfile().getPhone(),
-        imageUrl: c.getProfile().getImageUrl(),
-        specialties: [...c.getProfile().getSpecialties()],
-        status: toConsultantStatusResponse(
-          resolveConsultantStatus(resolvedSettings, c.getStatusId()),
-        ),
-        isActive: c.getIsActive(),
-        createdAt: c.getCreatedAt().toISOString(),
-        updatedAt: c.getUpdatedAt().toISOString(),
-      };
-    });
+    const consultantsWithEmail = consultants.map((c) =>
+      toConsultantDetailResponse({
+        consultant: c,
+        settings: resolvedSettings,
+        email: userByAuthUid.get(c.getConsultantId())?.email ?? "",
+      }),
+    );
     const sortedConsultants = sortByTimestampDesc(
       consultantsWithEmail,
       listQueryParams.sortBy,
@@ -90,6 +104,33 @@ consoleConsultantRoutes.get(
     );
 
     return noStoreJson({ consultants: items, pagination });
+  }),
+);
+
+consoleConsultantRoutes.get(
+  "/console/consultants/:consultantId",
+  getRoute(async ({ organizationId, request, param }) => {
+    const authUser = await verifyAccountAuth(request);
+    requirePermission(authUser, organizationId, "console.consultants.read");
+    const consultantId = param("consultantId");
+
+    const [consultant, settings] = await Promise.all([
+      createConsultantRepository().findById(organizationId, consultantId),
+      createSettingsRepository().findByOrganizationId(organizationId),
+    ]);
+    if (!consultant) {
+      return jsonError(404, "CONSULTANT_NOT_FOUND", "Consultant not found");
+    }
+
+    const userByAuthUid = await getUsersByUids([consultantId]);
+
+    return noStoreJson({
+      consultant: toConsultantDetailResponse({
+        consultant,
+        settings: settings ?? Settings.createDefault(organizationId),
+        email: userByAuthUid.get(consultantId)?.email ?? "",
+      }),
+    });
   }),
 );
 

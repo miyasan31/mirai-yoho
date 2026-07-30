@@ -9,6 +9,7 @@
  *   - slots（翌日から N 日分、10:00-17:00 の 15 分枠）
  *   - users / customers（apps/user の会員と顧客）
  *   - bookings / payments（確定・完了・キャンセル・仮予約の 4 状態 + 精算書用の先月分）
+ *   - booking-ratings（完了済み予約への評価。console の占い師詳細で平均点・分布を確認できる）
  *   - coupons / user-coupons（初回登録特典 3 枚・90 日 / 誕生日 1 枚・30 日）
  *   - policy-revisions（利用者向け 3 種 + 占い師向け 2 種 × 旧版 / 現行の 2 版）
  *
@@ -38,6 +39,7 @@ import { BookingStatus } from "../src/domain/booking/booking-status";
 import { CancelDeadline } from "../src/domain/booking/cancel-deadline";
 import { ConsultantMemo } from "../src/domain/booking/consultant-memo";
 import { ZoomUrl } from "../src/domain/booking/zoom-url";
+import { BookingRating } from "../src/domain/booking-rating/booking-rating";
 import { Consultant } from "../src/domain/consultant/consultant";
 import { ConsultantProfile } from "../src/domain/consultant/consultant-profile";
 import { Coupon } from "../src/domain/coupon/coupon";
@@ -55,6 +57,7 @@ import { BirthDate } from "../src/domain/user/birth-date";
 import { User } from "../src/domain/user/user";
 import { UserCoupon } from "../src/domain/user-coupon/user-coupon";
 import { getAccountDocId } from "../src/infrastructure/firestore/firestore-account-repository";
+import { FirestoreBookingRatingRepository } from "../src/infrastructure/firestore/firestore-booking-rating-repository";
 import { FirestoreBookingRepository } from "../src/infrastructure/firestore/firestore-booking-repository";
 import { app, db } from "../src/infrastructure/firestore/firestore-client";
 import { FIRESTORE_COLLECTIONS } from "../src/infrastructure/firestore/firestore-collections";
@@ -754,6 +757,8 @@ interface BookingScenarioBase {
   status: SeedBookingStatus;
   withMemo?: boolean;
   withCoupon?: boolean;
+  /** 完了済み予約に付ける評価。console の占い師詳細で確認する */
+  rating?: { score: number; comment?: string };
 }
 
 /**
@@ -813,6 +818,7 @@ function buildBookingScenarios(
   const customerAt = (index: number) => customers[index % customers.length];
 
   const scenarios: BookingScenario[] = [
+    // 会員が「未評価」バッジと評価導線を確認するための完了済み予約（あえて評価を付けない）
     {
       consultant: own,
       customer: customerAt(0),
@@ -822,6 +828,41 @@ function buildBookingScenarios(
       status: "completed",
       withMemo: true,
       withCoupon: true,
+    },
+    // 会員が「評価済み」バッジと読み取り専用表示を確認するための評価済み予約
+    {
+      consultant: own,
+      customer: customerAt(0),
+      pricePlan: ownPlans[0],
+      dayOffset: -14,
+      hour: 10,
+      status: "completed",
+      withMemo: true,
+      rating: {
+        score: 5,
+        comment:
+          "とても丁寧に話を聞いていただき、気持ちが軽くなりました。また相談したいです。",
+      },
+    },
+    // console の占い師詳細で平均点とスコア分布が散らばって見えるようにする
+    {
+      consultant: own,
+      customer: customerAt(1),
+      pricePlan: ownPlans[0],
+      dayOffset: -10,
+      hour: 16,
+      status: "completed",
+      rating: { score: 4, comment: "的確なアドバイスをいただけました。" },
+    },
+    {
+      consultant: own,
+      customer: customerAt(2),
+      pricePlan: ownPlans[1],
+      dayOffset: -5,
+      hour: 13,
+      status: "completed",
+      // 低評価もダッシュボード上で確認できるようにコメントなしで 1 件入れる
+      rating: { score: 2 },
     },
     {
       consultant: own,
@@ -913,6 +954,10 @@ function buildBookingScenarios(
         hour: 16,
         status: "completed",
         withMemo: true,
+        rating: {
+          score: 3 + (index % 3),
+          comment: "落ち着いて相談できました。",
+        },
       },
     );
   }
@@ -1078,7 +1123,54 @@ async function seedBooking(
     }),
   );
 
+  if (scenario.rating) {
+    await seedBookingRating({
+      organizationId,
+      bookingId,
+      scenario,
+      startsAt,
+      endsAt,
+    });
+  }
+
   return bookingId;
+}
+
+/**
+ * 完了済み予約への評価を投入する。
+ *
+ * BookingRating は「提出後は編集不可」の仕様のため Repository が create() しか公開しておらず、
+ * 2 回目以降の実行では ALREADY_EXISTS になる。シードは冪等であるべきなので、
+ * 先に doc を消してから作り直す（存在しない doc の delete は no-op）。
+ */
+async function seedBookingRating(params: {
+  organizationId: string;
+  bookingId: string;
+  scenario: BookingScenario;
+  startsAt: Date;
+  endsAt: Date;
+}): Promise<void> {
+  const { organizationId, bookingId, scenario, startsAt, endsAt } = params;
+  if (!scenario.rating) return;
+
+  await db
+    .collection(FIRESTORE_COLLECTIONS.bookingRatings)
+    .doc(bookingId)
+    .delete();
+
+  await new FirestoreBookingRatingRepository().create(
+    BookingRating.create({
+      organizationId,
+      bookingId,
+      consultantId: scenario.consultant.consultantId,
+      customerId: scenario.customer.customerId,
+      score: scenario.rating.score,
+      comment: scenario.rating.comment,
+      consultedAt: startsAt,
+      // 鑑定終了の 1 時間後に評価したことにする
+      ratedAt: new Date(endsAt.getTime() + 60 * 60 * 1000),
+    }),
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -1127,6 +1219,10 @@ async function main() {
   for (const scenario of scenarios) {
     bookingIds.push(await seedBooking(args.organizationId, scenario, coupons));
   }
+
+  const ratedScenarioCount = scenarios.filter(
+    (scenario) => scenario.rating,
+  ).length;
 
   const couponScenarioIndex = scenarios.findIndex(
     (scenario) => scenario.withCoupon,
@@ -1183,6 +1279,9 @@ async function main() {
   console.log(`  customers: ${customers.length}`);
   console.log(
     `  bookings: ${bookingIds.length}（確定 / 完了 / キャンセル / 仮予約）`,
+  );
+  console.log(
+    `  bookingRatings: ${ratedScenarioCount}（完了済み予約への評価。未評価の完了済み予約も 1 件残している）`,
   );
   console.log(
     `  userCoupons: ${WELCOME_COUPON_BATCH_SIZE + BIRTHDAY_COUPON_BATCH_SIZE}（初回登録特典 ${WELCOME_COUPON_BATCH_SIZE} 枚: 未使用 ${WELCOME_COUPON_BATCH_SIZE - 1} / 使用済み 1、誕生日 ${BIRTHDAY_COUPON_BATCH_SIZE} 枚: 期限切れ）`,
