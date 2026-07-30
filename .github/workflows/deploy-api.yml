@@ -33,11 +33,12 @@ jobs:
       # 存在するか事前検証する。値未投入のシークレットがあると `gcloud run services update` が
       # 「Secret ... versions/latest was not found」で失敗するため、ビルド前にまとめて検出して
       # 修正手順を提示する。値は表示せず、有効バージョンの有無のみ確認する。
-      # リストは terraform の api_secret_ids（infra/terraform/gcp/common/api/main.tf）と一致させる。
+      # リストは terraform の runtime_secret_ids（infra/terraform/gcp/common/firebase/main.tf）と
+      # 一致させる。common/api がこれを受け取って Cloud Run に env としてマウントする。
       - name: Verify required secrets have a value
         env:
           REQUIRED_SECRETS: >-
-            API_URL USER_APP_URL CONSOLE_APP_URL CANCEL_TOKEN_SECRET
+            API_URL USER_APP_URL CONSOLE_APP_URL CANCEL_TOKEN_SECRET COUPON_WEBHOOK_SECRET
             CORS_ALLOWED_ORIGINS FIREBASE_CLIENT_EMAIL FIREBASE_PRIVATE_KEY FIREBASE_PROJECT_ID
             FIREBASE_STORAGE_BUCKET INVOICE_REGISTRATION_NUMBER LINE_WORKS_LATE_ARRIVAL_WEBHOOK_URL
             RESEND_API_KEY RESEND_FROM_EMAIL STRIPE_SECRET_KEY STRIPE_WEBHOOK_SECRET
