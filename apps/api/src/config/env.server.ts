@@ -88,6 +88,9 @@ export const envServer = {
   get zoomCredentialEncryptionKey(): string {
     return requireServerEnv("ZOOM_CREDENTIAL_ENCRYPTION_KEY");
   },
+  get firestoreEmulatorHost(): string | undefined {
+    return process.env.FIRESTORE_EMULATOR_HOST;
+  },
   get firebaseProjectId(): string | undefined {
     return process.env.FIREBASE_PROJECT_ID;
   },

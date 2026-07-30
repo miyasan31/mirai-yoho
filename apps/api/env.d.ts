@@ -22,6 +22,9 @@ declare namespace NodeJS {
 
     ZOOM_INTEGRATION_MODE?: "live" | "stub";
 
+    /** 設定されていると firebase-admin の Firestore がエミュレーターに接続する（ローカル開発専用） */
+    FIRESTORE_EMULATOR_HOST?: string;
+
     FIREBASE_PROJECT_ID?: string;
     FIREBASE_CLIENT_EMAIL?: string;
     FIREBASE_PRIVATE_KEY?: string;

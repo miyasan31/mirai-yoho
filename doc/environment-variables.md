@@ -56,6 +56,15 @@
 
 `ZOOM_INTEGRATION_MODE` を `stub` にすると、上記 2 つの Zoom アプリを用意しなくても Zoom OAuth・会議作成をフェイクで済ませられる（`src/infrastructure/zoom/stub-zoom-service.ts` / `stub-zoom-user-oauth-service.ts`）。未設定時の既定値は `live`。**本番では絶対に `stub` にしないこと。**
 
+## ローカル開発用の Firestore エミュレーター
+
+`FIRESTORE_EMULATOR_HOST=127.0.0.1:8080` を設定すると、firebase-admin の Firestore クライアントが自動でエミュレーター（`pnpm emulator`）に接続する。Firebase Auth はエミュレートせず `FIREBASE_PROJECT_ID` の本物のプロジェクトを使い続けるため、ログインと ID トークン検証の挙動は変わらない。
+
+- 設定先: `apps/api/.env.local`（API サーバー / batch worker）。`make create-organization` などスクリプト系も使う場合はリポジトリルートの `.env.local` にも同じ行を追加する
+- エミュレーターの project id は `FIREBASE_PROJECT_ID` と一致させる（`scripts/firestore-emulator.sh` が参照。既定 `mirai-yoho-dev`）。ずれると別プロジェクト扱いでデータが見えなくなる
+- **本番では絶対に設定しないこと**。`NODE_ENV=production` で設定されている場合は起動時にエラーになる（`src/infrastructure/firestore/firestore-client.ts`）
+- 手順の詳細は [README](../README.md#firestore-エミュレーターローカル開発) を参照
+
 ## その他の外部サービス
 
 | 環境変数 | 取得元 |
