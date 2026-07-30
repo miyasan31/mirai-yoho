@@ -1,4 +1,4 @@
-.PHONY: create-organization create-default-roles seed-slots delete-slots
+.PHONY: create-organization create-default-roles seed-local seed-slots delete-slots
 .PHONY: auth-adc-organization-operator setup-secrets setup-secret
 .PHONY: setup-secrets-from-env setup-secrets-from-env-fish
 .PHONY: describe-secret access-secret check-secret-value
@@ -21,7 +21,12 @@
 .PHONY: check-secret-value\:dev check-secret-value\:prod
 
 ENV ?= local
+# local は API サーバーと同じ apps/api/.env.local を使う（ルートに .env.local は置かない）
+ifeq ($(ENV),local)
+ENV_FILE = apps/api/.env.local
+else
 ENV_FILE = .env.$(ENV)
+endif
 PROJECT_DEV = mirai-yoho-dev
 PROJECT_PROD = mirai-yoho-prod
 
@@ -49,6 +54,22 @@ create-organization:
 	@test -n "$(ORGANIZATION_NAME)" || (echo "Error: ORGANIZATION_NAME is required. Usage: make create-organization ORGANIZATION_ID=<id> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email> [ADMIN_NAME=<name>]" && exit 1)
 	@test -n "$(ADMIN_EMAIL)" || (echo "Error: ADMIN_EMAIL is required. Usage: make create-organization ORGANIZATION_ID=<id> ORGANIZATION_NAME=<name> ADMIN_EMAIL=<email> [ADMIN_NAME=<name>]" && exit 1)
 	pnpm dlx tsx --env-file=$(ENV_FILE) apps/api/scripts/create-organization.ts $(ORGANIZATION_ID) "$(ORGANIZATION_NAME)" $(ADMIN_EMAIL) "$(ADMIN_NAME)"
+
+# Usage: make seed-local ADMIN=<email|uid> [CONSULTANT=<email|uid>] [ORGANIZATION_ID=<id>] [DAYS=<n>]
+# Example: make seed-local ADMIN=you@example.com
+# ローカルの Firestore エミュレーター（pnpm emulator）に組織・ロール・管理者・占い師・
+# 料金プラン・空き枠を一括投入する。ENV=local 固定（エミュレーター以外には流せない）。
+# ADMIN / CONSULTANT には dev プロジェクトに実在する Auth ユーザーを指定する。
+seed-local:
+	@test -f "apps/api/.env.local" || (echo "Error: apps/api/.env.local not found" && exit 1)
+	@test -n "$(ADMIN)" || (echo "Error: ADMIN is required. Usage: make seed-local ADMIN=<email|uid>" && exit 1)
+	pnpm dlx tsx --tsconfig apps/api/tsconfig.json --env-file=apps/api/.env.local apps/api/scripts/seed-local.ts \
+		--admin "$(ADMIN)" \
+		$(if $(CONSULTANT),--consultant "$(CONSULTANT)",) \
+		$(if $(ORGANIZATION_ID),--organization-id "$(ORGANIZATION_ID)",) \
+		$(if $(ORGANIZATION_NAME),--organization-name "$(ORGANIZATION_NAME)",) \
+		$(if $(CONSULTANT_NAME),--consultant-name "$(CONSULTANT_NAME)",) \
+		$(if $(DAYS),--days "$(DAYS)",)
 
 # Usage: make create-default-roles ORGANIZATION_ID=<organizationId> [ENV=<local|dev|prod>]
 # Usage: make create-default-roles:dev ORGANIZATION_ID=<id>

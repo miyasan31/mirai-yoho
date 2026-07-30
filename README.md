@@ -64,9 +64,30 @@ FIRESTORE_EMULATOR_HOST=127.0.0.1:8080
 
 - エミュレートするのは **Firestore だけ**。Firebase Auth は `FIREBASE_PROJECT_ID`（dev プロジェクト）の本物を使い続けるため、ログインと ID トークン検証はこれまでどおり動きます。エミュレーターの project id も同じ値に揃える必要があるため、起動スクリプトは `FIREBASE_PROJECT_ID`（既定 `mirai-yoho-dev`）を使います
 - データは終了時に `.emulator-data/`（gitignore 済み）へ書き出し、次回起動時に読み込みます。まっさらに戻したいときはこのディレクトリを削除してください
-- 初回はコレクションが空なので、組織・ロール・空き枠のシードが必要です（`make create-organization` / `make create-default-roles` / `make seed-slots`。いずれも `ENV=local` が既定）
+- 初回はコレクションが空なので、シードを流します（下記）
 - `firestore.rules` はエミュレーターに読み込ませていません（rules は Terraform 管理で、`firebase.json` に `firestore` 設定を置くと `firebase deploy --only firestore` が可能になってしまうため）。API は admin SDK 経由で rules をバイパスし、SPA から Firestore を直接触っていないので影響ありません
-- 実行には Java（JDK 11+）が必要です（Firestore エミュレーターの動作要件）
+- 実行には Java（JDK 11+）が必要です（Firestore エミュレーターの動作要件。`mise install` で入ります）
+
+#### シードデータの投入
+
+```bash
+make seed-local ADMIN=you@example.com
+```
+
+組織・ロール・管理者アカウント・占い師・料金プラン（30 / 60 / 90 分）・空き枠（翌日から 7 日分、10:00-17:00 の 15 分枠）をまとめて投入します。同じ引数なら何度実行しても同じドキュメントを上書きするだけです（冪等）。
+
+| 変数 | 既定値 | 説明 |
+| --- | --- | --- |
+| `ADMIN` | （必須） | console にログインする Auth ユーザーのメールアドレスまたは UID |
+| `CONSULTANT` | `ADMIN` と同じ | consultant にログインする Auth ユーザー |
+| `ORGANIZATION_ID` | `local-org` | 組織 ID（各 SPA の URL パスに使う） |
+| `ORGANIZATION_NAME` | `ローカル組織` | 組織名 |
+| `CONSULTANT_NAME` | `ローカル占い師` | 占い師の表示名 |
+| `DAYS` | `7` | 空き枠を作る日数 |
+
+- Auth はエミュレートしないため、`ADMIN` / `CONSULTANT` には **dev プロジェクトに実在する** Auth ユーザーを指定します。スクリプトは Auth を読むだけで、ユーザーの作成・変更は一切しません（メールで見つからない場合は UID を直接渡してください）
+- `FIRESTORE_EMULATOR_HOST` が未設定だと実行を拒否するので、dev / 本番に流れる心配はありません
+- 利用規約・キャンセルポリシーも必要なら、続けて `pnpm dlx tsx --tsconfig apps/api/tsconfig.json --env-file=apps/api/.env.local apps/api/scripts/seed-initial-policies.ts --only-org local-org` を実行してください
 
 ## よく使うコマンド
 
