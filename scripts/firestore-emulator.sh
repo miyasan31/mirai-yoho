@@ -21,4 +21,21 @@ if [ -f "$DATA_DIR/firebase-export-metadata.json" ]; then
   set -- "$@" --import "$DATA_DIR"
 fi
 
-exec firebase emulators:start "$@"
+# エミュレーターは別プロセスグループで起動する（set -m でジョブ制御を有効にする）。
+# Ctrl-C や pnpm dev 経由の停止ではシェル全体に SIGINT が飛ぶが、firebase CLI が
+# SIGINT を 2 回受け取ると即時終了して --export-on-exit のエクスポートが中断される。
+# プロセスグループを分けたうえで trap から 1 回だけ転送する。
+set -m
+firebase emulators:start "$@" &
+emulator_pid=$!
+set +m
+
+trap 'kill -INT "$emulator_pid" 2>/dev/null || true' INT TERM
+
+# trap が入ると wait が中断されるので、エミュレーターが終了するまで待ち直す
+status=0
+while kill -0 "$emulator_pid" 2>/dev/null; do
+  wait "$emulator_pid" || status=$?
+done
+
+exit "$status"

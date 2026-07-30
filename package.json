@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "prepare": "husky && pnpm -r --if-present run generate",
-    "dev": "pnpm -r --parallel run dev",
+    "dev": "pnpm run --parallel --workspace-root \"/^(emulator|dev:apps)$/\"",
+    "dev:apps": "pnpm -r --parallel run dev",
     "emulator": "sh scripts/firestore-emulator.sh",
     "dev:api": "pnpm --filter @mirai-yoho/api dev",
     "dev:user": "pnpm --filter @mirai-yoho/user dev",
