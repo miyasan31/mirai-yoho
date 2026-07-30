@@ -83,7 +83,7 @@ export default function SettlementStatementPage() {
     <styled.div>
       <styled.div data-print-hidden mb="4">
         <Text as="h1" textStyle="2xl" fontWeight="bold" mb="1">
-          精算書
+          精算書発行
         </Text>
         <Text textStyle="sm" color="fg.muted">
           対象月の借受金からシステム利用料と事務所利用料を控除した精算書を発行します。
