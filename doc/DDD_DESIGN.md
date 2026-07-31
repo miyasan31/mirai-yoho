@@ -168,6 +168,7 @@
 | `PolicyRevision` | `PolicyType` | `publish()` `archive()` `updateDraft()` | ポリシー本文の改訂（§2.2） |
 | `PolicyAgreement` | `PolicyType` | —（記録専用・不変） | 同意証跡の記録（§2.2） |
 | `Settings` | `BusinessHours` `PricePlanRange` `ConsultantStatus` | `updateBusinessHours()` `updateConsultantStatuses()` `updatePricePlanRange()` | 組織設定の更新 |
+| `AppraisalReport` | `AppraisalReportContent` | `updateContent()` `publish()` | 占い師による鑑定書の下書き作成・公開（§5.6） |
 
 ### 5.2 Booking 集約詳細
 
@@ -263,6 +264,28 @@ class Booking {
   consultant: Consultant  // 同上
 }
 ```
+
+### 5.6 AppraisalReport 集約詳細
+
+```
+AppraisalReport（集約ルート）
+├── organizationId: string          外部参照（マルチテナント境界）
+├── reportId: string                ID（Firestore 自動生成）
+├── bookingId: string               外部参照（別集約）。一意キーは (organizationId, bookingId)
+├── consultantId: string            外部参照（別集約）。担当占い師のみ作成・編集可
+├── customerId: string              外部参照（別集約）
+├── content: AppraisalReportContent  タイトル / 顧客名 / 生年月日 / 鑑定日 / テーマ / 現状 / 鑑定結果 / 開運行動 / まとめ
+├── status: AppraisalReportStatus   draft|published
+├── publishedAt?: Date
+├── createdAt: Date
+└── updatedAt: Date
+```
+
+鑑定終了（`booking.endsAt` を過ぎている）かつキャンセルされていない予約に対してのみ、担当占い師が下書きを作成できる
+（`assertBookingReportable`）。`booking.status: completed` は「課金完了」を意味し鑑定終了とは無関係なため、
+鑑定書の可否判定には使わない。`publish()` は下書き状態かつ `content.result`（鑑定結果）が空でない場合のみ許可し、
+公開後は `updateContent()` が `APPRAISAL_REPORT_NOT_DRAFT` で拒否される（編集不可）。公開済みの鑑定書のみ、
+顧客のマイページ（`findPublishedByCustomerIds`）に一覧表示される。
 
 ---
 
@@ -526,6 +549,26 @@ apps/api/src/
 | `setup_intent.succeeded` | `CompleteSetupUseCase` → `payment.completeSetup(paymentMethodId)`（`status: setup_complete`）。以後 §8.3 の off-session 課金が可能になる |
 | `setup_intent.setup_failed` | `CancelPaymentUseCase` → `payment.cancel()` |
 | `payment_intent.payment_failed` | `FailPaymentUseCase` → `payment.failCharge()` |
+
+### 8.5 精算書発行（`GetConsultantSettlementStatementUseCase`）
+
+占い師向けの精算書を月単位で都度算出する。永続化される集約ではなく、`Booking` / `Payment` / `Consultant` /
+`Settings` / `Customer` を横断して読み取り専用で組み立てる集計ユースケース（`domain/settlement/` は
+Firestore への参照を持たない純粋な計算関数のみで構成）。
+
+```
+入力: organizationId / consultantId / month（YYYY-MM）/ usesOfficeAddress
+
+1. resolveSettlementPeriod(month)                     ← JST 月初〜翌月初の絶対時刻レンジに変換
+2. BookingRepository.findByConsultantId()             ← 対象月内・非キャンセルの予約を抽出
+3. PaymentRepository.findByBookingIds()               ← status: charged の決済のみ借受金に計上
+4. calculateSettlement({ grossJPY, systemFeeRatePercent, usesOfficeAddress })
+   借受金 − システム利用料（外税10%） − 事務所利用料（利用時 ¥500） = 精算料（端数切り捨て）
+出力: 明細（予約ごとの日時・顧客名・料金プラン・金額）+ 各種金額の内訳
+```
+
+> `systemFeeRatePercent` は `ConsultantStatus.settlementRatePercent`（占い師ステータスごとに設定）から解決する。
+> PDF 化は `apps/consultant/src/pages/settlement-statement/` が担当し、UseCase 自体は帳票データのみ返す。
 
 ---
 

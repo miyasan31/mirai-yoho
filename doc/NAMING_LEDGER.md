@@ -897,6 +897,10 @@ export const FIRESTORE_COLLECTIONS = {
 
 > **追記（2026-07-28）**: さらに `policy-revisions` / `policy-agreements` が追加され、現行は **17 コレクション**。この 2 つは §3.12 に収録した。
 
+> **追記（2026-07-31）**: さらに `appraisal-reports`（鑑定書、PR #215）が追加され、現行は **18 コレクション**。
+> Doc ID は自動生成、一意キーは `(organizationId, bookingId)`。命名は既存コレクションの規則（kebab-case、camelCase キー）と整合しているため追加監査は不要。台帳本文（§3.x）には未反映。
+> なお精算書（`GetConsultantSettlementStatementUseCase`、PR #216）は月次集計を都度算出するのみで永続化せず、対応する Firestore コレクションを持たない（詳細は `DDD_DESIGN.md` §8.5）。
+
 #### 第2回監査結論
 
 **台帳内の一貫性: OK**（矛盾なし）。現行コードへの反映も完了（上表参照）。
