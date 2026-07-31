@@ -288,22 +288,24 @@ make create-organization:dev \
 3. `accounts/{organizationId}_{accountId}` に `roleId: "admin"` を保存する。未ログインのユーザーは `status: invited`、ログイン済みのユーザーは `status: active` になる。
 4. `roles/{organizationId}_{roleId}` にシステムロール（`admin` / `operator`）を保存する。
 5. `settings/{organizationId}` に初期設定を作成する。初期ステータスは `standard`（表示名: `標準`）である（予約フローは「占い師 → プラン → 枠 → 情報」に固定されており、占い師選択の有効/無効を切り替える設定項目は存在しない）。
-6. Firebase Auth のパスワード再設定リンクを出力する。新規ユーザーの場合は一時パスワードも標準出力に出る。
-
-### 4.2.1 初期ポリシーを投入する
-
-このスクリプトは `policy-revisions` を作りません。**公開中の利用規約とキャンセルポリシーが無いと顧客は予約できない**（`DDD_DESIGN.md` §2.2）ため、組織作成後に seed スクリプトで投入します。
-
-```bash
-pnpm dlx tsx --env-file=.env.dev apps/api/scripts/seed-initial-policies.ts \
-  --only-org tokyo-shibuya \
-  --version 2026-08-01 \
-  --effective-from 2026-08-01T00:00:00+09:00
-```
-
-利用規約 / キャンセルポリシー / プライバシーポリシーの 3 種を `apps/api/scripts/seed-data/policy-*-initial.md` から読み込んで公開します。既に `policy-revisions` を持つ組織はスキップされます。以降の改訂は運営コンソールの「利用規約・キャンセルポリシー」画面から行います。
+6. `policy-revisions` に初期ポリシー 5 種を **下書き（`draft`）** で作成する（§4.2.1）。
+7. Firebase Auth のパスワード再設定リンクを出力する。新規ユーザーの場合は一時パスワードも標準出力に出る。
 
 出力されるパスワード再設定リンクと一時パスワードは認証情報です。運用記録に残さず、安全な経路で初期管理者に渡してください。初期管理者はリンクからパスワードを設定します。
+
+### 4.2.1 初期ポリシー（下書き）を公開する
+
+組織作成スクリプトが、利用者向け 3 種（利用規約 / キャンセルポリシー / プライバシーポリシー）と占い師向け 2 種（占い師利用規約 / 占い師プライバシーポリシー）の初期版を `draft` で作ります。本文は `apps/api/scripts/seed-data/policy-*-initial.md` から読み込みます。版名は実行日（JST）の `YYYY-MM-DD` で、`--policy-version` で上書きできます。既に同じ種別の `policy-revisions` を持つ組織はスキップされます。
+
+```bash
+make create-organization:dev \
+  ORGANIZATION_ID=tokyo-shibuya \
+  ORGANIZATION_NAME="渋谷鑑定室" \
+  ADMIN_EMAIL=admin@example.com
+# → policyRevisions (draft): user_terms / user_cancellation_policy / ... が出力される
+```
+
+**下書きのままでは顧客は予約できません**。予約フローは公開中（`published`）の利用規約とキャンセルポリシーを要求します（`DDD_DESIGN.md` §2.2）。初期管理者がログインしたあと、運営コンソールの「利用規約・キャンセルポリシー」画面で本文と版名を確認し、施行日を指定して公開してください。施行日を未来にすると、その日が来るまでは公開済みとして扱われません。以降の改訂も同じ画面から行います。
 
 ### 4.3 初回ログイン後の状態
 
@@ -344,7 +346,7 @@ make apply ENV=dev
 ## 5. 作成後の確認チェックリスト
 
 - [ ] `organizations`、`accounts`、`roles`、`settings` に想定したドキュメントがある。
-- [ ] `policy-revisions` に利用規約・キャンセルポリシーの `published` な改訂がある（無いと予約できない）。
+- [ ] `policy-revisions` に 5 種の下書きがあり、少なくとも利用規約・キャンセルポリシーをコンソールから公開した（`published` が無いと予約できない）。
 - [ ] 初期管理者がパスワードを設定し、ログイン後に対象組織へアクセスできる。
 - [ ] `accounts/{organizationId}_{accountId}` が `roleId: admin`、初回認証後に `status: active` になっている。
 - [ ] 管理画面で営業時間、料金範囲、占い師ステータスなどを組織要件に合わせて設定した。
@@ -362,6 +364,7 @@ make apply ENV=dev
 | `No value for required variable worker_image` / `api_image` | `make plan` / `make apply` は HEAD の SHA から両方を自動導出するので、通常は発生しない。`terraform` を直接叩いた場合は `TF_VAR_worker_image` と `TF_VAR_api_image` を両方 export する（URI は `make print-worker-image` / `make print-api-image` で確認）。 |
 | Cloud Run で Secret を読めない                     | Secret の存在・値・`api-server` 実行サービスアカウントの参照権限を確認し、再デプロイする。詳細は [Secret 運用手順](secret-manager.md) を参照。 |
 | 定期バッチが対象組織に存在しない                              | `.tfvars` の `organization_ids` に組織 ID を追加して Terraform apply する。                                                 |
+| 予約画面で「規約が公開されていない」旨が出て先に進めない        | 初期ポリシーが `draft` のまま。コンソールの「利用規約・キャンセルポリシー」画面で利用規約とキャンセルポリシーを公開する（施行日が未来なら、その日まで公開扱いにならない）。 |
 
 
 ## 関連ドキュメント
