@@ -1246,7 +1246,7 @@ function buildBookingScenarios(
 }
 
 /**
- * 予約が占有する枠（利用枠 + 後続のバッファ枠）を予約済みにする。
+ * 予約が占有する枠（利用枠 + 後続の準備時間枠）を予約済みにする。
  * キャンセル済みの予約では空きに戻す。過去の枠は seedSlots が作らないのでここで作る。
  */
 async function occupySlots(params: {

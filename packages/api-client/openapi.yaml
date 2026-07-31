@@ -3145,7 +3145,7 @@ components:
           type: array
           items:
             type: string
-          description: バッファ時間として占有する 15 分 Slot の ID 群
+          description: 準備時間として占有する 15 分 Slot の ID 群
         durationMinutes:
           type: integer
           enum: [30, 60, 90, 120]

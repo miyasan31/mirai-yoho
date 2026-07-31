@@ -353,7 +353,7 @@ const config: AppConfig = {
               selector: ".rbc-event",
               title: "予約 / 予約枠イベント",
               description:
-                "確定済みの予約、開放中の空き枠、バッファが色分けされて表示されます。",
+                "確定済みの予約、開放中の空き枠、準備時間が色分けされて表示されます。",
             },
           ],
           relations: [

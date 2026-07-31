@@ -178,7 +178,7 @@ export default function ConsultantSlotsPage() {
         );
         bookingEvents.push({
           id: `buffer-${booking.bookingId}`,
-          title: `バッファ`,
+          title: `準備時間`,
           start: endsAt,
           end: bufferEnd,
           type: "buffer",

@@ -99,7 +99,7 @@
 | `[x]` | クーポン機能（`Coupon` / `UserCoupon` 集約、発行・配布・予約適用の一連フロー） | PR #113 |
 | `[x]` | ダッシュボード機能（`GetDashboardUseCase`） | PR #87〜#98 |
 | `[x]` | `apps/admin` → `apps/console` リブランディング（`admin.*` → `console.*` ドメイン、API パス `/admin/*` → `/console/*`） | PR #100, #102, #104 |
-| `[x]` | 15分単位の連続予約・バッファ機能（`PricePlan.durationMinutes`（30/60/90/120分）、予約後 15分バッファを空き枠から自動除外、`@mirai-yoho/shared/slot-availability`） | PR #120 |
+| `[x]` | 15分単位の連続予約・準備時間機能（`PricePlan.durationMinutes`（30/60/90/120分）、予約後 15分の準備時間を空き枠から自動除外、`@mirai-yoho/shared/slot-availability`） | PR #120 |
 | `[x]` | 相談員指名予約フラグを廃止し「相談員 → プラン → 枠 → 情報」フローに一本化（`consultantSelectionEnabled` 設定・相談員横断探索ロジックを削除） | PR #131 |
 | `[x]` | Zoom 連携のローカル stub モード追加（`ZOOM_INTEGRATION_MODE=stub` で OAuth・会議作成をフェイク化） | PR #123 |
 
@@ -114,7 +114,7 @@
 | `[x]` | 顧客の会員化（Firebase 匿名認証 + Google 連携、`/register` とマイページ 7 画面、`User` 集約） | PR #114, #115, #118, #130 |
 | `[x]` | 予約に会員登録と Zoom 連携を必須化（`CUSTOMER_NOT_SIGNED_UP` / `ZOOM_NOT_CONNECTED`） | `DDD_DESIGN.md` §2.1 |
 | `[x]` | PayPay 即時決済（`paymentMethodType: 'card' \| 'paypay'`、`Payment.createImmediate()`） | `DDD_DESIGN.md` §8.4 |
-| `[x]` | 占い師スケジュールカレンダー（予約 + 15分バッファ表示）、予約一覧に日時レンジと料金プランを表示 | PR #133, #134 |
+| `[x]` | 占い師スケジュールカレンダー（予約 + 15分の準備時間表示）、予約一覧に日時レンジと料金プランを表示 | PR #133, #134 |
 | `[x]` | 表示名を「相談員」→「占い師」に変更 | PR #137 |
 | `[x]` | 予約動線 ↔ マイページの回遊、クーポン取得導線 | PR #139, #141 |
 | `[x]` | N+1 クエリの一括プリロード化 | PR #140 |
