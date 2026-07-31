@@ -178,7 +178,7 @@ Booking（集約ルート）
 ├── customerId: CustomerId          外部参照（別集約）
 ├── consultantId: ConsultantId      外部参照（別集約）
 ├── usageSlotIds: string[]          外部参照（別集約）。durationMinutes 分の 15分スロットを連続予約
-├── bufferSlotIds: string[]         外部参照（別集約）。予約後 15分分のバッファスロット（空き枠から自動除外）
+├── bufferSlotIds: string[]         外部参照（別集約）。予約後 15分の準備時間スロット（空き枠から自動除外）
 ├── startsAt / endsAt: Date         slots から複製（非正規化）
 ├── durationMinutes: SupportedDurationMinutes  30|60|90|120（PricePlan.durationMinutes と一致）
 ├── status: BookingStatus           pending|confirmed|completed|cancelled
@@ -406,9 +406,9 @@ apps/api/src/
    ← 欠けていれば 400 GUARDIAN_CONSENT_REQUIRED
 3. UserRepository.findById(userId)         ← アクティブ・Zoom 連携済みチェック
 4. resolveContinuousAndPricePlan()         ← selectionId → PricePlan、durationMinutes 分の
-   15分スロットが startsAt から連続空きか + 直後 1 コマ（15分）のバッファスロットの空き
+   15分スロットが startsAt から連続空きか + 直後 1 コマ（15分）の準備時間スロットの空き
 5. usageSlot.reserve(newBookingId) / bufferSlot.reserve(newBookingId)（各コマ）
-   ← 二重予約・過去日時チェック（DomainError）。バッファは以後の空き枠検索から除外される
+   ← 二重予約・過去日時チェック（DomainError）。準備時間は以後の空き枠検索から除外される
 6. resolveAppliedCoupon()                  ← selectedUserCouponId があれば UserCoupon を検証し割引額算出
 7. CustomerRepository.findByUserIdAndOrganizationId() → 既存なければ Customer.create({...})、
    既存なら customer.updateInfo()          ← 親権者情報もここで更新

@@ -16,7 +16,7 @@ describe("slot-availability", () => {
     expect(getSlotUnitMinutes()).toBe(15);
   });
 
-  it("バッファ 15 分と 1 Slot を返す", () => {
+  it("準備時間 15 分と 1 Slot を返す", () => {
     expect(getBookingBufferMinutes()).toBe(15);
     expect(getBufferSlotCount()).toBe(1);
   });
