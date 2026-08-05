@@ -2,7 +2,7 @@
 
 > Version 1.0 | 2026-03-22 | PRD v0.5 + DDD設計 v1.0 対応
 
-> **注記（2026-07-30）**: Phase 6 を PR #219 時点まで反映済み。
+> **注記（2026-07-31）**: Phase 6 を PR #225 時点まで反映済み。
 
 > **注記（2026-07-28）**: サービス名は「あなたのみらい予報」（運営: 一般社団法人JKK）、職種呼称は「占い師」に変更済み（PR #157 / #137）。Phase 1〜5 の本文は当時の表記のまま残す。Phase 5 以降に追加された機能は **Phase 6** にまとめた。
 
@@ -144,6 +144,13 @@
 | `[x]` | **利用規約・プライバシーポリシーをユーザー向け / 占い師向けに分離**（`PolicyAudience`、`user_*` / `consultant_*` の 5 種別へ再編） | PR #217 / `DDD_DESIGN.md` §2.2 |
 | `[x]` | ローカル開発を Firestore エミュレーターに接続可能にし、シード投入スクリプトを追加（`scripts/firestore-emulator.sh` / `apps/api/scripts/seed-local.ts`） | PR #218 |
 | `[x]` | 本番 GCP プロジェクト ID を `mirai-yoho` に変更 | PR #219 |
+| `[x]` | 鑑定後に占い師を評価できる機能（`BookingRating` 集約、console 限定公開） | PR #214 / `DDD_DESIGN.md` §5.3 |
+| `[x]` | **鑑定書発行機能**（`AppraisalReport` 集約、占い師が下書き作成・公開、顧客マイページで閲覧） | PR #215 / `DDD_DESIGN.md` §5.6 |
+| `[x]` | **精算書発行機能**（`GetConsultantSettlementStatementUseCase`、月次の借受金からシステム利用料・事務所利用料を控除） | PR #216 / `DDD_DESIGN.md` §8.5 |
+| `[x]` | seed-local を全画面ぶんのデータ投入・デモ組織として見せられる内容に拡充 | PR #220, #224 |
+| `[x]` | 占い師編集をモーダルから独立したページに変更（console） | PR #222 |
+| `[x]` | Terraform の plan / apply を prod でも自動実行するように変更（`terraform-apply.yml`） | PR #223 |
+| `[x]` | 組織作成スクリプトで初期ポリシーを下書き生成するように変更 | PR #225 |
 
 ---
 
