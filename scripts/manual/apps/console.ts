@@ -67,7 +67,8 @@ const config: AppConfig = {
       .first()
       .getAttribute("href");
     if (!href) return {};
-    const match = href.match(/\/consultants\/([^/?#]+)$/);
+    // 行には詳細（/consultants/<id>）と編集（/consultants/<id>/edit）が並ぶので両方を受ける
+    const match = href.match(/\/consultants\/([^/?#]+)(?:\/edit)?$/);
     return match ? { consultantId: decodeURIComponent(match[1]) } : {};
   },
   serviceMap: {
@@ -81,6 +82,7 @@ const config: AppConfig = {
           "設定 - 営業時間が、占い師の予約枠管理カレンダーの表示範囲と追加できる時間帯を決めます。",
           "設定 - ステータスで整えた名称が、占い師のプロフィールに表示されます。",
           "占い師管理からの招待で、占い師コンソールを使えるアカウントが作られます。",
+          "設定 - 会社情報が、占い師が発行する精算書の宛先と事務所利用時の発行者住所になります。",
           "利用規約・キャンセルポリシーを公開すると、占い師に再同意が求められ、同意するまで予約枠を追加できなくなります。",
         ],
       },
@@ -382,7 +384,7 @@ const config: AppConfig = {
           id: "consultants",
           title: "占い師管理",
           overview:
-            "占い師の招待と稼働状況の確認を行います。行の編集アイコンからプロフィール編集へ移動できます。",
+            "占い師の招待と稼働状況の確認を行います。行のアイコンから占い師詳細と占い師編集へ移動できます。",
           route: "/{orgId}/consultants",
           requiresAuth: true,
           waitForSelector: "table",
@@ -410,9 +412,17 @@ const config: AppConfig = {
             },
             {
               n: 4,
-              selector: 'table a[href*="/consultants/"]',
+              selector: 'table a[href*="/consultants/"]:not([href$="/edit"])',
+              title: "詳細アイコン",
+              description:
+                "プロフィールと会員から寄せられた評価をまとめた占い師詳細を開きます。",
+            },
+            {
+              n: 5,
+              selector: 'table a[href$="/edit"]',
               title: "編集アイコン",
-              description: "占い師編集画面を開きます。",
+              description:
+                "占い師編集画面を開きます。管理者ロールにのみ表示されます。",
             },
           ],
           relations: [
@@ -479,11 +489,57 @@ const config: AppConfig = {
           ],
         },
         {
+          id: "consultant-detail",
+          title: "占い師詳細",
+          overview:
+            "1 人の占い師のプロフィールと、鑑定後に会員から寄せられた評価を確認する画面です。評価は占い師本人には公開されません。",
+          route: "/{orgId}/consultants/{consultantId}",
+          requires: ["orgId", "consultantId"],
+          waitForSelector: "h1",
+          annotations: [
+            {
+              n: 1,
+              selector: 'a[href$="/edit"]',
+              title: "編集",
+              description:
+                "占い師編集画面へ移動します。管理者ロールにのみ表示されます。",
+            },
+            {
+              n: 2,
+              selector: 'h1:has-text("占い師詳細")',
+              title: "プロフィール",
+              description:
+                "表示名・連絡先・自己紹介・専門分野・ステータスを表示します。",
+            },
+            {
+              n: 3,
+              selector: 'h2:has-text("評価")',
+              title: "評価サマリー",
+              description:
+                "平均点と 5 段階それぞれの件数で、評価の傾向を把握できます。",
+            },
+            {
+              n: 4,
+              selector: "table thead tr",
+              title: "評価一覧",
+              description:
+                "評価・コメント・鑑定日時・投稿日時を 1 件ずつ表示します。",
+            },
+            {
+              n: 5,
+              selector: '[data-scope="select"][data-part="trigger"]',
+              title: "表示件数・並び順",
+              description:
+                "評価一覧の表示件数と並び順を切り替え、右側のページ送りで前後を表示します。",
+            },
+          ],
+        },
+        {
           id: "consultant-edit",
           title: "占い師編集",
           overview:
             "占い師の表示名・自己紹介・専門分野・ステータスを更新します。稼働を止める場合は無効化します。",
-          route: "/{orgId}/consultants/{consultantId}",
+          route: "/{orgId}/consultants/{consultantId}/edit",
           requires: ["orgId", "consultantId"],
           waitForSelector: "#name",
           annotations: [
@@ -1170,6 +1226,51 @@ const config: AppConfig = {
           ],
         },
         {
+          id: "settings-company-info",
+          title: "設定 - 会社情報",
+          overview:
+            "占い師が発行する精算書に載る会社名と住所を設定します。事務所所在地は、占い師が事務所を住所として使う場合の発行者住所になります。",
+          route: "/{orgId}/settings?tab=company-info",
+          requiresAuth: true,
+          waitForSelector: 'input[aria-label="会社名"]',
+          annotations: [
+            {
+              n: 1,
+              selector: 'input[aria-label="会社名"]',
+              title: "会社名",
+              description: "精算書の宛先として印字される名称です。",
+            },
+            {
+              n: 2,
+              selector: 'input[aria-label="所在地"]',
+              title: "所在地",
+              description: "精算書の宛先として印字される住所です。",
+            },
+            {
+              n: 3,
+              selector: 'input[aria-label="事務所所在地"]',
+              title: "事務所所在地",
+              description:
+                "事務所を住所として利用する占い師の精算書に、発行者住所として印字されます。",
+            },
+            {
+              n: 4,
+              selector: `${OPEN_TAB_PANEL} button[type="submit"]`,
+              title: "保存",
+              description:
+                "会社情報を保存し、以降に発行される精算書へ反映します。",
+            },
+          ],
+          relations: [
+            {
+              target: "consultant",
+              screen: "精算書発行",
+              effect:
+                "会社名と所在地が精算書の宛先になり、事務所所在地は事務所を住所として選んだ場合の発行者住所になります。",
+            },
+          ],
+        },
+        {
           id: "settings-business-hours",
           title: "設定 - 営業時間",
           overview:
@@ -1182,7 +1283,8 @@ const config: AppConfig = {
               n: 1,
               selector: '[role="tab"]',
               title: "設定タブ",
-              description: "営業時間・ステータス・料金の設定を切り替えます。",
+              description:
+                "会社情報・営業時間・料金・ステータスの設定を切り替えます。",
             },
             {
               n: 2,
