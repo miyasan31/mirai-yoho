@@ -4,6 +4,16 @@ import type { AppConfig } from "../src/types.js";
 /** Park UI の Dialog は unmountOnExit なので、開いている 1 つだけが DOM に存在する */
 const OPEN_DIALOG = '[data-scope="dialog"][data-part="content"]';
 
+/** 先頭に一致した要素の href を返す。無ければ null */
+async function firstHref(
+  page: CaptureContext["page"],
+  selector: string,
+): Promise<string | null> {
+  const locator = page.locator(selector).first();
+  if ((await locator.count()) === 0) return null;
+  return await locator.getAttribute("href");
+}
+
 /** トリガーを押してダイアログが開くまで待つ setup を作る */
 const openDialog =
   (trigger: string) =>
@@ -57,17 +67,30 @@ const config: AppConfig = {
     } catch {
       return {};
     }
-    const href = await page
-      .locator('a[href*="/bookings/"][href*="/memo"]')
-      .first()
-      .getAttribute("href");
-    if (!href) return {};
-    const match = href.match(/\/bookings\/([^/]+)\/memo/);
-    return match ? { bookingId: decodeURIComponent(match[1]) } : {};
+    const resolved: Record<string, string | undefined> = {};
+    const memoHref = await firstHref(
+      page,
+      'a[href*="/bookings/"][href*="/memo"]',
+    );
+    const memoMatch = memoHref?.match(/\/bookings\/([^/]+)\/memo/);
+    if (memoMatch) resolved.bookingId = decodeURIComponent(memoMatch[1]);
+
+    // 鑑定書リンクは鑑定終了後の予約にしか出ないので、メモとは別の予約 ID になり得る
+    const reportHref = await firstHref(
+      page,
+      'a[href*="/bookings/"][href*="/appraisal-report"]',
+    );
+    const reportMatch = reportHref?.match(
+      /\/bookings\/([^/]+)\/appraisal-report/,
+    );
+    if (reportMatch) {
+      resolved.appraisalBookingId = decodeURIComponent(reportMatch[1]);
+    }
+    return resolved;
   },
   serviceMap: {
     summary:
-      "占い師コンソールで整えた内容は、そのまま予約サイトに公開されます。予約可能な時間帯、選べる料金プラン、掲載されるプロフィールは、いずれもここでの操作が起点です。各画面の「関連する動き」欄に、その操作が予約サイトのどこに出るかを記載しています。",
+      "占い師コンソールで整えた内容は、そのまま予約サイトに公開されます。予約可能な時間帯、選べる料金プラン、掲載されるプロフィール、鑑定後に届く鑑定書は、いずれもここでの操作が起点です。各画面の「関連する動き」欄に、その操作が予約サイトのどこに出るかを記載しています。",
     flows: [
       {
         path: "占い師コンソール → 予約サイト",
@@ -75,6 +98,7 @@ const config: AppConfig = {
           "予約枠管理で追加した枠が、予約サイトで選べる開始時刻になります。削除すると選べなくなります。",
           "料金プランで作成したプランが、予約サイトの料金プラン選択に並びます。アーカイブすると消えます。",
           "プロフィールの表示名・自己紹介・専門分野・アイコンが、占い師一覧のカードに反映されます。",
+          "鑑定書を発行すると、予約者のマイページの鑑定書一覧に並び、本文を読めるようになります。",
         ],
       },
     ],
@@ -234,7 +258,7 @@ const config: AppConfig = {
           id: "bookings",
           title: "予約一覧",
           overview:
-            "担当中の予約を一覧で確認できます。顧客名にカーソルを合わせると連絡先が表示されます。",
+            "担当中の予約を一覧で確認できます。顧客名にカーソルを合わせると連絡先が表示され、鑑定メモと鑑定書の編集にもここから移動します。",
           route: "/{orgId}/bookings",
           requiresAuth: true,
           waitForSelector: "h1",
@@ -273,6 +297,21 @@ const config: AppConfig = {
               title: "入室確認",
               description:
                 "開始 15 分前から押せます。押しておくと入室済みとして記録され、遅刻の確認対象から外れます。",
+            },
+            {
+              n: 6,
+              selector: 'a[href*="/appraisal-report"]',
+              title: "鑑定書",
+              description:
+                "鑑定の終了時刻を過ぎるとアイコンが有効になり、鑑定書の作成画面へ移動します。",
+            },
+          ],
+          relations: [
+            {
+              target: "user",
+              screen: "鑑定書",
+              effect:
+                "ここで発行した鑑定書だけが、予約者のマイページに表示されます。",
             },
           ],
         },
@@ -316,6 +355,94 @@ const config: AppConfig = {
               title: "保存",
               description:
                 "変更内容を保存します。保存後は予約一覧にも反映されます。",
+            },
+          ],
+        },
+        {
+          id: "appraisal-report",
+          title: "鑑定書",
+          overview:
+            "鑑定テーマ・現状・鑑定結果・開運アクション・総括をまとめ、予約者に発行する画面です。下書きのうちは何度でも書き直せます。",
+          route: "/{orgId}/bookings/{appraisalBookingId}/appraisal-report",
+          requires: ["orgId", "appraisalBookingId"],
+          waitForSelector: "form",
+          annotations: [
+            {
+              n: 1,
+              selector: "#title",
+              title: "タイトル",
+              description:
+                "予約者の鑑定書一覧に見出しとして並ぶ文言を入力します。",
+            },
+            {
+              n: 2,
+              selector: "#appraisalDate",
+              title: "お名前・生年月日・鑑定日",
+              description:
+                "鑑定書の冒頭に載る項目で、鑑定メモに入力済みの内容を初期値として引き継ぎます。",
+            },
+            {
+              n: 3,
+              selector: "#theme",
+              title: "本文の各項目",
+              description:
+                "鑑定テーマ・現状・鑑定結果・開運アクション・総括を順に記述します。",
+            },
+            {
+              n: 4,
+              selector: 'button[type="submit"]',
+              title: "下書きを保存",
+              description:
+                "内容を下書きとして保存します。予約者にはまだ表示されません。",
+            },
+            {
+              n: 5,
+              selector: 'button:has-text("発行する")',
+              title: "発行する",
+              description:
+                "確認のうえ発行すると予約者に公開され、以降は内容を編集できなくなります。",
+            },
+          ],
+          relations: [
+            {
+              target: "user",
+              screen: "鑑定書",
+              effect:
+                "発行した鑑定書がマイページの一覧に加わり、本文をいつでも読み返せるようになります。",
+            },
+          ],
+        },
+        {
+          id: "appraisal-report-publish",
+          title: "鑑定書の発行",
+          overview:
+            "鑑定書を発行する前の確認画面です。発行後は取り消しも編集もできないため、内容を確かめてから実行します。",
+          route: "/{orgId}/bookings/{appraisalBookingId}/appraisal-report",
+          requires: ["orgId", "appraisalBookingId"],
+          waitForSelector: 'button:has-text("発行する")',
+          setup: openDialog('button:has-text("発行する")'),
+          captureMode: "viewport",
+          annotations: [
+            {
+              n: 1,
+              selector: `${OPEN_DIALOG} button:has-text("発行する")`,
+              title: "発行する",
+              description:
+                "画面の入力内容をそのまま確定し、予約者に公開します。",
+            },
+            {
+              n: 2,
+              selector: `${OPEN_DIALOG} button:has-text("戻る")`,
+              title: "戻る",
+              description: "発行せずに編集画面へ戻ります。",
+            },
+          ],
+          relations: [
+            {
+              target: "user",
+              screen: "鑑定書",
+              effect:
+                "発行した時点でマイページに表示されるため、公開前の内容は下書きのまま保存します。",
             },
           ],
         },
@@ -470,6 +597,51 @@ const config: AppConfig = {
               screen: "料金プラン選択",
               effect:
                 "プラン名を変えると別のプランとして扱われるため、選択中だった予約者は選び直しになります。",
+            },
+          ],
+        },
+        {
+          id: "settlement-statement",
+          title: "精算書発行",
+          overview:
+            "対象月の借受金からシステム利用料と事務所利用料を差し引いた精算書を作り、PDF として保存する画面です。保存した PDF は各自で運営へメール送信します。",
+          route: "/{orgId}/settlement-statement",
+          requiresAuth: true,
+          waitForSelector: "h1",
+          annotations: [
+            {
+              n: 1,
+              selector: '[data-scope="select"][data-part="trigger"]',
+              title: "対象月",
+              description:
+                "直近 12 ヶ月から対象月を選びます。既定は締めの済んだ先月です。",
+            },
+            {
+              n: 2,
+              selector: 'input[aria-label="発行者名"]',
+              title: "発行者名",
+              description:
+                "精算書に発行者として印字する名前で、初期値は登録済みの氏名です。",
+            },
+            {
+              n: 3,
+              selector: 'input[aria-label="住所"]',
+              title: "住所",
+              description: "精算書に印字する住所を入力します。",
+            },
+            {
+              n: 4,
+              selector: '[data-scope="checkbox"][data-part="root"]',
+              title: "事務所を住所として利用する",
+              description:
+                "自宅住所を出さずに済む代わりに、月 500 円の事務所利用料が控除されます。",
+            },
+            {
+              n: 5,
+              selector: 'button:has-text("PDFとして保存")',
+              title: "PDF として保存",
+              description:
+                "印刷ダイアログを開きます。送信先で「PDFに保存」を選ぶと精算書が保存されます。",
             },
           ],
         },

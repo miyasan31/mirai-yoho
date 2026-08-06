@@ -63,6 +63,40 @@ async function resolveConsultantId(
   return match ? decodeURIComponent(match[1]) : undefined;
 }
 
+/** 予約一覧から、評価導線が出ている予約 ID を取り出す。 */
+async function resolveRatingBookingId(
+  ctx: CaptureContext,
+): Promise<string | undefined> {
+  await ctx.page.goto(`${ctx.baseUrl}/mypage/bookings`, {
+    waitUntil: "domcontentloaded",
+  });
+  const href = await firstAttribute(
+    ctx,
+    'a[href*="/mypage/bookings/"][href$="/rating"]',
+    "href",
+    5_000,
+  );
+  const match = href?.match(/\/mypage\/bookings\/([^/]+)\/rating/);
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
+/** 鑑定書一覧から先頭の鑑定書 ID を取り出す。 */
+async function resolveAppraisalReportId(
+  ctx: CaptureContext,
+): Promise<string | undefined> {
+  await ctx.page.goto(`${ctx.baseUrl}/mypage/appraisal-reports`, {
+    waitUntil: "domcontentloaded",
+  });
+  const href = await firstAttribute(
+    ctx,
+    'a[href*="/mypage/appraisal-reports/"]',
+    "href",
+    5_000,
+  );
+  const match = href?.match(/\/mypage\/appraisal-reports\/([^/?#]+)/);
+  return match ? decodeURIComponent(match[1]) : undefined;
+}
+
 /** 料金プラン画面を操作して selectionId / durationMinutes を確定させる。 */
 async function resolvePlanSelection(
   ctx: CaptureContext,
@@ -172,18 +206,25 @@ const config: AppConfig = {
   loginPath: "/register",
   postLoginUrlPattern: /\/mypage(\/[^?]*)?(\?.*)?$/,
   resolveDynamicParams: async (ctx) => {
-    const orgId = ctx.params.orgId;
-    if (!orgId) {
-      console.warn(
-        "  orgId が未設定のため動的パラメタを解決できません（MANUAL_ORG_ID を指定してください）",
-      );
-      return {};
-    }
-    const orgPath = encodeURIComponent(orgId);
     const resolved: Record<string, string | undefined> = {
       bookingId: SAMPLE_BOOKING_ID,
       cancelToken: `${SAMPLE_BOOKING_ID}.manual-preview`,
     };
+
+    // マイページ配下の画面は URL に組織 ID を含まないので、先に解決しておく
+    const ratingBookingId = await resolveRatingBookingId(ctx);
+    if (ratingBookingId) resolved.ratingBookingId = ratingBookingId;
+    const reportId = await resolveAppraisalReportId(ctx);
+    if (reportId) resolved.reportId = reportId;
+
+    const orgId = ctx.params.orgId;
+    if (!orgId) {
+      console.warn(
+        "  orgId が未設定のため組織配下の動的パラメタを解決できません（MANUAL_ORG_ID を指定してください）",
+      );
+      return resolved;
+    }
+    const orgPath = encodeURIComponent(orgId);
 
     const consultantId = await resolveConsultantId(ctx, orgPath);
     if (!consultantId) return resolved;
@@ -532,7 +573,7 @@ const config: AppConfig = {
               selector: "nav",
               title: "サイドメニュー",
               description:
-                "プロフィール・予約一覧・Zoom 連携・クーポンへ移動します。",
+                "プロフィール・予約一覧・鑑定書・外部連携・クーポンへ移動します。",
             },
             {
               n: 2,
@@ -602,7 +643,7 @@ const config: AppConfig = {
           id: "mypage-bookings",
           title: "予約一覧",
           overview:
-            "自分の予約を一覧で確認する画面です。Zoom への入室とキャンセルもここから行います。",
+            "自分の予約を一覧で確認する画面です。Zoom への入室とキャンセル、鑑定後の評価と鑑定書の閲覧もここから行います。",
           route: "/mypage/bookings",
           requiresAuth: true,
           waitForSelector: 'h1:has-text("予約一覧")',
@@ -631,6 +672,20 @@ const config: AppConfig = {
               title: "クーポン割引",
               description:
                 "クーポンを使った予約では、割引額とお支払い金額を並べて表示します。",
+            },
+            {
+              n: 5,
+              selector: 'a[href$="/rating"]',
+              title: "占い師を評価する",
+              description:
+                "鑑定が終わり評価期間内の予約に「未評価」バッジとともに表示され、評価画面へ移動します。",
+            },
+            {
+              n: 6,
+              selector: 'a:has-text("鑑定書を見る")',
+              title: "鑑定書を見る",
+              description:
+                "占い師が鑑定書を発行した予約に表示され、その鑑定書を開きます。",
             },
           ],
         },
@@ -663,6 +718,100 @@ const config: AppConfig = {
               selector: `${OPEN_DIALOG} button:has-text("戻る")`,
               title: "戻る",
               description: "キャンセルせずに予約一覧へ戻ります。",
+            },
+          ],
+        },
+        {
+          id: "mypage-rating",
+          title: "鑑定の評価",
+          overview:
+            "終わった鑑定の満足度を 5 段階とコメントで伝える画面です。送信後の変更・取り消しはできません。",
+          route: "/mypage/bookings/{ratingBookingId}/rating",
+          requires: ["ratingBookingId"],
+          requiresAuth: true,
+          waitForSelector: 'h1:has-text("鑑定の評価")',
+          annotations: [
+            {
+              n: 1,
+              selector: 'a:has-text("予約一覧に戻る")',
+              title: "予約一覧に戻る",
+              description: "評価せずに予約一覧へ戻ります。",
+            },
+            {
+              n: 2,
+              selector: '[data-scope="rating-group"][data-part="control"]',
+              title: "鑑定の満足度",
+              description: "5 段階の星で満足度を選びます。",
+            },
+            {
+              n: 3,
+              selector: "textarea",
+              title: "コメント",
+              description:
+                "感想を任意で入力します。入力欄の下に残り文字数が表示されます。",
+            },
+            {
+              n: 4,
+              selector: 'button[type="submit"]',
+              title: "評価を送信する",
+              description:
+                "評価を送信し、予約一覧へ戻ります。送信した内容は変更できません。",
+            },
+          ],
+        },
+        {
+          id: "mypage-appraisal-reports",
+          title: "鑑定書一覧",
+          overview:
+            "占い師が発行した鑑定書を一覧で確認する画面です。鑑定が終わり発行されたものだけが並びます。",
+          route: "/mypage/appraisal-reports",
+          requiresAuth: true,
+          waitForSelector: 'h1:has-text("鑑定書")',
+          annotations: [
+            {
+              n: 1,
+              selector: "li",
+              title: "鑑定書カード",
+              description:
+                "タイトル・鑑定日・担当・店舗・発行日をまとめて表示します。",
+            },
+            {
+              n: 2,
+              selector: 'a:has-text("鑑定書を見る")',
+              title: "鑑定書を見る",
+              description: "選んだ鑑定書の本文を開きます。",
+            },
+          ],
+        },
+        {
+          id: "mypage-appraisal-report",
+          title: "鑑定書",
+          overview:
+            "鑑定書の本文を読む画面です。鑑定テーマ・現状・鑑定結果・開運アクション・総括が順に並びます。",
+          route: "/mypage/appraisal-reports/{reportId}",
+          requires: ["reportId"],
+          requiresAuth: true,
+          waitForSelector: "article",
+          annotations: [
+            {
+              n: 1,
+              selector: 'a:has-text("鑑定書一覧に戻る")',
+              title: "鑑定書一覧に戻る",
+              description: "一覧に戻り、別の鑑定書を選び直せます。",
+            },
+            {
+              n: 2,
+              selector: "article h1",
+              title: "タイトルと鑑定情報",
+              description:
+                "鑑定書のタイトルと、お名前・生年月日・鑑定日・店舗・担当・発行日を表示します。",
+            },
+            {
+              n: 3,
+              selector: "article section",
+              title: "本文",
+              description:
+                "占い師が記入した項目だけが見出しつきで表示されます。",
             },
           ],
         },
