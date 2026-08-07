@@ -381,15 +381,18 @@ apps/api/src/
 │   ├── customer/ · user/ · user-coupon/
 │   ├── settings/ · authorization/ · account/ · organization/ · coupon/
 │   ├── policy/                       ← PolicyRevision / PolicyAgreement（§2.2）
+│   ├── booking-rating/               ← BookingRating（§5.3）
+│   ├── appraisal-report/             ← AppraisalReport（§5.6）
+│   ├── settlement/                   ← 精算書の読み取りモデル（§8.5）
 │   └── zoom-session/
 │                                     ↑ domain 直下は全ディレクトリを列挙している
 │
 ├── application/                      ← 以下は代表例。実際は集約とほぼ 1 対 1 で
-│   ├── booking/                        authorization / consultant / coupon / dashboard /
-│   │   ├── create-booking-use-case.ts   payment / policy / price-plan / settings / slot /
-│   │   ├── cancel-booking-use-case.ts   user / user-coupon / zoom-session が並ぶ
-│   │   ├── charge-payment-use-case.ts
-│   │   └── setup-payment-use-case.ts  ← カード登録 / PayPay 即時決済（§8.4）
+│   ├── booking/                        appraisal-report / authorization / booking-rating /
+│   │   ├── create-booking-use-case.ts   consultant / coupon / dashboard / payment / policy /
+│   │   ├── cancel-booking-use-case.ts   price-plan / settings / settlement / slot / user /
+│   │   ├── charge-payment-use-case.ts   user-coupon が並ぶ（zoom-session は domain のみで
+│   │   └── setup-payment-use-case.ts  ← カード登録 / PayPay 即時決済（§8.4）　application 層は持たない）
 │   └── shared/                      ← UseCase から使うポート（Interface）
 │       ├── stripe-service.ts · zoom-service.ts · email-service.ts
 │       ├── cancel-token-service.ts  ← キャンセルリンクの HMAC 署名

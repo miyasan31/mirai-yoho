@@ -1,7 +1,7 @@
 # 命名台帳 — Firestore / Domain / API
 
 > Version 2.0 | 2026-06-26（2026-07-12 追記: §6.5 更新 / **2026-07-14 改訂: `organization-` プレフィックス全廃。§6.3-B の混在許容方針を撤回。詳細は §0** / **2026-07-15 改訂: Firebase Auth uid の正準名を `authUid` に統一。§3.5 の `uid` 維持合意を撤回。詳細は §0.1** / **2026-07-15 改訂: `accounts.role` → `accounts.roleId` にリネームし `consultant` ロールを廃止。詳細は §3.5** / **2026-07-15 改訂: `accounts.authUid` → `accounts.accountId` にリネーム。accounts 集約主識別子命名を他集約 (consultantId / roleId / userId) に揃える。§0.1 の accounts 側 authUid 採用を撤回。詳細は §0.2**）  
-> 対象: 策定時点の全11コレクション + 横断命名ルール（その後 `organization-roles`（現 `roles`）/`users`/`user-zoom-credentials`/`user-coupons`/`coupons`/`policy-revisions`/`policy-agreements` が追加され現行17コレクション。詳細は §6.5・§3.12）  
+> 対象: 策定時点の全11コレクション + 横断命名ルール（その後 `organization-roles`（現 `roles`）/`users`/`user-zoom-credentials`/`user-coupons`/`coupons`/`policy-revisions`/`policy-agreements`/`booking-ratings`/`appraisal-reports` が追加され現行19コレクション。詳細は §6.5・§3.12）  
 > 目的: 永続化・ドメイン・API の名称を整理し、今後の実装・リネームの基準とする
 
 > **呼称について（2026-07-28）**: 日本語の職種呼称は PR #137 で「相談員」→「**占い師**」に変更された。英語・コード上の識別子（`Consultant` / `consultantId` / `consultantMemo` など）は**変更しない**方針のため、本台帳の識別子は現行のままで正しい。日付入りの改訂記録（§0 系・§3.5 など）に残る「相談員」は当時の表記としてそのまま残す。
@@ -902,6 +902,8 @@ export const FIRESTORE_COLLECTIONS = {
 > **追記（2026-07-31）**: さらに `appraisal-reports`（鑑定書、PR #215）が追加され、現行は **18 コレクション**。
 > Doc ID は自動生成、一意キーは `(organizationId, bookingId)`。命名は既存コレクションの規則（kebab-case、camelCase キー）と整合しているため追加監査は不要。台帳本文（§3.x）には未反映。
 > なお精算書（`GetConsultantSettlementStatementUseCase`、PR #216）は月次集計を都度算出するのみで永続化せず、対応する Firestore コレクションを持たない（詳細は `DDD_DESIGN.md` §8.5）。
+
+> **訂正（2026-08-07）**: 上記の集計には `booking-ratings`（鑑定評価、PR #214。§2 表の row 12 には収録済みだが本追記の集計から漏れていた）が含まれていなかった。`apps/api/src/infrastructure/firestore/firestore-collections.ts` の実数と照合し、現行は **19 コレクション**が正しい。
 
 #### 第2回監査結論
 
